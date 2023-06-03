@@ -397,6 +397,7 @@ const Page: CustomPage = () => {
             columns={columns}
             data={data.ruleExecutions}
             showPagination={false}
+            isLoading={isLoading}
           />
         )}
       </Section>

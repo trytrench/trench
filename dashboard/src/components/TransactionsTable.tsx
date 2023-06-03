@@ -278,6 +278,7 @@ interface PaymentsTableProps {
 
   allowMarkAsFraud?: boolean;
   onMarkSelectedAsFraud?: (ids: string[]) => void;
+  isLoading?: boolean;
 }
 
 export function PaymentsTable({
@@ -376,6 +377,7 @@ export function PaymentsTable({
       showColumnVisibilityOptions
       rowSelection={rowSelection}
       onRowSelectionChange={setRowSelection}
+      isLoading={isLoading}
     />
   );
 }
@@ -547,7 +549,7 @@ export function usePaymentsTableProps({
       transactionsData: data?.data ?? [],
       refetchTransactions: refetch,
       count: data?.count,
-      loadinngTransactions: isLoading,
+      isLoading,
     }),
     [
       pagination,

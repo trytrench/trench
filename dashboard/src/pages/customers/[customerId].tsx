@@ -203,6 +203,7 @@ const Page: CustomPage = () => {
           onMarkSelectedAsFraud={() => {
             refetchTransactions().catch(handleError);
           }}
+          isLoading={isTransactionsLoading}
         />
       </Section>
 
@@ -213,6 +214,7 @@ const Page: CustomPage = () => {
           //   searchComponent,
           //   getRowHref,
           showPagination={false}
+          isLoading={isLoading}
         />
       </Section>
 

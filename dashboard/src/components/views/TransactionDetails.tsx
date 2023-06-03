@@ -429,6 +429,7 @@ export const TransactionDetails = ({ transactionId }: Props) => {
           onMarkSelectedAsFraud={() => {
             refetchTransactions().catch(handleError);
           }}
+          isLoading={isTransactionsLoading}
         />
       </Section>
     </Box>

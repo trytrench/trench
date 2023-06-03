@@ -1,4 +1,14 @@
-import { Box, Link, Table, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
+import {
+  Box,
+  Link,
+  Spinner,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+} from "@chakra-ui/react";
 import {
   flexRender,
   getCoreRowModel,
@@ -30,11 +40,10 @@ interface DataTableProps<TData, TValue> {
   getRowHref?: (row: Row<TData>) => string;
   showColumnVisibilityOptions?: boolean;
   showPagination?: boolean;
-
   rowSelection?: Record<string, boolean>;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
-
   getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string;
+  isLoading?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -51,6 +60,7 @@ export function DataTable<TData, TValue>({
   rowSelection = {},
   onRowSelectionChange,
   getRowId,
+  isLoading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -129,7 +139,19 @@ export function DataTable<TData, TValue>({
             ))}
           </Thead>
           <Tbody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <Tr>
+                <Td colSpan={columns.length} h="24" textAlign="center">
+                  <Spinner
+                    thickness="4px"
+                    speed="0.65s"
+                    emptyColor="gray.200"
+                    color="blue.500"
+                    size="lg"
+                  />
+                </Td>
+              </Tr>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <Tr
                   key={row.id}

@@ -66,7 +66,11 @@ const ListDetailsPage: CustomPage = () => {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data: listData, refetch } = api.dashboard.lists.get.useQuery({
+  const {
+    data: listData,
+    refetch,
+    isLoading,
+  } = api.dashboard.lists.get.useQuery({
     id: router.query.listId as string,
   });
 
@@ -181,6 +185,7 @@ const ListDetailsPage: CustomPage = () => {
         pageIndex={pageIndex}
         pageSize={pageSize}
         pageCount={-1}
+        isLoading={isLoading}
       />
     </Box>
   );

@@ -35,6 +35,7 @@ const ViewPage: CustomPage = () => {
           onMarkSelectedAsFraud={() => {
             refetchTransactions().catch(handleError);
           }}
+          isLoading={isLoading}
         />
       ) : (
         <Skeleton />

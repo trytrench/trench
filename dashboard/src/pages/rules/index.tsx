@@ -190,7 +190,7 @@ const RulesPage: CustomPage = () => {
     pageSize: 20,
   });
 
-  const { data: rulesData } = api.dashboard.rules.getAll.useQuery({
+  const { data: rulesData, isLoading } = api.dashboard.rules.getAll.useQuery({
     limit: pageSize,
     offset: pageIndex * pageSize,
   });
@@ -213,6 +213,7 @@ const RulesPage: CustomPage = () => {
         pageSize={pageSize}
         pageCount={-1}
         getRowHref={(row) => `/rules/${row.original.id}`}
+        isLoading={isLoading}
       />
     </Box>
   );

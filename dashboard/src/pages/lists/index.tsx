@@ -102,7 +102,11 @@ const ListsPage: CustomPage = () => {
     pageSize: 10,
   });
 
-  const { data: listsData, refetch } = api.dashboard.lists.getAll.useQuery({
+  const {
+    data: listsData,
+    refetch,
+    isLoading,
+  } = api.dashboard.lists.getAll.useQuery({
     limit: pageSize,
     offset: pageIndex * pageSize,
   });
@@ -203,6 +207,7 @@ const ListsPage: CustomPage = () => {
         pageSize={pageSize}
         pageCount={-1}
         getRowHref={(row) => `/lists/${row.original.id}`}
+        isLoading={isLoading}
       />
     </Box>
   );
