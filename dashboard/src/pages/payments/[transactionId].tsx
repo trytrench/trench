@@ -25,6 +25,7 @@ import {
   ModalOverlay,
   Stack,
   Text,
+  Tooltip,
   VStack,
   useDisclosure,
   usePrevious,
@@ -334,9 +335,23 @@ const Page: CustomPage = () => {
           </Heading>
 
           <Box>
-            <TransactionStatusTag
-              status={data.outcome?.status || "incomplete"}
-            />
+            <Tooltip
+              label={data.outcome?.sellerMessage}
+              bgColor="white"
+              fontWeight="medium"
+              fontSize="sm"
+              color="inherit"
+              borderColor="gray.200"
+              borderWidth={1}
+              rounded="md"
+              placement="bottom"
+              hasArrow
+              p={4}
+            >
+              <TransactionStatusTag
+                status={data.outcome?.status || "incomplete"}
+              />
+            </Tooltip>
           </Box>
         </HStack>
         <Menu placement="bottom-end">
