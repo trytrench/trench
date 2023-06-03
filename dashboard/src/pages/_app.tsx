@@ -62,6 +62,13 @@ const MyApp = (props: CustomAppProps) => {
           },
         },
       },
+      Menu: {
+        baseStyle: {
+          item: {
+            fontSize: "sm",
+          },
+        },
+      },
     },
   });
 
