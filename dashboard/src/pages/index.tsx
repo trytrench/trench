@@ -30,9 +30,11 @@ const Home: CustomPage = () => {
           _hover={{
             backgroundColor: "gray.100",
           }}
+          borderRadius="md"
+          p="2"
         >
-          <CardHeader>
-            <Heading size="md">See Transactions</Heading>
+          <CardHeader pb={0}>
+            <Heading size="md">See transactions</Heading>
           </CardHeader>
           <CardBody>
             <Text>Search, assess, and block fraudent transactions.</Text>
@@ -47,9 +49,11 @@ const Home: CustomPage = () => {
           _hover={{
             backgroundColor: "gray.100",
           }}
+          borderRadius="md"
+          p="2"
         >
-          <CardHeader>
-            <Heading size="md">Manage Blocklists</Heading>
+          <CardHeader pb={0}>
+            <Heading size="md">Manage blocklists</Heading>
           </CardHeader>
           <CardBody>
             <Text>
@@ -66,9 +70,11 @@ const Home: CustomPage = () => {
           _hover={{
             backgroundColor: "gray.100",
           }}
+          borderRadius="md"
+          p="2"
         >
-          <CardHeader>
-            <Heading size="md">Set Rules</Heading>
+          <CardHeader pb={0}>
+            <Heading size="md">Set rules</Heading>
           </CardHeader>
           <CardBody>
             <Text>Set rules to assign risk levels to transactions.</Text>
