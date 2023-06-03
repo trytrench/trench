@@ -321,10 +321,6 @@
     colors "~1.2.1"
     string-argv "~0.3.1"
 
-"@trytrench/creepjs@https://github.com/trytrench/creepjs.git":
-  version "1.0.0"
-  resolved "https://github.com/trytrench/creepjs.git#c4451b6739e7b3e47e8ffaba48f00dcd4b6397b3"
-
 "@ts-morph/common@~0.19.0":
   version "0.19.0"
   resolved "https://registry.npmjs.org/@ts-morph/common/-/common-0.19.0.tgz"

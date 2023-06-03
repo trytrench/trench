@@ -25,7 +25,6 @@ export default defineConfig(({ command, mode }) => {
       plugins: [
         dts({
           insertTypesEntry: true,
-          skipDiagnostics: true,
         }),
         obfuscator({
           options: {},

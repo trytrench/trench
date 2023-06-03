@@ -1,30 +1,4 @@
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import {
-  getCSS,
-  getCSSMedia,
-  getCanvas2d,
-  getCanvasWebgl,
-  getCapturedErrors,
-  getClientRects,
-  getConsoleErrors,
-  getFonts,
-  getHTMLElementVersion,
-  getIntl,
-  getLies,
-  getMaths,
-  getMedia,
-  getOfflineAudioContext,
-  getResistance,
-  getSVG,
-  getScreen,
-  getStatus,
-  getTimezone,
-  getTrash,
-  getVoices,
-  getWebRTCData,
-  getWebRTCDevices,
-  getWindowFeatures,
-} from "@trytrench/creepjs/src/index";
 import { detectIncognito } from "detectincognitojs";
 import { Base64 } from "js-base64";
 
@@ -53,6 +27,7 @@ const getHasLiedResolution = function () {
 
 const getHasLiedOs = function () {
   const userAgent = navigator.userAgent.toLowerCase();
+  // @ts-ignore
   let oscpu = navigator.oscpu;
   const platform = navigator.platform.toLowerCase();
   let os;
@@ -98,6 +73,7 @@ const getHasLiedOs = function () {
   const mobileDevice =
     "ontouchstart" in window ||
     navigator.maxTouchPoints > 0 ||
+    // @ts-ignore
     navigator.msMaxTouchPoints > 0;
 
   if (
@@ -267,6 +243,7 @@ const getHasLiedBrowser = function () {
     throw "a";
   } catch (err) {
     try {
+      // @ts-ignore
       err.toSource();
       errFirefox = true;
     } catch (errOfErr) {
@@ -319,119 +296,19 @@ export const initialize = async (baseUrl: string, id: string) => {
   };
 
   try {
-    // @ts-ignore
-    const [
-      // workerScopeComputed,
-      voicesComputed,
-      offlineAudioContextComputed,
-      canvasWebglComputed,
-      // canvas2dComputed,
-      windowFeaturesComputed,
-      htmlElementVersionComputed,
-      cssComputed,
-      cssMediaComputed,
-      screenComputed,
-      mathsComputed,
-      consoleErrorsComputed,
-      timezoneComputed,
-      clientRectsComputed,
-      fontsComputed,
-      mediaComputed,
-      svgComputed,
-      resistanceComputed,
-      intlComputed,
-    ] = await Promise.all([
-      // getBestWorkerScope(),
-      getVoices(),
-      getOfflineAudioContext(),
-      getCanvasWebgl(),
-      // getCanvas2d(),
-      getWindowFeatures(),
-      getHTMLElementVersion(),
-      getCSS(),
-      getCSSMedia(),
-      getScreen(),
-      getMaths(),
-      getConsoleErrors(),
-      getTimezone(),
-      getClientRects(),
-      getFonts(),
-      getMedia(),
-      getSVG(),
-      getResistance(),
-      getIntl(),
-    ]);
-
-    const fingerprint = {
-      // workerScopeComputed,
-      voicesComputed,
-      offlineAudioContextComputed,
-      canvasWebglComputed: {
-        ...canvasWebglComputed,
-        dataURI: undefined,
-        dataURI2: undefined,
-        pixels: undefined,
-        pixels2: undefined,
-      },
-      // canvas2dComputed,
-      windowFeaturesComputed,
-      htmlElementVersionComputed,
-      cssComputed,
-      cssMediaComputed,
-      screenComputed,
-      mathsComputed: {
-        data: Object.entries(mathsComputed?.data ?? {}).reduce(
-          (acc, [key, value]) => ({
-            ...acc,
-            // @ts-ignore
-            [key]: value?.result ?? undefined,
-          }),
-          {}
-        ),
-      },
-      consoleErrorsComputed,
-      timezoneComputed,
-      clientRectsComputed,
-      fontsComputed,
-      mediaComputed,
-      svgComputed,
-      resistanceComputed,
-      intlComputed,
-    };
-
-    const [lies, trash, capturedErrors, incognitoResult] = await Promise.all([
-      getLies(),
-      getTrash(),
-      getCapturedErrors(),
-      detectIncognito().catch((error) => {}),
-    ]);
-
-    const [webRTCData, webRTCDevices, status] = await Promise.all([
-      getWebRTCData(),
-      getWebRTCDevices(),
-      getStatus(),
-    ]);
-
+    const incognitoResult = await detectIncognito();
     payload = {
       ...payload,
-      fingerprint,
-      lies,
-      trash,
-      capturedErrors,
       incognitoResult,
-      webRTCData,
-      webRTCDevices,
-      status,
       fp2Data: {
         hasLiedLanguages: getHasLiedLanguages(),
         hasLiedResolution: getHasLiedResolution(),
         hasLiedBrowser: getHasLiedBrowser(),
         hasLiedOs: getHasLiedOs(),
+        userAgent: navigator.userAgent,
       },
     };
-  } catch (error) {
-    console.error("Error loading trench data:", error);
-  }
+  } catch (error) {}
 
   const obfs = encode(JSON.stringify(payload));
 
