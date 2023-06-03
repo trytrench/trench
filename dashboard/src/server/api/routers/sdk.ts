@@ -18,14 +18,7 @@ const deviceSchema = z.object({
   externalSessionId: z.string(),
   deviceToken: z.string().optional(),
   device: z.object({ ...mapValues(sources, () => componentSchema) }),
-  lies: z.any(),
-  trash: z.any(),
-  capturedErrors: z.any(),
   incognitoResult: z.any(),
-  fingerprint: z.any(),
-  webRTCData: z.any(),
-  webRTCDevices: z.any(),
-  status: z.any(),
   fp2Data: z.any(),
 });
 
