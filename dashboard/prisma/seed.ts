@@ -25,8 +25,15 @@ const PAYMENT_ATTEMPTS: Prisma.PaymentAttemptCreateArgs["data"][] = Array.from(
   () => {
     return {
       amount: faker.number.int({ min: 1, max: 1000 }),
-      currency: faker.finance.currencyCode(),
+      currency: "usd",
       description: faker.word.words(2),
+      customer: {
+        create: {
+          customId: faker.string.uuid(),
+          email: faker.internet.email(),
+          name: faker.person.fullName(),
+        },
+      },
       checkoutSession: {
         create: {
           customId: faker.string.uuid(),

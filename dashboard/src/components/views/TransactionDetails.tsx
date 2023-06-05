@@ -230,10 +230,70 @@ export const TransactionDetails = ({ transactionId }: Props) => {
   ];
 
   const deviceData = [
-    {
-      label: "Platform",
-      value: data.session.device.components.platform.value,
-    },
+    // {
+    //   label: "Platform",
+    //   value: data.session.device.components.platform.value,
+    // },
+    ...(fp2Data
+      ? [
+          {
+            label: "Browser",
+            value: userAgent.browser.name + " " + userAgent.browser.version,
+          },
+          {
+            label: "OS",
+            value:
+              userAgent.os.name +
+              " " +
+              userAgent.os.version +
+              " " +
+              (fp2Data.hasLiedOs ? "(Lied)" : ""),
+          },
+          ...(userAgent.device.vendor ||
+          userAgent.device.model ||
+          fp2Data.hasLiedDevice
+            ? [
+                {
+                  label: "Device",
+                  value:
+                    [userAgent.device.vendor, userAgent.device.model]
+                      .filter(Boolean)
+                      .join(" ") +
+                    " " +
+                    (fp2Data.hasLiedDevice ? "(Lied)" : ""),
+                },
+              ]
+            : []),
+          {
+            label: "Resolution",
+            value:
+              data.session.device.components.screenResolution.value.join("x") +
+              " " +
+              (fp2Data.hasLiedResolution ? "(Lied)" : ""),
+          },
+          {
+            label: "Engine",
+            value: [userAgent.engine.name, userAgent.engine.version]
+              .filter(Boolean)
+              .join(" "),
+          },
+          ...(userAgent.cpu.architecture
+            ? [
+                {
+                  label: "CPU",
+                  value: [userAgent.cpu.architecture, userAgent.cpu.model]
+                    .filter(Boolean)
+                    .join(" "),
+                },
+              ]
+            : []),
+          {
+            label: "Bot",
+            value: fp2Data.isBot ? "True" : "False",
+          },
+        ]
+      : []),
+
     {
       label: "Timezone",
       value: data.session.device.components.timezone.value,
