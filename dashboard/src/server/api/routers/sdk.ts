@@ -6,6 +6,7 @@ import { getIpData, maxMind } from "~/server/lib/maxMind";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { env } from "~/env.mjs";
 import { decode } from "~/server/lib/obfuscate";
+import { userAgentFromString } from "next/server";
 
 const componentSchema = z.object({
   value: z.any(),
@@ -70,31 +71,44 @@ export const sdkRouter = createTRPCRouter({
         }
       }
 
-      const session = await ctx.prisma.session.upsert({
-        where: { externalId: externalSessionId },
+      const userAgentData = userAgentFromString(deviceData.fp2Data?.userAgent);
+
+      const session = await ctx.prisma.checkoutSession.upsert({
+        where: { customId: externalSessionId },
         update: {},
         create: {
-          externalId: externalSessionId,
-          device: existingDeviceId
-            ? {
-                connectOrCreate: {
-                  where: { id: existingDeviceId },
-                  create: {
-                    fingerprint: hashComponents(device),
-                    components: device,
-                  },
-                },
-              }
-            : {
-                create: {
-                  fingerprint: hashComponents(device),
-                  components: device,
-                },
-              },
+          customId: externalSessionId,
 
-          ipAddress: existingIpAddress
-            ? { connect: { id: existingIpAddress.id } }
-            : { create: { ipAddress, ...ipData } },
+          deviceSnapshot: {
+            create: {
+              fingerprint: hashComponents(device),
+              userAgent: deviceData.fp2Data?.userAgent as string,
+              browserName: userAgentData.browser.name,
+              browserVersion: userAgentData.browser.version,
+              deviceModel: userAgentData.device.model,
+              deviceType: userAgentData.device.type,
+              deviceVendor: userAgentData.device.vendor,
+              engineName: userAgentData.engine.name,
+              engineVersion: userAgentData.engine.version,
+              osName: userAgentData.os.name,
+              osVersion: userAgentData.os.version,
+              cpuArchitecture: userAgentData.cpu.architecture,
+              isIncognito: deviceData.incognitoResult?.isPrivate,
+              reqUserAgent: ctx.userAgent,
+              screenResolution: Array.isArray(
+                deviceData.device.screenResolution.value
+              )
+                ? deviceData.device.screenResolution.value.join("x")
+                : undefined,
+              timezone:
+                typeof deviceData.device.timezone.value === "string"
+                  ? deviceData.device.timezone.value
+                  : undefined,
+              device: {
+                create: true,
+              },
+            },
+          },
         },
         select: {
           id: true,
@@ -104,9 +118,8 @@ export const sdkRouter = createTRPCRouter({
 
       const deviceId = session.device.id;
 
-      await ctx.prisma.deviceData.create({
+      await ctx.prisma.deviceSnapshot.create({
         data: {
-          deviceId,
           data: deviceData,
         },
       });
