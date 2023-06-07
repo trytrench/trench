@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  app:
+    image: node:18
+    volumes:
+      - ../../:/usr/src/app
+    working_dir: /usr/src/app
+    command: bash -c "yarn install --frozen-lockfile && npx prisma migrate deploy && yarn vitest run"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/postgres?pgbouncer=true
+      - API_KEY=API_KEY
+      - JWT_SECRET=
+      - MAXMIND_ACCOUNT_ID=
+      - MAXMIND_LICENSE_KEY=
+      - NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    expose:
+      - 5432
+    restart: always

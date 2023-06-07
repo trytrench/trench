@@ -1,0 +1,464 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views", "fullTextSearch", "filteredRelationCount"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PaymentAttempt {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  amount      Int
+  currency    String
+  description String?
+  metadata    Json
+
+  assessment PaymentAttemptAssessment?
+  outcome    PaymentOutcome?
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
+  checkoutSessionId String
+
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodId String
+
+  billingAddress   BillingAddress? @relation(fields: [billingAddressId], references: [id])
+  billingAddressId String?
+
+  shippingAddress   ShippingAddress? @relation(fields: [shippingAddressId], references: [id])
+  shippingAddressId String?
+
+  ruleExecutions RuleExecution[]
+
+  ipAddresses    PaymentAttemptToIpAddress[]
+}
+
+model PaymentAttemptAssessment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transformsOutput Json @default("{}")
+  isFraud   Boolean   @default(false)
+  riskLevel String
+
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  paymentAttemptId String         @unique
+}
+
+model PaymentOutcome {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status                   String
+  reason                   String
+  stripeData               Json?
+  threeDSecureFlow         String?
+  threeDSecureResult       String?
+  threeDSecureResultReason String?
+  threeDSecureVersion      String?
+
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  paymentAttemptId String         @unique
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  customId    String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String?
+  email       String?
+  phoneNumber String?
+
+  paymentAttempts   PaymentAttempt[]
+  paymentMethods    PaymentMethod[]
+  checkoutSessions  CheckoutSession[]
+  shippingAddresses ShippingAddress[]
+  billingAddresses  BillingAddress[]
+
+  devices     CustomerToDevice[]
+  cards       CustomerToCard[]
+  ipAddresses CustomerToIpAddress[]
+}
+
+model CheckoutSession {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  deviceSnapshot   DeviceSnapshot? @relation(fields: [deviceSnapshotId], references: [id])
+  deviceSnapshotId String?         @unique
+
+  events          Event[]
+  paymentAttempts PaymentAttempt[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type    String
+  payload Json @default("{}")
+
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
+  checkoutSessionId String
+}
+
+model DeviceSnapshot {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId String
+
+  ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+  ipAddressId String
+
+  checkoutSession CheckoutSession?
+
+  fingerprint String?
+  userAgent   String?
+
+  browserName     String?
+  browserVersion  String?
+  deviceModel     String?
+  deviceType      String?
+  deviceVendor    String?
+  engineName      String?
+  engineVersion   String?
+  osName          String?
+  osVersion       String?
+  cpuArchitecture String?
+
+  isIncognito Boolean?
+
+  reqUserAgent String?
+
+  screenResolution String? // 1920x1080
+  timezone         String?
+
+  metadata Json @default("{}")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  customers       CustomerToDevice[]
+  ipAddresses     DeviceToIpAddress[]
+  deviceSnapshots DeviceSnapshot[]
+}
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  name      String?
+  email     String?
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  cvcCheck          String?
+  addressLine1Check String?
+  postalCodeCheck   String?
+
+  card   Card?   @relation(fields: [cardId], references: [id])
+  cardId String?
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  cardWallet      String?
+  paymentAttempts PaymentAttempt[]
+}
+
+model Card {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  bin         String?
+  brand       String
+  country     String
+  last4       String
+  funding     String?
+  issuer      String?
+  expiryMonth Int?
+  expiryYear  Int?
+
+  threeDSecureSupported Boolean?
+
+  customers      CustomerToCard[]
+  paymentMethods PaymentMethod[]
+  ipAddresses    CardToIpAddress[]
+}
+
+// Locations
+
+model Location {
+  id        String @id @default(cuid())
+  latitude  Float
+  longitude Float
+
+  cityISOCode String?
+  cityName    String?
+  countryCode String?
+  countryName String?
+
+  postalCode    String?
+  regionISOCode String?
+  regionName    String?
+
+  ipAddresses IpAddress[]
+  addresses   Address[]
+}
+
+model IpAddress {
+  id        String   @id @default(cuid())
+  ipAddress String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location   Location? @relation(fields: [locationId], references: [id])
+  locationId String?
+
+  metadata Json @default("{}")
+
+  deviceSnapshots DeviceSnapshot[]
+  devices         DeviceToIpAddress[]
+  customers       CustomerToIpAddress[]
+  cards           CardToIpAddress[]
+  paymentAttempts PaymentAttemptToIpAddress[]
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  city       String?
+  country    String?
+  line1      String?
+  line2      String?
+  postalCode String?
+  state      String?
+
+  location   Location? @relation(fields: [locationId], references: [id])
+  locationId String?
+
+  billingAddresses  BillingAddress[]
+  shippingAddresses ShippingAddress[]
+  paymentMethods    PaymentMethod[]
+}
+
+model ShippingAddress {
+  id          String  @id @default(cuid())
+  customId    String? @unique
+  name        String?
+  phoneNumber String?
+
+  address   Address @relation(fields: [addressId], references: [id])
+  addressId String
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  paymentAttempts PaymentAttempt[]
+}
+
+model BillingAddress {
+  id          String  @id @default(cuid())
+  customId    String? @unique
+  name        String?
+  phoneNumber String?
+
+  address   Address @relation(fields: [addressId], references: [id])
+  addressId String
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  paymentAttempts PaymentAttempt[]
+}
+
+// Rules
+
+
+model Rule {
+  id          String          @id @default(cuid())
+  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime        @default(now())
+  name        String
+  description String?
+  tsCode      String
+  jsCode      String
+  riskLevel   String
+  executions  RuleExecution[]
+}
+
+model RuleExecution {
+  id               String         @id @default(cuid())
+  createdAt        DateTime       @default(now())
+  paymentAttemptId String
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  ruleId           String
+  rule             Rule           @relation(fields: [ruleId], references: [id])
+  result           Boolean?
+  error            String?
+  riskLevel        String
+}
+
+// Lists
+
+model List {
+  id        String     @id @default(cuid())
+  updatedAt DateTime   @updatedAt
+  createdAt DateTime   @default(now())
+  name      String
+  alias     String     @unique
+  regex     String?
+  createdBy String
+  items     ListItem[]
+}
+
+model ListItem {
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  value     String
+  listId    String
+  list      List     @relation(fields: [listId], references: [id])
+  createdBy String
+
+  @@unique([listId, value])
+}
+
+// Views
+
+view CustomerToDevice {
+  createdAt  DateTime @default(now())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  deviceId   String
+  device     Device   @relation(fields: [deviceId], references: [id])
+
+  @@id([deviceId, customerId])
+}
+
+view CustomerToCard {
+  createdAt  DateTime @default(now())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  cardId     String
+  card       Card     @relation(fields: [cardId], references: [id])
+
+  @@id([cardId, customerId])
+}
+
+view CustomerToIpAddress {
+  createdAt   DateTime  @default(now())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  ipAddressId String
+  ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+
+  @@id([customerId, ipAddressId])
+}
+
+view PaymentAttemptToIpAddress {
+  createdAt        DateTime       @default(now())
+  paymentAttemptId String
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  ipAddressId      String
+  ipAddress        IpAddress      @relation(fields: [ipAddressId], references: [id])
+
+  @@id([paymentAttemptId, ipAddressId])
+}
+
+view DeviceToIpAddress {
+  createdAt   DateTime  @default(now())
+  deviceId    String
+  device      Device    @relation(fields: [deviceId], references: [id])
+  ipAddressId String
+  ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+
+  @@id([deviceId, ipAddressId])
+}
+
+view CardToIpAddress {
+  createdAt   DateTime  @default(now())
+  cardId      String
+  card        Card      @relation(fields: [cardId], references: [id])
+  ipAddressId String
+  ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+
+  @@id([cardId, ipAddressId])
+}
+
+// Next Auth
+
+// Necessary for Next auth
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? // @db.Text
+    access_token      String? // @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? // @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+model AuthSession {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      AuthSession[]
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}

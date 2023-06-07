@@ -1,0 +1,17 @@
+{
+  "name": "trench",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build:sdk": "yarn workspace @trench/sdk build",
+    "dev:sdk": "yarn workspace @trench/sdk dev",
+    "lint": "eslint --ext \".js,.ts,.tsx\" --report-unused-disable-directives */*.ts"
+  },
+  "workspaces": [
+    "sdk",
+    "backend"
+  ],
+  "devDependencies": {
+    "eslint": "^8.30.0"
+  }
+}
