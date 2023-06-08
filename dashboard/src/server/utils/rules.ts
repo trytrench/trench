@@ -1,31 +1,38 @@
-import { rules } from ".eslintrc.cjs";
 import {
-  Card,
-  Customer,
-  Device,
-  IpAddress,
-  PaymentMethod,
-  Prisma,
-  RiskLevel,
-  Rule,
-  Session,
-  Transaction,
+  type Card,
+  type CheckoutSession,
+  type Customer,
+  type Device,
+  type DeviceSnapshot,
+  type IpAddress,
+  type PaymentAttempt,
+  type PaymentMethod,
 } from "@prisma/client";
+import { RiskLevel } from "../../common/types";
 
-export type PayloadTransaction = Transaction & {
-  session: Session & {
-    device: Device;
-    ipAddress: IpAddress;
-    transactions: Transaction[];
+export type RulePayload = {
+  paymentAttempt: PaymentAttempt & {
+    checkoutSession: CheckoutSession & {
+      deviceSnapshot:
+        | (DeviceSnapshot & {
+            ipAddress: IpAddress;
+            device: Device;
+          })
+        | null;
+      paymentAttempts: PaymentAttempt[];
+    };
+    paymentMethod: PaymentMethod & { card: Card | null };
+    customer: Customer | null;
   };
-  paymentMethod: PaymentMethod & { card: Card | null };
-  customer: Customer;
+  transforms: any;
+  lists: Record<string, string[]>;
 };
 
 function convertStringToFn(jsString: string) {
   if (jsString === "" || jsString === null) {
     throw new Error("No string supplied");
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-implied-eval
   return Function(`"use strict";return (${jsString})`)();
 }
 
@@ -37,11 +44,7 @@ export function runRule({
     jsCode: string;
     riskLevel: string;
   };
-  payload: {
-    transaction: PayloadTransaction;
-    aggregations: any;
-    lists: Record<string, string[]>;
-  };
+  payload: RulePayload;
 }) {
   try {
     const fn = convertStringToFn(rule.jsCode) as unknown as (
@@ -50,12 +53,13 @@ export function runRule({
     const result = fn(payload);
     return {
       result,
-      riskLevel: rule.riskLevel,
+      riskLevel: rule.riskLevel as RiskLevel,
     };
   } catch (e: any) {
     return {
-      error: e.message ?? "Unknown error",
-      riskLevel: rule.riskLevel,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      error: e?.message ?? "Unknown error",
+      riskLevel: rule.riskLevel as RiskLevel,
     };
   }
 }
@@ -65,11 +69,7 @@ export function runRules({
   payload,
 }: {
   rules: { jsCode: string; riskLevel: string }[];
-  payload: {
-    transaction: PayloadTransaction;
-    aggregations: any;
-    lists: Record<string, string[]>;
-  };
+  payload: RulePayload;
 }) {
   const ruleExecutionResults = rules.map((rule) => runRule({ rule, payload }));
 

@@ -2,11 +2,10 @@ import { useRouter } from "next/router";
 import { Layout } from "../../components/layouts/Layout";
 import { ViewNavLayout } from "../../components/layouts/ViewNavLayout";
 import { type CustomPage } from "../../types/Page";
-import { ViewSessions } from "../../components/views/ViewSessions";
 import { Box, Heading, Skeleton } from "@chakra-ui/react";
 import {
-  TransactionsTable,
-  useTransactionTableProps,
+  PaymentsTable,
+  usePaymentsTableProps,
 } from "~/components/TransactionsTable";
 import { handleError } from "~/lib/handleError";
 
@@ -19,14 +18,14 @@ const ViewPage: CustomPage = () => {
     transactionsData,
     count,
     refetchTransactions,
-  } = useTransactionTableProps({});
+  } = usePaymentsTableProps({});
 
   return (
     <Box>
       <Heading>Transactions</Heading>
       {transactionsData ? (
-        <TransactionsTable
-          transactionsData={transactionsData}
+        <PaymentsTable
+          paymentsData={transactionsData}
           count={count}
           pagination={pagination}
           onPaginationChange={setPagination}

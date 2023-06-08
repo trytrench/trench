@@ -1,20 +1,14 @@
 import {
   Box,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
   Button,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
   DrawerOverlay,
   Flex,
   HStack,
-  IconButton,
-  Input,
   Link,
   Spacer,
   Text,
@@ -23,9 +17,11 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { Menu } from "lucide-react";
+import { signOut } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
+import { handleError } from "../lib/handleError";
 
 interface Props {
   href: string;
@@ -82,7 +78,7 @@ export const MainNav = () => {
       {isDesktop ? (
         <Box flex={1} flexDirection="row" display="flex">
           <HStack spacing={6}>
-            <NavItem href="/transactions">Transactions</NavItem>
+            <NavItem href="/payments">Payments</NavItem>
             <NavItem href="/lists">Lists</NavItem>
             <NavItem href="/rules">Rules</NavItem>
           </HStack>
@@ -92,12 +88,27 @@ export const MainNav = () => {
             <NavItem href="/help">Help</NavItem>
             <NavItem href="/docs">Docs</NavItem>
             <Spacer />
+            <Button
+              onClick={() => {
+                signOut().catch(handleError);
+              }}
+            >
+              Sign out
+            </Button>
             {/* <UserButton afterSignOutUrl="/" /> */}
           </HStack>
         </Box>
       ) : (
         <Flex justify="end" flex={1}>
-          {/* <UserButton afterSignOutUrl="/" /> */}
+          {/* <UserButton afterSignrOutUrl="/" /> */}
+          <Button
+            size="sm"
+            onClick={() => {
+              signOut().catch(handleError);
+            }}
+          >
+            Sign out
+          </Button>
         </Flex>
       )}
 
@@ -109,7 +120,7 @@ export const MainNav = () => {
 
           <DrawerBody>
             <VStack align="start" onClick={onClose}>
-              <NavItem href="/transactions">Transactions</NavItem>
+              <NavItem href="/payments">Payments</NavItem>
               <NavItem href="/lists">Lists</NavItem>
               <NavItem href="/rules">Rules</NavItem>
             </VStack>

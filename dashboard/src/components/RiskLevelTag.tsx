@@ -1,5 +1,5 @@
 import { Tag, TagLabel } from "@chakra-ui/react";
-import { RiskLevel } from "@prisma/client";
+import { RiskLevel } from "../common/types";
 
 export const MAP_RISK_LEVEL_TO_DATA = {
   [RiskLevel.VeryHigh]: {

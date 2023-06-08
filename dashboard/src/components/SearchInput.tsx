@@ -1,8 +1,5 @@
-import { RiskLevel } from "@prisma/client";
 import { CreatableSelect } from "chakra-react-select";
-import { useCallback, useMemo, useState } from "react";
-import { MAP_RISK_LEVEL_TO_DATA } from "./RiskLevelTag";
-import { set } from "date-fns";
+import { useCallback, useState } from "react";
 
 type Option = {
   label: string;
@@ -14,8 +11,6 @@ interface Props {
   selectedOptions: Option[];
   onChange: (value: Option[]) => void;
 }
-
-const RISK_LEVELS = Object.values(RiskLevel);
 
 function isOpenEnded(prefix: string, options: Option[]) {
   if (options.some((o) => o.value.startsWith(prefix) && o.value !== prefix)) {

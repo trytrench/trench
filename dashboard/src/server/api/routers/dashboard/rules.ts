@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
-import { RiskLevel } from "@prisma/client";
 import { runRule } from "~/server/utils/rules";
+import { RiskLevel } from "../../../../common/types";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
@@ -36,8 +36,8 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input: ruleToBacktest }) => {
-      const [transactions, lists] = await ctx.prisma.$transaction([
-        ctx.prisma.transaction.findMany({
+      const [paymentAttempts, lists] = await ctx.prisma.$transaction([
+        ctx.prisma.paymentAttempt.findMany({
           orderBy: {
             createdAt: "desc",
           },
@@ -50,11 +50,16 @@ export const rulesRouter = createTRPCRouter({
             },
           },
           include: {
-            session: {
+            assessment: true,
+            checkoutSession: {
               include: {
-                transactions: true,
-                device: true,
-                ipAddress: true,
+                paymentAttempts: true,
+                deviceSnapshot: {
+                  include: {
+                    device: true,
+                    ipAddress: true,
+                  },
+                },
               },
             },
             paymentMethod: {
@@ -78,22 +83,22 @@ export const rulesRouter = createTRPCRouter({
         return acc;
       }, {} as Record<string, string[]>);
 
-      const triggeredTransactions: typeof transactions = [];
+      const triggeredTransactions: typeof paymentAttempts = [];
 
-      transactions.forEach((transaction) => {
+      paymentAttempts.forEach((paymentAttempt) => {
         const result = runRule({
           rule: {
             jsCode: ruleToBacktest.jsCode,
             riskLevel: RiskLevel.VeryHigh,
           },
           payload: {
-            transaction: transaction,
-            aggregations: transaction.transforms,
+            paymentAttempt: paymentAttempt,
+            transforms: paymentAttempt.assessment?.transformsOutput,
             lists: listsObj,
           },
         });
         if (result.result === true) {
-          triggeredTransactions.push(transaction);
+          triggeredTransactions.push(paymentAttempt);
         }
       });
 
@@ -120,47 +125,7 @@ export const rulesRouter = createTRPCRouter({
         },
       });
     }),
-  getStatistics: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const result: any = await ctx.prisma.$queryRaw`
-      SELECT DATE_TRUNC('day', "Transaction"."createdAt") AS day, 
-      COUNT(CASE WHEN "RuleExecution"."result" = false THEN 1 END) AS "falseCount",
-      COUNT(CASE WHEN "RuleExecution"."result" = true THEN 1 END) AS "trueCount",
-      COUNT(CASE WHEN "RuleExecution"."error" IS NOT NULL THEN 1 END) AS "errorCount"
-      FROM "RuleExecution"
-      JOIN "Transaction" ON "Transaction".id = "RuleExecution"."transactionId"
-      WHERE "ruleId" = ${input.id}
-      AND "Transaction"."createdAt" > NOW() - INTERVAL '7 days'
-      GROUP BY day
-    `;
 
-      const ruleActivationChart: {
-        date: Date;
-        trueCount: number;
-        falseCount: number;
-        errorCount: number;
-      }[] = result
-        .map((item: any) => {
-          return {
-            date: item.day as Date,
-            trueCount: Number(item.trueCount),
-            falseCount: Number(item.falseCount),
-            errorCount: Number(item.errorCount),
-          };
-        })
-        .sort((a: any, b: any) => {
-          return a.date.getTime() - b.date.getTime();
-        });
-
-      return {
-        ruleActivationChart,
-      };
-    }),
   update: protectedProcedure
     .input(
       z.object({

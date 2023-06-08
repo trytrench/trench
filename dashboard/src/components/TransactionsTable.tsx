@@ -2,21 +2,17 @@ import {
   Box,
   Button,
   Checkbox,
-  Icon,
-  IconButton,
   Menu,
   MenuButton,
   MenuItem,
   MenuList,
   Portal,
-  Skeleton,
   Tag,
   TagLabel,
   Tooltip,
-  color,
 } from "@chakra-ui/react";
 import {
-  Updater,
+  type Updater,
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
@@ -24,7 +20,7 @@ import { MAP_RISK_LEVEL_TO_DATA, RiskLevelTag } from "./RiskLevelTag";
 
 import { format } from "date-fns";
 import {
-  SetStateAction,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -47,7 +43,7 @@ import { formatWalletAddress } from "~/utils/formatWalletAddress";
 import { handleError } from "~/lib/handleError";
 import { MoreHorizontal } from "lucide-react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
-import { RiskLevel } from "@prisma/client";
+
 import { useRouter } from "next/router";
 
 type Option = {
@@ -65,7 +61,7 @@ const MAP_BRAND_TO_ICON = {
 };
 
 export type TxRow =
-  RouterOutputs["dashboard"]["transactions"]["getAll"]["data"][number];
+  RouterOutputs["dashboard"]["paymentAttempts"]["getAll"]["data"][number];
 
 const columns: ColumnDef<TxRow>[] = [
   {
@@ -97,7 +93,7 @@ const columns: ColumnDef<TxRow>[] = [
       const status = row.original.outcome?.status || "incomplete";
       return (
         <Tooltip
-          label={row.original.outcome?.sellerMessage}
+          // label={row.original.outcome?.sellerMessage}
           bgColor="white"
           fontWeight="medium"
           fontSize="sm"
@@ -118,7 +114,9 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Risk",
     id: "risk",
     cell: ({ row }) => {
-      const { riskLevel, isFraud } = row.original;
+      const { assessment } = row.original;
+      const riskLevel = assessment?.riskLevel;
+      const isFraud = assessment?.isFraud;
 
       return (
         <Box display="flex" alignItems="center" gap={1}>
@@ -164,7 +162,7 @@ const columns: ColumnDef<TxRow>[] = [
     accessorKey: "row.paymentMethod.card",
     cell: ({ row }) => {
       const { card } = row.original.paymentMethod;
-      if (!card) null;
+      if (!card) return null;
       return <CardWithIcon brand={card.brand} last4={card.last4} />;
     },
   },
@@ -172,10 +170,10 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Date",
     accessorFn: (row) => format(new Date(row.createdAt), "MMM d, p"),
   },
-  {
-    header: "Wallet",
-    accessorFn: (row) => formatWalletAddress(row.walletAddress),
-  },
+  // {
+  //   header: "Wallet",
+  //   accessorFn: (row) => formatWalletAddress(row.walletAddress),
+  // },
 ];
 
 const searchOptions = [
@@ -268,8 +266,8 @@ function queryKvToOption([key, val]: [string, string]): Option | null {
   }
 }
 
-interface TransactionsTableProps {
-  transactionsData: TxRow[];
+interface PaymentsTableProps {
+  paymentsData: TxRow[];
   count?: number;
 
   pagination: PaginationState;
@@ -282,8 +280,8 @@ interface TransactionsTableProps {
   onMarkSelectedAsFraud?: (ids: string[]) => void;
 }
 
-export function TransactionsTable({
-  transactionsData,
+export function PaymentsTable({
+  paymentsData: transactionsData,
   count,
   pagination,
   onPaginationChange,
@@ -293,12 +291,13 @@ export function TransactionsTable({
 
   allowMarkAsFraud = false,
   onMarkSelectedAsFraud,
-}: TransactionsTableProps) {
+}: PaymentsTableProps) {
   const { pageIndex, pageSize } = pagination;
 
   const dataCount = count ?? transactionsData.length;
 
-  const { mutateAsync } = api.dashboard.transactions.updateMany.useMutation();
+  const { mutateAsync } =
+    api.dashboard.paymentAttempts.assessment.updateMany.useMutation();
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const createMarkSelectedAsFraud = useCallback(
@@ -435,7 +434,6 @@ function usePagination(
 }
 
 const encodeOptions = (options: Option[]) => {
-  console.log("PRE ENCODED OPTIONS", options);
   const encoded = options
     .map(optionToQueryKv)
     .filter((kv) => kv !== null)
@@ -451,9 +449,7 @@ const decodeOptions = (str: string) => {
   const decodedStr = decodeURIComponent(str);
   const options: Option[] = [];
   decodedStr.split("&").forEach((pair) => {
-    console.log(pair);
     const kv = pair.split("=").map(decodeURIComponent);
-    console.log("DECODED KV", kv);
     const option = queryKvToOption(kv);
     if (option) {
       options.push(option);
@@ -502,12 +498,12 @@ function useQueryOptions(
   return [selectedOptions, setOptions];
 }
 
-export function useTransactionTableProps({
-  linkedTransactionId,
+export function usePaymentsTableProps({
+  linkedPaymentAttemptId,
   executedRuleId,
   customerId,
 }: {
-  linkedTransactionId?: string;
+  linkedPaymentAttemptId?: string;
   executedRuleId?: string;
   customerId?: string;
 }) {
@@ -530,11 +526,11 @@ export function useTransactionTableProps({
   );
 
   const { isLoading, data, refetch } =
-    api.dashboard.transactions.getAll.useQuery(
+    api.dashboard.paymentAttempts.getAll.useQuery(
       {
         limit: pageSize,
         offset: pageIndex * pageSize,
-        linkedTransactionId,
+        linkedPaymentAttemptId,
         executedRuleId,
         customerId,
         search: options,

@@ -12,7 +12,6 @@ import {
   Tabs,
 } from "@chakra-ui/react";
 import { Sidebar } from "../Sidebar";
-import { ViewSessions } from "../views/ViewSessions";
 import { useRouter } from "next/router";
 import { handleError } from "../../lib/handleError";
 import { useFullPath } from "../hooks/useFullPath";

@@ -13,6 +13,10 @@ export const env = createEnv({
     MAXMIND_ACCOUNT_ID: z.string(),
     MAXMIND_LICENSE_KEY: z.string(),
     API_KEY: z.string(),
+    ADMIN_USERNAME: z.string(),
+    ADMIN_PASSWORD: z.string(),
+    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string(),
+    NEXTAUTH_SECRET: z.string(),
   },
 
   /**
@@ -35,5 +39,8 @@ export const env = createEnv({
     API_KEY: process.env.API_KEY,
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:
       process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
 });

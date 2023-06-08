@@ -1,6 +1,6 @@
 import { ChakraProvider, baseTheme, extendTheme } from "@chakra-ui/react";
 import { api } from "~/lib/api";
-import { SessionProvider, useSession } from "next-auth/react";
+import { SessionProvider, signIn, useSession } from "next-auth/react";
 import { type CustomPage } from "../types/Page";
 import { useEffect, type ReactNode } from "react";
 import { Inter } from "next/font/google";
@@ -21,18 +21,27 @@ const inter = Inter({
 const RenderComponent = (props: CustomAppProps) => {
   const { Component, pageProps } = props;
 
+  const isPublicPage = Component.isPublicPage || false;
   const { status } = useSession();
   const getLayout = Component.getLayout || ((page: ReactNode) => page);
 
   if (status === "loading") {
     return null;
   }
-  return <>{getLayout(<Component {...pageProps} />)}</>;
+
+  return (
+    <>
+      {status === "authenticated" || isPublicPage ? (
+        <>{getLayout(<Component {...pageProps} />)}</>
+      ) : (
+        <RedirectToSignIn />
+      )}
+    </>
+  );
 };
 
 const MyApp = (props: CustomAppProps) => {
-  const { Component, pageProps } = props;
-  const isPublicPage = Component.isPublicPage || false;
+  const { pageProps } = props;
 
   const theme = extendTheme({
     colors: {
@@ -56,26 +65,19 @@ const MyApp = (props: CustomAppProps) => {
     },
   });
 
-  const { data: sessionData } = useSession();
-
   return (
     <ChakraProvider theme={theme}>
       <SessionProvider session={pageProps.session}>
-        {sessionData || isPublicPage ? (
-          <RenderComponent {...props} />
-        ) : (
-          <RedirectToSignIn redirectUrl={"/sign-in"} />
-        )}
+        <RenderComponent {...props} />
       </SessionProvider>
     </ChakraProvider>
   );
 };
 
-function RedirectToSignIn({ redirectUrl }: { redirectUrl: string }) {
-  const router = useRouter();
+function RedirectToSignIn() {
   useEffect(() => {
-    router.replace(redirectUrl).catch(handleError);
-  }, [router, redirectUrl]);
+    signIn().catch(handleError);
+  }, []);
 
   return null;
 }

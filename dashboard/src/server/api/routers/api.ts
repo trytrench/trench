@@ -2,10 +2,11 @@ import { z } from "zod";
 import { getAggregations } from "~/server/utils/aggregations";
 import { createTRPCRouter, openApiProcedure } from "../trpc";
 import { prisma } from "~/server/db";
-import { type Prisma, RiskLevel } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import { runRules } from "~/server/utils/rules";
 import * as Sentry from "@sentry/nextjs";
 import { geocodeAddress } from "~/server/lib/mapbox";
+import { RiskLevel } from "../../../common/types";
 
 const addressSchema = z.object({
   city: z.string().optional(),
@@ -68,13 +69,8 @@ export const apiRouter = createTRPCRouter({
     .output(
       z.object({
         success: z.boolean(),
-        riskLevel: z.enum([
-          RiskLevel.Normal,
-          RiskLevel.Medium,
-          RiskLevel.High,
-          RiskLevel.VeryHigh,
-        ]),
-        transactionId: z.string(),
+        riskLevel: z.nativeEnum(RiskLevel),
+        paymentAttemptId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -103,7 +99,7 @@ export const apiRouter = createTRPCRouter({
         paymentMethod.card;
 
       // Create transaction
-      const createdTransaction = await ctx.prisma.transaction.create({
+      const createdTransaction = await ctx.prisma.paymentAttempt.create({
         data: {
           ...transaction,
           session: { connect: { externalId: session.externalId } },
@@ -138,11 +134,15 @@ export const apiRouter = createTRPCRouter({
           },
         },
         include: {
-          session: {
+          checkoutSession: {
             include: {
-              transactions: true,
-              device: true,
-              ipAddress: true,
+              paymentAttempts: true,
+              deviceSnapshot: {
+                include: {
+                  device: true,
+                  ipAddress: true,
+                },
+              },
             },
           },
           paymentMethod: {
@@ -155,16 +155,16 @@ export const apiRouter = createTRPCRouter({
       });
 
       // Connect session to customer
-      await ctx.prisma.customerSession.upsert({
-        where: {
-          sessionId_customerId: {
-            sessionId: createdTransaction.sessionId,
-            customerId,
-          },
-        },
-        update: {},
-        create: { sessionId: createdTransaction.sessionId, customerId },
-      });
+      // await ctx.prisma.custome.upsert({
+      //   where: {
+      //     sessionId_customerId: {
+      //       sessionId: createdTransaction.sessionId,
+      //       customerId,
+      //     },
+      //   },
+      //   update: {},
+      //   create: { sessionId: createdTransaction.sessionId, customerId },
+      // });
 
       // Generate aggregations
       const aggregations = await getAggregations(
@@ -217,7 +217,7 @@ export const apiRouter = createTRPCRouter({
                 result: result?.result,
                 error: result?.error,
                 riskLevel: result.riskLevel,
-                transactionId: createdTransaction.id,
+                paymentAttemptId: createdTransaction.id,
                 ruleId: rule.id,
               };
             })
@@ -236,14 +236,14 @@ export const apiRouter = createTRPCRouter({
       return {
         success: true,
         riskLevel: highestRiskLevel,
-        transactionId: createdTransaction.id,
+        paymentAttemptId: createdTransaction.id,
       };
     }),
   updateTransactionOutcome: openApiProcedure
     .meta({ openapi: { method: "POST", path: "/transaction/outcome" } })
     .input(
       z.object({
-        transactionId: z.string(),
+        paymentAttemptId: z.string(),
         status: z.enum(["succeeded", "failed"]),
         networkStatus: z
           .enum([
@@ -277,8 +277,8 @@ export const apiRouter = createTRPCRouter({
       Sentry.addBreadcrumb({
         data: input,
       });
-      await prisma.transactionOutcome.upsert({
-        where: { transactionId: input.transactionId },
+      await prisma.paymentOutcome.upsert({
+        where: { paymentAttemptId: input.paymentAttemptId },
         create: input,
         update: {},
       });

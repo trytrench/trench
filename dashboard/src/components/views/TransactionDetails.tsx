@@ -13,12 +13,9 @@ import { TransactionMap } from "../TransactionMap/TransactionMap";
 import { startCase } from "lodash";
 import { CardWithIcon } from "../CardWithIcon/CardWithIcon";
 import { IoCheckmarkCircle } from "react-icons/io5";
-import { ReactNode, useMemo, useState } from "react";
-import {
-  TransactionsTable,
-  useTransactionTableProps,
-} from "../TransactionsTable";
-import { IpAddress } from "@prisma/client";
+import { type ReactNode, useMemo, useState } from "react";
+import { PaymentsTable, usePaymentsTableProps } from "../TransactionsTable";
+import { type IpAddress } from "@prisma/client";
 import { handleError } from "~/lib/handleError";
 
 export const Section = ({
@@ -83,7 +80,7 @@ export const TransactionDetails = ({ transactionId }: Props) => {
     transactionsData: relatedData,
     count,
     refetchTransactions,
-  } = useTransactionTableProps({
+  } = usePaymentsTableProps({
     linkedTransactionId: transactionId,
   });
 
@@ -361,8 +358,8 @@ export const TransactionDetails = ({ transactionId }: Props) => {
 
       <Section title="Related transactions">
         {/* <ViewTransactions linkedTransactionId={transactionId} /> */}
-        <TransactionsTable
-          transactionsData={relatedData || []}
+        <PaymentsTable
+          paymentsData={relatedData || []}
           count={count}
           pagination={pagination}
           onPaginationChange={setPagination}

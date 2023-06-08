@@ -1,13 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  type Prisma,
+  PrismaClient,
+  PaymentOutcomeStatus,
+} from "@prisma/client";
 import { faker } from "@faker-js/faker";
-
-const prodPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.PROD_DATABASE_URL,
-    },
-  },
-});
+import { RiskLevel } from "../src/common/types";
 
 const devPrisma = new PrismaClient({
   datasources: {
@@ -17,169 +14,68 @@ const devPrisma = new PrismaClient({
   },
 });
 
-async function main() {
-  const txs = await prodPrisma.transaction.findMany({
-    take: 100,
-    include: {
-      customer: true,
-      session: {
-        include: {
-          device: true,
-          ipAddress: true,
-        },
-      },
-      outcome: true,
-      paymentMethod: {
-        include: {
-          card: true,
-        },
-      },
-      ruleExecutions: {
-        include: {
-          rule: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+function selectRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)] as T;
+}
 
-  await devPrisma.$transaction(
-    txs.map((tx) =>
-      devPrisma.transaction.upsert({
-        where: {
-          id: tx.id,
-        },
-        update: {},
+const NUM_ROWS = 200;
+// Generate customers
+const PAYMENT_ATTEMPTS: Prisma.PaymentAttemptCreateArgs["data"][] = Array.from(
+  { length: NUM_ROWS },
+  () => {
+    return {
+      amount: faker.number.int({ min: 1, max: 1000 }),
+      currency: faker.finance.currencyCode(),
+      description: faker.word.words(2),
+      checkoutSession: {
         create: {
-          ...tx,
-          description: faker.word.words(2),
-          sellerName: faker.company.name(),
-          transforms: tx.transforms ?? {},
-          sessionId: undefined,
-          session: {
-            connectOrCreate: {
-              where: {
-                id: tx.sessionId,
-              },
-              create: {
-                ...tx.session,
-                deviceId: undefined,
-                device: {
-                  connectOrCreate: {
-                    where: {
-                      id: tx.session.device.id,
-                    },
-                    create: {
-                      ...tx.session.device,
-                      components: tx.session.device.components ?? {},
-                    },
-                  },
-                },
-                ipAddressId: undefined,
-                ipAddress: {
-                  connectOrCreate: {
-                    where: {
-                      id: tx.session.ipAddress.id,
-                    },
-                    create: {
-                      ...tx.session.ipAddress,
-                    },
-                  },
-                },
-              },
+          customId: faker.string.uuid(),
+        },
+      },
+      paymentMethod: {
+        create: {
+          customId: faker.string.uuid(),
+          card: {
+            create: {
+              fingerprint: faker.string.nanoid(),
+              bin: faker.finance.creditCardNumber().slice(0, 6),
+              last4: faker.finance.creditCardNumber().slice(-4),
+              expiryMonth: faker.number.int({ min: 1, max: 12 }),
+              expiryYear: faker.number.int({ min: 2021, max: 2030 }),
+              brand: selectRandom(["visa", "mastercard", "amex", "discover"]),
+              country: faker.location.countryCode(),
             },
-          },
-          paymentMethodId: undefined,
-          paymentMethod: {
-            connectOrCreate: {
-              where: {
-                id: tx.paymentMethodId,
-              },
-              create: {
-                ...tx.paymentMethod,
-                name: faker.person.fullName(),
-                line1: faker.location.streetAddress(),
-                line2: faker.location.secondaryAddress(),
-                geocode: tx.paymentMethod.geocode ?? {},
-                cardId: undefined,
-                card: tx.paymentMethod.card
-                  ? {
-                      connectOrCreate: {
-                        where: {
-                          id: tx.paymentMethod.card.id,
-                        },
-                        create: {
-                          ...tx.paymentMethod.card,
-                          last4: faker.number
-                            .int({ min: 1000, max: 9999 })
-                            .toString(),
-                        },
-                      },
-                    }
-                  : undefined,
-              },
-            },
-          },
-          customerId: undefined,
-          customer: {
-            connectOrCreate: {
-              where: {
-                id: tx.customerId,
-              },
-              create: {
-                ...tx.customer,
-                email: faker.internet.email(),
-              },
-            },
-          },
-          outcome: tx.outcome
-            ? {
-                connectOrCreate: {
-                  where: {
-                    id: tx.outcome.id,
-                  },
-                  create: {
-                    ...tx.outcome,
-                    transactionId: undefined, // do not include transactionId in outcome create input
-                  },
-                },
-              }
-            : undefined,
-          ruleExecutions: {
-            connectOrCreate: tx.ruleExecutions.map((ruleExecution) => ({
-              where: {
-                id: ruleExecution.id,
-              },
-              create: {
-                ...ruleExecution,
-                ruleId: undefined,
-                transactionId: undefined,
-                rule: {
-                  connectOrCreate: {
-                    where: {
-                      id: ruleExecution.ruleId,
-                    },
-                    create: ruleExecution.rule,
-                  },
-                },
-              },
-            })),
           },
         },
-      })
+      },
+      assessment: {
+        create: {
+          riskLevel: RiskLevel.Normal,
+        },
+      },
+      outcome: {
+        create: {
+          status: PaymentOutcomeStatus.Succeeded,
+          reason: faker.lorem.sentence(),
+        },
+      },
+    };
+  }
+);
+
+async function main() {
+  await devPrisma.$transaction(
+    PAYMENT_ATTEMPTS.map((paymentAttempt) =>
+      devPrisma.paymentAttempt.create({ data: paymentAttempt })
     )
   );
 }
 main()
   .then(async () => {
     await devPrisma.$disconnect();
-    await prodPrisma.$disconnect();
   })
   .catch(async (e) => {
     console.error(e);
     await devPrisma.$disconnect();
-    await prodPrisma.$disconnect();
     process.exit(1);
   });

@@ -33,7 +33,7 @@ import {
   BiTransfer,
   BiTime,
 } from "react-icons/bi";
-import { type Node } from "../../server/api/routers/dashboard/transactions";
+import { type Node } from "../../server/api/routers/dashboard/paymentAttempts";
 import { type ForceGraphProps } from "react-force-graph-2d";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {

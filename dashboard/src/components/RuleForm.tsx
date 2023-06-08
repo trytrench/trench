@@ -23,7 +23,7 @@ import { RiskLevel } from "@prisma/client";
 import { createProject, ts } from "@ts-morph/bootstrap";
 import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
-import { TransactionsTable } from "./TransactionsTable";
+import { PaymentsTable } from "./TransactionsTable";
 import { type PaginationState } from "@tanstack/react-table";
 
 const ruleSchema = z.object({
@@ -313,8 +313,8 @@ export function RuleForm({
             </HStack>
 
             {paginatedBacktestData && (
-              <TransactionsTable
-                transactionsData={paginatedBacktestData}
+              <PaymentsTable
+                paymentsData={paginatedBacktestData}
                 count={backtestData?.length ?? 0}
                 pagination={pagination}
                 onPaginationChange={setPagination}

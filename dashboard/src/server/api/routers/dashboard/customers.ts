@@ -16,11 +16,7 @@ export const customersRouter = createTRPCRouter({
         include: {
           paymentMethods: {
             include: {
-              paymentMethod: {
-                include: {
-                  card: true,
-                },
-              },
+              card: true,
             },
           },
           devices: true,
@@ -29,15 +25,6 @@ export const customersRouter = createTRPCRouter({
               ipAddress: true,
             },
           },
-          //   customer: true,
-          //   outcome: true,
-          //   session: {
-          //     include: {
-          //       device: true,
-          //       transactions: true,
-          //       ipAddress: true,
-          //     },
-          //   },
         },
       });
     }),

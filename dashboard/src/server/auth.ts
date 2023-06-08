@@ -5,7 +5,7 @@ import {
   type NextAuthOptions,
   type DefaultSession,
 } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
 
@@ -37,20 +37,49 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
+    // session: ({ session, user }) => ({
+    //   ...session,
+    //   user: {
+    //     ...session.user,
+    //     id: user.id,
+    //   },
+    // }),
+  },
+  // adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      // The name to display on the sign in form (e.g. "Sign in with...")
+      name: "Credentials",
+      // `credentials` is used to generate a form on the sign in page.
+      // You can specify which fields should be submitted, by adding keys to the `credentials` object.
+      // e.g. domain, username, password, 2FA token, etc.
+      // You can pass any HTML attribute to the <input> tag through the object.
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "admin" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize(credentials, req) {
+        // Add logic here to look up the user from the credentials supplied
+
+        if (
+          credentials?.username !== env.ADMIN_USERNAME &&
+          credentials?.password !== env.ADMIN_PASSWORD
+        ) {
+          return null;
+        }
+        const user = { id: "admin", name: env.ADMIN_USERNAME };
+
+        if (user) {
+          // Any object returned will be saved in `user` property of the JWT
+          return user;
+        } else {
+          // If you return null then an error will be displayed advising the user to check their details.
+          return null;
+
+          // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
+        }
       },
     }),
-  },
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    // DiscordProvider({
-    //   clientId: env.DISCORD_CLIENT_ID,
-    //   clientSecret: env.DISCORD_CLIENT_SECRET,
-    // }),
     /**
      * ...add more providers here.
      *

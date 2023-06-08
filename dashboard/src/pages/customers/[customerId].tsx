@@ -1,15 +1,15 @@
 import { Box, Checkbox, HStack, Heading, Icon, Text } from "@chakra-ui/react";
-import { ColumnDef } from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/router";
 import { CardWithIcon } from "~/components/CardWithIcon/CardWithIcon";
 import { DataTable } from "~/components/DataTable";
 import {
-  TransactionsTable,
-  useTransactionTableProps,
+  PaymentsTable,
+  usePaymentsTableProps,
 } from "~/components/TransactionsTable";
 import { Layout } from "~/components/layouts/Layout";
 import { Section } from "~/components/views/TransactionDetails";
-import { RouterOutputs, api } from "~/lib/api";
+import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
 import { TransactionMap } from "~/components/TransactionMap/TransactionMap";
 import { IoCheckmarkCircle } from "react-icons/io5";
@@ -146,7 +146,7 @@ const Page: CustomPage = () => {
     transactionsData,
     count,
     refetchTransactions,
-  } = useTransactionTableProps({
+  } = usePaymentsTableProps({
     customerId,
   });
 
@@ -192,8 +192,8 @@ const Page: CustomPage = () => {
       </Section> */}
 
       <Section title="Transactions">
-        <TransactionsTable
-          transactionsData={transactionsData || []}
+        <PaymentsTable
+          paymentsData={transactionsData || []}
           count={count}
           pagination={pagination}
           onPaginationChange={setPagination}

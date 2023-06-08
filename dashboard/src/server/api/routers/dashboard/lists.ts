@@ -60,7 +60,7 @@ export const listsRouter = createTRPCRouter({
       const result = await ctx.prisma.listItem.create({
         data: {
           ...input,
-          createdBy: ctx.session.user,
+          createdBy: ctx.session.user.id,
         },
       });
       return result;

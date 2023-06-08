@@ -23,8 +23,8 @@ import RuleExecutionStackedBarChart from "~/components/charts/RuleExecutionStack
 import dynamic from "next/dynamic";
 import { EditIcon } from "lucide-react";
 import {
-  TransactionsTable,
-  useTransactionTableProps,
+  PaymentsTable,
+  usePaymentsTableProps,
 } from "~/components/TransactionsTable";
 
 // const DynamicBarChart = dynamic(
@@ -56,7 +56,7 @@ const EditRulePage: CustomPage = () => {
     setSelectedOptions,
     transactionsData,
     count,
-  } = useTransactionTableProps({
+  } = usePaymentsTableProps({
     executedRuleId: ruleId,
   });
 
@@ -140,8 +140,8 @@ const EditRulePage: CustomPage = () => {
       <Box mt={8}>
         <Heading mb={4}>Transactions</Heading>
         {transactionsData ? (
-          <TransactionsTable
-            transactionsData={transactionsData}
+          <PaymentsTable
+            paymentsData={transactionsData}
             count={count}
             pagination={pagination}
             onPaginationChange={setPagination}
