@@ -66,8 +66,8 @@ const PAYMENT_ATTEMPTS: {
       }, RiskLevel.Normal);
 
       return {
-        amount: faker.number.int({ min: 1, max: 1000 }),
-        currency: "usd",
+        amount: faker.number.int({ min: 1, max: 1000000 }),
+        currency: "USD",
         description: faker.word.words(2),
 
         checkoutSession: {
@@ -90,7 +90,7 @@ const PAYMENT_ATTEMPTS: {
                 isIncognito: faker.datatype.boolean(),
                 reqUserAgent: userAgent,
                 screenResolution: "1920x1080",
-                timezone: "America/Los_Angeles",
+                timezone: faker.location.timeZone(),
                 ipAddress: {
                   create: {
                     ipAddress: faker.internet.ip(),

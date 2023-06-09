@@ -81,6 +81,32 @@ export const apiRouter = createTRPCRouter({
       });
 
       const paymentAttempt = await ctx.prisma.paymentAttempt.create({
+        include: {
+          paymentMethod: {
+            include: {
+              card: true,
+              address: {
+                include: {
+                  location: true,
+                },
+              },
+            },
+          },
+          checkoutSession: {
+            include: {
+              deviceSnapshot: {
+                include: {
+                  ipAddress: {
+                    include: {
+                      location: true,
+                    },
+                  },
+                  device: true,
+                },
+              },
+            },
+          },
+        },
         data: {
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,

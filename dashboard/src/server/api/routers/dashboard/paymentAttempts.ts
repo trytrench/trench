@@ -181,7 +181,7 @@ export const paymentAttemptsRouter = createTRPCRouter({
                 deviceSnapshot: {
                   deviceId:
                     linkedPaymentAttempt.checkoutSession.deviceSnapshot
-                      ?.deviceId,
+                      ?.deviceId ?? undefined,
                 },
               },
             },
@@ -190,7 +190,7 @@ export const paymentAttemptsRouter = createTRPCRouter({
                 deviceSnapshot: {
                   fingerprint:
                     linkedPaymentAttempt.checkoutSession.deviceSnapshot
-                      ?.fingerprint,
+                      ?.fingerprint ?? undefined,
                 },
               },
             },
@@ -200,7 +200,7 @@ export const paymentAttemptsRouter = createTRPCRouter({
                   ipAddress: {
                     ipAddress:
                       linkedPaymentAttempt.checkoutSession.deviceSnapshot
-                        ?.ipAddress.ipAddress,
+                        ?.ipAddress?.ipAddress ?? undefined,
                   },
                 },
               },
