@@ -19,12 +19,12 @@ import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import { CustomTypeScriptEditor } from "./editor/CustomTypescriptEditor";
 import { PREFIX, SUFFIX, TYPES_SOURCE } from "./editor/constants";
-import { RiskLevel } from "@prisma/client";
 import { createProject, ts } from "@ts-morph/bootstrap";
 import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
 import { PaymentsTable } from "./PaymentsTable";
 import { type PaginationState } from "@tanstack/react-table";
+import { RiskLevel } from "../common/types";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
@@ -88,7 +88,7 @@ function WriteRule(props: WriteRuleProps) {
 
   const dynamicTsLib = useMemo(() => {
     if (!listsData) return null;
-    const listAliases = listsData.map((list) => list.alias);
+    const listAliases = listsData.rows.map((list) => list.alias);
     return `
     type Lists = {
       ${listAliases.map((alias) => `"${alias}": string[]`).join("\n")}
