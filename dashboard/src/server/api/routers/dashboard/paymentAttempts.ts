@@ -243,12 +243,12 @@ export const paymentAttemptsRouter = createTRPCRouter({
 
       const [count, data] = await ctx.prisma.$transaction([
         ctx.prisma.paymentAttempt.count({
-          where: filter,
+          // where: filter,
         }),
         ctx.prisma.paymentAttempt.findMany({
           skip: input.offset,
           take: input.limit,
-          where: filter,
+          // where: filter,
           orderBy: {
             createdAt: "desc",
           },

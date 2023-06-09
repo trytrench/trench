@@ -1,4 +1,5 @@
-CREATE OR REPLACE VIEW "CustomerPaymentMethodLink" AS
+CREATE
+OR REPLACE VIEW "CustomerPaymentMethodLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentMethod"."id" AS "paymentMethodId",
@@ -8,12 +9,14 @@ FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
     INNER JOIN "PaymentMethod" ON "PaymentAttempt"."paymentMethodId" = "PaymentMethod"."id"
+WHERE
+    "CheckoutSession"."customerId" IS NOT NULL
 GROUP BY
     "PaymentMethod"."id",
     "CheckoutSession"."customerId";
 
-
-CREATE OR REPLACE VIEW "CustomerPaymentAttemptLink" AS
+CREATE
+OR REPLACE VIEW "CustomerPaymentAttemptLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentAttempt"."id" AS "paymentAttemptId",
@@ -22,12 +25,14 @@ SELECT
 FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
+WHERE
+    "CheckoutSession"."customerId" IS NOT NULL
 GROUP BY
     "PaymentAttempt"."id",
     "CheckoutSession"."customerId";
 
-
-CREATE OR REPLACE VIEW "CustomerDeviceLink" AS
+CREATE
+OR REPLACE VIEW "CustomerDeviceLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "DeviceSnapshot"."deviceId" AS "deviceId",
@@ -36,11 +41,14 @@ SELECT
 FROM
     "CheckoutSession"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."id" = "DeviceSnapshot"."checkoutSessionId"
+WHERE
+    "CheckoutSession"."customerId" IS NOT NULL
 GROUP BY
     "CheckoutSession"."customerId",
     "DeviceSnapshot"."deviceId";
 
-CREATE OR REPLACE VIEW "CustomerCardLink" AS
+CREATE
+OR REPLACE VIEW "CustomerCardLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentMethod"."cardId" AS "cardId",
@@ -50,11 +58,14 @@ FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
     INNER JOIN "PaymentMethod" ON "PaymentAttempt"."paymentMethodId" = "PaymentMethod"."id"
+WHERE
+    "CheckoutSession"."customerId" IS NOT NULL
 GROUP BY
     "PaymentMethod"."cardId",
     "CheckoutSession"."customerId";
 
-CREATE OR REPLACE VIEW "CustomerIpAddressLink" AS
+CREATE
+OR REPLACE VIEW "CustomerIpAddressLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",
@@ -63,12 +74,14 @@ SELECT
 FROM
     "CheckoutSession"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."id" = "DeviceSnapshot"."checkoutSessionId"
+WHERE
+    "CheckoutSession"."customerId" IS NOT NULL
 GROUP BY
     "CheckoutSession"."customerId",
     "DeviceSnapshot"."ipAddressId";
 
-
-CREATE OR REPLACE VIEW "PaymentAttemptIpAddressLink" AS
+CREATE
+OR REPLACE VIEW "PaymentAttemptIpAddressLink" AS
 SELECT
     "PaymentAttempt"."id" AS "PaymentAttemptId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId"
@@ -77,8 +90,8 @@ FROM
     INNER JOIN "CheckoutSession" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."id" = "DeviceSnapshot"."checkoutSessionId";
 
-    
-CREATE OR REPLACE VIEW "DeviceIpAddressLink" AS
+CREATE
+OR REPLACE VIEW "DeviceIpAddressLink" AS
 SELECT
     "Device"."id" AS "deviceId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",
@@ -91,7 +104,8 @@ GROUP BY
     "Device"."id",
     "DeviceSnapshot"."ipAddressId";
 
-CREATE OR REPLACE VIEW "CardIpAddressLink" AS
+CREATE
+OR REPLACE VIEW "CardIpAddressLink" AS
 SELECT
     "Card"."id" AS "cardId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",

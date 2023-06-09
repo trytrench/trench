@@ -30,16 +30,15 @@ model PaymentAttempt {
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId String
 
-  billingAddress   BillingAddress? @relation(fields: [billingAddressId], references: [id])
-  billingAddressId String?
-
-  shippingAddress   ShippingAddress? @relation(fields: [shippingAddressId], references: [id])
+  shippingName      String?
+  shippingPhone     String?
+  shippingAddress   Address? @relation(fields: [shippingAddressId], references: [id])
   shippingAddressId String?
 
   ruleExecutions RuleExecution[]
 
-  ipAddresseLinks PaymentAttemptIpAddressLink[]
-  customerLink    CustomerPaymentAttemptLink?
+  ipAddressLinks PaymentAttemptIpAddressLink[]
+  customerLink   CustomerPaymentAttemptLink?
 }
 
 model PaymentAttemptAssessment {
@@ -85,10 +84,10 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name        String?
-  email       String?
-  phoneNumber String?
-  metadata    Json    @default("{}")
+  name     String?
+  email    String?
+  phone    String?
+  metadata Json    @default("{}")
 
   checkoutSessions CheckoutSession[]
 
@@ -271,32 +270,7 @@ model Address {
   location   Location? @relation(fields: [locationId], references: [id])
   locationId String?
 
-  billingAddresses  BillingAddress[]
-  shippingAddresses ShippingAddress[]
-  paymentMethods    PaymentMethod[]
-}
-
-model ShippingAddress {
-  id          String  @id @default(cuid())
-  customId    String? @unique
-  name        String?
-  phoneNumber String?
-
-  address   Address @relation(fields: [addressId], references: [id])
-  addressId String
-
-  paymentAttempts PaymentAttempt[]
-}
-
-model BillingAddress {
-  id          String  @id @default(cuid())
-  customId    String? @unique
-  name        String?
-  phoneNumber String?
-
-  address   Address @relation(fields: [addressId], references: [id])
-  addressId String
-
+  paymentMethods  PaymentMethod[]
   paymentAttempts PaymentAttempt[]
 }
 
