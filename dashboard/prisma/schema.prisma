@@ -19,13 +19,10 @@ model PaymentAttempt {
   amount      Int
   currency    String
   description String?
-  metadata    Json @default("{}")
+  metadata    Json    @default("{}")
 
   assessment PaymentAttemptAssessment?
   outcome    PaymentOutcome?
-
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
 
   checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
   checkoutSessionId String
@@ -41,7 +38,8 @@ model PaymentAttempt {
 
   ruleExecutions RuleExecution[]
 
-  ipAddresses    PaymentAttemptToIpAddress[]
+  ipAddresseLinks PaymentAttemptToIpAddress[]
+  customerLink    CustomerToPaymentAttempt?
 }
 
 model PaymentAttemptAssessment {
@@ -49,9 +47,9 @@ model PaymentAttemptAssessment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transformsOutput Json @default("{}")
-  isFraud   Boolean   @default(false)
-  riskLevel String
+  transformsOutput Json    @default("{}")
+  isFraud          Boolean @default(false)
+  riskLevel        String
 
   paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
   paymentAttemptId String         @unique
@@ -82,24 +80,23 @@ model PaymentOutcome {
 }
 
 model Customer {
-  id          String   @id @default(cuid())
-  customId    String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   name        String?
   email       String?
   phoneNumber String?
+  metadata    Json    @default("{}")
 
-  paymentAttempts   PaymentAttempt[]
-  paymentMethods    PaymentMethod[]
-  checkoutSessions  CheckoutSession[]
-  shippingAddresses ShippingAddress[]
-  billingAddresses  BillingAddress[]
+  checkoutSessions CheckoutSession[]
 
-  devices     CustomerToDevice[]
-  cards       CustomerToCard[]
-  ipAddresses CustomerToIpAddress[]
+  deviceLinks         CustomerToDevice[]
+  cardLinks           CustomerToCard[]
+  ipAddressLinks      CustomerToIpAddress[]
+  paymentMethodLinks  CustomerToPaymentMethod[]
+  paymentAttemptLinks CustomerToPaymentAttempt[]
 }
 
 model CheckoutSession {
@@ -124,7 +121,7 @@ model Event {
   updatedAt DateTime @updatedAt
 
   type    String
-  payload Json @default("{}")
+  payload Json   @default("{}")
 
   checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
   checkoutSessionId String
@@ -172,9 +169,10 @@ model Device {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  customers       CustomerToDevice[]
-  ipAddresses     DeviceToIpAddress[]
   deviceSnapshots DeviceSnapshot[]
+
+  customerLinks  CustomerToDevice[]
+  ipAddressLinks DeviceToIpAddress[]
 }
 
 model PaymentMethod {
@@ -195,11 +193,10 @@ model PaymentMethod {
   card   Card?   @relation(fields: [cardId], references: [id])
   cardId String?
 
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
   cardWallet      String?
   paymentAttempts PaymentAttempt[]
+
+  customerLink CustomerToPaymentMethod?
 }
 
 model Card {
@@ -218,9 +215,10 @@ model Card {
 
   threeDSecureSupported Boolean?
 
-  customers      CustomerToCard[]
   paymentMethods PaymentMethod[]
-  ipAddresses    CardToIpAddress[]
+
+  customerLinks  CustomerToCard[]
+  ipAddressLinks CardToIpAddress[]
 }
 
 // Locations
@@ -255,10 +253,11 @@ model IpAddress {
   metadata Json @default("{}")
 
   deviceSnapshots DeviceSnapshot[]
-  devices         DeviceToIpAddress[]
-  customers       CustomerToIpAddress[]
-  cards           CardToIpAddress[]
-  paymentAttempts PaymentAttemptToIpAddress[]
+
+  deviceLinks         DeviceToIpAddress[]
+  customerLinks       CustomerToIpAddress[]
+  cardLinks           CardToIpAddress[]
+  paymentAttemptLinks PaymentAttemptToIpAddress[]
 }
 
 model Address {
@@ -287,9 +286,6 @@ model ShippingAddress {
   address   Address @relation(fields: [addressId], references: [id])
   addressId String
 
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
   paymentAttempts PaymentAttempt[]
 }
 
@@ -302,14 +298,10 @@ model BillingAddress {
   address   Address @relation(fields: [addressId], references: [id])
   addressId String
 
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
   paymentAttempts PaymentAttempt[]
 }
 
 // Rules
-
 
 model Rule {
   id          String          @id @default(cuid())
@@ -333,6 +325,8 @@ model RuleExecution {
   result           Boolean?
   error            String?
   riskLevel        String
+
+  @@unique([paymentAttemptId, ruleId])
 }
 
 // Lists
@@ -362,52 +356,83 @@ model ListItem {
 
 // Views
 
+view CustomerToPaymentMethod {
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerId      String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodId String        @unique
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
+
+  @@id([paymentMethodId, customerId])
+}
+
+view CustomerToPaymentAttempt {
+  customer         Customer       @relation(fields: [customerId], references: [id])
+  customerId       String
+  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
+  paymentAttemptId String         @unique
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
+
+  @@id([paymentAttemptId, customerId])
+}
+
 view CustomerToDevice {
-  createdAt  DateTime @default(now())
-  customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
-  deviceId   String
+  customerId String
   device     Device   @relation(fields: [deviceId], references: [id])
+  deviceId   String
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
 
   @@id([deviceId, customerId])
 }
 
 view CustomerToCard {
-  createdAt  DateTime @default(now())
-  customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
-  cardId     String
+  customerId String
   card       Card     @relation(fields: [cardId], references: [id])
+  cardId     String
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
 
   @@id([cardId, customerId])
 }
 
 view CustomerToIpAddress {
-  createdAt   DateTime  @default(now())
-  customerId  String
   customer    Customer  @relation(fields: [customerId], references: [id])
-  ipAddressId String
+  customerId  String
   ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+  ipAddressId String
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
 
   @@id([customerId, ipAddressId])
 }
 
 view PaymentAttemptToIpAddress {
-  createdAt        DateTime       @default(now())
-  paymentAttemptId String
   paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
-  ipAddressId      String
+  paymentAttemptId String
   ipAddress        IpAddress      @relation(fields: [ipAddressId], references: [id])
+  ipAddressId      String
 
   @@id([paymentAttemptId, ipAddressId])
 }
 
 view DeviceToIpAddress {
-  createdAt   DateTime  @default(now())
   deviceId    String
   device      Device    @relation(fields: [deviceId], references: [id])
   ipAddressId String
   ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
 
   @@id([deviceId, ipAddressId])
 }
@@ -418,6 +443,9 @@ view CardToIpAddress {
   card        Card      @relation(fields: [cardId], references: [id])
   ipAddressId String
   ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
+
+  firstSeenLink DateTime
+  lastSeenLink  DateTime
 
   @@id([cardId, ipAddressId])
 }

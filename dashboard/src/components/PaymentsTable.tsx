@@ -26,11 +26,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import { api, type RouterOutputs } from "./../lib/api";
-import { CardWithIcon } from "./CardWithIcon/CardWithIcon";
+import { api, type RouterOutputs } from "../lib/api";
+import { CardWithIcon } from "./card-with-icon/CardWithIcon";
 import { DataTable } from "./DataTable";
 import { SearchInput } from "./SearchInput";
-import { TransactionStatusTag } from "./TransactionStatusTag";
+import { PaymentStatusTag } from "./TransactionStatusTag";
 import {
   VisaIcon,
   MastercardIcon,
@@ -38,13 +38,14 @@ import {
   DiscoverIcon,
   JCBIcon,
   DinersIcon,
-} from "./CardWithIcon/icons";
+} from "./card-with-icon/icons";
 import { formatWalletAddress } from "~/utils/formatWalletAddress";
 import { handleError } from "~/lib/handleError";
 import { MoreHorizontal } from "lucide-react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
 
 import { useRouter } from "next/router";
+import { PaymentOutcomeStatus } from "@prisma/client";
 
 type Option = {
   label: string;
@@ -105,7 +106,7 @@ const columns: ColumnDef<TxRow>[] = [
           hasArrow
           p={4}
         >
-          <TransactionStatusTag status={status} />
+          <PaymentStatusTag status={status} />
         </Tooltip>
       );
     },
@@ -156,6 +157,9 @@ const columns: ColumnDef<TxRow>[] = [
   {
     header: "Customer Name",
     accessorKey: "paymentMethod.name",
+    cell({ row }) {
+      return row.original.customer?.name || row.original.paymentMethod.name;
+    },
   },
   {
     header: "Card",
@@ -206,16 +210,16 @@ const searchOptions = [
     value: "status",
   },
   {
-    label: `Incomplete`,
-    value: `status:null`,
+    label: `Pending`,
+    value: `status:${PaymentOutcomeStatus.Pending}`,
   },
   {
     label: `Succeeded`,
-    value: `status:succeeded`,
+    value: `status:${PaymentOutcomeStatus.Succeeded}`,
   },
   {
     label: `Failed`,
-    value: `status:failed`,
+    value: `status:${PaymentOutcomeStatus.Failed}`,
   },
   {
     label: "isFraud:",
@@ -292,6 +296,8 @@ export function PaymentsTable({
 
   allowMarkAsFraud = false,
   onMarkSelectedAsFraud,
+
+  isLoading = false,
 }: PaymentsTableProps) {
   const { pageIndex, pageSize } = pagination;
 
@@ -305,7 +311,7 @@ export function PaymentsTable({
     (markFraudAs: boolean) => () => {
       const ids = Object.keys(rowSelection);
       if (ids.length === 0) return;
-      mutateAsync({ ids, changes: { isFraud: markFraudAs } })
+      mutateAsync({ paymentAttemptIds: ids, changes: { isFraud: markFraudAs } })
         .then(() => {
           setRowSelection({});
           onMarkSelectedAsFraud?.(ids);
@@ -319,6 +325,7 @@ export function PaymentsTable({
 
   return (
     <DataTable
+      rowHeight={9}
       getRowId={(row) => row.id}
       columns={columns}
       data={transactionsData}
@@ -326,7 +333,7 @@ export function PaymentsTable({
       pageIndex={pageIndex}
       pageSize={pageSize}
       pageCount={Math.ceil(dataCount / pageSize)}
-      getRowHref={(row) => `/transactions/${row.original.id}`}
+      getRowHref={(row) => `/payments/${row.original.id}`}
       header={
         <Box
           w="full"
@@ -527,7 +534,7 @@ export function usePaymentsTableProps({
     [selectedOptions]
   );
 
-  const { isLoading, data, refetch } =
+  const { isLoading, data, refetch, isFetching, isPreviousData } =
     api.dashboard.paymentAttempts.getAll.useQuery(
       {
         limit: pageSize,
@@ -537,7 +544,7 @@ export function usePaymentsTableProps({
         customerId,
         search: options,
       },
-      { keepPreviousData: true }
+      { keepPreviousData: true, refetchOnWindowFocus: false, staleTime: 5000 }
     );
 
   return useMemo(
@@ -550,6 +557,8 @@ export function usePaymentsTableProps({
       refetchTransactions: refetch,
       count: data?.count,
       isLoading,
+      isFetching,
+      isPreviousData,
     }),
     [
       pagination,
@@ -560,6 +569,8 @@ export function usePaymentsTableProps({
       data?.count,
       refetch,
       isLoading,
+      isFetching,
+      isPreviousData,
     ]
   );
 }

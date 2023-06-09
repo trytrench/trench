@@ -6,7 +6,7 @@ import { Box, Heading, Skeleton } from "@chakra-ui/react";
 import {
   PaymentsTable,
   usePaymentsTableProps,
-} from "~/components/TransactionsTable";
+} from "~/components/PaymentsTable";
 import { handleError } from "~/lib/handleError";
 
 const ViewPage: CustomPage = () => {
@@ -18,6 +18,9 @@ const ViewPage: CustomPage = () => {
     transactionsData,
     count,
     refetchTransactions,
+    isLoading,
+    isFetching,
+    isPreviousData,
   } = usePaymentsTableProps({});
 
   return (
@@ -35,7 +38,8 @@ const ViewPage: CustomPage = () => {
           onMarkSelectedAsFraud={() => {
             refetchTransactions().catch(handleError);
           }}
-          isLoading={isLoading}
+          // Only load when fetching new data
+          isLoading={isFetching}
         />
       ) : (
         <Skeleton />

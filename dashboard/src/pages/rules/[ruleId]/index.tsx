@@ -25,7 +25,7 @@ import { EditIcon } from "lucide-react";
 import {
   PaymentsTable,
   usePaymentsTableProps,
-} from "~/components/TransactionsTable";
+} from "~/components/PaymentsTable";
 
 // const DynamicBarChart = dynamic(
 //   () => import("~/components/charts/RuleExecutionStackedBarChart"),

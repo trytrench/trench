@@ -23,7 +23,7 @@ import { RiskLevel } from "@prisma/client";
 import { createProject, ts } from "@ts-morph/bootstrap";
 import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
-import { PaymentsTable } from "./TransactionsTable";
+import { PaymentsTable } from "./PaymentsTable";
 import { type PaginationState } from "@tanstack/react-table";
 
 const ruleSchema = z.object({

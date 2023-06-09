@@ -7,14 +7,12 @@ import {
   Flex,
   HStack,
   Heading,
-  Highlight,
   Icon,
   IconButton,
   Link,
   Menu,
   MenuButton,
   MenuItem,
-  MenuItemOption,
   MenuList,
   Modal,
   ModalBody,
@@ -23,25 +21,20 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Stack,
   Text,
   Tooltip,
   VStack,
   useDisclosure,
-  usePrevious,
   useToast,
 } from "@chakra-ui/react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/router";
-import { CardWithIcon } from "~/components/CardWithIcon/CardWithIcon";
+import { CardWithIcon } from "~/components/card-with-icon/CardWithIcon";
 import { DataTable } from "~/components/DataTable";
 import { RiskLevelTag } from "~/components/RiskLevelTag";
-import { TransactionStatusTag } from "~/components/TransactionStatusTag";
+import { PaymentStatusTag } from "~/components/TransactionStatusTag";
 import { Layout } from "~/components/layouts/Layout";
-import {
-  Section,
-  TransactionDetails,
-} from "~/components/views/TransactionDetails";
+import { Section, PaymentDetails } from "~/components/views/TransactionDetails";
 import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
 import {
@@ -49,18 +42,10 @@ import {
   Globe,
   Mail,
   MoreHorizontal,
-  Network,
   Phone,
-  SlidersHorizontal,
   Wallet,
 } from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import {
   DEFAULT_BLOCKLISTS,
   DefaultBlockListAlias,
@@ -78,49 +63,52 @@ const MAP_BLOCKLIST_TO_ICON: Record<DefaultBlockListAlias, ReactNode> = {
   [DefaultBlockListAlias.WalletAddressBlocklist]: <Wallet />,
 };
 
-type Transaction = RouterOutputs["dashboard"]["transactions"]["get"];
+type PaymentAttempt = RouterOutputs["dashboard"]["paymentAttempts"]["get"];
 type BlockListItem = {
   tempId: string;
   alias: DefaultBlockListAlias;
   value: string;
 };
 
-function getBlockListItems(transaction: Transaction): BlockListItem[] {
+function getBlockListItems(paymentAttempt: PaymentAttempt): BlockListItem[] {
   const items: BlockListItem[] = [];
-  if (transaction.customer?.email) {
-    items.push({
-      tempId: nanoid(),
-      alias: DefaultBlockListAlias.EmailBlocklist,
-      value: transaction?.customer.email,
-    });
+  function addItem({
+    value,
+    alias,
+  }: {
+    alias: DefaultBlockListAlias;
+    value: string | undefined | null;
+  }) {
+    if (value) {
+      items.push({
+        tempId: nanoid(),
+        alias,
+        value,
+      });
+    }
   }
-  items.push({
-    tempId: nanoid(),
-    alias: DefaultBlockListAlias.DeviceBlocklist,
-    value: transaction.session.device.id,
+
+  addItem({
+    alias: DefaultBlockListAlias.EmailBlocklist,
+    value: paymentAttempt?.customerLink?.customer.email,
   });
-  items.push({
-    tempId: nanoid(),
+  addItem({
     alias: DefaultBlockListAlias.IpBlocklist,
-    value: transaction.session.ipAddress.ipAddress,
+    value: paymentAttempt?.checkoutSession.deviceSnapshot?.ipAddress.ipAddress,
   });
-  if (transaction.paymentMethod.card?.fingerprint) {
-    items.push({
-      tempId: nanoid(),
-      alias: DefaultBlockListAlias.CardFingerprintBlocklist,
-      value: transaction.paymentMethod.card.fingerprint,
-    });
-  }
-  items.push({
-    tempId: nanoid(),
-    alias: DefaultBlockListAlias.WalletAddressBlocklist,
-    value: transaction.walletAddress,
+  addItem({
+    alias: DefaultBlockListAlias.DeviceBlocklist,
+    value: paymentAttempt?.checkoutSession.deviceSnapshot?.deviceId,
+  });
+  addItem({
+    alias: DefaultBlockListAlias.CardFingerprintBlocklist,
+    value: paymentAttempt?.paymentMethod.card?.fingerprint,
   });
 
   return items;
 }
 
-function BlockTransaction(props: { transaction: Transaction }) {
+function BlockTransaction(props: { transaction: PaymentAttempt }) {
   const { transaction } = props;
 
   const [selectedItems, setSelectedItems] = useState<BlockListItem[]>([]);
@@ -137,10 +125,10 @@ function BlockTransaction(props: { transaction: Transaction }) {
     api.dashboard.lists.addDefaultBlocklistItems.useMutation();
   const toast = useToast();
   const handleAddSelected = useCallback(() => {
-    const confirmed = window.confirm(
-      `Are you sure you want to add ${selectedItems.length} items to the blocklist? This will prevent future transactions from being created with these entities.`
-    );
-    if (!confirmed) return;
+    // const confirmed = window.confirm(
+    //   `Are you sure you want to add ${selectedItems.length} items to the blocklist? This will prevent future transactions from being created with these entities.`
+    // );
+    // if (!confirmed) return;
 
     mutateAsync({
       items: selectedItems.map((item) => ({
@@ -158,6 +146,7 @@ function BlockTransaction(props: { transaction: Transaction }) {
       })
       .catch((err) => {
         toast({
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
           title: `Error: ${err.message ?? "Unknown"}`,
           status: "error",
         });
@@ -257,7 +246,7 @@ function BlockTransaction(props: { transaction: Transaction }) {
 }
 
 type Row = NonNullable<
-  RouterOutputs["dashboard"]["transactions"]["get"]
+  RouterOutputs["dashboard"]["paymentAttempts"]["get"]
 >["ruleExecutions"][number];
 
 const columns: ColumnDef<Row>[] = [
@@ -277,13 +266,14 @@ const columns: ColumnDef<Row>[] = [
 
 const Page: CustomPage = () => {
   const router = useRouter();
-  const transactionId = router.query.transactionId as string;
+  const paymentId = router.query.paymentId as string;
 
-  const { isLoading, data } = api.dashboard.transactions.get.useQuery({
-    id: transactionId,
-  });
+  const { isLoading, data: paymentAttemptData } =
+    api.dashboard.paymentAttempts.get.useQuery({
+      id: paymentId,
+    });
 
-  if (!data) return null;
+  if (!paymentAttemptData) return null;
 
   //   const { data: transaction } = api.dashboard.transactions.get.useQuery({
   //     id: transactionId,
@@ -293,16 +283,27 @@ const Page: CustomPage = () => {
     {
       label: "Name",
       value: (
-        <Link as={NextLink} href={`/customers/${data.customer.id}`}>
-          {data.paymentMethod.name}
+        <Link
+          as={NextLink}
+          href={`/customers/${
+            paymentAttemptData.customerLink?.customer?.id ?? ""
+          }`}
+        >
+          {paymentAttemptData.customerLink?.customer?.name ||
+            paymentAttemptData.paymentMethod.name}
         </Link>
       ),
     },
     {
       label: "Email",
       value: (
-        <Link as={NextLink} href={`/customers/${data.customer.id}`}>
-          {data.customer.email}
+        <Link
+          as={NextLink}
+          href={`/customers/${
+            paymentAttemptData.customerLink?.customer?.id ?? ""
+          }`}
+        >
+          {paymentAttemptData.customerLink?.customer?.email}
         </Link>
       ),
     },
@@ -310,9 +311,9 @@ const Page: CustomPage = () => {
       label: "Payment",
       value: (
         <CardWithIcon
-          last4={data.paymentMethod.card.last4}
-          brand={data.paymentMethod.card.brand}
-          wallet={data.paymentMethod.card.wallet}
+          last4={paymentAttemptData.paymentMethod.card?.last4}
+          brand={paymentAttemptData.paymentMethod.card?.brand}
+          wallet={paymentAttemptData.paymentMethod.cardWallet}
         />
       ),
     },
@@ -327,16 +328,16 @@ const Page: CustomPage = () => {
       <Flex justify="space-between" align="center">
         <HStack align="baseline" spacing={4}>
           <Heading mb={2}>
-            {(data.amount / 100).toLocaleString("en-US", {
+            {(paymentAttemptData.amount / 100).toLocaleString("en-US", {
               style: "currency",
-              currency: data.currency,
+              currency: paymentAttemptData.currency,
             })}{" "}
-            {data.currency}
+            {paymentAttemptData.currency}
           </Heading>
 
           <Box>
             <Tooltip
-              label={data.outcome?.sellerMessage}
+              // label={paymentAttemptData.outcome?.sellerMessage}
               bgColor="white"
               fontWeight="medium"
               fontSize="sm"
@@ -348,8 +349,8 @@ const Page: CustomPage = () => {
               hasArrow
               p={4}
             >
-              <TransactionStatusTag
-                status={data.outcome?.status || "incomplete"}
+              <PaymentStatusTag
+                status={paymentAttemptData.outcome?.status || "incomplete"}
               />
             </Tooltip>
           </Box>
@@ -363,19 +364,22 @@ const Page: CustomPage = () => {
             icon={<Icon as={MoreHorizontal} />}
           ></MenuButton>
           <MenuList minWidth="150px">
-            <BlockTransaction transaction={data} />
+            <BlockTransaction transaction={paymentAttemptData} />
           </MenuList>
         </Menu>
       </Flex>
       <HStack spacing={6} mb={2}>
         <Text color="gray.600" fontWeight="medium">
-          {format(new Date(data.createdAt), "MMM dd, yyyy, h:mm a")}
+          {format(
+            new Date(paymentAttemptData.createdAt),
+            "MMM dd, yyyy, h:mm a"
+          )}
         </Text>
         <Text color="gray.500">
           <Text userSelect="none" display="inline">
             ID:{" "}
           </Text>
-          {data.id}
+          {paymentAttemptData.id}
         </Text>
       </HStack>
       <HStack mb={2}></HStack>
@@ -397,11 +401,13 @@ const Page: CustomPage = () => {
         title={
           <Box display="flex" gap={2} alignItems="center">
             Risk Level
-            <RiskLevelTag riskLevel={data.riskLevel} />
+            <RiskLevelTag
+              riskLevel={paymentAttemptData.assessment?.riskLevel}
+            />
           </Box>
         }
       >
-        {!data?.ruleExecutions.length ? (
+        {!paymentAttemptData?.ruleExecutions.length ? (
           <Flex justify="center" align="center">
             <Text fontSize="sm" color="subtle">
               No executed rules
@@ -410,13 +416,13 @@ const Page: CustomPage = () => {
         ) : (
           <DataTable
             columns={columns}
-            data={data.ruleExecutions}
+            data={paymentAttemptData.ruleExecutions}
             showPagination={false}
             isLoading={isLoading}
           />
         )}
       </Section>
-      <TransactionDetails transactionId={transactionId} />
+      <PaymentDetails paymentId={paymentId} />
       {/* <ViewTransaction transactionId={transactionId} /> */}
     </Box>
   );

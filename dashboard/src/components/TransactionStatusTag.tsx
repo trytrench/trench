@@ -1,19 +1,20 @@
-import { Tag, TagLabel, TagLeftIcon, TagProps } from "@chakra-ui/react";
+import { Tag, TagLabel, TagLeftIcon, type TagProps } from "@chakra-ui/react";
+import { PaymentOutcomeStatus } from "@prisma/client";
 import { Check, X } from "lucide-react";
 import React from "react";
 
-export const TRANSACTION_STATUS_DATA = {
-  failed: {
+export const PAYMENT_STATUS_METADATA = {
+  [PaymentOutcomeStatus.Failed]: {
     color: "red",
     label: "failed",
     icon: X,
   },
-  incomplete: {
+  [PaymentOutcomeStatus.Pending]: {
     color: "red",
     label: "incomplete",
     icon: X,
   },
-  succeeded: {
+  [PaymentOutcomeStatus.Succeeded]: {
     color: "green",
     label: "succeeded",
     icon: Check,
@@ -25,10 +26,10 @@ interface Props extends TagProps {
 }
 
 // eslint-disable-next-line react/display-name
-export const TransactionStatusTag = React.forwardRef(
+export const PaymentStatusTag = React.forwardRef(
   ({ status, ...props }: Props, ref) => {
     const { icon, color, label } =
-      TRANSACTION_STATUS_DATA[status as keyof typeof TRANSACTION_STATUS_DATA] ||
+      PAYMENT_STATUS_METADATA[status as keyof typeof PAYMENT_STATUS_METADATA] ||
       {};
 
     return (

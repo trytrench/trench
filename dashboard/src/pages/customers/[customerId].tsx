@@ -1,17 +1,17 @@
 import { Box, Checkbox, HStack, Heading, Icon, Text } from "@chakra-ui/react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/router";
-import { CardWithIcon } from "~/components/CardWithIcon/CardWithIcon";
+import { CardWithIcon } from "~/components/card-with-icon/CardWithIcon";
 import { DataTable } from "~/components/DataTable";
 import {
   PaymentsTable,
   usePaymentsTableProps,
-} from "~/components/TransactionsTable";
+} from "~/components/PaymentsTable";
 import { Layout } from "~/components/layouts/Layout";
 import { Section } from "~/components/views/TransactionDetails";
 import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
-import { TransactionMap } from "~/components/TransactionMap/TransactionMap";
+import { PaymentMap } from "~/components/payment-map/PaymentMap";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import { startCase } from "lodash";
 import { handleError } from "~/lib/handleError";
@@ -19,7 +19,7 @@ import { handleError } from "~/lib/handleError";
 const columns: ColumnDef<
   NonNullable<
     RouterOutputs["dashboard"]["customers"]["get"]
-  >["paymentMethods"][number]
+  >["paymentMethodLinks"][number]["paymentMethod"]
 >[] = [
   {
     id: "select",
@@ -50,9 +50,9 @@ const columns: ColumnDef<
     cell: ({ row }) => {
       return (
         <CardWithIcon
-          last4={row.original.paymentMethod.card.last4}
-          brand={row.original.paymentMethod.card.brand}
-          wallet={row.original.paymentMethod.card.wallet}
+          last4={row.original.card?.last4}
+          brand={row.original.card?.brand}
+          wallet={row.original.cardWallet}
         />
       );
     },
@@ -62,15 +62,15 @@ const columns: ColumnDef<
     accessorKey: "paymentMethod.name",
   },
   {
-    label: "Address",
+    header: "Address",
     id: "address",
     accessorFn: (row) =>
       [
-        row.paymentMethod.line1,
-        row.paymentMethod.line2,
-        row.paymentMethod.city,
-        row.paymentMethod.state,
-        row.paymentMethod.country,
+        row.address?.line1,
+        row.address?.line2,
+        row.address?.city,
+        row.address?.state,
+        row.address?.country,
       ]
         .filter(Boolean)
         .join(", "),
@@ -91,7 +91,7 @@ const columns: ColumnDef<
     header: "CVC check",
     accessorKey: "paymentMethod.card.cvcCheck",
     cell: ({ row }) =>
-      row.original.paymentMethod.cvcCheck === "pass" && (
+      row.original.cvcCheck === "pass" && (
         <HStack spacing={1}>
           <Icon color="green" as={IoCheckmarkCircle} />
           <Text>Passed</Text>
@@ -101,15 +101,15 @@ const columns: ColumnDef<
   {
     header: "ZIP check",
     cell: ({ row }) =>
-      row.original.paymentMethod.postalCodeCheck && (
+      row.original.postalCodeCheck && (
         <HStack spacing={1}>
-          {row.original.paymentMethod.postalCodeCheck === "pass" ? (
+          {row.original.postalCodeCheck === "pass" ? (
             <>
               <Icon color="green" as={IoCheckmarkCircle} />
               <Text>Passed</Text>
             </>
           ) : (
-            <Text>{startCase(row.original.paymentMethod.postalCodeCheck)}</Text>
+            <Text>{startCase(row.original.postalCodeCheck)}</Text>
           )}
         </HStack>
       ),
@@ -117,17 +117,15 @@ const columns: ColumnDef<
   {
     header: "Address check",
     cell: ({ row }) =>
-      row.original.paymentMethod.addressLine1Check && (
+      row.original.addressLine1Check && (
         <HStack spacing={1}>
-          {row.original.paymentMethod.addressLine1Check === "pass" ? (
+          {row.original.addressLine1Check === "pass" ? (
             <>
               <Icon color="green" as={IoCheckmarkCircle} />
               <Text>Passed</Text>
             </>
           ) : (
-            <Text>
-              {startCase(row.original.paymentMethod.addressLine1Check)}
-            </Text>
+            <Text>{startCase(row.original.addressLine1Check)}</Text>
           )}
         </HStack>
       ),
@@ -146,11 +144,12 @@ const Page: CustomPage = () => {
     transactionsData,
     count,
     refetchTransactions,
+    isFetching: isPaymentsFetching,
   } = usePaymentsTableProps({
     customerId,
   });
 
-  const { isLoading, data } = api.dashboard.customers.get.useQuery({
+  const { isFetching, data } = api.dashboard.customers.get.useQuery({
     id: customerId,
   });
 
@@ -203,37 +202,41 @@ const Page: CustomPage = () => {
           onMarkSelectedAsFraud={() => {
             refetchTransactions().catch(handleError);
           }}
-          isLoading={isTransactionsLoading}
+          isLoading={isPaymentsFetching}
         />
       </Section>
 
       <Section title="Payment methods">
         <DataTable
           columns={columns}
-          data={data.paymentMethods || []}
+          data={data.paymentMethodLinks.map((link) => link.paymentMethod) || []}
           //   searchComponent,
           //   getRowHref,
           showPagination={false}
-          isLoading={isLoading}
+          isLoading={isFetching}
         />
       </Section>
 
       <Section title="Location">
         <Box h={300}>
-          <TransactionMap
+          <PaymentMap
             markers={[
-              ...data.ipAddresses.map(({ ipAddress }) => ({
-                longitude: ipAddress.longitude,
-                latitude: ipAddress.latitude,
-                radius: ipAddress.accuracyRadius,
-                type: "device",
-              })),
-              ...data.paymentMethods
-                .filter(({ paymentMethod }) => paymentMethod.geocode?.center)
+              ...data.ipAddressLinks
+                .filter(({ ipAddress }) => !!ipAddress.location)
+                .map(({ ipAddress }) => ({
+                  longitude: ipAddress.location?.longitude ?? 0,
+                  latitude: ipAddress.location?.latitude ?? 0,
+                  // radius: ipAddress.accuracyRadius,
+                  type: "device" as const,
+                })),
+              ...data.paymentMethodLinks
+                .filter(
+                  ({ paymentMethod }) => !!paymentMethod.address?.location
+                )
                 .map(({ paymentMethod }) => ({
-                  longitude: paymentMethod.geocode.center[0],
-                  latitude: paymentMethod.geocode.center[1],
-                  type: "card",
+                  longitude: paymentMethod.address?.location?.longitude ?? 0,
+                  latitude: paymentMethod.address?.location?.latitude ?? 0,
+                  type: "card" as const,
                 })),
             ]}
           />

@@ -14,15 +14,32 @@ export const customersRouter = createTRPCRouter({
           id: input.id,
         },
         include: {
-          paymentMethods: {
+          paymentMethodLinks: {
             include: {
-              card: true,
+              paymentMethod: {
+                include: {
+                  address: {
+                    include: {
+                      location: true,
+                    },
+                  },
+                  card: true,
+                },
+              },
             },
           },
-          devices: true,
-          ipAddresses: {
+          deviceLinks: {
             include: {
-              ipAddress: true,
+              device: true,
+            },
+          },
+          ipAddressLinks: {
+            include: {
+              ipAddress: {
+                include: {
+                  location: true,
+                },
+              },
             },
           },
         },

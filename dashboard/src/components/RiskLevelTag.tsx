@@ -1,7 +1,13 @@
 import { Tag, TagLabel } from "@chakra-ui/react";
 import { RiskLevel } from "../common/types";
 
-export const MAP_RISK_LEVEL_TO_DATA = {
+export const MAP_RISK_LEVEL_TO_DATA: Record<
+  string,
+  {
+    color: string;
+    label: string;
+  }
+> = {
   [RiskLevel.VeryHigh]: {
     color: "red",
     label: "Very High",
@@ -20,9 +26,14 @@ export const MAP_RISK_LEVEL_TO_DATA = {
   },
 };
 
-export function RiskLevelTag({ riskLevel }: { riskLevel: RiskLevel }) {
-  const color = MAP_RISK_LEVEL_TO_DATA[riskLevel]?.color ?? "gray";
-  const label = MAP_RISK_LEVEL_TO_DATA[riskLevel]?.label ?? "Unknown";
+export function RiskLevelTag({ riskLevel }: { riskLevel?: string }) {
+  const color = riskLevel
+    ? MAP_RISK_LEVEL_TO_DATA[riskLevel]?.color ?? "gray"
+    : "gray";
+  const label = riskLevel
+    ? MAP_RISK_LEVEL_TO_DATA[riskLevel]?.label ?? "Unknown"
+    : "Unknown";
+
   return (
     <Tag colorScheme={color} size="sm" px={1.5}>
       <TagLabel>{label}</TagLabel>

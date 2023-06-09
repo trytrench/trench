@@ -25,9 +25,9 @@ const MAP_WALLET_TO_ICON = {
 };
 
 interface Props {
-  last4: string;
-  brand: string;
-  wallet?: string;
+  last4?: string | null;
+  brand?: string | null;
+  wallet?: string | null;
 }
 
 export const CardWithIcon = ({ brand, last4, wallet }: Props) => {

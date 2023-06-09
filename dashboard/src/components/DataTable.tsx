@@ -1,6 +1,7 @@
 import {
   Box,
   Link,
+  Skeleton,
   Spinner,
   Table,
   Tbody,
@@ -32,10 +33,10 @@ import NextLink from "next/link";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  onPaginationChange: OnChangeFn<PaginationState>;
-  pageCount: number;
-  pageIndex: number;
-  pageSize: number;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  pageCount?: number;
+  pageIndex?: number;
+  pageSize?: number;
   header?: React.ReactNode;
   getRowHref?: (row: Row<TData>) => string;
   showColumnVisibilityOptions?: boolean;
@@ -44,15 +45,16 @@ interface DataTableProps<TData, TValue> {
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string;
   isLoading?: boolean;
+  rowHeight?: number;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onPaginationChange,
-  pageCount,
-  pageIndex,
-  pageSize,
+  pageCount = 1,
+  pageIndex = 0,
+  pageSize = data.length,
   header,
   getRowHref,
   showColumnVisibilityOptions = false,
@@ -61,6 +63,7 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   getRowId,
   isLoading = false,
+  rowHeight,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -89,7 +92,7 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: onRowSelectionChange,
     onPaginationChange: (newVal) => {
-      onPaginationChange(newVal);
+      onPaginationChange?.(newVal);
       onRowSelectionChange?.({});
     },
     getRowId: getRowId,
@@ -124,7 +127,8 @@ export function DataTable<TData, TValue>({
                       key={header.id}
                       maxW={header.getSize()}
                       fontSize="xs"
-                      px={4}
+                      px={2}
+                      whiteSpace="nowrap"
                     >
                       {header.isPlaceholder
                         ? null
@@ -140,20 +144,40 @@ export function DataTable<TData, TValue>({
           </Thead>
           <Tbody>
             {isLoading ? (
-              <Tr>
-                <Td colSpan={columns.length} h="24" textAlign="center">
-                  <Spinner
-                    thickness="4px"
-                    speed="0.65s"
-                    emptyColor="gray.200"
-                    color="blue.500"
-                    size="lg"
-                  />
-                </Td>
-              </Tr>
+              rowHeight ? (
+                Array.from({ length: pageSize }).map((_, i) => (
+                  <Tr height={rowHeight} key={i}>
+                    {columns.map((column) => (
+                      <Td
+                        fontSize="sm"
+                        key={column.id}
+                        // maxW={column.getSize()}
+                        isTruncated
+                        py={1}
+                        px={2}
+                      >
+                        <Skeleton height="16px" />
+                      </Td>
+                    ))}
+                  </Tr>
+                ))
+              ) : (
+                <Tr>
+                  <Td colSpan={columns.length} h="24" textAlign="center">
+                    <Spinner
+                      thickness="4px"
+                      speed="0.65s"
+                      emptyColor="gray.200"
+                      color="blue.500"
+                      size="lg"
+                    />
+                  </Td>
+                </Tr>
+              )
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <Tr
+                  height={rowHeight}
                   key={row.id}
                   _hover={{ bg: "gray.50" }}
                   data-state={row.getIsSelected() && "selected"}
@@ -164,8 +188,8 @@ export function DataTable<TData, TValue>({
                       key={cell.id}
                       maxW={cell.column.getSize()}
                       isTruncated
-                      py={2}
-                      px={4}
+                      py={1}
+                      px={2}
                     >
                       {cell.column.columnDef.meta?.disableLink ||
                       !getRowHref ? (

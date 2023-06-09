@@ -12,11 +12,11 @@ interface Marker {
   type: "device" | "card";
 }
 
-interface Props {
+interface PaymentMapProps {
   markers: Marker[];
 }
 
-export const TransactionMap = ({ markers }: Props) => {
+export const PaymentMap = ({ markers }: PaymentMapProps) => {
   const layerStyle = {
     id: "circle-fill",
     type: "fill",

@@ -38,7 +38,7 @@ import { MoreHorizontal } from "lucide-react";
 import { Plus } from "lucide-react";
 
 const columns: ColumnDef<
-  RouterOutputs["dashboard"]["lists"]["getAll"][number]
+  RouterOutputs["dashboard"]["lists"]["getAll"]["rows"][number]
 >[] = [
   {
     header: "List",
@@ -201,11 +201,11 @@ const ListsPage: CustomPage = () => {
       </Flex>
       <DataTable
         columns={columns}
-        data={listsData ?? []}
+        data={listsData?.rows ?? []}
         onPaginationChange={setPagination}
         pageIndex={pageIndex}
         pageSize={pageSize}
-        pageCount={-1}
+        pageCount={Math.ceil((listsData?.count ?? 0) / pageSize)}
         getRowHref={(row) => `/lists/${row.original.id}`}
         isLoading={isLoading}
       />

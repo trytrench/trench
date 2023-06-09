@@ -20,8 +20,8 @@ import NextLink from "next/link";
 import { RiskLevelTag } from "~/components/RiskLevelTag";
 import { EditIcon, InfoIcon, Plus } from "lucide-react";
 import { Highlight, themes } from "prism-react-renderer";
-import { RiskLevel } from "@prisma/client";
 import { PREFIX, SUFFIX } from "~/components/editor/constants";
+import { RiskLevel } from "../../common/types";
 
 type RulesRow = RouterOutputs["dashboard"]["rules"]["getAll"][number];
 
@@ -207,11 +207,11 @@ const RulesPage: CustomPage = () => {
       </Flex>
       <DataTable
         columns={columns}
-        data={rulesData ?? []}
+        data={rulesData?.rows ?? []}
         onPaginationChange={setPagination}
         pageIndex={pageIndex}
         pageSize={pageSize}
-        pageCount={-1}
+        pageCount={Math.ceil((rulesData?.count ?? 0) / pageSize)}
         getRowHref={(row) => `/rules/${row.original.id}`}
         isLoading={isLoading}
       />

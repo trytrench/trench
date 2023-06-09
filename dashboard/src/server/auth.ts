@@ -37,13 +37,19 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    // session: ({ session, user }) => ({
-    //   ...session,
-    //   user: {
-    //     ...session.user,
-    //     id: user.id,
-    //   },
-    // }),
+    session: ({ session, token }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: token.userId,
+      },
+    }),
+    jwt: ({ user, token }) => {
+      if (user) {
+        token.userId = user.id;
+      }
+      return token;
+    },
   },
   // adapter: PrismaAdapter(prisma),
   providers: [
@@ -58,9 +64,8 @@ export const authOptions: NextAuthOptions = {
         username: { label: "Username", type: "text", placeholder: "admin" },
         password: { label: "Password", type: "password" },
       },
-      authorize(credentials, req) {
+      authorize(credentials) {
         // Add logic here to look up the user from the credentials supplied
-
         if (
           credentials?.username !== env.ADMIN_USERNAME &&
           credentials?.password !== env.ADMIN_PASSWORD

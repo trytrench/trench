@@ -25,23 +25,29 @@ export const listsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const result = await ctx.prisma.list.findMany({
-        skip: input.offset,
-        take: input.limit,
-        include: {
-          _count: {
-            select: {
-              items: true,
+      const [count, rows] = await ctx.prisma.$transaction([
+        ctx.prisma.list.count(),
+        ctx.prisma.list.findMany({
+          skip: input.offset,
+          take: input.limit,
+          include: {
+            _count: {
+              select: {
+                items: true,
+              },
             },
           },
-        },
-      });
-      return result.map((list) => {
-        return {
-          ...list,
-          author: undefined,
-        };
-      });
+        }),
+      ]);
+      return {
+        count,
+        rows: rows.map((list) => {
+          return {
+            ...list,
+            author: undefined,
+          };
+        }),
+      };
     }),
   create: protectedProcedure
     .input(listSchema)
@@ -123,6 +129,8 @@ export const listsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { items } = input;
+
+      console.log(ctx.session);
 
       const listAliases = uniq(items.map((item) => item.listAlias));
 

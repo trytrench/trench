@@ -19,10 +19,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 const Home: CustomPage = () => {
   return (
-    <Box width="50%" flexDir="column" gap={4} display="flex">
+    <Box maxW="container.sm" flexDir="column" gap={4} display="flex">
       <Heading mb={4}>Home</Heading>
 
-      <Link href="/transactions">
+      <Link href="/payments">
         <Card
           transition={"all 0.2s ease-in-out"}
           size="sm"
@@ -34,10 +34,10 @@ const Home: CustomPage = () => {
           p="2"
         >
           <CardHeader pb={0}>
-            <Heading size="md">See transactions</Heading>
+            <Heading size="md">See payments</Heading>
           </CardHeader>
           <CardBody>
-            <Text>Search, assess, and block fraudent transactions.</Text>
+            <Text>Search, assess, and flag fraudent payments.</Text>
           </CardBody>
         </Card>
       </Link>
@@ -57,12 +57,12 @@ const Home: CustomPage = () => {
           </CardHeader>
           <CardBody>
             <Text>
-              Manage blocklists to block transactions from specific users.
+              Manage blocklists to block payment attempts from specific users.
             </Text>
           </CardBody>
         </Card>
       </Link>
-      <Link href="/transactions">
+      <Link href="/rules">
         <Card
           transition={"all 0.2s ease-in-out"}
           size="sm"

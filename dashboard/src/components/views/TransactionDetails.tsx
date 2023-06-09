@@ -9,13 +9,13 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { api } from "~/lib/api";
-import { TransactionMap } from "../TransactionMap/TransactionMap";
+import { PaymentMap } from "../payment-map/PaymentMap";
 import { startCase } from "lodash";
-import { CardWithIcon } from "../CardWithIcon/CardWithIcon";
+import { CardWithIcon } from "../card-with-icon/CardWithIcon";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import { type ReactNode, useMemo, useState } from "react";
-import { PaymentsTable, usePaymentsTableProps } from "../TransactionsTable";
-import { type IpAddress } from "@prisma/client";
+import { PaymentsTable, usePaymentsTableProps } from "../PaymentsTable";
+import { type Address, type IpAddress } from "@prisma/client";
 import { handleError } from "~/lib/handleError";
 
 export const Section = ({
@@ -51,26 +51,53 @@ const List = ({
   </Stack>
 );
 
-interface Props {
-  transactionId: string;
+function getLabelValuePairs(
+  data: { label: string; value?: string | null | ReactNode; show?: boolean }[]
+) {
+  return data
+    .filter((item) => item.show !== false && !!item.value)
+    .map((item) => ({
+      label: item.label,
+      value: item.value,
+    }));
 }
 
-export const TransactionDetails = ({ transactionId }: Props) => {
-  const { isLoading, data } = api.dashboard.transactions.get.useQuery({
-    id: transactionId,
+function getAddressString(address?: Address | null) {
+  if (!address) return "No address";
+  return (
+    [
+      address.line1,
+      address.line2,
+      address.city,
+      address.state,
+      address.country,
+      address.postalCode,
+    ]
+      .filter(Boolean)
+      .join(", ") || "No address"
+  );
+}
+
+interface PaymentDetailsProps {
+  paymentId: string;
+}
+
+export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
+  const { isLoading, data } = api.dashboard.paymentAttempts.get.useQuery({
+    id: paymentId,
   });
 
-  const getAnonymizers = (ipAddress: IpAddress) => {
-    const anonymizers = [];
+  // const getAnonymizers = (ipAddress: IpAddress) => {
+  //   const anonymizers = [];
 
-    if (ipAddress.isAnonymousVpn) anonymizers.push("VPN");
-    if (ipAddress.isHostingProvider) anonymizers.push("Hosting provider");
-    if (ipAddress.isPublicProxy) anonymizers.push("Public proxy");
-    if (ipAddress.isResidentialProxy) anonymizers.push("Residential proxy");
-    if (ipAddress.isTorExitNode) anonymizers.push("Tor exit node");
+  //   if (ipAddress.isAnonymousVpn) anonymizers.push("VPN");
+  //   if (ipAddress.isHostingProvider) anonymizers.push("Hosting provider");
+  //   if (ipAddress.isPublicProxy) anonymizers.push("Public proxy");
+  //   if (ipAddress.isResidentialProxy) anonymizers.push("Residential proxy");
+  //   if (ipAddress.isTorExitNode) anonymizers.push("Tor exit node");
 
-    return anonymizers;
-  };
+  //   return anonymizers;
+  // };
 
   const {
     pagination,
@@ -80,13 +107,14 @@ export const TransactionDetails = ({ transactionId }: Props) => {
     transactionsData: relatedData,
     count,
     refetchTransactions,
+    isFetching: isTransactionsLoading,
   } = usePaymentsTableProps({
-    linkedTransactionId: transactionId,
+    linkedPaymentAttemptId: paymentId,
   });
 
   if (!data) return null;
 
-  const paymentDetails = [
+  const paymentDetails = getLabelValuePairs([
     {
       label: "Price",
       value: (data.amount / 100).toLocaleString("en-US", {
@@ -94,18 +122,16 @@ export const TransactionDetails = ({ transactionId }: Props) => {
         currency: data.currency,
       }),
     },
-    {
-      label: "Description",
-      value: data.description,
-    },
-    {
-      label: "Seller",
-      value: data.sellerName,
-    },
-    {
-      label: "Wallet address",
-      value: data.walletAddress,
-    },
+    { label: "Description", value: data.description },
+
+    // {
+    //   label: "Seller",
+    //   value: data.sellerName,
+    // },
+    // {
+    //   label: "Wallet address",
+    //   value: data.walletAddress,
+    // },
     // {
     //   label: "Created",
     //   value: format(new Date(data.createdAt), "dd/MM/yyyy HH:mm:ss"),
@@ -114,189 +140,139 @@ export const TransactionDetails = ({ transactionId }: Props) => {
     //   label: "Updated",
     //   value: format(new Date(data.updatedAt), "dd/MM/yyyy HH:mm:ss"),
     // },
-  ];
+  ]);
 
-  const paymentMethodData = [
-    {
-      label: "ID",
-      value: data.paymentMethod.id,
-    },
-    {
-      label: "Fingerprint",
-      value: data.paymentMethod.card?.fingerprint,
-    },
+  const paymentMethod = data.paymentMethod;
+  const paymentMethodData = getLabelValuePairs([
+    { label: "ID", value: paymentMethod.id },
+    { label: "Fingerprint", value: paymentMethod.card?.fingerprint },
     {
       label: "Card",
       value: (
         <CardWithIcon
-          brand={data.paymentMethod.card?.brand}
-          last4={data.paymentMethod.card?.last4}
-          wallet={data.paymentMethod.card?.wallet}
+          brand={paymentMethod.card?.brand}
+          last4={paymentMethod.card?.last4}
+          wallet={paymentMethod.cardWallet}
         />
       ),
     },
     {
       label: "Type",
-      value:
-        startCase(data.paymentMethod.card?.brand || "") +
-        " " +
-        (data.paymentMethod.card?.funding || ""),
+      value: `${startCase(paymentMethod.card?.brand || "")} ${
+        paymentMethod.card?.funding || ""
+      }`,
     },
-    {
-      label: "Issuer",
-      value: data.paymentMethod.card?.issuer,
-    },
-    {
-      label: "Country",
-      value: data.paymentMethod.card?.country,
-    },
-    {
-      label: "Owner",
-      value: data.paymentMethod.name,
-    },
-    {
-      label: "Email",
-      value: data.paymentMethod.email,
-    },
+    { label: "Issuer", value: paymentMethod.card?.issuer },
+    { label: "Country", value: paymentMethod.card?.country },
+    { label: "Owner", value: paymentMethod.name },
+    { label: "Email", value: paymentMethod.email },
     {
       label:
-        data.paymentMethod.line1 ||
-        data.paymentMethod.line2 ||
-        data.paymentMethod.city ||
-        data.paymentMethod.state ||
-        data.paymentMethod.country
+        paymentMethod.address?.line1 ||
+        paymentMethod.address?.line2 ||
+        paymentMethod.address?.city ||
+        paymentMethod.address?.state ||
+        paymentMethod.address?.country
           ? "Address"
           : "Postal code",
-      value:
-        [
-          data.paymentMethod.line1,
-          data.paymentMethod.line2,
-          data.paymentMethod.city,
-          data.paymentMethod.state,
-          data.paymentMethod.country,
-          data.paymentMethod.postalCode,
-        ]
-          .filter(Boolean)
-          .join(", ") || "No address",
+      value: getAddressString(paymentMethod.address),
     },
     {
       label: "CVC Check",
-      value: data.paymentMethod.cvcCheck === "pass" && (
+      value: paymentMethod.cvcCheck === "pass" && (
         <HStack spacing={1}>
           <Icon color="green" as={IoCheckmarkCircle} />
           <Text>Passed</Text>
         </HStack>
       ),
     },
-    ...(data.paymentMethod.postalCode
-      ? [
-          {
-            label: "ZIP Check",
-            value: data.paymentMethod.postalCodeCheck && (
-              <HStack spacing={1}>
-                {data.paymentMethod.postalCodeCheck === "pass" ? (
-                  <>
-                    <Icon color="green" as={IoCheckmarkCircle} />
-                    <Text>Passed</Text>
-                  </>
-                ) : (
-                  <Text>{startCase(data.paymentMethod.postalCodeCheck)}</Text>
-                )}
-              </HStack>
-            ),
-          },
-        ]
-      : []),
-    ...(data.paymentMethod.line1
-      ? [
-          {
-            label: "Address Check",
-            value: data.paymentMethod.addressLine1Check && (
-              <HStack spacing={1}>
-                {data.paymentMethod.addressLine1Check === "pass" ? (
-                  <>
-                    <Icon color="green" as={IoCheckmarkCircle} />
-                    <Text>Passed</Text>
-                  </>
-                ) : (
-                  <Text>{startCase(data.paymentMethod.addressLine1Check)}</Text>
-                )}
-              </HStack>
-            ),
-          },
-        ]
-      : []),
-    ,
-  ];
+    {
+      label: "ZIP Check",
+      show: !!paymentMethod.address?.postalCode,
+      value: (
+        <HStack spacing={1}>
+          {paymentMethod.postalCodeCheck === "pass" ? (
+            <>
+              <Icon color="green" as={IoCheckmarkCircle} />
+              <Text>Passed</Text>
+            </>
+          ) : (
+            <Text>{startCase(paymentMethod.postalCodeCheck ?? "")}</Text>
+          )}
+        </HStack>
+      ),
+    },
+    {
+      label: "Address Check",
+      show: !!paymentMethod.address?.line1,
+      value: paymentMethod.addressLine1Check && (
+        <HStack spacing={1}>
+          {paymentMethod.addressLine1Check === "pass" ? (
+            <>
+              <Icon color="green" as={IoCheckmarkCircle} />
+              <Text>Passed</Text>
+            </>
+          ) : (
+            <Text>{startCase(paymentMethod.addressLine1Check)}</Text>
+          )}
+        </HStack>
+      ),
+    },
+  ]);
 
-  const deviceData = [
+  const deviceSnapshot = data.checkoutSession.deviceSnapshot;
+  const deviceData = getLabelValuePairs([
+    {
+      label: "Browser",
+      show: !!deviceSnapshot,
+      value: `${deviceSnapshot?.browserName ?? ""} ${
+        deviceSnapshot?.browserVersion ?? ""
+      }`,
+    },
+    {
+      label: "OS",
+      show: !!deviceSnapshot,
+      value: `${deviceSnapshot?.osName ?? ""} ${
+        deviceSnapshot?.osVersion ?? ""
+      }`,
+    },
+
+    {
+      label: "Device",
+      show: !!(deviceSnapshot?.deviceVendor || deviceSnapshot?.deviceModel),
+      value: [deviceSnapshot?.deviceVendor, deviceSnapshot?.deviceModel]
+        .filter(Boolean)
+        .join(" "),
+    },
+
+    {
+      label: "Resolution",
+      show: !!deviceSnapshot?.screenResolution,
+      value: deviceSnapshot?.screenResolution,
+    },
+    {
+      label: "Engine",
+      value: [deviceSnapshot?.engineName, deviceSnapshot?.engineVersion]
+        .filter(Boolean)
+        .join(" "),
+    },
+
+    {
+      label: "CPU",
+      show: !!(deviceSnapshot?.cpuArchitecture || deviceSnapshot?.deviceModel),
+      value: [deviceSnapshot?.cpuArchitecture, deviceSnapshot?.deviceModel]
+        .filter(Boolean)
+        .join(" "),
+    },
+
     // {
-    //   label: "Platform",
-    //   value: data.session.device.components.platform.value,
+    //   label: "Bot",
+    //   value: deviceSnapshot.bot ? "True" : "False",
     // },
-    ...(fp2Data
-      ? [
-          {
-            label: "Browser",
-            value: userAgent.browser.name + " " + userAgent.browser.version,
-          },
-          {
-            label: "OS",
-            value:
-              userAgent.os.name +
-              " " +
-              userAgent.os.version +
-              " " +
-              (fp2Data.hasLiedOs ? "(Lied)" : ""),
-          },
-          ...(userAgent.device.vendor ||
-          userAgent.device.model ||
-          fp2Data.hasLiedDevice
-            ? [
-                {
-                  label: "Device",
-                  value:
-                    [userAgent.device.vendor, userAgent.device.model]
-                      .filter(Boolean)
-                      .join(" ") +
-                    " " +
-                    (fp2Data.hasLiedDevice ? "(Lied)" : ""),
-                },
-              ]
-            : []),
-          {
-            label: "Resolution",
-            value:
-              data.session.device.components.screenResolution.value.join("x") +
-              " " +
-              (fp2Data.hasLiedResolution ? "(Lied)" : ""),
-          },
-          {
-            label: "Engine",
-            value: [userAgent.engine.name, userAgent.engine.version]
-              .filter(Boolean)
-              .join(" "),
-          },
-          ...(userAgent.cpu.architecture
-            ? [
-                {
-                  label: "CPU",
-                  value: [userAgent.cpu.architecture, userAgent.cpu.model]
-                    .filter(Boolean)
-                    .join(" "),
-                },
-              ]
-            : []),
-          {
-            label: "Bot",
-            value: fp2Data.isBot ? "True" : "False",
-          },
-        ]
-      : []),
 
     {
       label: "Timezone",
-      value: data.session.device.components.timezone.value,
+      value: deviceSnapshot?.timezone,
     },
     // {
     //   label: "OS",
@@ -304,49 +280,76 @@ export const TransactionDetails = ({ transactionId }: Props) => {
     // },
     {
       label: "IP Address",
-      value: data.session.ipAddress.ipAddress,
+      value: deviceSnapshot?.ipAddress.ipAddress,
     },
     {
       label: "Static IP Score",
-      value: data.session.ipAddress.staticIPScore,
+      value: "WIP",
+      // value: deviceSnapshot?.ipAddress,
     },
     {
       label: "ISP",
-      value: data.session.ipAddress.isp,
+      // value: data.session.ipAddress.isp,
+      value: "WIP",
     },
     {
       label: "Anonymous",
-      value: data.session.ipAddress.isAnonymous ? "True" : "False",
+      value: "WIP",
+      // value: data.session.ipAddress.isAnonymous ? "True" : "False",
     },
-    ...(data.session.ipAddress.isAnonymous
+    // ...(data.session.ipAddress.isAnonymous
+    //   ? [
+    //       {
+    //         label: "Anonymizer",
+    //         value: getAnonymizers(data.session.ipAddress).join(", "),
+    //       },
+    //     ]
+    //   : []),
+    // {
+    //   label: "User type",
+    //   value: startCase(data.session.ipAddress.userType),
+    // },
+    // {
+    //   label: "User count",
+    //   value: data.session.ipAddress.userCount,
+    // },
+    {
+      label: "Fingerprint",
+      value: data.checkoutSession.deviceSnapshot?.fingerprint,
+    },
+  ]);
+
+  const locationData = [
+    // { label: "City", value: deviceSnapshot?.ipAddress.address.cityName },
+    // { label: "Subdivision", value: deviceSnapshot?.ipAddress.address.subdivisionName },
+    // { label: "Country", value: deviceSnapshot?.ipAddress.address.countryName },
+    // { label: "IP Timezone", value: deviceSnapshot?.ipAddress.address.timezone },
+  ];
+
+  const markers = [
+    ...(data.checkoutSession.deviceSnapshot?.ipAddress.location
       ? [
           {
-            label: "Anonymizer",
-            value: getAnonymizers(data.session.ipAddress).join(", "),
+            longitude:
+              data.checkoutSession.deviceSnapshot.ipAddress.location.longitude,
+            latitude:
+              data.checkoutSession.deviceSnapshot.ipAddress.location.latitude,
+            type: "device" as const,
           },
         ]
       : []),
-    {
-      label: "User type",
-      value: startCase(data.session.ipAddress.userType),
-    },
-    {
-      label: "User count",
-      value: data.session.ipAddress.userCount,
-    },
-    {
-      label: "Fingerprint",
-      value: data.session.device.fingerprint,
-    },
+    ...(data.paymentMethod.address?.location
+      ? [
+          {
+            longitude: data.paymentMethod.address.location.longitude,
+            latitude: data.paymentMethod.address.location.latitude,
+            type: "card" as const,
+          },
+        ]
+      : []),
   ];
 
-  const locationData = [
-    { label: "City", value: data.session.ipAddress.cityName },
-    { label: "Subdivision", value: data.session.ipAddress.subdivisionName },
-    { label: "Country", value: data.session.ipAddress.countryName },
-    { label: "IP Timezone", value: data.session.ipAddress.timezone },
-  ];
-
+  console.log(markers);
   return (
     <Box>
       <Section title="Product">
@@ -359,25 +362,7 @@ export const TransactionDetails = ({ transactionId }: Props) => {
             <List data={locationData} />
           </GridItem>
           <GridItem h={250}>
-            <TransactionMap
-              markers={[
-                {
-                  latitude: data.session.ipAddress.latitude,
-                  longitude: data.session.ipAddress.longitude,
-                  radius: data.session.ipAddress.accuracyRadius,
-                  type: "device",
-                },
-                ...(data.paymentMethod.geocode
-                  ? [
-                      {
-                        longitude: data.paymentMethod.geocode.center[0],
-                        latitude: data.paymentMethod.geocode.center[1],
-                        type: "card",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
+            <PaymentMap markers={markers} />
           </GridItem>
         </Grid>
       </Section>

@@ -20,13 +20,21 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.rule.findMany({
-        skip: input.offset,
-        take: input.limit,
-        include: {
-          _count: { select: { executions: { where: { result: true } } } },
-        },
-      });
+      const [count, rows] = await ctx.prisma.$transaction([
+        ctx.prisma.rule.count(),
+        ctx.prisma.rule.findMany({
+          skip: input.offset,
+          take: input.limit,
+          include: {
+            _count: { select: { executions: { where: { result: true } } } },
+          },
+        }),
+      ]);
+
+      return {
+        count,
+        rows,
+      };
     }),
   backtest: protectedProcedure
     .input(

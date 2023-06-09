@@ -17,16 +17,16 @@ export const paymentAttemptsRouter = createTRPCRouter({
     updateMany: protectedProcedure
       .input(
         z.object({
-          ids: z.array(z.string()),
+          paymentAttemptIds: z.array(z.string()),
           changes: z.object({
             isFraud: z.boolean().optional(),
           }),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const { ids, changes } = input;
+        const { paymentAttemptIds, changes } = input;
         return ctx.prisma.paymentAttemptAssessment.updateMany({
-          where: { id: { in: ids } },
+          where: { paymentAttemptId: { in: paymentAttemptIds } },
           data: changes,
         });
       }),
@@ -55,15 +55,30 @@ export const paymentAttemptsRouter = createTRPCRouter({
           paymentMethod: {
             include: {
               card: true,
+              address: {
+                include: {
+                  location: true,
+                },
+              },
             },
           },
-          customer: true,
+          customerLink: {
+            include: {
+              customer: true,
+            },
+          },
+          assessment: true,
           outcome: true,
           checkoutSession: {
             include: {
               deviceSnapshot: {
                 include: {
                   device: true,
+                  ipAddress: {
+                    include: {
+                      location: true,
+                    },
+                  },
                 },
               },
               paymentAttempts: true,
@@ -107,7 +122,11 @@ export const paymentAttemptsRouter = createTRPCRouter({
                 card: true,
               },
             },
-            customer: true,
+            customerLink: {
+              include: {
+                customer: true,
+              },
+            },
             checkoutSession: {
               include: {
                 deviceSnapshot: {
@@ -122,7 +141,7 @@ export const paymentAttemptsRouter = createTRPCRouter({
             },
           },
         });
-        if (!linkedPaymentAttempt) throw new Error("Transaction not found");
+        if (!linkedPaymentAttempt) throw new Error("Payment attempt not found");
       }
 
       const filter: Prisma.PaymentAttemptFindManyArgs["where"] = {
@@ -140,10 +159,12 @@ export const paymentAttemptsRouter = createTRPCRouter({
           status: input.search?.status,
         },
 
-        customer: {
-          email: getSearchOption(input.search?.email),
+        customerLink: {
+          customer: {
+            email: getSearchOption(input.search?.email),
+          },
+          customerId: input.customerId,
         },
-        customerId: input.customerId,
         ruleExecutions: input.executedRuleId
           ? {
               some: {
@@ -184,10 +205,29 @@ export const paymentAttemptsRouter = createTRPCRouter({
                 },
               },
             },
-            { customer: { email: linkedPaymentAttempt.customer?.email } },
             {
-              customer: {
-                phoneNumber: linkedPaymentAttempt.customer?.phoneNumber,
+              customerLink: {
+                customer: {
+                  AND: [
+                    {
+                      email: linkedPaymentAttempt.customerLink?.customer.email,
+                    },
+                    { NOT: { email: null } },
+                  ],
+                },
+              },
+            },
+            {
+              customerLink: {
+                customer: {
+                  AND: [
+                    {
+                      phoneNumber:
+                        linkedPaymentAttempt.customerLink?.customer.phoneNumber,
+                    },
+                    { NOT: { phoneNumber: null } },
+                  ],
+                },
               },
             },
             // { customer: { name: linkedPaymentAttempt.customer?.name } },
@@ -214,7 +254,9 @@ export const paymentAttemptsRouter = createTRPCRouter({
           },
           include: {
             assessment: true,
-            customer: true,
+            customerLink: {
+              include: { customer: true },
+            },
             paymentMethod: {
               include: {
                 card: true,
