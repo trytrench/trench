@@ -1,13 +1,11 @@
-import { useRouter } from "next/router";
 import { Layout } from "../../components/layouts/Layout";
-import { ViewNavLayout } from "../../components/layouts/ViewNavLayout";
 import { type CustomPage } from "../../types/Page";
 import { Box, Heading, Skeleton } from "@chakra-ui/react";
 import {
   PaymentsTable,
   usePaymentsTableProps,
 } from "~/components/PaymentsTable";
-import { handleError } from "~/lib/handleError";
+import { api } from "../../lib/api";
 
 const ViewPage: CustomPage = () => {
   const {
@@ -17,11 +15,11 @@ const ViewPage: CustomPage = () => {
     setSelectedOptions,
     transactionsData,
     count,
-    refetchTransactions,
-    isLoading,
+    queryProps,
     isFetching,
-    isPreviousData,
   } = usePaymentsTableProps({});
+
+  const util = api.useContext();
 
   return (
     <Box>
@@ -35,8 +33,32 @@ const ViewPage: CustomPage = () => {
           selectedOptions={selectedOptions}
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud={true}
-          onMarkSelectedAsFraud={() => {
-            refetchTransactions().catch(handleError);
+          onMarkSelectedAsFraud={(paymentIds, markedAs) => {
+            // refetchTransactions().catch(handleError);
+            util.dashboard.paymentAttempts.getAll.setData(
+              queryProps,
+              (prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  data: prev.data.map((payment) => {
+                    if (paymentIds.includes(payment.id)) {
+                      return {
+                        ...payment,
+                        assessment: payment.assessment
+                          ? {
+                              ...payment.assessment,
+                              isFraud: markedAs,
+                            }
+                          : null,
+                      };
+                    }
+
+                    return payment;
+                  }),
+                };
+              }
+            );
           }}
           // Only load when fetching new data
           isLoading={isFetching}

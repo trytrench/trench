@@ -158,7 +158,10 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Customer Name",
     accessorKey: "paymentMethod.name",
     cell({ row }) {
-      return row.original.customer?.name || row.original.paymentMethod.name;
+      return (
+        row.original.customerLink?.customer.name ||
+        row.original.paymentMethod.name
+      );
     },
   },
   {
@@ -281,7 +284,7 @@ interface PaymentsTableProps {
   onSelectedOptionsChange?: (newVal: Option[]) => void;
 
   allowMarkAsFraud?: boolean;
-  onMarkSelectedAsFraud?: (ids: string[]) => void;
+  onMarkSelectedAsFraud?: (ids: string[], markedTo: boolean) => void;
   isLoading?: boolean;
 }
 
@@ -314,7 +317,7 @@ export function PaymentsTable({
       mutateAsync({ paymentAttemptIds: ids, changes: { isFraud: markFraudAs } })
         .then(() => {
           setRowSelection({});
-          onMarkSelectedAsFraud?.(ids);
+          onMarkSelectedAsFraud?.(ids, markFraudAs);
         })
         .catch(handleError);
     },
@@ -391,7 +394,7 @@ export function PaymentsTable({
 
 function usePagination(
   defaultPagination: PaginationState
-): [PaginationState, (pagination: PaginationState) => void] {
+): [PaginationState, (arg: SetStateAction<PaginationState>) => void] {
   const router = useRouter();
 
   const pageIndex = useMemo(
@@ -446,6 +449,7 @@ const encodeOptions = (options: Option[]) => {
   const encoded = options
     .map(optionToQueryKv)
     .filter((kv) => kv !== null)
+    .map((kv) => kv as [string, string])
     .map(
       ([key, value]) =>
         `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
@@ -459,7 +463,7 @@ const decodeOptions = (str: string) => {
   const options: Option[] = [];
   decodedStr.split("&").forEach((pair) => {
     const kv = pair.split("=").map(decodeURIComponent);
-    const option = queryKvToOption(kv);
+    const option = queryKvToOption(kv as [string, string]);
     if (option) {
       options.push(option);
     }
@@ -528,24 +532,38 @@ export function usePaymentsTableProps({
     () =>
       selectedOptions.reduce<Record<string, string>>((acc, option) => {
         const [key, value] = option.value.split(":");
+        if (!key || !value) return acc;
         acc[key] = value;
         return acc;
       }, {}),
     [selectedOptions]
   );
 
+  const queryProps = useMemo(
+    () => ({
+      limit: pageSize,
+      offset: pageIndex * pageSize,
+      linkedPaymentAttemptId,
+      executedRuleId,
+      customerId,
+      search: options,
+    }),
+    [
+      pageSize,
+      pageIndex,
+      linkedPaymentAttemptId,
+      executedRuleId,
+      customerId,
+      options,
+    ]
+  );
+
   const { isLoading, data, refetch, isFetching, isPreviousData } =
-    api.dashboard.paymentAttempts.getAll.useQuery(
-      {
-        limit: pageSize,
-        offset: pageIndex * pageSize,
-        linkedPaymentAttemptId,
-        executedRuleId,
-        customerId,
-        search: options,
-      },
-      { keepPreviousData: true, refetchOnWindowFocus: false, staleTime: 5000 }
-    );
+    api.dashboard.paymentAttempts.getAll.useQuery(queryProps, {
+      keepPreviousData: true,
+      refetchOnWindowFocus: false,
+      staleTime: 5000,
+    });
 
   return useMemo(
     () => ({
@@ -559,6 +577,7 @@ export function usePaymentsTableProps({
       isLoading,
       isFetching,
       isPreviousData,
+      queryProps,
     }),
     [
       pagination,
@@ -571,6 +590,7 @@ export function usePaymentsTableProps({
       isLoading,
       isFetching,
       isPreviousData,
+      queryProps,
     ]
   );
 }

@@ -127,7 +127,7 @@ export function DataTable<TData, TValue>({
                       key={header.id}
                       maxW={header.getSize()}
                       fontSize="xs"
-                      px={2}
+                      px={3}
                       whiteSpace="nowrap"
                     >
                       {header.isPlaceholder
@@ -153,10 +153,14 @@ export function DataTable<TData, TValue>({
                         key={column.id}
                         // maxW={column.getSize()}
                         isTruncated
-                        py={1}
-                        px={2}
+                        py={1.5}
+                        px={3}
                       >
-                        <Skeleton height="16px" />
+                        <Skeleton
+                          height="16px"
+                          startColor="gray.100"
+                          endColor="gray.300"
+                        />
                       </Td>
                     ))}
                   </Tr>
@@ -188,8 +192,8 @@ export function DataTable<TData, TValue>({
                       key={cell.id}
                       maxW={cell.column.getSize()}
                       isTruncated
-                      py={1}
-                      px={2}
+                      py={1.5}
+                      px={3}
                     >
                       {cell.column.columnDef.meta?.disableLink ||
                       !getRowHref ? (
