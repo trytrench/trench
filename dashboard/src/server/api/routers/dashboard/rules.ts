@@ -62,6 +62,7 @@ export const rulesRouter = createTRPCRouter({
             checkoutSession: {
               include: {
                 paymentAttempts: true,
+                customer: true,
                 deviceSnapshot: {
                   include: {
                     device: true,
@@ -75,7 +76,6 @@ export const rulesRouter = createTRPCRouter({
                 card: true,
               },
             },
-            customer: true,
             outcome: true,
           },
         }),

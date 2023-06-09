@@ -23,13 +23,11 @@ const NUM_ROWS = 40;
 // Generate customers
 const PAYMENT_ATTEMPTS: {
   getPaymentAttempt: (props: {
-    deviceSnapshotId: string;
     rules: {
       id: string;
       riskLevel: RiskLevel;
     }[];
   }) => Prisma.PaymentAttemptCreateArgs["data"];
-  deviceSnapshot: Prisma.DeviceSnapshotCreateArgs["data"];
 }[] = Array.from({ length: NUM_ROWS }, () => {
   const name = faker.person.fullName();
 
@@ -37,39 +35,7 @@ const PAYMENT_ATTEMPTS: {
   const userAgentData = userAgentFromString(userAgent);
 
   return {
-    deviceSnapshot: {
-      fingerprint: faker.string.nanoid(),
-      userAgent: userAgent,
-      browserName: userAgentData.browser.name,
-      browserVersion: userAgentData.browser.version,
-      deviceModel: userAgentData.device.model,
-      deviceType: userAgentData.device.type,
-      deviceVendor: userAgentData.device.vendor,
-      engineName: userAgentData.engine.name,
-      engineVersion: userAgentData.engine.version,
-      osName: userAgentData.os.name,
-      osVersion: userAgentData.os.version,
-      cpuArchitecture: userAgentData.cpu.architecture,
-      isIncognito: faker.datatype.boolean(),
-      reqUserAgent: userAgent,
-      screenResolution: "1920x1080",
-      timezone: "America/Los_Angeles",
-      ipAddress: {
-        create: {
-          ipAddress: faker.internet.ip(),
-          location: {
-            create: {
-              latitude: faker.location.latitude(),
-              longitude: faker.location.longitude(),
-            },
-          },
-        },
-      },
-      device: {
-        create: {},
-      },
-    },
-    getPaymentAttempt: ({ deviceSnapshotId, rules }) => {
+    getPaymentAttempt: ({ rules }) => {
       const ruleExecutions = rules.map((rule) => {
         const shouldError = faker.number.int({ min: 0, max: 20 }) > 19;
         const shouldPass = faker.number.int({ min: 0, max: 20 }) > 18;
@@ -108,8 +74,37 @@ const PAYMENT_ATTEMPTS: {
           create: {
             customId: faker.string.uuid(),
             deviceSnapshot: {
-              connect: {
-                id: deviceSnapshotId,
+              create: {
+                fingerprint: faker.string.nanoid(),
+                userAgent: userAgent,
+                browserName: userAgentData.browser.name,
+                browserVersion: userAgentData.browser.version,
+                deviceModel: userAgentData.device.model,
+                deviceType: userAgentData.device.type,
+                deviceVendor: userAgentData.device.vendor,
+                engineName: userAgentData.engine.name,
+                engineVersion: userAgentData.engine.version,
+                osName: userAgentData.os.name,
+                osVersion: userAgentData.os.version,
+                cpuArchitecture: userAgentData.cpu.architecture,
+                isIncognito: faker.datatype.boolean(),
+                reqUserAgent: userAgent,
+                screenResolution: "1920x1080",
+                timezone: "America/Los_Angeles",
+                ipAddress: {
+                  create: {
+                    ipAddress: faker.internet.ip(),
+                    location: {
+                      create: {
+                        latitude: faker.location.latitude(),
+                        longitude: faker.location.longitude(),
+                      },
+                    },
+                  },
+                },
+                device: {
+                  create: {},
+                },
               },
             },
             customer: {
@@ -127,6 +122,12 @@ const PAYMENT_ATTEMPTS: {
             name: name,
             address: {
               create: {
+                line1: faker.location.streetAddress(),
+                line2: faker.location.secondaryAddress(),
+                city: faker.location.city(),
+                state: faker.location.state(),
+                country: faker.location.countryCode(),
+                postalCode: faker.location.zipCode(),
                 location: {
                   create: {
                     latitude: faker.location.latitude(),
@@ -192,18 +193,14 @@ async function main() {
   for (let i = 0; i < PAYMENT_ATTEMPTS.length; i += BATCH_SIZE) {
     const batch = PAYMENT_ATTEMPTS.slice(i, i + BATCH_SIZE);
     await Promise.all(
-      batch.map(({ getPaymentAttempt, deviceSnapshot }) =>
-        devPrisma.$transaction(async (tx) => {
-          const snapshot = await devPrisma.deviceSnapshot.create({
-            data: deviceSnapshot,
-          });
-          return devPrisma.paymentAttempt.create({
+      batch.map(({ getPaymentAttempt }) =>
+        devPrisma.$transaction([
+          devPrisma.paymentAttempt.create({
             data: getPaymentAttempt({
-              deviceSnapshotId: snapshot.id,
               rules: rulesToCreate,
             }),
-          });
-        })
+          }),
+        ])
       )
     );
   }

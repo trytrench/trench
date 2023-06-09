@@ -8,6 +8,7 @@ import { type Session } from "next-auth";
 import { type AppPropsType } from "next/dist/shared/lib/utils";
 import { useRouter, type NextRouter } from "next/router";
 import { handleError } from "../lib/handleError";
+import "../styles/globals.css";
 
 type CustomAppProps = AppPropsType<NextRouter, { session: Session | null }> & {
   Component: CustomPage;
