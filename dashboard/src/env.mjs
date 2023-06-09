@@ -10,12 +10,13 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     NODE_ENV: z.enum(["development", "test", "production"]),
     JWT_SECRET: z.string(),
-    MAXMIND_ACCOUNT_ID: z.string(),
-    MAXMIND_LICENSE_KEY: z.string(),
+    MAXMIND_ACCOUNT_ID: z.string().optional(),
+    MAXMIND_LICENSE_KEY: z.string().optional(),
     API_KEY: z.string(),
     ADMIN_USERNAME: z.string(),
     ADMIN_PASSWORD: z.string(),
-    NEXTAUTH_SECRET: z.string(),
+    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
+    STRIPE_SECRET_KEY: z.string(),
   },
 
   /**
@@ -42,6 +43,6 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   },
 });

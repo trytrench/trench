@@ -81,7 +81,7 @@ model PaymentOutcome {
 
 model Customer {
   id        String   @id @default(cuid())
-  customId  String?  @unique
+  customId  String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -105,11 +105,9 @@ model CheckoutSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
-  deviceSnapshot   DeviceSnapshot? @relation(fields: [deviceSnapshotId], references: [id])
-  deviceSnapshotId String?         @unique
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  customerId     String?
+  deviceSnapshot DeviceSnapshot?
 
   events          Event[]
   paymentAttempts PaymentAttempt[]
@@ -135,10 +133,11 @@ model DeviceSnapshot {
   device   Device @relation(fields: [deviceId], references: [id])
   deviceId String
 
-  ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
-  ipAddressId String
+  ipAddress   IpAddress? @relation(fields: [ipAddressId], references: [id])
+  ipAddressId String?
 
-  checkoutSession CheckoutSession?
+  checkoutSessionId String          @unique
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
 
   fingerprint String?
   userAgent   String?
@@ -158,7 +157,7 @@ model DeviceSnapshot {
 
   reqUserAgent String?
 
-  screenResolution String? // 1920x1080
+  screenResolution String?
   timezone         String?
 
   metadata Json @default("{}")
@@ -206,7 +205,7 @@ model Card {
   createdAt   DateTime @default(now())
   bin         String?
   brand       String
-  country     String
+  country     String?
   last4       String
   funding     String?
   issuer      String?
@@ -225,13 +224,13 @@ model Card {
 
 model Location {
   id        String @id @default(cuid())
-  latitude  Float
-  longitude Float
+  latitude  Float?
+  longitude Float?
 
-  cityISOCode String?
-  cityName    String?
-  countryCode String?
-  countryName String?
+  cityGeonameId Int?
+  cityName      String?
+  countryCode   String?
+  countryName   String?
 
   postalCode    String?
   regionISOCode String?

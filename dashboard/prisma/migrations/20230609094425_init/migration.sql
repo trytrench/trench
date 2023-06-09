@@ -10,7 +10,6 @@ CREATE TABLE "PaymentAttempt" (
     "currency" TEXT NOT NULL,
     "description" TEXT,
     "metadata" JSONB NOT NULL DEFAULT '{}',
-    "customerId" TEXT,
     "checkoutSessionId" TEXT NOT NULL,
     "paymentMethodId" TEXT NOT NULL,
     "billingAddressId" TEXT,
@@ -53,12 +52,13 @@ CREATE TABLE "PaymentOutcome" (
 -- CreateTable
 CREATE TABLE "Customer" (
     "id" TEXT NOT NULL,
-    "customId" TEXT,
+    "customId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "name" TEXT,
     "email" TEXT,
     "phoneNumber" TEXT,
+    "metadata" JSONB NOT NULL DEFAULT '{}',
 
     CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
 );
@@ -70,7 +70,6 @@ CREATE TABLE "CheckoutSession" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "customerId" TEXT,
-    "deviceSnapshotId" TEXT,
 
     CONSTRAINT "CheckoutSession_pkey" PRIMARY KEY ("id")
 );
@@ -93,7 +92,8 @@ CREATE TABLE "DeviceSnapshot" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deviceId" TEXT NOT NULL,
-    "ipAddressId" TEXT NOT NULL,
+    "ipAddressId" TEXT,
+    "checkoutSessionId" TEXT NOT NULL,
     "fingerprint" TEXT,
     "userAgent" TEXT,
     "browserName" TEXT,
@@ -137,7 +137,6 @@ CREATE TABLE "PaymentMethod" (
     "addressLine1Check" TEXT,
     "postalCodeCheck" TEXT,
     "cardId" TEXT,
-    "customerId" TEXT,
     "cardWallet" TEXT,
 
     CONSTRAINT "PaymentMethod_pkey" PRIMARY KEY ("id")
@@ -151,7 +150,7 @@ CREATE TABLE "Card" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "bin" TEXT,
     "brand" TEXT NOT NULL,
-    "country" TEXT NOT NULL,
+    "country" TEXT,
     "last4" TEXT NOT NULL,
     "funding" TEXT,
     "issuer" TEXT,
@@ -165,9 +164,9 @@ CREATE TABLE "Card" (
 -- CreateTable
 CREATE TABLE "Location" (
     "id" TEXT NOT NULL,
-    "latitude" DOUBLE PRECISION NOT NULL,
-    "longitude" DOUBLE PRECISION NOT NULL,
-    "cityISOCode" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "cityGeonameId" INTEGER,
     "cityName" TEXT,
     "countryCode" TEXT,
     "countryName" TEXT,
@@ -211,7 +210,6 @@ CREATE TABLE "ShippingAddress" (
     "name" TEXT,
     "phoneNumber" TEXT,
     "addressId" TEXT NOT NULL,
-    "customerId" TEXT,
 
     CONSTRAINT "ShippingAddress_pkey" PRIMARY KEY ("id")
 );
@@ -223,7 +221,6 @@ CREATE TABLE "BillingAddress" (
     "name" TEXT,
     "phoneNumber" TEXT,
     "addressId" TEXT NOT NULL,
-    "customerId" TEXT,
 
     CONSTRAINT "BillingAddress_pkey" PRIMARY KEY ("id")
 );
@@ -296,7 +293,7 @@ CREATE UNIQUE INDEX "Customer_customId_key" ON "Customer"("customId");
 CREATE UNIQUE INDEX "CheckoutSession_customId_key" ON "CheckoutSession"("customId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CheckoutSession_deviceSnapshotId_key" ON "CheckoutSession"("deviceSnapshotId");
+CREATE UNIQUE INDEX "DeviceSnapshot_checkoutSessionId_key" ON "DeviceSnapshot"("checkoutSessionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PaymentMethod_customId_key" ON "PaymentMethod"("customId");
@@ -314,13 +311,13 @@ CREATE UNIQUE INDEX "ShippingAddress_customId_key" ON "ShippingAddress"("customI
 CREATE UNIQUE INDEX "BillingAddress_customId_key" ON "BillingAddress"("customId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "RuleExecution_paymentAttemptId_ruleId_key" ON "RuleExecution"("paymentAttemptId", "ruleId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "List_alias_key" ON "List"("alias");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ListItem_listId_value_key" ON "ListItem"("listId", "value");
-
--- AddForeignKey
-ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_checkoutSessionId_fkey" FOREIGN KEY ("checkoutSessionId") REFERENCES "CheckoutSession"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -344,25 +341,22 @@ ALTER TABLE "PaymentOutcome" ADD CONSTRAINT "PaymentOutcome_paymentAttemptId_fke
 ALTER TABLE "CheckoutSession" ADD CONSTRAINT "CheckoutSession_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CheckoutSession" ADD CONSTRAINT "CheckoutSession_deviceSnapshotId_fkey" FOREIGN KEY ("deviceSnapshotId") REFERENCES "DeviceSnapshot"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Event" ADD CONSTRAINT "Event_checkoutSessionId_fkey" FOREIGN KEY ("checkoutSessionId") REFERENCES "CheckoutSession"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DeviceSnapshot" ADD CONSTRAINT "DeviceSnapshot_deviceId_fkey" FOREIGN KEY ("deviceId") REFERENCES "Device"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DeviceSnapshot" ADD CONSTRAINT "DeviceSnapshot_ipAddressId_fkey" FOREIGN KEY ("ipAddressId") REFERENCES "IpAddress"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DeviceSnapshot" ADD CONSTRAINT "DeviceSnapshot_ipAddressId_fkey" FOREIGN KEY ("ipAddressId") REFERENCES "IpAddress"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DeviceSnapshot" ADD CONSTRAINT "DeviceSnapshot_checkoutSessionId_fkey" FOREIGN KEY ("checkoutSessionId") REFERENCES "CheckoutSession"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PaymentMethod" ADD CONSTRAINT "PaymentMethod_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PaymentMethod" ADD CONSTRAINT "PaymentMethod_cardId_fkey" FOREIGN KEY ("cardId") REFERENCES "Card"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PaymentMethod" ADD CONSTRAINT "PaymentMethod_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "IpAddress" ADD CONSTRAINT "IpAddress_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -374,13 +368,7 @@ ALTER TABLE "Address" ADD CONSTRAINT "Address_locationId_fkey" FOREIGN KEY ("loc
 ALTER TABLE "ShippingAddress" ADD CONSTRAINT "ShippingAddress_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ShippingAddress" ADD CONSTRAINT "ShippingAddress_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "BillingAddress" ADD CONSTRAINT "BillingAddress_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "BillingAddress" ADD CONSTRAINT "BillingAddress_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RuleExecution" ADD CONSTRAINT "RuleExecution_paymentAttemptId_fkey" FOREIGN KEY ("paymentAttemptId") REFERENCES "PaymentAttempt"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

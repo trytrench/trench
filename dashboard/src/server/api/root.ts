@@ -1,6 +1,5 @@
 import { createTRPCRouter } from "~/server/api/trpc";
 import { apiRouter } from "./routers/api";
-import { sdkRouter } from "./routers/sdk";
 import { dashboardRouter } from "./routers/dashboard";
 
 /**
@@ -10,7 +9,6 @@ import { dashboardRouter } from "./routers/dashboard";
  */
 export const appRouter = createTRPCRouter({
   api: apiRouter,
-  sdk: sdkRouter,
   dashboard: dashboardRouter,
 });
 
