@@ -226,10 +226,10 @@ model Location {
   latitude  Float?
   longitude Float?
 
-  cityGeonameId Int?
-  cityName      String?
-  countryCode   String?
-  countryName   String?
+  cityGeonameId  Int?
+  cityName       String?
+  countryISOCode String?
+  countryName    String?
 
   postalCode    String?
   regionISOCode String?
