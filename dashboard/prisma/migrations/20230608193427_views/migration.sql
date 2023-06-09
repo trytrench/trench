@@ -1,9 +1,9 @@
-CREATE OR REPLACE VIEW "CustomerToPaymentMethod" AS
+CREATE OR REPLACE VIEW "CustomerPaymentMethodLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentMethod"."id" AS "paymentMethodId",
-    MIN("PaymentAttempt"."createdAt") AS "firstSeenLink",
-    MAX("PaymentAttempt"."createdAt") AS "lastSeenLink"
+    MIN("PaymentAttempt"."createdAt") AS "firstSeen",
+    MAX("PaymentAttempt"."createdAt") AS "lastSeen"
 FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
@@ -13,12 +13,12 @@ GROUP BY
     "CheckoutSession"."customerId";
 
 
-CREATE OR REPLACE VIEW "CustomerToPaymentAttempt" AS
+CREATE OR REPLACE VIEW "CustomerPaymentAttemptLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentAttempt"."id" AS "paymentAttemptId",
-    MIN("PaymentAttempt"."createdAt") AS "firstSeenLink",
-    MAX("PaymentAttempt"."createdAt") AS "lastSeenLink"
+    MIN("PaymentAttempt"."createdAt") AS "firstSeen",
+    MAX("PaymentAttempt"."createdAt") AS "lastSeen"
 FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
@@ -27,12 +27,12 @@ GROUP BY
     "CheckoutSession"."customerId";
 
 
-CREATE OR REPLACE VIEW "CustomerToDevice" AS
+CREATE OR REPLACE VIEW "CustomerDeviceLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "DeviceSnapshot"."deviceId" AS "deviceId",
-    MIN("DeviceSnapshot"."createdAt") AS "firstSeenLink",
-    MAX("DeviceSnapshot"."createdAt") AS "lastSeenLink",
+    MIN("DeviceSnapshot"."createdAt") AS "firstSeen",
+    MAX("DeviceSnapshot"."createdAt") AS "lastSeen"
 FROM
     "CheckoutSession"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."deviceSnapshotId" = "DeviceSnapshot"."id"
@@ -40,12 +40,12 @@ GROUP BY
     "CheckoutSession"."customerId",
     "DeviceSnapshot"."deviceId";
 
-CREATE OR REPLACE VIEW "CustomerToCard" AS
+CREATE OR REPLACE VIEW "CustomerCardLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "PaymentMethod"."cardId" AS "cardId",
-    MIN("PaymentAttempt"."createdAt") AS "firstSeenLink",
-    MAX("PaymentAttempt"."createdAt") AS "lastSeenLink"
+    MIN("PaymentAttempt"."createdAt") AS "firstSeen",
+    MAX("PaymentAttempt"."createdAt") AS "lastSeen"
 FROM
     "CheckoutSession"
     INNER JOIN "PaymentAttempt" ON "CheckoutSession"."id" = "PaymentAttempt"."checkoutSessionId"
@@ -54,12 +54,12 @@ GROUP BY
     "PaymentMethod"."cardId",
     "CheckoutSession"."customerId";
 
-CREATE OR REPLACE VIEW "CustomerToIpAddress" AS
+CREATE OR REPLACE VIEW "CustomerIpAddressLink" AS
 SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",
-    MIN("DeviceSnapshot"."createdAt") AS "firstSeenLink",
-    MAX("DeviceSnapshot"."createdAt") AS "lastSeenLink"
+    MIN("DeviceSnapshot"."createdAt") AS "firstSeen",
+    MAX("DeviceSnapshot"."createdAt") AS "lastSeen"
 FROM
     "CheckoutSession"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."deviceSnapshotId" = "DeviceSnapshot"."id"
@@ -68,7 +68,7 @@ GROUP BY
     "DeviceSnapshot"."ipAddressId";
 
 
-CREATE OR REPLACE VIEW "PaymentAttemptToIpAddress" AS
+CREATE OR REPLACE VIEW "PaymentAttemptIpAddressLink" AS
 SELECT
     "PaymentAttempt"."id" AS "PaymentAttemptId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId"
@@ -78,12 +78,12 @@ FROM
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."deviceSnapshotId" = "DeviceSnapshot"."id";
 
     
-CREATE OR REPLACE VIEW "DeviceToIpAddress" AS
+CREATE OR REPLACE VIEW "DeviceIpAddressLink" AS
 SELECT
     "Device"."id" AS "deviceId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",
-    MIN("DeviceSnapshot"."createdAt") AS "firstSeenLink",
-    MAX("DeviceSnapshot"."createdAt") AS "lastSeenLink"
+    MIN("DeviceSnapshot"."createdAt") AS "firstSeen",
+    MAX("DeviceSnapshot"."createdAt") AS "lastSeen"
 FROM
     "Device"
     INNER JOIN "DeviceSnapshot" ON "DeviceSnapshot"."deviceId" = "Device"."id"
@@ -91,12 +91,12 @@ GROUP BY
     "Device"."id",
     "DeviceSnapshot"."ipAddressId";
 
-CREATE OR REPLACE VIEW "CardToIpAddress" AS
+CREATE OR REPLACE VIEW "CardIpAddressLink" AS
 SELECT
     "Card"."id" AS "cardId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId",
-    MIN("PaymentAttempt"."createdAt") AS "firstSeenLink",
-    MAX("PaymentAttempt"."createdAt") AS "lastSeenLink"
+    MIN("PaymentAttempt"."createdAt") AS "firstSeen",
+    MAX("PaymentAttempt"."createdAt") AS "lastSeen"
 FROM
     "Card"
     INNER JOIN "PaymentMethod" ON "Card"."id" = "PaymentMethod"."cardId"
