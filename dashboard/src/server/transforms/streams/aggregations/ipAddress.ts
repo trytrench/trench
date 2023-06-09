@@ -7,7 +7,7 @@ type IpAddressAggregations = {
   paymentAttemptCount: number;
 };
 
-export const customerAggregationsStream = stream.resolver(
+export const ipAddressAggregationsStream = stream.resolver(
   async ({ input, ctx }): Promise<IpAddressAggregations> => {
     const ipAddress =
       input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress?.ipAddress;
@@ -26,7 +26,6 @@ export const customerAggregationsStream = stream.resolver(
     const result = await ctx.prisma.$transaction([
       // Device count
       ctx.prisma.device.count({
-        select: { id: true },
         where: {
           ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
           createdAt: { lte: paymentDate },
@@ -43,19 +42,25 @@ export const customerAggregationsStream = stream.resolver(
       }),
       // Customer count
       ctx.prisma.customer.count({
-        select: { id: true },
         where: {
           ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
           createdAt: { lte: paymentDate },
         },
       }),
-      // // Payment attempt count
-      // ctx.prisma.paymentAttempt.count({
-      //     select: { id: true },
-      //     where: {
-      //         ipa
+      // Payment attempt count
+      ctx.prisma.paymentAttempt.count({
+        where: {
+          ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
+          createdAt: { lte: paymentDate },
+        },
+      }),
     ]);
 
-    return {};
+    return {
+      deviceCount: result[0],
+      uniqueCardCountriesCount: result[1].length,
+      customerCount: result[2],
+      paymentAttemptCount: result[3],
+    };
   }
 );

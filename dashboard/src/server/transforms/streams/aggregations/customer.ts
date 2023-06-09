@@ -22,24 +22,21 @@ export const customerAggregationsStream = stream.resolver(
 
     const result = await ctx.prisma.$transaction([
       // Card count
-      ctx.prisma.card.findMany({
-        select: { id: true },
+      ctx.prisma.card.count({
         where: {
           customerLinks: { some: { customerId: customerId } },
           createdAt: { lte: paymentDate },
         },
       }),
       // Device count
-      ctx.prisma.device.findMany({
-        select: { id: true },
+      ctx.prisma.device.count({
         where: {
           customerLinks: { some: { customerId: customerId } },
           createdAt: { lte: paymentDate },
         },
       }),
       // IP count
-      ctx.prisma.ipAddress.findMany({
-        select: { id: true },
+      ctx.prisma.ipAddress.count({
         where: {
           customerLinks: { some: { customerId: customerId } },
           createdAt: { lte: paymentDate },
@@ -48,9 +45,9 @@ export const customerAggregationsStream = stream.resolver(
     ]);
 
     return {
-      cardCount: result[0].length,
-      deviceCount: result[1].length,
-      ipCount: result[2].length,
+      cardCount: result[0],
+      deviceCount: result[1],
+      ipCount: result[2],
     };
   }
 );
