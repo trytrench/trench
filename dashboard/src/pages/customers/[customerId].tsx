@@ -8,7 +8,7 @@ import {
   usePaymentsTableProps,
 } from "~/components/PaymentsTable";
 import { Layout } from "~/components/layouts/Layout";
-import { Section } from "~/components/views/TransactionDetails";
+import { Section } from "~/components/views/PaymentDetails";
 import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
 import { PaymentMap } from "~/components/payment-map/PaymentMap";
@@ -141,9 +141,9 @@ const Page: CustomPage = () => {
     setPagination,
     selectedOptions,
     setSelectedOptions,
-    transactionsData,
+    data: paymentsData,
     count,
-    refetchTransactions,
+    refetch,
     isFetching: isPaymentsFetching,
   } = usePaymentsTableProps({
     customerId,
@@ -190,9 +190,9 @@ const Page: CustomPage = () => {
         </HStack>
       </Section> */}
 
-      <Section title="Transactions">
+      <Section title="Payments">
         <PaymentsTable
-          paymentsData={transactionsData || []}
+          paymentsData={paymentsData || []}
           count={count}
           pagination={pagination}
           onPaginationChange={setPagination}
@@ -200,7 +200,7 @@ const Page: CustomPage = () => {
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud
           onMarkSelectedAsFraud={() => {
-            refetchTransactions().catch(handleError);
+            refetch().catch(handleError);
           }}
           isLoading={isPaymentsFetching}
         />
@@ -252,31 +252,6 @@ const Page: CustomPage = () => {
           showPagination={false}
         /> */}
       </Section>
-
-      {/* <Section
-        title={
-          <Box display="flex" gap={2} alignItems="center">
-            Risk Level
-            <RiskLevelTag riskLevel={data.riskLevel} />
-          </Box>
-        }
-      >
-        {!data?.ruleExecutions.length ? (
-          <Flex justify="center" align="center">
-            <Text fontSize="sm" color="subtle">
-              No executed rules
-            </Text>
-          </Flex>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={data.ruleExecutions}
-            showPagination={false}
-          />
-        )}
-      </Section>
-      <TransactionDetails transactionId={transactionId} />
-      <ViewTransaction transactionId={transactionId} /> */}
     </Box>
   );
 };

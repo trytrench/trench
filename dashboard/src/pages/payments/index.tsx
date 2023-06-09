@@ -13,7 +13,7 @@ const ViewPage: CustomPage = () => {
     setPagination,
     selectedOptions,
     setSelectedOptions,
-    transactionsData,
+    data: paymentsData,
     count,
     queryProps,
     isFetching,
@@ -23,10 +23,10 @@ const ViewPage: CustomPage = () => {
 
   return (
     <Box>
-      <Heading>Transactions</Heading>
-      {transactionsData ? (
+      <Heading>Payments</Heading>
+      {paymentsData ? (
         <PaymentsTable
-          paymentsData={transactionsData}
+          paymentsData={paymentsData}
           count={count}
           pagination={pagination}
           onPaginationChange={setPagination}
@@ -34,7 +34,6 @@ const ViewPage: CustomPage = () => {
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud={true}
           onMarkSelectedAsFraud={(paymentIds, markedAs) => {
-            // refetchTransactions().catch(handleError);
             util.dashboard.paymentAttempts.getAll.setData(
               queryProps,
               (prev) => {

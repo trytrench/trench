@@ -32,7 +32,7 @@ SELECT
     "CheckoutSession"."customerId" AS "customerId",
     "DeviceSnapshot"."deviceId" AS "deviceId",
     MIN("DeviceSnapshot"."createdAt") AS "firstSeenLink",
-    MAX("DeviceSnapshot"."createdAt") AS "lastSeenLink"
+    MAX("DeviceSnapshot"."createdAt") AS "lastSeenLink",
 FROM
     "CheckoutSession"
     INNER JOIN "DeviceSnapshot" ON "CheckoutSession"."deviceSnapshotId" = "DeviceSnapshot"."id"

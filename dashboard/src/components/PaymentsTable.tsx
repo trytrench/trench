@@ -19,18 +19,12 @@ import {
 import { MAP_RISK_LEVEL_TO_DATA, RiskLevelTag } from "./RiskLevelTag";
 
 import { format } from "date-fns";
-import {
-  type SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type SetStateAction, useCallback, useMemo, useState } from "react";
 import { api, type RouterOutputs } from "../lib/api";
 import { CardWithIcon } from "./card-with-icon/CardWithIcon";
 import { DataTable } from "./DataTable";
 import { SearchInput } from "./SearchInput";
-import { PaymentStatusTag } from "./TransactionStatusTag";
+import { PaymentStatusTag } from "./PaymentStatusTag";
 import {
   VisaIcon,
   MastercardIcon,
@@ -289,7 +283,7 @@ interface PaymentsTableProps {
 }
 
 export function PaymentsTable({
-  paymentsData: transactionsData,
+  paymentsData,
   count,
   pagination,
   onPaginationChange,
@@ -304,7 +298,7 @@ export function PaymentsTable({
 }: PaymentsTableProps) {
   const { pageIndex, pageSize } = pagination;
 
-  const dataCount = count ?? transactionsData.length;
+  const dataCount = count ?? paymentsData.length;
 
   const { mutateAsync } =
     api.dashboard.paymentAttempts.assessment.updateMany.useMutation();
@@ -331,7 +325,7 @@ export function PaymentsTable({
       rowHeight={9}
       getRowId={(row) => row.id}
       columns={columns}
-      data={transactionsData}
+      data={paymentsData}
       onPaginationChange={onPaginationChange}
       pageIndex={pageIndex}
       pageSize={pageSize}
@@ -347,7 +341,7 @@ export function PaymentsTable({
         >
           {selectedOptions && onSelectedOptionsChange && (
             <SearchInput
-              placeholder="Search transactions"
+              placeholder="Search payment attempts"
               options={searchOptions}
               selectedOptions={selectedOptions}
               onChange={onSelectedOptionsChange}
@@ -571,8 +565,8 @@ export function usePaymentsTableProps({
       setPagination,
       selectedOptions,
       setSelectedOptions,
-      transactionsData: data?.data ?? [],
-      refetchTransactions: refetch,
+      data: data?.data ?? [],
+      refetch,
       count: data?.count,
       isLoading,
       isFetching,

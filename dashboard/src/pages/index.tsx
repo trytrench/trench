@@ -1,7 +1,6 @@
 import Head from "next/head";
 import Image from "next/image";
 import { Inter } from "next/font/google";
-import { Sidebar } from "~/components/Sidebar";
 import { api } from "~/lib/api";
 import { type CustomPage } from "../types/Page";
 import { Layout } from "../components/layouts/Layout";
@@ -77,7 +76,7 @@ const Home: CustomPage = () => {
             <Heading size="md">Set rules</Heading>
           </CardHeader>
           <CardBody>
-            <Text>Set rules to assign risk levels to transactions.</Text>
+            <Text>Set rules to assign risk levels to payments.</Text>
           </CardBody>
         </Card>
       </Link>

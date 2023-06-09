@@ -32,9 +32,9 @@ import { useRouter } from "next/router";
 import { CardWithIcon } from "~/components/card-with-icon/CardWithIcon";
 import { DataTable } from "~/components/DataTable";
 import { RiskLevelTag } from "~/components/RiskLevelTag";
-import { PaymentStatusTag } from "~/components/TransactionStatusTag";
+import { PaymentStatusTag } from "~/components/PaymentStatusTag";
 import { Layout } from "~/components/layouts/Layout";
-import { Section, PaymentDetails } from "~/components/views/TransactionDetails";
+import { Section, PaymentDetails } from "~/components/views/PaymentDetails";
 import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
 import {
@@ -54,14 +54,6 @@ import { nanoid } from "nanoid";
 import { handleError } from "~/lib/handleError";
 import { format } from "date-fns";
 import NextLink from "next/link";
-
-const MAP_BLOCKLIST_TO_ICON: Record<DefaultBlockListAlias, ReactNode> = {
-  [DefaultBlockListAlias.CardFingerprintBlocklist]: <CreditCard />,
-  [DefaultBlockListAlias.DeviceBlocklist]: <Phone />,
-  [DefaultBlockListAlias.EmailBlocklist]: <Mail />,
-  [DefaultBlockListAlias.IpBlocklist]: <Globe />,
-  [DefaultBlockListAlias.WalletAddressBlocklist]: <Wallet />,
-};
 
 type PaymentAttempt = RouterOutputs["dashboard"]["paymentAttempts"]["get"];
 type BlockListItem = {
@@ -108,14 +100,14 @@ function getBlockListItems(paymentAttempt: PaymentAttempt): BlockListItem[] {
   return items;
 }
 
-function BlockTransaction(props: { transaction: PaymentAttempt }) {
-  const { transaction } = props;
+function BlockPayment(props: { paymentAttempt: PaymentAttempt }) {
+  const { paymentAttempt } = props;
 
   const [selectedItems, setSelectedItems] = useState<BlockListItem[]>([]);
   const [blockListItems, setBlockListItems] = useState<BlockListItem[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure({
     onOpen: () => {
-      const blockListItems = getBlockListItems(transaction);
+      const blockListItems = getBlockListItems(paymentAttempt);
       setSelectedItems(blockListItems);
       setBlockListItems(blockListItems);
     },
@@ -125,11 +117,6 @@ function BlockTransaction(props: { transaction: PaymentAttempt }) {
     api.dashboard.lists.addDefaultBlocklistItems.useMutation();
   const toast = useToast();
   const handleAddSelected = useCallback(() => {
-    // const confirmed = window.confirm(
-    //   `Are you sure you want to add ${selectedItems.length} items to the blocklist? This will prevent future transactions from being created with these entities.`
-    // );
-    // if (!confirmed) return;
-
     mutateAsync({
       items: selectedItems.map((item) => ({
         listAlias: item.alias,
@@ -275,10 +262,6 @@ const Page: CustomPage = () => {
 
   if (!paymentAttemptData) return null;
 
-  //   const { data: transaction } = api.dashboard.transactions.get.useQuery({
-  //     id: transactionId,
-  //   });
-
   const customerDetails = [
     {
       label: "Name",
@@ -322,7 +305,7 @@ const Page: CustomPage = () => {
   return (
     <Box>
       <Text mb={1} fontWeight="medium" fontSize="sm" color="subtle">
-        Transaction
+        Payment
       </Text>
 
       <Flex justify="space-between" align="center">
@@ -364,7 +347,7 @@ const Page: CustomPage = () => {
             icon={<Icon as={MoreHorizontal} />}
           ></MenuButton>
           <MenuList minWidth="150px">
-            <BlockTransaction transaction={paymentAttemptData} />
+            <BlockPayment paymentAttempt={paymentAttemptData} />
           </MenuList>
         </Menu>
       </Flex>
@@ -423,7 +406,6 @@ const Page: CustomPage = () => {
         )}
       </Section>
       <PaymentDetails paymentId={paymentId} />
-      {/* <ViewTransaction transactionId={transactionId} /> */}
     </Box>
   );
 };

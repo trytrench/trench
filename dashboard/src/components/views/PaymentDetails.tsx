@@ -104,10 +104,10 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     setPagination,
     selectedOptions,
     setSelectedOptions,
-    transactionsData: relatedData,
+    data: relatedData,
     count,
-    refetchTransactions,
-    isFetching: isTransactionsLoading,
+    refetch,
+    isFetching,
   } = usePaymentsTableProps({
     linkedPaymentAttemptId: paymentId,
   });
@@ -319,7 +319,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     },
   ]);
 
-  const locationData = [
+  const locationData: { label: string; value: ReactNode }[] = [
     // { label: "City", value: deviceSnapshot?.ipAddress.address.cityName },
     // { label: "Subdivision", value: deviceSnapshot?.ipAddress.address.subdivisionName },
     // { label: "Country", value: deviceSnapshot?.ipAddress.address.countryName },
@@ -401,8 +401,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
         </Grid>
       </Section>
 
-      <Section title="Related transactions">
-        {/* <ViewTransactions linkedTransactionId={transactionId} /> */}
+      <Section title="Related payments">
         <PaymentsTable
           paymentsData={relatedData || []}
           count={count}
@@ -412,9 +411,9 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud
           onMarkSelectedAsFraud={() => {
-            refetchTransactions().catch(handleError);
+            refetch().catch(handleError);
           }}
-          isLoading={isTransactionsLoading}
+          isLoading={isFetching}
         />
       </Section>
     </Box>

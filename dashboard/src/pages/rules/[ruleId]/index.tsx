@@ -26,6 +26,7 @@ import {
   PaymentsTable,
   usePaymentsTableProps,
 } from "~/components/PaymentsTable";
+import { RiskLevelTag } from "../../../components/RiskLevelTag";
 
 // const DynamicBarChart = dynamic(
 //   () => import("~/components/charts/RuleExecutionStackedBarChart"),
@@ -54,7 +55,7 @@ const EditRulePage: CustomPage = () => {
     setPagination,
     selectedOptions,
     setSelectedOptions,
-    transactionsData,
+    data: paymentsData,
     count,
   } = usePaymentsTableProps({
     executedRuleId: ruleId,
@@ -87,6 +88,11 @@ const EditRulePage: CustomPage = () => {
         <Text color={ruleData.description ? "black" : "gray.500"}>
           {ruleData.description || "None"}
         </Text>
+
+        <Heading mt={8} mb={2} size="sm">
+          Risk Level
+        </Heading>
+        <RiskLevelTag riskLevel={ruleData.riskLevel} />
 
         <Heading mt={8} mb={2} size="sm">
           Code{" "}
@@ -138,10 +144,10 @@ const EditRulePage: CustomPage = () => {
         )}
       </Box>
       <Box mt={8}>
-        <Heading mb={4}>Transactions</Heading>
-        {transactionsData ? (
+        <Heading mb={4}>Payments</Heading>
+        {paymentsData ? (
           <PaymentsTable
-            paymentsData={transactionsData}
+            paymentsData={paymentsData}
             count={count}
             pagination={pagination}
             onPaginationChange={setPagination}

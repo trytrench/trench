@@ -298,7 +298,7 @@ export function RuleForm({
               >
                 Test rule
               </Button>
-              <Text whiteSpace="nowrap">on transactions from the last</Text>
+              <Text whiteSpace="nowrap">on payment attempts from the last</Text>
               <Select
                 width="auto"
                 value={lastNDays}

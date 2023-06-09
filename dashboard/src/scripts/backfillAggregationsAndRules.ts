@@ -1,16 +1,21 @@
-import { Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import { prisma } from "~/server/db";
 import { getAggregations } from "~/server/utils/aggregations";
 import { runRules } from "~/server/utils/rules";
 
 const main = async () => {
-  const transactions = await prisma.transaction.findMany({
+  const transactions = await prisma.paymentAttempt.findMany({
     include: {
-      session: {
+      checkoutSession: {
         include: {
-          transactions: true,
-          device: true,
-          ipAddress: true,
+          paymentAttempts: true,
+          customer: true,
+          deviceSnapshot: {
+            include: {
+              device: true,
+              ipAddress: true,
+            },
+          },
         },
       },
       paymentMethod: {
@@ -18,7 +23,6 @@ const main = async () => {
           card: true,
         },
       },
-      customer: true,
     },
     orderBy: {
       createdAt: "desc",
