@@ -55,9 +55,9 @@ model PaymentAttemptAssessment {
 }
 
 enum PaymentOutcomeStatus {
-  Succeeded
-  Failed
-  Pending
+  SUCCEEDED
+  FAILED
+  PENDING
 }
 
 model PaymentOutcome {
@@ -67,7 +67,6 @@ model PaymentOutcome {
   updatedAt DateTime @updatedAt
 
   status                   PaymentOutcomeStatus
-  reason                   String
   stripeData               Json?
   threeDSecureFlow         String?
   threeDSecureResult       String?
