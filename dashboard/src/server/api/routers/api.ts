@@ -113,6 +113,8 @@ export const apiRouter = createTRPCRouter({
           description: paymentIntent.description,
           metadata: paymentIntent.metadata,
           checkoutSession: { connect: { id: checkoutSession.id } },
+          shippingName: paymentIntent.shipping?.name,
+          shippingPhone: paymentIntent.shipping?.phone,
           paymentMethod: {
             connectOrCreate: {
               where: { customId: paymentMethod.id },
@@ -162,6 +164,20 @@ export const apiRouter = createTRPCRouter({
           },
         },
       });
+
+      if (paymentIntent.shipping) {
+        await ctx.prisma.address.create({
+          data: {
+            paymentAttempts: { connect: { id: paymentAttempt.id } },
+            city: paymentIntent.shipping?.address?.city,
+            country: paymentIntent.shipping?.address?.country,
+            line1: paymentIntent.shipping?.address?.line1,
+            line2: paymentIntent.shipping?.address?.line2,
+            postalCode: paymentIntent.shipping?.address?.postal_code,
+            state: paymentIntent.shipping?.address?.state,
+          },
+        });
+      }
 
       // Generate aggregations
       // const aggregations = await getAggregations(

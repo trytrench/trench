@@ -4,17 +4,17 @@ import { Check, X } from "lucide-react";
 import React from "react";
 
 export const PAYMENT_STATUS_METADATA = {
-  [PaymentOutcomeStatus.Failed]: {
+  [PaymentOutcomeStatus.FAILED]: {
     color: "red",
     label: "failed",
     icon: X,
   },
-  [PaymentOutcomeStatus.Pending]: {
+  incomplete: {
     color: "red",
     label: "incomplete",
     icon: X,
   },
-  [PaymentOutcomeStatus.Succeeded]: {
+  [PaymentOutcomeStatus.SUCCEEDED]: {
     color: "green",
     label: "succeeded",
     icon: Check,
