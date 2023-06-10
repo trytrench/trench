@@ -1,53 +1,75 @@
 import { stream } from "../../flow";
+import { type AllCounts, createAllCounts, DEFAULT_ALL_COUNTS } from "./utils";
 
 type CustomerAggregations = {
-  cardCount: number;
-  deviceCount: number;
-  ipCount: number;
+  cards: AllCounts;
+  devices: AllCounts;
+  ipAddresses: AllCounts;
+  paymentAttempts: AllCounts;
+  paymentMethods: AllCounts;
 };
 
 export const customerAggregationsStream = stream.resolver(
   async ({ input, ctx }): Promise<CustomerAggregations> => {
-    const customerId = input.paymentAttempt.checkoutSession.customerId;
-    const paymentTime = input.paymentAttempt.createdAt;
-    const paymentDate = new Date(paymentTime);
+    const { paymentAttempt } = input;
+
+    const customerId = paymentAttempt.checkoutSession.customerId;
+    const timeOfPayment = new Date(paymentAttempt.createdAt);
 
     if (!customerId) {
       return {
-        cardCount: 0,
-        deviceCount: 0,
-        ipCount: 0,
+        cards: DEFAULT_ALL_COUNTS,
+        devices: DEFAULT_ALL_COUNTS,
+        ipAddresses: DEFAULT_ALL_COUNTS,
+        paymentAttempts: DEFAULT_ALL_COUNTS,
+        paymentMethods: DEFAULT_ALL_COUNTS,
       };
     }
 
-    const result = await ctx.prisma.$transaction([
-      // Card count
-      ctx.prisma.card.count({
-        where: {
-          customerLinks: { some: { customerId: customerId } },
-          createdAt: { lte: paymentDate },
-        },
-      }),
-      // Device count
-      ctx.prisma.device.count({
-        where: {
-          customerLinks: { some: { customerId: customerId } },
-          createdAt: { lte: paymentDate },
-        },
-      }),
-      // IP count
-      ctx.prisma.ipAddress.count({
-        where: {
-          customerLinks: { some: { customerId: customerId } },
-          createdAt: { lte: paymentDate },
-        },
-      }),
-    ]);
+    const [cardLinks, deviceLinks, ipAddressLinks, paymentAttemptLinks] =
+      await ctx.prisma.$transaction([
+        ctx.prisma.customerCardLink.findMany({
+          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        }),
+
+        ctx.prisma.customerDeviceLink.findMany({
+          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        }),
+
+        ctx.prisma.customerIpAddressLink.findMany({
+          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        }),
+
+        ctx.prisma.customerPaymentAttemptLink.findMany({
+          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        }),
+
+        ctx.prisma.customerPaymentMethodLink.findMany({
+          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        }),
+      ]);
 
     return {
-      cardCount: result[0],
-      deviceCount: result[1],
-      ipCount: result[2],
+      cards: createAllCounts({
+        timeOfPayment,
+        links: cardLinks,
+      }),
+      devices: createAllCounts({
+        timeOfPayment,
+        links: deviceLinks,
+      }),
+      ipAddresses: createAllCounts({
+        timeOfPayment,
+        links: ipAddressLinks,
+      }),
+      paymentAttempts: createAllCounts({
+        timeOfPayment,
+        links: paymentAttemptLinks,
+      }),
+      paymentMethods: createAllCounts({
+        timeOfPayment,
+        links: paymentAttemptLinks,
+      }),
     };
   }
 );

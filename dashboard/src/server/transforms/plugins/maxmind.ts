@@ -10,6 +10,9 @@ export async function maxmindPlugin(ipAddress: string) {
 }
 
 const getIpData = (data: Insights) => {
+  if (!data.location) {
+    throw new Error("No location data");
+  }
   return {
     continentISOCode: data.continent?.code,
     continentName: data.continent?.names?.en,
@@ -28,11 +31,11 @@ const getIpData = (data: Insights) => {
       data.subdivisions?.[data.subdivisions.length - 1]?.names.en,
     subdivisionConfidence:
       data.subdivisions?.[data.subdivisions.length - 1]?.confidence,
-    latitude: data.location?.latitude,
-    longitude: data.location?.longitude,
-    accuracyRadius: data.location?.accuracyRadius,
-    averageIncome: data.location?.averageIncome,
-    timezone: data.location?.timeZone,
+    latitude: data.location.latitude,
+    longitude: data.location.longitude,
+    accuracyRadius: data.location.accuracyRadius,
+    averageIncome: data.location.averageIncome,
+    timezone: data.location.timeZone,
     isp: data.traits?.isp,
     isAnonymous: data.traits?.isAnonymous,
     isAnonymousVpn: data.traits?.isAnonymousVpn,

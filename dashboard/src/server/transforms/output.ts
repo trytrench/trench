@@ -1,20 +1,20 @@
 import { cardIpDistanceStream } from "./streams/cardIpDistance";
 import { stream } from "./flow";
+import { aggregationStream } from "./streams/aggregations";
 
-export const transformsStream = stream.depend({}).resolver(({ deps }) => {
-  return {
-    transforms: deps,
-  };
-});
-
-export const rulePayloadStream = stream.depend({}).resolver(({ input }) => {
-  const { paymentAttempt, blockLists } = input;
-
-  return {
-    paymentAttempt: paymentAttempt,
-    lists: blockLists,
+export const rulePayloadStream = stream
+  .depend({
     transforms: {
+      aggregations: aggregationStream,
       cardIpDistance: cardIpDistanceStream,
     },
-  };
-});
+  })
+  .resolver(({ input, deps }) => {
+    const { paymentAttempt, blockLists } = input;
+    const { transforms } = deps;
+    return {
+      paymentAttempt: paymentAttempt,
+      lists: blockLists,
+      transforms,
+    };
+  });

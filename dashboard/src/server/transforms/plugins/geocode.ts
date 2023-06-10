@@ -26,6 +26,7 @@ export const geocodePlugin = async (address: Address) => {
     .forwardGeocode({
       query,
       limit: 1,
+      types: ["address"],
     })
     .send();
 
@@ -33,5 +34,25 @@ export const geocodePlugin = async (address: Address) => {
     throw new Error("No features found");
   }
 
-  return response.body.features[0];
+  const countryFeature = response.body.features[0].context.find((context) =>
+    context.id.startsWith("country")
+  ) as Record<string, any> | undefined;
+
+  const countryCode =
+    (countryFeature?.short_code as string | undefined) ?? null;
+
+  if (!countryCode) {
+    throw new Error("No country code found");
+  }
+
+  const center = response.body.features[0].center;
+  if (!center[1] || !center[0]) {
+    throw new Error("Center missing latitude or longitude");
+  }
+
+  return {
+    latitude: center[1],
+    longitude: center[0],
+    countryCode,
+  };
 };

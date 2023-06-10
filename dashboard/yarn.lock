@@ -1734,10 +1734,10 @@
   resolved "https://registry.yarnpkg.com/@trpc/server/-/server-10.29.1.tgz#9113ae61faac415aa8d8425dd0fccc91c649b3a4"
   integrity sha512-kNXgMh5ya+awuz2tB4eIyVrRs7nVtqGXwSGabzH3l5ZLWz7rbKJquOJ7h6bjvIfWUpaFG62HJNWxxGUtXCRgRw==
 
-"@trytrench/flow@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@trytrench/flow/-/flow-0.0.1.tgz#005dcc114f722405a701fef67b711569568c99ea"
-  integrity sha512-lVLfBuxn3EKczg1j+lqD0B5wcZbasPHU/azN0Aqowlsd5TsSPViWWqSt/2jBwPVisPorsgpJgUc3skCsrhkqEA==
+"@trytrench/flow@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@trytrench/flow/-/flow-0.0.2.tgz#5600d45be2a1686785b35d128151944e28219507"
+  integrity sha512-1B6XvSHI9a5TF97xLsL17sUDJ46DBJPtKFowgEaJGhL0J4gPSBVBa78uNvRTCyj2+++DMkJnpYAGOAQpFCeppA==
 
 "@ts-morph/bootstrap@^0.19.0":
   version "0.19.0"

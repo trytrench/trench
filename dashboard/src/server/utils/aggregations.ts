@@ -1,4 +1,4 @@
-import { Prisma, PrismaPromise } from "@prisma/client";
+import { Prisma, type PrismaPromise } from "@prisma/client";
 import { prisma } from "../db";
 import { set, mapValues, uniqBy, uniq } from "lodash";
 import { zip } from "./zip";

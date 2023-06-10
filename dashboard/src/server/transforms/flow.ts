@@ -10,6 +10,7 @@ import {
   type PaymentAttempt,
   type Address,
   type Card,
+  type Customer,
 } from "@prisma/client";
 
 export type StreamInput = {
@@ -21,6 +22,7 @@ export type StreamInput = {
             ipAddress: IpAddress | null;
           })
         | null;
+      customer: Customer | null;
     };
     paymentMethod: PaymentMethod & {
       address: Address;

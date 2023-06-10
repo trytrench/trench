@@ -1,34 +1,59 @@
 import { stream } from "../../flow";
+import {
+  DEFAULT_TIME_BUCKET_AGGREGATIONS,
+  createTimeBucketCounts,
+  type TimeBucketCounts,
+  type AllCounts,
+  DEFAULT_ALL_COUNTS,
+  createAllCounts,
+} from "./utils";
 
 type IpAddressAggregations = {
-  deviceCount: number;
-  uniqueCardCountriesCount: number;
-  customerCount: number;
-  paymentAttemptCount: number;
+  devices: AllCounts;
+  customers: AllCounts;
+  cards: {
+    uniqueCountries: number;
+  };
+  paymentAttempts: TimeBucketCounts;
 };
 
 export const ipAddressAggregationsStream = stream.resolver(
   async ({ input, ctx }): Promise<IpAddressAggregations> => {
-    const ipAddress =
-      input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress?.ipAddress;
-    const paymentTime = input.paymentAttempt.createdAt;
-    const paymentDate = new Date(paymentTime);
+    const { paymentAttempt } = input;
 
-    if (!ipAddress) {
+    const ipAddressId =
+      paymentAttempt.checkoutSession.deviceSnapshot?.ipAddressId;
+    const timeOfPayment = new Date(paymentAttempt.createdAt);
+
+    if (!ipAddressId) {
       return {
-        deviceCount: 0,
-        uniqueCardCountriesCount: 0,
-        customerCount: 0,
-        paymentAttemptCount: 0,
+        devices: DEFAULT_ALL_COUNTS,
+        customers: DEFAULT_ALL_COUNTS,
+        cards: {
+          uniqueCountries: 0,
+        },
+        paymentAttempts: DEFAULT_TIME_BUCKET_AGGREGATIONS,
       };
     }
 
-    const result = await ctx.prisma.$transaction([
-      // Device count
-      ctx.prisma.device.count({
+    const [
+      customerLinks,
+      deviceLinks,
+      uniqueCardCountries,
+      paymentAttemptLinks,
+    ] = await ctx.prisma.$transaction([
+      // Customer links
+      ctx.prisma.customerIpAddressLink.findMany({
         where: {
-          ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
-          createdAt: { lte: paymentDate },
+          ipAddressId: ipAddressId,
+          firstSeen: { lte: timeOfPayment },
+        },
+      }),
+      // Device links
+      ctx.prisma.deviceIpAddressLink.findMany({
+        where: {
+          ipAddressId: ipAddressId,
+          firstSeen: { lte: timeOfPayment },
         },
       }),
       // Unique country count
@@ -36,31 +61,48 @@ export const ipAddressAggregationsStream = stream.resolver(
         select: { id: true },
         distinct: ["country"],
         where: {
-          ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
-          createdAt: { lte: paymentDate },
+          ipAddressLinks: { some: { ipAddressId: ipAddressId } },
+          createdAt: { lte: timeOfPayment },
         },
       }),
-      // Customer count
-      ctx.prisma.customer.count({
+      // Payment attempt links
+      ctx.prisma.paymentAttemptIpAddressLink.findMany({
         where: {
-          ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
-          createdAt: { lte: paymentDate },
+          ipAddressId: ipAddressId,
+          paymentAttempt: {
+            createdAt: { lte: timeOfPayment },
+          },
         },
-      }),
-      // Payment attempt count
-      ctx.prisma.paymentAttempt.count({
-        where: {
-          ipAddressLinks: { some: { ipAddress: { ipAddress: ipAddress } } },
-          createdAt: { lte: paymentDate },
+        include: {
+          paymentAttempt: true,
         },
       }),
     ]);
 
+    const customerCounts = createAllCounts({
+      links: customerLinks,
+      timeOfPayment,
+    });
+    const deviceCounts = createAllCounts({
+      links: deviceLinks,
+      timeOfPayment,
+    });
+
+    const paymentCounts = createTimeBucketCounts({
+      timeOfPayment,
+      items: paymentAttemptLinks.map((link) => ({
+        data: link,
+        timestamp: new Date(link.paymentAttempt.createdAt),
+      })),
+    });
+
     return {
-      deviceCount: result[0],
-      uniqueCardCountriesCount: result[1].length,
-      customerCount: result[2],
-      paymentAttemptCount: result[3],
+      customers: customerCounts,
+      devices: deviceCounts,
+      cards: {
+        uniqueCountries: uniqueCardCountries.length,
+      },
+      paymentAttempts: paymentCounts,
     };
   }
 );

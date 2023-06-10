@@ -15,7 +15,7 @@ export const ipDataStream = stream.plugin({
   plugin: maxmindPlugin,
 });
 
-export const geocodeCard = stream.plugin({
+export const geocodeCardStream = stream.plugin({
   feedInput: ({ input }) => {
     const paymentMethod = input.paymentAttempt.paymentMethod;
     return paymentMethod.address;
@@ -26,21 +26,14 @@ export const geocodeCard = stream.plugin({
 export const cardIpDistanceStream = stream
   .depend({
     geolocateSession: ipDataStream,
-    geolocateCard: geocodeCard,
+    geolocateCard: geocodeCardStream,
   })
   .resolver(({ deps }) => {
     const { geolocateSession, geolocateCard } = deps;
 
-    if (!geolocateSession.latitude || !geolocateSession.longitude) {
-      throw new Error("Session latitude or longitude is missing");
-    }
-    if (!geolocateCard.center[1] || !geolocateCard.center[0]) {
-      throw new Error("Card center lat or long is missing");
-    }
-
     const distance = getPreciseDistance(
       { lat: geolocateSession.latitude, lon: geolocateSession.longitude },
-      { lat: geolocateCard.center[1], lon: geolocateCard.center[0] }
+      { lat: geolocateCard.latitude, lon: geolocateCard.longitude }
     );
 
     const distanceKm = convertDistance(distance, "km");
