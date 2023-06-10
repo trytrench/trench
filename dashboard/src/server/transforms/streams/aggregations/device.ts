@@ -106,7 +106,7 @@ export const deviceAggregationsStream = stream
     ) as string[];
 
     const prevCountries = linkedLocations.map(
-      (location) => location.countryCode
+      (location) => location.countryISOCode
     );
     const uniqueCountries = uniq([
       ...prevCountries,
@@ -131,6 +131,7 @@ export const deviceAggregationsStream = stream
       data: paymentAttempt.paymentMethod.email,
       timestamp: paymentAttempt.createdAt,
     }));
+
     const emailsCount = createTimeBucketCounts({
       timeOfPayment,
       items: [
@@ -144,7 +145,7 @@ export const deviceAggregationsStream = stream
           data: paymentAttempt.checkoutSession.customer?.email,
           timestamp: paymentAttempt.createdAt,
         },
-      ],
+      ].filter((item) => !!item.data),
       getTimeBucketCount(bucketItems) {
         return uniq(bucketItems.map(({ data }) => data)).length;
       },

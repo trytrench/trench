@@ -83,7 +83,7 @@ GROUP BY
 CREATE
 OR REPLACE VIEW "PaymentAttemptIpAddressLink" AS
 SELECT
-    "PaymentAttempt"."id" AS "PaymentAttemptId",
+    "PaymentAttempt"."id" AS "paymentAttemptId",
     "DeviceSnapshot"."ipAddressId" AS "ipAddressId"
 FROM
     "PaymentAttempt"

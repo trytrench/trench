@@ -1,4 +1,8 @@
-import { cardIpDistanceStream } from "./streams/cardIpDistance";
+import {
+  cardIpDistanceStream,
+  geocodeCardStream,
+  ipDataStream,
+} from "./streams/cardIpDistance";
 import { stream } from "./flow";
 import { aggregationStream } from "./streams/aggregations";
 
@@ -7,6 +11,8 @@ export const rulePayloadStream = stream
     transforms: {
       aggregations: aggregationStream,
       cardIpDistance: cardIpDistanceStream,
+      geocodeCard: geocodeCardStream,
+      ipData: ipDataStream,
     },
   })
   .resolver(({ input, deps }) => {

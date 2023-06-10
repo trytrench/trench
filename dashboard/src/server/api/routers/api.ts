@@ -3,6 +3,7 @@ import { z } from "zod";
 import { env } from "~/env.mjs";
 import { RiskLevel } from "../../../common/types";
 import { createTRPCRouter, openApiProcedure } from "../trpc";
+import { rulePayloadStream } from "../../transforms/output";
 
 const addressSchema = z.object({
   city: z.string().optional(),
@@ -62,7 +63,7 @@ export const apiRouter = createTRPCRouter({
                     create: {
                       customId: customer.id,
                       name: customer.name,
-                      phoneNumber: customer.phone,
+                      phone: customer.phone,
                       email: customer.email,
                       metadata: customer.metadata,
                     },
@@ -85,22 +86,15 @@ export const apiRouter = createTRPCRouter({
           paymentMethod: {
             include: {
               card: true,
-              address: {
-                include: {
-                  location: true,
-                },
-              },
+              address: true,
             },
           },
           checkoutSession: {
             include: {
+              customer: true,
               deviceSnapshot: {
                 include: {
-                  ipAddress: {
-                    include: {
-                      location: true,
-                    },
-                  },
+                  ipAddress: true,
                   device: true,
                 },
               },
@@ -178,6 +172,13 @@ export const apiRouter = createTRPCRouter({
           },
         });
       }
+
+      const rulePayload = await rulePayloadStream.run({
+        paymentAttempt,
+        blockLists: [],
+      });
+
+      console.log(JSON.stringify(rulePayload, null, 2));
 
       // Generate aggregations
       // const aggregations = await getAggregations(

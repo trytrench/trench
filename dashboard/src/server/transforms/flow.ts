@@ -25,7 +25,7 @@ export type StreamInput = {
       customer: Customer | null;
     };
     paymentMethod: PaymentMethod & {
-      address: Address;
+      address: Address | null;
       card: Card | null;
     };
   };
