@@ -141,7 +141,7 @@ export default async function handler(
                   longitude: ipData.longitude,
                   cityGeonameId: ipData.cityGeonameId,
                   cityName: ipData.cityName,
-                  countryCode: ipData.countryISOCode,
+                  countryISOCode: ipData.countryISOCode,
                   countryName: ipData.countryName,
                   postalCode: ipData.postalCode,
                   regionISOCode: ipData.subdivisionISOCode,

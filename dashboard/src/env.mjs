@@ -17,6 +17,7 @@ export const env = createEnv({
     ADMIN_PASSWORD: z.string(),
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
     STRIPE_SECRET_KEY: z.string(),
+    STRIPE_WEBHOOK_SECRET: z.string(),
   },
 
   /**
@@ -44,5 +45,6 @@ export const env = createEnv({
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   },
 });

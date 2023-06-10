@@ -85,7 +85,7 @@ model StripePaymentOutcome {
   reason           String?
   riskLevel        String?
   riskScore        Int?
-  rule             String?
+  rule             Json?
   sellerMessage    String?
   type             String?
   paymentOutcome   PaymentOutcome @relation(fields: [paymentOutcomeId], references: [id])
