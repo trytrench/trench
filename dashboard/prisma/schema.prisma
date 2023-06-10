@@ -67,7 +67,7 @@ model PaymentOutcome {
   updatedAt DateTime @updatedAt
 
   status                   PaymentOutcomeStatus
-  stripeData               Json?
+  stripeOutcome            StripePaymentOutcome?
   threeDSecureFlow         String?
   threeDSecureResult       String?
   threeDSecureResultReason String?
@@ -75,6 +75,21 @@ model PaymentOutcome {
 
   paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
   paymentAttemptId String         @unique
+}
+
+model StripePaymentOutcome {
+  id               String         @id @default(cuid())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  networkStatus    String?
+  reason           String?
+  riskLevel        String?
+  riskScore        Int?
+  rule             String?
+  sellerMessage    String?
+  type             String?
+  paymentOutcome   PaymentOutcome @relation(fields: [paymentOutcomeId], references: [id])
+  paymentOutcomeId String         @unique
 }
 
 model Customer {
