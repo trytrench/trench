@@ -26,7 +26,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string(),
+    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
   },
 
   /**
