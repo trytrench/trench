@@ -2,6 +2,8 @@
 title: Stripe Integration
 ---
 
+Learn how to set up a Stripe payment flow that integrates Trench to collect data and assess payments.
+
 ### Create a PaymentIntent
 
 Add an endpoint on your server that creates a PaymentIntent. A PaymentIntent tracks the customer’s payment lifecycle, keeping track of any failed payment attempts and ensuring the customer is only charged once. Return the PaymentIntent’s client secret in the response to finish the payment on the client.
