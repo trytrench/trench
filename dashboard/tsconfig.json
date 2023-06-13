@@ -30,6 +30,7 @@
     "incremental": true,
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
+    "types": ["@types/mapbox__mapbox-sdk"],
     "paths": {
       "~/*": ["./src/*"]
     }

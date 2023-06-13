@@ -156,8 +156,12 @@ const PAYMENT_ATTEMPTS: {
         },
         outcome: {
           create: {
-            status: PaymentOutcomeStatus.Succeeded,
-            reason: faker.lorem.sentence(),
+            status: PaymentOutcomeStatus.SUCCEEDED,
+            stripeOutcome: {
+              create: {
+                reason: faker.lorem.sentence(),
+              },
+            },
           },
         },
         ruleExecutions: {

@@ -18,6 +18,10 @@ export const ipDataStream = stream.plugin({
 export const geocodeCardStream = stream.plugin({
   feedInput: ({ input }) => {
     const paymentMethod = input.paymentAttempt.paymentMethod;
+
+    if (!paymentMethod.address) {
+      throw new Error("Address not found");
+    }
     return paymentMethod.address;
   },
   plugin: geocodePlugin,

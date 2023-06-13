@@ -1,7 +1,11 @@
 "use client";
 import React, { useRef, useEffect, useMemo, useCallback } from "react";
-import Editor, { OnChange, useMonaco, Monaco } from "@monaco-editor/react";
-import { editor, Range } from "monaco-editor";
+import Editor, {
+  type OnChange,
+  useMonaco,
+  type Monaco,
+} from "@monaco-editor/react";
+import { type editor, Range } from "monaco-editor";
 import { TYPES_SOURCE } from "./constants";
 import { Box } from "@chakra-ui/react";
 
@@ -42,8 +46,8 @@ export const CustomTypeScriptEditor: React.FC<CustomTypeScriptEditorProps> = ({
       });
 
       // extra libraries
-      var libSource = `${TYPES_SOURCE}\n${dynamicTsLib ?? ""}`;
-      var libUri = "ts:filename/facts.d.ts";
+      const libSource = `${TYPES_SOURCE}\n${dynamicTsLib ?? ""}`;
+      const libUri = "ts:filename/facts.d.ts";
       monaco.languages.typescript.typescriptDefaults.addExtraLib(
         libSource,
         libUri

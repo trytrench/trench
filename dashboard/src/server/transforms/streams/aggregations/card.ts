@@ -45,7 +45,7 @@ export const cardAggregationsStream = stream
     ]);
 
     const pastCountries = paymentMethods
-      .map((paymentMethod) => paymentMethod.address?.location?.countryCode)
+      .map((paymentMethod) => paymentMethod.address?.location?.countryISOCode)
       .filter((countryCode) => !!countryCode) as string[];
     const currentCountry = cardGeocode.countryCode;
     const uniqueCountries = uniq(

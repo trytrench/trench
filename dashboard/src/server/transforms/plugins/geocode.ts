@@ -1,12 +1,11 @@
-import mbxClient from "@mapbox/mapbox-sdk";
-import type MapiClient from "@mapbox/mapbox-sdk/lib/classes/mapi-client";
+import mbxClient from "@mapbox/mapbox-sdk/lib/classes/mapi-client";
 import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding";
 import { type Address } from "@prisma/client";
 import { env } from "../../../env.mjs";
 
-const mapboxClient = mbxClient({
+const mapboxClient = new mbxClient({
   accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
-}) as MapiClient;
+});
 
 export const geocodePlugin = async (address: Address) => {
   const query = [

@@ -5,6 +5,7 @@ import {
 } from "./streams/cardIpDistance";
 import { stream } from "./flow";
 import { aggregationStream } from "./streams/aggregations";
+import { type Stream } from "@trytrench/flow";
 
 export const rulePayloadStream = stream
   .depend({
@@ -24,3 +25,12 @@ export const rulePayloadStream = stream
       transforms,
     };
   });
+
+export type RulePayload = typeof rulePayloadStream extends Stream<
+  any,
+  infer TOut,
+  any,
+  any
+>
+  ? TOut
+  : never;

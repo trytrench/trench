@@ -13,5 +13,6 @@
   ],
   "devDependencies": {
     "eslint": "^8.30.0"
-  }
+  },
+  "dependencies": {}
 }
