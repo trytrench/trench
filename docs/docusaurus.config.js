@@ -51,6 +51,12 @@ const config = {
         },
       }),
     ],
+    [
+      "docusaurus-preset-shiki-twoslash",
+      {
+        themes: ["github-light", "github-dark"],
+      },
+    ],
   ],
 
   themeConfig:

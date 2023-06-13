@@ -10,7 +10,7 @@ import { userAgentFromString } from "next/server";
 const devPrisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: process.env.POSTGRES_PRISMA_URL,
     },
   },
 });

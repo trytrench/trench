@@ -9,7 +9,7 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@db:5432/postgres?pgbouncer=true
+      - POSTGRES_PRISMA_URL=postgres://postgres:postgres@db:5432/postgres?pgbouncer=true
       - API_KEY=API_KEY
       - JWT_SECRET=
       - MAXMIND_ACCOUNT_ID=

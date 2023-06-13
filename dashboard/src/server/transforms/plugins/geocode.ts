@@ -4,7 +4,7 @@ import { type Address } from "@prisma/client";
 import { env } from "../../../env.mjs";
 
 const mapboxClient = new mbxClient({
-  accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+  accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "",
 });
 
 export const geocodePlugin = async (address: Address) => {
