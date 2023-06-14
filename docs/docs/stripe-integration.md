@@ -1,8 +1,46 @@
 ---
 title: Stripe Integration
+sidebar_position: 2
 ---
 
-Learn how to set up a Stripe payment flow that integrates Trench to collect data and assess payments.
+## Data collection (5 min)
+
+Learn how to easily integrate Trench for data collection in payment flows that follow the [Stripe Quickstart guide](https://stripe.com/docs/payments/quickstart). If you also want to assess payments with Trench, follow the [Assess Payments](#assess-payments) guide.
+
+### Sync Stripe data
+
+Create a [Stripe webhook](https://dashboard.stripe.com/webhooks) endpoint with the URL `{{TRENCH_URL}}/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
+
+### Initialize Trench
+
+When you create a new payment intent, pass the client secret to Trench to initialize a session.
+
+```jsx title="App.jsx"
+export default function App() {
+  useEffect(() => {
+    // Create PaymentIntent as soon as the page loads
+    fetch("/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ id: "xl-tshirt" }] }),
+    })
+      .then((res) => res.json())
+      .then((data) => setClientSecret(data.clientSecret));
+  }, []);
+
+  useEffect(() => {
+    // Initialize Trench
+    if (clientSecret) initialize(process.env.TRENCH_API_URL, clientSecret);
+  }, [clientSecret]);
+```
+
+## Assess payments
+
+Learn how to integrate Trench to assess payments. This requires modifying your payment flow to [finalize payments on the server](https://stripe.com/docs/payments/finalize-payments-on-the-server).
+
+### Sync Stripe data
+
+Create a [Stripe webhook](https://dashboard.stripe.com/webhooks) endpoint with the URL `{{TRENCH_URL}}/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
 
 ### Create a PaymentIntent
 
