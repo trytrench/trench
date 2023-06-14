@@ -78,7 +78,7 @@ const config = {
             label: "Docs",
           },
           {
-            href: "https://github.com/facebook/docusaurus",
+            href: "https://github.com/trytrench/trench",
             label: "GitHub",
             position: "right",
           },
@@ -108,10 +108,6 @@ const config = {
           {
             title: "More",
             items: [
-              {
-                label: "Blog",
-                to: "/blog",
-              },
               {
                 label: "GitHub",
                 href: "https://github.com/trytrench/trench",
