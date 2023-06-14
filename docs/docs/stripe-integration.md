@@ -7,11 +7,11 @@ sidebar_position: 2
 
 Learn how to easily integrate Trench for data collection in payment flows that follow the [Stripe Quickstart guide](https://stripe.com/docs/payments/quickstart). If you also want to assess payments with Trench, follow the [Assess Payments](#assess-payments) guide.
 
-### Sync Stripe data
+### 1. Sync Stripe data
 
 Create a [Stripe webhook](https://dashboard.stripe.com/webhooks) endpoint with the URL `{{TRENCH_URL}}/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
 
-### Initialize Trench
+### 2. Initialize Trench
 
 When you create a new payment intent, pass the client secret to Trench to initialize a session.
 
@@ -38,11 +38,11 @@ export default function App() {
 
 Learn how to integrate Trench to assess payments. This requires modifying your payment flow to [finalize payments on the server](https://stripe.com/docs/payments/finalize-payments-on-the-server).
 
-### Sync Stripe data
+### 1. Sync Stripe data
 
 Create a [Stripe webhook](https://dashboard.stripe.com/webhooks) endpoint with the URL `{{TRENCH_URL}}/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
 
-### Create a PaymentIntent
+### 2. Create a PaymentIntent
 
 Add an endpoint on your server that creates a PaymentIntent. A PaymentIntent tracks the customer’s payment lifecycle, keeping track of any failed payment attempts and ensuring the customer is only charged once. Return the PaymentIntent’s client secret in the response to finish the payment on the client.
 
@@ -65,7 +65,7 @@ app.post("/create-payment-intent", async (req, res) => {
 });
 ```
 
-### Add and configure the Elements provider to your checkout page
+### 3. Add and configure the Elements provider to your checkout page
 
 Immediately make a request to the endpoint on your server to create a new PaymentIntent as soon as your checkout page loads. Pass the client secret as an option to the Elements provider.
 
@@ -106,7 +106,7 @@ export default function App() {
 }
 ```
 
-### Add the Payment Element component
+### 4. Add the Payment Element component
 
 Use the PaymentElement component to build your form. When the customer submits your payment form, create a PaymentMethod to send to your server for additional validation or business logic prior to confirmation.
 
@@ -171,7 +171,7 @@ export default function CheckoutForm({ clientSecret }) {
 }
 ```
 
-### Submit the payment to Stripe
+### 5. Submit the payment to Stripe
 
 On the server, send the `paymentIntentId` and `payentMethodId` to Trench to assess the payment. Attach the Trench `paymentAttemptId` to the `PaymentIntent`. If the risk level is normal, confirm the payment intent.
 
@@ -219,7 +219,7 @@ app.post("/confirm-payment-intent", async (req, res) => {
 });
 ```
 
-### Handle any next actions
+### 6. Handle any next actions
 
 When the PaymentIntent requires additional action from the customer, such as authenticating with 3D Secure or redirecting to a different site, you need to trigger those actions.
 
