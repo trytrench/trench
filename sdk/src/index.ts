@@ -17,7 +17,7 @@ export const initialize = async (baseUrl: string, paymentIntentId: string) => {
   } catch (error) {}
 
   try {
-    const response = await fetch(`${baseUrl}/device`, {
+    const response = await fetch(`${baseUrl}/api/device`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
