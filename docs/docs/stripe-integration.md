@@ -11,11 +11,17 @@ Learn how to easily integrate Trench for data collection in payment flows that f
 
 Create a [Stripe webhook](https://dashboard.stripe.com/webhooks) endpoint with the URL `{{TRENCH_URL}}/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
 
-### 2. Initialize Trench
+### 2. Set up the Trench SDK
 
-When you create a new payment intent, pass the client secret to Trench to initialize a session.
+```bash
+npm install @trytrench/sdk
+```
+
+When you create a new payment intent, pass the URL of your Trench deployment (e.g. `https://trench-demo.vercel.app`) and the client secret to initialize a session.
 
 ```jsx title="App.jsx"
+import { initialize } from "@trytrench/sdk";
+
 export default function App() {
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads

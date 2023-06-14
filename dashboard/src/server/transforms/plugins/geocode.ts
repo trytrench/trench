@@ -3,11 +3,11 @@ import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding";
 import { type Address } from "@prisma/client";
 import { env } from "../../../env.mjs";
 
-const mapboxClient = new mbxClient({
-  accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "",
-});
-
 export const geocodePlugin = async (address: Address) => {
+  const mapboxClient = new mbxClient({
+    accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "",
+  });
+
   const query = [
     address.line1,
     address.line2,
