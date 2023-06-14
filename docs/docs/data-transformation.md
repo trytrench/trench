@@ -1,5 +1,7 @@
 ---
-title: Customize Data Transformations
+title: "Advanced: Data Transformations"
+sidebar_position: 3
+draft: true
 ---
 
 This guide provides a step-by-step process for creating custom transformations on data before applying your rule sets.
