@@ -18,8 +18,8 @@ Trench is an open-source payment fraud prevention platform. This includes an SDK
 - `STRIPE_SECRET_KEY` - Stripe key with read permissions on `PaymentIntent`, `PaymentMethod`, and `Customer`
 - `STRIPE_WEBHOOK_SECRET` - used to verify Stripe webhooks
 - `JWT_SECRET` - used to sign JWT tokens
-- `SENTRY_DSN` (optional) - Sentry DSN for error reporting
-- `NEXT_PUBLIC_MAPBOX_TOKEN` (optional) - Mapbox token for geocoding and maps
+- `SENTRY_DSN` **(optional)** - Sentry DSN for error reporting
+- `NEXT_PUBLIC_MAPBOX_TOKEN` **(optional)** - Mapbox token for geocoding and maps
 
 ### Stripe Integration
 
