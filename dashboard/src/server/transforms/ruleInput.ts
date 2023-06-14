@@ -1,23 +1,19 @@
 import { node } from "./flow";
 import { aggregationNode } from "./nodes/aggregations";
 import { type inferNodeOutput } from "@trytrench/flow";
-
-export const splitNameNode = node.resolver(({ input }) => {
-  const { paymentAttempt } = input;
-  const nameArr = paymentAttempt.paymentMethod.name?.split(" ") || [];
-  const firstName = nameArr[0];
-  const lastName = nameArr.slice(1).join(" ");
-  return {
-    firstName,
-    lastName,
-  };
-});
+import {
+  paymentMethodIpDistanceNode,
+  geocodePaymentMethodNode,
+  ipDataNode,
+} from "./nodes/cardIpDistance";
 
 export const ruleInputNode = node
   .depend({
     transforms: {
       aggregations: aggregationNode,
-      splitName: splitNameNode,
+      ipData: ipDataNode,
+      paymentMethodLocation: geocodePaymentMethodNode,
+      paymentMethodIpDistance: paymentMethodIpDistanceNode,
     },
   })
   .resolver(({ input, deps }) => {

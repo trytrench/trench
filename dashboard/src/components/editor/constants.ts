@@ -64,7 +64,7 @@ type RuleInput = {
     };
     paymentMethod: PaymentMethod & { address: Address; card: Card };
   };
-  lists: List[];
+  lists: Record<string, string[]>;
   transforms: {
     aggregations: {
       card: CardAggregations;

@@ -14,7 +14,7 @@ export const ipDataNode = node
   })
   .then(maxmindPlugin);
 
-export const geocoodeCardNode = node
+export const geocodePaymentMethodNode = node
   .resolver(({ input }) => {
     const paymentMethod = input.paymentAttempt.paymentMethod;
 
@@ -25,17 +25,20 @@ export const geocoodeCardNode = node
   })
   .then(geocodePlugin);
 
-export const cardIpDistanceNode = node
+export const paymentMethodIpDistanceNode = node
   .depend({
     geolocateSession: ipDataNode,
-    geolocateCard: geocoodeCardNode,
+    geolocatePaymentMethod: geocodePaymentMethodNode,
   })
   .resolver(({ deps }) => {
-    const { geolocateSession, geolocateCard } = deps;
+    const { geolocateSession, geolocatePaymentMethod } = deps;
 
     const distance = getPreciseDistance(
       { lat: geolocateSession.latitude, lon: geolocateSession.longitude },
-      { lat: geolocateCard.latitude, lon: geolocateCard.longitude }
+      {
+        lat: geolocatePaymentMethod.latitude,
+        lon: geolocatePaymentMethod.longitude,
+      }
     );
 
     const distanceKm = convertDistance(distance, "km");

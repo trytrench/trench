@@ -29,7 +29,7 @@ export type StreamInput = {
       card: Card | null;
     };
   };
-  blockLists: List[];
+  blockLists: Record<string, string[]>;
 };
 
 export const node = initNodeBuilder

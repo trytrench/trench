@@ -1,9 +1,12 @@
+import superjson from "superjson";
 import Stripe from "stripe";
 import { z } from "zod";
 import { env } from "~/env.mjs";
 import { RiskLevel } from "../../../common/types";
 import { createTRPCRouter, openApiProcedure } from "../trpc";
 import { ruleInputNode } from "../../transforms/ruleInput";
+import { runRules } from "../../utils/rules";
+import { type Prisma } from "@prisma/client";
 
 const addressSchema = z.object({
   city: z.string().optional(),
@@ -81,6 +84,10 @@ export const apiRouter = createTRPCRouter({
         },
       });
 
+      if (!paymentMethod.card.fingerprint) {
+        throw new Error("No fingerprint found on payment method");
+      }
+
       const paymentAttempt = await ctx.prisma.paymentAttempt.create({
         include: {
           paymentMethod: {
@@ -136,10 +143,10 @@ export const apiRouter = createTRPCRouter({
                 card: {
                   connectOrCreate: {
                     where: {
-                      fingerprint: paymentMethod.card.fingerprint!,
+                      fingerprint: paymentMethod.card.fingerprint,
                     },
                     create: {
-                      fingerprint: paymentMethod.card.fingerprint!,
+                      fingerprint: paymentMethod.card.fingerprint,
                       bin: paymentMethod.card.iin,
                       brand: paymentMethod.card.brand,
                       country: paymentMethod.card.country,
@@ -173,132 +180,118 @@ export const apiRouter = createTRPCRouter({
         });
       }
 
-      const rulePayload = await ruleInputNode.run({
+      const [rules, lists] = await ctx.prisma.$transaction([
+        ctx.prisma.rule.findMany(),
+        ctx.prisma.list.findMany({
+          include: {
+            items: true,
+          },
+        }),
+      ]);
+      const blockLists = lists.reduce((acc, list) => {
+        acc[list.alias] = list.items.map((item) => item.value);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      const ruleInput = await ruleInputNode.run({
         paymentAttempt,
-        blockLists: [],
+        blockLists,
       });
 
-      console.log(JSON.stringify(rulePayload, null, 2));
+      const { ruleExecutionResults, highestRiskLevel } = runRules({
+        rules,
+        input: ruleInput,
+      });
 
-      // Generate aggregations
-      // const aggregations = await getAggregations(
-      //   new Date(checkoutSession.createdAt),
-      //   checkoutSession.customerId,
-      //   checkoutSession.ip,
-      //   createdTransaction.session.deviceId,
-      //   createdTransaction.paymentMethod.cardId
-      // );
-
-      // Save aggregations
-      // await ctx.prisma.transaction.update({
-      //   where: { id: createdTransaction.id },
-      //   data: {
-      //     transforms: aggregations,
-      //   },
-      // });
-
-      // const [rules, lists] = await ctx.prisma.$transaction([
-      //   ctx.prisma.rule.findMany(),
-      //   ctx.prisma.list.findMany({
-      //     include: {
-      //       items: true,
-      //     },
-      //   }),
-      // ]);
-      // const listsObj = lists.reduce((acc, list) => {
-      //   acc[list.alias] = list.items.map((item) => item.value);
-      //   return acc;
-      // }, {} as Record<string, string[]>);
-
-      // const { ruleExecutionResults, highestRiskLevel } = runRules({
-      //   rules,
-      //   payload: {
-      //     transaction: createdTransaction,
-      //     aggregations: aggregations,
-      //     lists: listsObj,
-      //   },
-      // });
-
-      // await ctx.prisma.$transaction([
-      //   ctx.prisma.ruleExecution.createMany({
-      //     data: rules
-      //       .map((rule, index) => {
-      //         const result = ruleExecutionResults[index];
-      //         if (!result) {
-      //           return null;
-      //         }
-      //         return {
-      //           result: result?.result,
-      //           error: result?.error,
-      //           riskLevel: result.riskLevel,
-      //           paymentAttemptId: createdTransaction.id,
-      //           ruleId: rule.id,
-      //         };
-      //       })
-      //       .filter(
-      //         (rule) => rule !== null
-      //       ) as Prisma.RuleExecutionCreateManyInput[],
-      //   }),
-      //   ctx.prisma.transaction.update({
-      //     where: { id: createdTransaction.id },
-      //     data: {
-      //       riskLevel: highestRiskLevel,
-      //     },
-      //   }),
-      // ]);
+      await ctx.prisma.$transaction([
+        ctx.prisma.ruleExecution.createMany({
+          data: rules
+            .map((rule, index) => {
+              const result = ruleExecutionResults[index];
+              if (!result) {
+                return null;
+              }
+              return {
+                result: result?.result,
+                error: result?.error,
+                riskLevel: result.riskLevel,
+                paymentAttemptId: paymentAttempt.id,
+                ruleId: rule.id,
+              };
+            })
+            .filter(
+              (rule) => rule !== null
+            ) as Prisma.RuleExecutionCreateManyInput[],
+        }),
+        ctx.prisma.paymentAttemptAssessment.update({
+          where: { id: paymentAttempt.id },
+          data: {
+            riskLevel: highestRiskLevel,
+            transformsOutput: superjson.parse(superjson.stringify(ruleInput)),
+          },
+        }),
+        ctx.prisma.paymentAttempt.update({
+          where: { id: paymentAttempt.id },
+          data: {
+            checkoutSession: {
+              update: {
+                deviceSnapshot: {
+                  update: {
+                    ipAddress: {
+                      update: {
+                        location: ruleInput.transforms.ipData
+                          ? {
+                              upsert: {
+                                update: {},
+                                create: {
+                                  latitude:
+                                    ruleInput.transforms.ipData.latitude,
+                                  longitude:
+                                    ruleInput.transforms.ipData.longitude,
+                                },
+                              },
+                            }
+                          : undefined,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            paymentMethod: {
+              update: {
+                address: {
+                  update: {
+                    location: {
+                      upsert: ruleInput.transforms.paymentMethodLocation
+                        ? {
+                            update: {},
+                            create: {
+                              latitude:
+                                ruleInput.transforms.paymentMethodLocation
+                                  ?.latitude,
+                              longitude:
+                                ruleInput.transforms.paymentMethodLocation
+                                  ?.longitude,
+                              countryISOCode:
+                                ruleInput.transforms.paymentMethodLocation
+                                  .countryCode,
+                            },
+                          }
+                        : undefined,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      ]);
 
       return {
         success: true,
-        // riskLevel: highestRiskLevel,
-        // paymentAttemptId: createdTransaction.id,
-        riskLevel: RiskLevel.Normal,
+        riskLevel: highestRiskLevel,
         paymentAttemptId: paymentAttempt.id,
       };
     }),
-  // updateTransactionOutcome: openApiProcedure
-  //   .meta({ openapi: { method: "POST", path: "/transaction/outcome" } })
-  //   .input(
-  //     z.object({
-  //       paymentAttemptId: z.string(),
-  //       status: z.enum(["succeeded", "failed"]),
-  //       networkStatus: z
-  //         .enum([
-  //           "approved_by_network",
-  //           "declined_by_network",
-  //           "not_sent_to_network",
-  //           "reversed_after_approval",
-  //         ])
-  //         .optional(),
-  //       reason: z.string().optional(),
-  //       riskLevel: z.enum(["normal", "elevated", "highest"]).optional(),
-  //       riskScore: z.number().optional(),
-  //       sellerMessage: z.string().optional(),
-  //       type: z
-  //         .enum([
-  //           "authorized",
-  //           "manual_review",
-  //           "issuer_declined",
-  //           "blocked",
-  //           "invalid",
-  //         ])
-  //         .optional(),
-  //       threeDSecureFlow: z.string().optional(),
-  //       threeDSecureResult: z.string().optional(),
-  //       threeDSecureResultReason: z.string().optional(),
-  //       threeDSecureVersion: z.string().optional(),
-  //     })
-  //   )
-  //   .output(z.object({ success: z.boolean() }))
-  //   .mutation(async ({ input }) => {
-  //     Sentry.addBreadcrumb({
-  //       data: input,
-  //     });
-  //     await prisma.paymentOutcome.upsert({
-  //       where: { paymentAttemptId: input.paymentAttemptId },
-  //       create: input,
-  //       update: {},
-  //     });
-
-  //     return { success: true };
-  //   }),
 });

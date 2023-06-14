@@ -9,24 +9,7 @@ import {
   type PaymentMethod,
 } from "@prisma/client";
 import { RiskLevel } from "../../common/types";
-
-export type RulePayload = {
-  paymentAttempt: PaymentAttempt & {
-    checkoutSession: CheckoutSession & {
-      deviceSnapshot:
-        | (DeviceSnapshot & {
-            ipAddress: IpAddress;
-            device: Device;
-          })
-        | null;
-      paymentAttempts: PaymentAttempt[];
-    };
-    paymentMethod: PaymentMethod & { card: Card | null };
-    customer: Customer | null;
-  };
-  transforms: any;
-  lists: Record<string, string[]>;
-};
+import { type RuleInput } from "../transforms/ruleInput";
 
 function convertStringToFn(jsString: string) {
   if (jsString === "" || jsString === null) {
@@ -38,27 +21,29 @@ function convertStringToFn(jsString: string) {
 
 export function runRule({
   rule,
-  payload,
+  input,
 }: {
   rule: {
     jsCode: string;
     riskLevel: string;
   };
-  payload: RulePayload;
+  input: RuleInput;
 }) {
   try {
     const fn = convertStringToFn(rule.jsCode) as unknown as (
       props: any
     ) => boolean;
-    const result = fn(payload);
+    const result = fn(input);
     return {
       result,
       riskLevel: rule.riskLevel as RiskLevel,
+      error: null,
     };
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const error = e as Error;
     return {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      error: e?.message ?? "Unknown error",
+      result: null,
+      error: error?.message || "Unknown error",
       riskLevel: rule.riskLevel as RiskLevel,
     };
   }
@@ -66,12 +51,12 @@ export function runRule({
 
 export function runRules({
   rules,
-  payload,
+  input,
 }: {
   rules: { jsCode: string; riskLevel: string }[];
-  payload: RulePayload;
+  input: RuleInput;
 }) {
-  const ruleExecutionResults = rules.map((rule) => runRule({ rule, payload }));
+  const ruleExecutionResults = rules.map((rule) => runRule({ rule, input }));
 
   const severitiesOrder = [
     RiskLevel.VeryHigh,
