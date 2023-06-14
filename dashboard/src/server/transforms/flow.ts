@@ -11,6 +11,7 @@ import {
   type Address,
   type Card,
   type Customer,
+  type Location,
 } from "@prisma/client";
 
 export type StreamInput = {
@@ -19,7 +20,11 @@ export type StreamInput = {
       deviceSnapshot:
         | (DeviceSnapshot & {
             device: Device;
-            ipAddress: IpAddress | null;
+            ipAddress:
+              | (IpAddress & {
+                  location: Location | null;
+                })
+              | null;
           })
         | null;
       customer: Customer | null;

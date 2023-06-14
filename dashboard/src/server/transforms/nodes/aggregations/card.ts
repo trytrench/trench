@@ -1,6 +1,6 @@
 import { uniq } from "lodash";
 import { node } from "../../flow";
-import { geocodePaymentMethodNode } from "../cardIpDistance";
+import { geocodePaymentMethodNode } from "../paymentMethodIpDistance";
 import { type AllCounts, DEFAULT_ALL_COUNTS, createAllCounts } from "./utils";
 
 type CardAggregations = {

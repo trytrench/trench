@@ -1,5 +1,5 @@
 import { node } from "../../flow";
-import { ipDataNode } from "../cardIpDistance";
+import { ipDataNode } from "../paymentMethodIpDistance";
 import { uniq } from "lodash";
 import {
   type TimeBucketCounts,

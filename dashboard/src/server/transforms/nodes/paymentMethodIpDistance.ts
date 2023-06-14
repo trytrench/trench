@@ -6,13 +6,34 @@ import { convertDistance, getPreciseDistance } from "geolib";
 export const ipDataNode = node
   .resolver(({ input }) => {
     const ipAddress =
-      input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress?.ipAddress;
+      input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress;
     if (!ipAddress) {
       throw new Error("IP address not found");
     }
     return ipAddress;
   })
-  .then(maxmindPlugin);
+  .then(async (ipAddressObj) => {
+    const { location, ipAddress } = ipAddressObj;
+    if (!location?.latitude || !location?.longitude) {
+      const maxmind = await maxmindPlugin(ipAddress);
+
+      return {
+        latitude: maxmind.latitude,
+        longitude: maxmind.longitude,
+        countryISOCode: maxmind.countryISOCode,
+        countryName: maxmind.countryName,
+        postalCode: maxmind.postalCode,
+        cityName: maxmind.cityName,
+        cityGeonameId: maxmind.cityGeonameId,
+      };
+    } else {
+      return {
+        ...location,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+    }
+  });
 
 export const geocodePaymentMethodNode = node
   .resolver(({ input }) => {

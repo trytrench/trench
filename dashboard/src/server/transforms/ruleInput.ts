@@ -5,7 +5,7 @@ import {
   paymentMethodIpDistanceNode,
   geocodePaymentMethodNode,
   ipDataNode,
-} from "./nodes/cardIpDistance";
+} from "./nodes/paymentMethodIpDistance";
 
 export const ruleInputNode = node
   .depend({

@@ -78,7 +78,11 @@ export const apiRouter = createTRPCRouter({
         include: {
           deviceSnapshot: {
             include: {
-              ipAddress: true,
+              ipAddress: {
+                include: {
+                  location: true,
+                },
+              },
             },
           },
         },
@@ -101,7 +105,9 @@ export const apiRouter = createTRPCRouter({
               customer: true,
               deviceSnapshot: {
                 include: {
-                  ipAddress: true,
+                  ipAddress: {
+                    include: { location: true },
+                  },
                   device: true,
                 },
               },
@@ -198,6 +204,8 @@ export const apiRouter = createTRPCRouter({
         blockLists,
       });
 
+      console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
+
       const { ruleExecutionResults, highestRiskLevel } = runRules({
         rules,
         input: ruleInput,
@@ -223,11 +231,13 @@ export const apiRouter = createTRPCRouter({
               (rule) => rule !== null
             ) as Prisma.RuleExecutionCreateManyInput[],
         }),
-        ctx.prisma.paymentAttemptAssessment.update({
+        ctx.prisma.paymentAttemptAssessment.upsert({
           where: { id: paymentAttempt.id },
-          data: {
+          update: {},
+          create: {
             riskLevel: highestRiskLevel,
             transformsOutput: superjson.parse(superjson.stringify(ruleInput)),
+            paymentAttempt: { connect: { id: paymentAttempt.id } },
           },
         }),
         ctx.prisma.paymentAttempt.update({
