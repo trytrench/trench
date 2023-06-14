@@ -32,6 +32,7 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftrytrench%2Ftrench%2Ftree%2Fmain%2Fdashboard&repository-name=trench-demo&project-name=trench-demo&env=ADMIN_USERNAME,ADMIN_PASSWORD,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,API_KEY,JWT_SECRET&stores=[{"type":"postgres"}])
 
 ### Local development
+
 1. Clone the repository
 2. Install dependencies: `yarn`
 3. Run the development server: `yarn dev`
@@ -47,7 +48,8 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 
 ### Stripe integration
 
-Integrate Trench into your payment flow by following our [Stripe Integration Guide](/stripe-integration) or our [Stripe Example](https://github.com/trytrench/stripe-example) code.
+Integrate Trench into your payment flow by following our [Stripe Integration Guide](https://docs.trytrench.com/stripe-integration) or our [Stripe Example](https://github.com/trytrench/stripe-example) code.
 
 ## Join our community
+
 Join the Trench community in [Discord](https://discord.gg/JPwzAumy) if you need support or have anything you'd like to ask. We'd love to chat!

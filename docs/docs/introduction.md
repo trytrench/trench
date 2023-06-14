@@ -4,7 +4,16 @@ sidebar_position: 1
 slug: /
 ---
 
-Trench is an open-source payment fraud prevention platform. This includes an SDK for data collection, a data platform for aggregating and enriching fraud data, and a UI for fraud workflows.
+Trench is an open-source payment fraud prevention platform.
+
+## Features
+
+- Set up in 10 minutes!
+- Fully customizable to meet your business needs
+- Collect rich data through our SDK
+- Respond to fraud in real time in our dashboard
+- Integrate complex custom data into your rule engine
+- Write rules in TypeScript
 
 ## Getting started
 
