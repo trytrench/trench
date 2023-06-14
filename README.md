@@ -31,6 +31,11 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftrytrench%2Ftrench%2Ftree%2Fmain%2Fdashboard&repository-name=trench-demo&project-name=trench-demo&env=ADMIN_USERNAME,ADMIN_PASSWORD,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,API_KEY,JWT_SECRET&stores=[{"type":"postgres"}])
 
+### Local development
+1. Clone the repository
+2. Install dependencies: `yarn`
+3. Run the development server: `yarn dev`
+
 #### Environment variables
 
 - `API_KEY` - used to authenticate requests from your backend
@@ -40,22 +45,9 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 - `SENTRY_DSN` (optional) - Sentry DSN for error reporting
 - `NEXT_PUBLIC_MAPBOX_TOKEN` (optional) - Mapbox token for geocoding and maps
 
-### Stripe Integration
-
-Create a [Stripe](https://dashboard.stripe.com/webhooks) webhook endpoint with the URL `<TRENCH URL>/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
+### Stripe integration
 
 Integrate Trench into your payment flow by following our [Stripe Integration Guide](/stripe-integration) or our [Stripe Example](https://github.com/trytrench/stripe-example) code.
 
 ## Join our community
-The Trench community can be found in the Airbyte Community Slack, where you can ask questions and voice ideas. You can also ask for help in our Discourse forum, or join our office hours. Airbyte's roadmap is publicly viewable on GitHub.
-
-For videos and blogs on data engineering and building your data stack, check out Airbyte's Content Hub, Youtube, and sign up for our newsletter.
-
-Dedicated support with direct access to our team is also available for Open Source users. If you are interested, please fill out this form.
-
-Contributing
-We <3 contributions big and small. In priority order (although everything is appreciated) with the most helpful first:
-
-Vote on features or get early access to beta functionality in our roadmap
-Open a PR (see our instructions on developing PostHog locally)
-Submit a feature request or bug report
+Join the Trench community in [Discord](https://discord.gg/JPwzAumy) if you need support or have anything you'd like to ask. We'd love to chat!
