@@ -1,4 +1,5 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import path from "path";
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
@@ -44,7 +45,14 @@ const config = {
     if (!isServer) {
       config.resolve.fallback.fs = false;
       config.module.noParse = /typescript/;
+
+      config.module.rules.push({
+        test: /\.d\.ts$/,
+        include: path.resolve(process.cwd(), "dist"),
+        use: [{ loader: "raw-loader" }],
+      });
     }
+
     return config;
   },
 };

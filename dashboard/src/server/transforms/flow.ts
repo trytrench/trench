@@ -1,4 +1,4 @@
-import { initStreamBuilder } from "@trytrench/flow";
+import { initNodeBuilder } from "@trytrench/flow";
 import { prisma } from "../db";
 import {
   type CheckoutSession,
@@ -32,7 +32,7 @@ export type StreamInput = {
   blockLists: List[];
 };
 
-export const stream = initStreamBuilder
+export const node = initNodeBuilder
   .context(() => {
     return {
       prisma,

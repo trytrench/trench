@@ -1,6 +1,6 @@
 import { uniq } from "lodash";
-import { stream } from "../../flow";
-import { geocodeCardStream } from "../cardIpDistance";
+import { node } from "../../flow";
+import { geocoodeCardNode } from "../cardIpDistance";
 import { type AllCounts, DEFAULT_ALL_COUNTS, createAllCounts } from "./utils";
 
 type CardAggregations = {
@@ -8,9 +8,9 @@ type CardAggregations = {
   uniqueCountries: number;
 };
 
-export const cardAggregationsStream = stream
+export const cardAggregationsNode = node
   .depend({
-    cardGeocode: geocodeCardStream,
+    cardGeocode: geocoodeCardNode,
   })
   .resolver(async ({ input, ctx, deps }): Promise<CardAggregations> => {
     const { paymentAttempt } = input;

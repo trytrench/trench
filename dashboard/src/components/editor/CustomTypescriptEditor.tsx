@@ -1,13 +1,8 @@
 "use client";
-import React, { useRef, useEffect, useMemo, useCallback } from "react";
-import Editor, {
-  type OnChange,
-  useMonaco,
-  type Monaco,
-} from "@monaco-editor/react";
-import { type editor, Range } from "monaco-editor";
+import React, { useRef, useMemo, useCallback } from "react";
+import Editor, { type OnChange, type Monaco } from "@monaco-editor/react";
+import { type editor } from "monaco-editor";
 import { TYPES_SOURCE } from "./constants";
-import { Box } from "@chakra-ui/react";
 
 interface CustomTypeScriptEditorProps {
   readOnlyBoilerplate?: {

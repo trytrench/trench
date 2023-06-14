@@ -1,4 +1,4 @@
-import { stream } from "../../flow";
+import { node } from "../../flow";
 import {
   DEFAULT_TIME_BUCKET_AGGREGATIONS,
   createTimeBucketCounts,
@@ -17,7 +17,7 @@ type IpAddressAggregations = {
   paymentAttempts: TimeBucketCounts;
 };
 
-export const ipAddressAggregationsStream = stream.resolver(
+export const ipAddressAggregationsNode = node.resolver(
   async ({ input, ctx }): Promise<IpAddressAggregations> => {
     const { paymentAttempt } = input;
 

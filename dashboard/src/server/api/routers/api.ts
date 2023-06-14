@@ -3,7 +3,7 @@ import { z } from "zod";
 import { env } from "~/env.mjs";
 import { RiskLevel } from "../../../common/types";
 import { createTRPCRouter, openApiProcedure } from "../trpc";
-import { rulePayloadStream } from "../../transforms/output";
+import { ruleInputNode } from "../../transforms/ruleInput";
 
 const addressSchema = z.object({
   city: z.string().optional(),
@@ -173,7 +173,7 @@ export const apiRouter = createTRPCRouter({
         });
       }
 
-      const rulePayload = await rulePayloadStream.run({
+      const rulePayload = await ruleInputNode.run({
         paymentAttempt,
         blockLists: [],
       });

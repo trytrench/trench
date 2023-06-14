@@ -1,4 +1,4 @@
-import { stream } from "../../flow";
+import { node } from "../../flow";
 import { type AllCounts, createAllCounts, DEFAULT_ALL_COUNTS } from "./utils";
 
 type CustomerAggregations = {
@@ -9,7 +9,7 @@ type CustomerAggregations = {
   paymentMethods: AllCounts;
 };
 
-export const customerAggregationsStream = stream.resolver(
+export const customerAggregationsNode = node.resolver(
   async ({ input, ctx }): Promise<CustomerAggregations> => {
     const { paymentAttempt } = input;
 

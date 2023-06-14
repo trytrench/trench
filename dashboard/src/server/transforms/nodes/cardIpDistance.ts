@@ -1,36 +1,34 @@
-import { stream } from "../flow";
+import { node } from "../flow";
 import { geocodePlugin } from "../plugins/geocode";
 import { maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
-export const ipDataStream = stream.plugin({
-  feedInput: ({ input }) => {
+export const ipDataNode = node
+  .resolver(({ input }) => {
     const ipAddress =
       input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress?.ipAddress;
     if (!ipAddress) {
       throw new Error("IP address not found");
     }
     return ipAddress;
-  },
-  plugin: maxmindPlugin,
-});
+  })
+  .then(maxmindPlugin);
 
-export const geocodeCardStream = stream.plugin({
-  feedInput: ({ input }) => {
+export const geocoodeCardNode = node
+  .resolver(({ input }) => {
     const paymentMethod = input.paymentAttempt.paymentMethod;
 
     if (!paymentMethod.address) {
       throw new Error("Address not found");
     }
     return paymentMethod.address;
-  },
-  plugin: geocodePlugin,
-});
+  })
+  .then(geocodePlugin);
 
-export const cardIpDistanceStream = stream
+export const cardIpDistanceNode = node
   .depend({
-    geolocateSession: ipDataStream,
-    geolocateCard: geocodeCardStream,
+    geolocateSession: ipDataNode,
+    geolocateCard: geocoodeCardNode,
   })
   .resolver(({ deps }) => {
     const { geolocateSession, geolocateCard } = deps;

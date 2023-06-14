@@ -1,5 +1,5 @@
-import { stream } from "../../flow";
-import { ipDataStream } from "../cardIpDistance";
+import { node } from "../../flow";
+import { ipDataNode } from "../cardIpDistance";
 import { uniq } from "lodash";
 import {
   type TimeBucketCounts,
@@ -20,9 +20,9 @@ type DeviceAggregations = {
   ipAddresses: AllCounts;
 };
 
-export const deviceAggregationsStream = stream
+export const deviceAggregationsNode = node
   .depend({
-    ipData: ipDataStream,
+    ipData: ipDataNode,
   })
   .resolver(async ({ input, deps, ctx }): Promise<DeviceAggregations> => {
     const { ipData } = deps;
