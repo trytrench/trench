@@ -10,6 +10,8 @@
     </a>
 </p>
 
+## Overview
+
 Trench is an open-source payment fraud prevention platform, built for engineers.
 
 ## Features
@@ -21,7 +23,7 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 - Integrate complex custom data into your rule engine
 - Write rules in TypeScript
 
-![screenshot](https://github.com/trytrench/trench/assets/9043913/c11fc56b-b33b-4cb4-bbfc-032aa47a3712)
+![screenshot](https://github.com/trytrench/trench/assets/9043913/e655c6dc-849f-406b-b528-a39b91a76cc6)
 
 ## Getting started
 
@@ -43,3 +45,17 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 Create a [Stripe](https://dashboard.stripe.com/webhooks) webhook endpoint with the URL `<TRENCH URL>/api/webhook`. Select the `Charge`, `Radar`, and `Payment Intent` events to listen to.
 
 Integrate Trench into your payment flow by following our [Stripe Integration Guide](/stripe-integration) or our [Stripe Example](https://github.com/trytrench/stripe-example) code.
+
+## Join our community
+The Trench community can be found in the Airbyte Community Slack, where you can ask questions and voice ideas. You can also ask for help in our Discourse forum, or join our office hours. Airbyte's roadmap is publicly viewable on GitHub.
+
+For videos and blogs on data engineering and building your data stack, check out Airbyte's Content Hub, Youtube, and sign up for our newsletter.
+
+Dedicated support with direct access to our team is also available for Open Source users. If you are interested, please fill out this form.
+
+Contributing
+We <3 contributions big and small. In priority order (although everything is appreciated) with the most helpful first:
+
+Vote on features or get early access to beta functionality in our roadmap
+Open a PR (see our instructions on developing PostHog locally)
+Submit a feature request or bug report
