@@ -83,7 +83,11 @@ export default async function handler(
       select: { id: true },
     });
 
-    if (!existingIpAddress) {
+    if (
+      !existingIpAddress &&
+      env.MAXMIND_LICENSE_KEY &&
+      env.MAXMIND_ACCOUNT_ID
+    ) {
       try {
         ipData = getIpData(await maxMind.insights(ipAddress));
       } catch (error) {
@@ -131,24 +135,26 @@ export default async function handler(
         : { create: {} },
       ipAddress: existingIpAddress
         ? { connect: { id: existingIpAddress.id } }
-        : ipAddress && ipData
+        : ipAddress
         ? {
             create: {
               ipAddress,
-              location: {
-                create: {
-                  latitude: ipData.latitude,
-                  longitude: ipData.longitude,
-                  cityGeonameId: ipData.cityGeonameId,
-                  cityName: ipData.cityName,
-                  countryISOCode: ipData.countryISOCode,
-                  countryName: ipData.countryName,
-                  postalCode: ipData.postalCode,
-                  regionISOCode: ipData.subdivisionISOCode,
-                  regionName: ipData.subdivisionName,
+              ...(ipData && {
+                location: {
+                  create: {
+                    latitude: ipData.latitude,
+                    longitude: ipData.longitude,
+                    cityGeonameId: ipData.cityGeonameId,
+                    cityName: ipData.cityName,
+                    countryISOCode: ipData.countryISOCode,
+                    countryName: ipData.countryName,
+                    postalCode: ipData.postalCode,
+                    regionISOCode: ipData.subdivisionISOCode,
+                    regionName: ipData.subdivisionName,
+                  },
                 },
-              },
-              metadata: ipData,
+                metadata: ipData,
+              }),
             },
           }
         : undefined,

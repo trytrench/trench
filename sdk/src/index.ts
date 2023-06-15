@@ -7,7 +7,7 @@ import {
   getHasLiedResolution,
 } from "./utils/fingerprint2";
 
-export const initialize = async (baseUrl: string, paymentIntentId: string) => {
+export const initialize = async (baseUrl: string, clientSecret: string) => {
   const fp = await FingerprintJS.load({ monitoring: false });
   const { components } = await fp.get();
 
@@ -17,11 +17,11 @@ export const initialize = async (baseUrl: string, paymentIntentId: string) => {
   } catch (error) {}
 
   try {
-    const response = await fetch(`${baseUrl}/device`, {
+    const response = await fetch(`${baseUrl}/api/device`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        paymentIntentId,
+        paymentIntentId: clientSecret.split("_secret")[0],
         isIncognito: incognitoResult?.isPrivate,
         fingerprintComponents: components,
         fingerprint2Components: {
