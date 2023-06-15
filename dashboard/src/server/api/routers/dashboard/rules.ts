@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
 import { runRule } from "~/server/utils/rules";
 import { RiskLevel } from "../../../../common/types";
+import { type RuleInput } from "../../../transforms/ruleInput";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
@@ -66,13 +67,18 @@ export const rulesRouter = createTRPCRouter({
                 deviceSnapshot: {
                   include: {
                     device: true,
-                    ipAddress: true,
+                    ipAddress: {
+                      include: {
+                        location: true,
+                      },
+                    },
                   },
                 },
               },
             },
             paymentMethod: {
               include: {
+                address: true,
                 card: true,
               },
             },
@@ -99,9 +105,10 @@ export const rulesRouter = createTRPCRouter({
             jsCode: ruleToBacktest.jsCode,
             riskLevel: RiskLevel.VeryHigh,
           },
-          payload: {
-            paymentAttempt: paymentAttempt,
-            transforms: paymentAttempt.assessment?.transformsOutput,
+          input: {
+            paymentAttempt,
+            transforms: paymentAttempt.assessment
+              ?.transformsOutput as RuleInput["transforms"],
             lists: listsObj,
           },
         });
@@ -110,7 +117,11 @@ export const rulesRouter = createTRPCRouter({
         }
       });
 
-      return triggeredTransactions;
+      return {
+        triggeredRows: triggeredTransactions,
+        triggered: triggeredTransactions.length,
+        total: paymentAttempts.length,
+      };
     }),
   create: protectedProcedure
     .input(ruleSchema)

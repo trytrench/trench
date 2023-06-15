@@ -1,12 +1,17 @@
-import mbxClient from "@mapbox/mapbox-sdk/lib/classes/mapi-client";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import mbxClient from "@mapbox/mapbox-sdk";
+
 import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding";
+import type MapiClient from "@mapbox/mapbox-sdk/lib/classes/mapi-client";
 import { type Address } from "@prisma/client";
 import { env } from "../../../env.mjs";
 
 export const geocodePlugin = async (address: Address) => {
-  const mapboxClient = new mbxClient({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  const mapboxClient = mbxClient({
     accessToken: env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "",
-  });
+  }) as MapiClient;
 
   const query = [
     address.line1,

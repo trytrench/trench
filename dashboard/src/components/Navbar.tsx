@@ -89,7 +89,6 @@ export const MainNav = () => {
             <NavItem href="/docs">Docs</NavItem>
             <Spacer />
             <Button
-              colorScheme="blue"
               size="sm"
               onClick={() => {
                 signOut().catch(handleError);

@@ -200,13 +200,13 @@ export function RuleForm({
   });
 
   const paginatedBacktestData = useMemo(() => {
-    if (!backtestData) return null;
+    if (!backtestData.triggeredRows) return null;
     const { pageIndex, pageSize } = pagination;
-    return backtestData.slice(
+    return backtestData.triggeredRows.slice(
       pageIndex * pageSize,
       pageIndex * pageSize + pageSize
     );
-  }, [backtestData, pagination]);
+  }, [backtestData.triggeredRows, pagination]);
 
   return (
     <Box p={8}>

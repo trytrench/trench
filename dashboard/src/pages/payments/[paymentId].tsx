@@ -286,7 +286,7 @@ const Page: CustomPage = () => {
             paymentAttemptData.customerLink?.customer?.id ?? ""
           }`}
         >
-          {paymentAttemptData.customerLink?.customer?.email}
+          {paymentAttemptData.customerLink?.customer?.email ?? "--"}
         </Link>
       ),
     },
@@ -314,8 +314,7 @@ const Page: CustomPage = () => {
             {(paymentAttemptData.amount / 100).toLocaleString("en-US", {
               style: "currency",
               currency: paymentAttemptData.currency,
-            })}{" "}
-            {paymentAttemptData.currency}
+            })}
           </Heading>
 
           <Box>
@@ -371,7 +370,7 @@ const Page: CustomPage = () => {
         <HStack>
           {customerDetails.map((item) => (
             <Box key={item.label} fontSize="sm">
-              <Text w={200} color="subtle">
+              <Text w={200} mb={1} color="subtle">
                 {item.label}
               </Text>
               <Text>{item.value}</Text>

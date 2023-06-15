@@ -204,12 +204,28 @@ export const apiRouter = createTRPCRouter({
         blockLists,
       });
 
-      console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
+      // console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
 
       const { ruleExecutionResults, highestRiskLevel } = runRules({
         rules,
         input: ruleInput,
       });
+
+      const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+        latitude: ruleInput.transforms.ipData.latitude,
+        longitude: ruleInput.transforms.ipData.longitude,
+        countryISOCode: ruleInput.transforms.ipData.countryISOCode,
+        countryName: ruleInput.transforms.ipData.countryName,
+        postalCode: ruleInput.transforms.ipData.postalCode,
+      };
+
+      const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+        latitude: ruleInput.transforms.paymentMethodLocation?.latitude,
+        longitude: ruleInput.transforms.paymentMethodLocation?.longitude,
+        countryISOCode: ruleInput.transforms.paymentMethodLocation.countryCode,
+      };
+
+      console.log(ruleInput.transforms.ipData);
 
       await ctx.prisma.$transaction([
         ctx.prisma.ruleExecution.createMany({
@@ -236,7 +252,9 @@ export const apiRouter = createTRPCRouter({
           update: {},
           create: {
             riskLevel: highestRiskLevel,
-            transformsOutput: superjson.parse(superjson.stringify(ruleInput)),
+            transformsOutput: superjson.parse(
+              superjson.stringify(ruleInput.transforms)
+            ),
             paymentAttempt: { connect: { id: paymentAttempt.id } },
           },
         }),
@@ -249,16 +267,12 @@ export const apiRouter = createTRPCRouter({
                   update: {
                     ipAddress: {
                       update: {
+                        metadata: ruleInput.transforms.ipData,
                         location: ruleInput.transforms.ipData
                           ? {
                               upsert: {
-                                update: {},
-                                create: {
-                                  latitude:
-                                    ruleInput.transforms.ipData.latitude,
-                                  longitude:
-                                    ruleInput.transforms.ipData.longitude,
-                                },
+                                update: ipLocationUpdate,
+                                create: ipLocationUpdate,
                               },
                             }
                           : undefined,
@@ -275,18 +289,8 @@ export const apiRouter = createTRPCRouter({
                     location: {
                       upsert: ruleInput.transforms.paymentMethodLocation
                         ? {
-                            update: {},
-                            create: {
-                              latitude:
-                                ruleInput.transforms.paymentMethodLocation
-                                  ?.latitude,
-                              longitude:
-                                ruleInput.transforms.paymentMethodLocation
-                                  ?.longitude,
-                              countryISOCode:
-                                ruleInput.transforms.paymentMethodLocation
-                                  .countryCode,
-                            },
+                            update: paymentMethodLocationUpdate,
+                            create: paymentMethodLocationUpdate,
                           }
                         : undefined,
                     },

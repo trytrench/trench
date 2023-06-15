@@ -6,8 +6,8 @@ import circle from "@turf/circle";
 import { env } from "~/env.mjs";
 
 interface Marker {
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   radius?: number;
   type: "device" | "card";
 }
@@ -32,6 +32,9 @@ export const PaymentMap = ({ markers }: PaymentMapProps) => {
     let bounds = new LngLatBounds();
 
     for (const marker of markers) {
+      if (!marker.latitude || !marker.longitude) {
+        continue;
+      }
       bounds = bounds.extend([marker.longitude, marker.latitude]);
     }
 
@@ -46,25 +49,34 @@ export const PaymentMap = ({ markers }: PaymentMapProps) => {
       initialViewState={getInitialViewState()}
       mapStyle="mapbox://styles/mapbox/streets-v12"
     >
-      {markers.map((marker) => (
-        <>
-          <Marker latitude={marker.latitude} longitude={marker.longitude}>
-            {marker.type === "device" ? <DeviceIcon /> : <CardIcon />}
-          </Marker>
-          {marker.radius && (
-            <Source
-              id="circleSource"
-              type="geojson"
-              data={circle([marker.longitude, marker.latitude], marker.radius, {
-                steps: 50,
-                units: "kilometers",
-              })}
-            >
-              <Layer {...layerStyle} />
-            </Source>
-          )}
-        </>
-      ))}
+      {markers.map((marker) => {
+        if (!marker.latitude || !marker.longitude) {
+          return null;
+        }
+        return (
+          <>
+            <Marker latitude={marker.latitude} longitude={marker.longitude}>
+              {marker.type === "device" ? <DeviceIcon /> : <CardIcon />}
+            </Marker>
+            {marker.radius && (
+              <Source
+                id="circleSource"
+                type="geojson"
+                data={circle(
+                  [marker.longitude, marker.latitude],
+                  marker.radius,
+                  {
+                    steps: 50,
+                    units: "kilometers",
+                  }
+                )}
+              >
+                <Layer {...layerStyle} />
+              </Source>
+            )}
+          </>
+        );
+      })}
     </Map>
   );
 };

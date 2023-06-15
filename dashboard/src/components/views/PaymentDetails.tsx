@@ -1,5 +1,6 @@
 import {
   Box,
+  Center,
   Divider,
   Grid,
   GridItem,
@@ -17,6 +18,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { PaymentsTable, usePaymentsTableProps } from "../PaymentsTable";
 import { type Address, type IpAddress } from "@prisma/client";
 import { handleError } from "~/lib/handleError";
+import { env } from "../../env.mjs";
 
 export const Section = ({
   children,
@@ -42,7 +44,7 @@ const List = ({
   <Stack>
     {data.map((item) => (
       <HStack key={item.label} fontSize="sm">
-        <Text w={200} color="subtle">
+        <Text w={180} color="subtle" flexShrink={0}>
           {item.label}
         </Text>
         <Text>{item.value}</Text>
@@ -55,10 +57,10 @@ function getLabelValuePairs(
   data: { label: string; value?: string | null | ReactNode; show?: boolean }[]
 ) {
   return data
-    .filter((item) => item.show !== false && !!item.value)
+    .filter((item) => item.show !== false && typeof item.value !== "undefined")
     .map((item) => ({
       label: item.label,
-      value: item.value,
+      value: item.value ?? "--",
     }));
 }
 
@@ -179,12 +181,15 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     },
     {
       label: "CVC Check",
-      value: paymentMethod.cvcCheck === "pass" && (
-        <HStack spacing={1}>
-          <Icon color="green" as={IoCheckmarkCircle} />
-          <Text>Passed</Text>
-        </HStack>
-      ),
+      value:
+        paymentMethod.cvcCheck === "pass" ? (
+          <>
+            <Icon color="green" as={IoCheckmarkCircle} />
+            <Text>Passed</Text>
+          </>
+        ) : (
+          <Text>{startCase(paymentMethod.cvcCheck ?? "")}</Text>
+        ),
     },
     {
       label: "ZIP Check",
@@ -221,6 +226,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
   ]);
 
   const deviceSnapshot = data.checkoutSession.deviceSnapshot;
+
   const deviceData = getLabelValuePairs([
     {
       label: "Browser",
@@ -280,21 +286,20 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     // },
     {
       label: "IP Address",
-      value: deviceSnapshot?.ipAddress.ipAddress,
+      value: deviceSnapshot?.ipAddress?.ipAddress,
     },
     {
       label: "Static IP Score",
-      value: "WIP",
-      // value: deviceSnapshot?.ipAddress,
+      value: deviceSnapshot?.ipAddress?.metadata.staticIPScore,
     },
     {
       label: "ISP",
       // value: data.session.ipAddress.isp,
-      value: "WIP",
+      value: deviceSnapshot?.ipAddress?.metadata.isp,
     },
     {
       label: "Anonymous",
-      value: "WIP",
+      value: deviceSnapshot?.ipAddress?.metadata.isAnonymous ? "True" : "False",
       // value: data.session.ipAddress.isAnonymous ? "True" : "False",
     },
     // ...(data.session.ipAddress.isAnonymous
@@ -319,15 +324,21 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     },
   ]);
 
-  const locationData: { label: string; value: ReactNode }[] = [
-    // { label: "City", value: deviceSnapshot?.ipAddress.address.cityName },
-    // { label: "Subdivision", value: deviceSnapshot?.ipAddress.address.subdivisionName },
-    // { label: "Country", value: deviceSnapshot?.ipAddress.address.countryName },
-    // { label: "IP Timezone", value: deviceSnapshot?.ipAddress.address.timezone },
-  ];
+  const locationData = getLabelValuePairs([
+    { label: "City", value: deviceSnapshot?.ipAddress?.location?.cityName },
+    {
+      label: "Subdivision",
+      value: deviceSnapshot?.ipAddress?.location?.regionName,
+    },
+    {
+      label: "Country",
+      value: deviceSnapshot?.ipAddress?.location?.countryName,
+    },
+    // { label: "IP Timezone", value: deviceSnapshot?.ipAddress?.location.ip },
+  ]);
 
   const markers = [
-    ...(data.checkoutSession.deviceSnapshot?.ipAddress.location
+    ...(data.checkoutSession.deviceSnapshot?.ipAddress?.location
       ? [
           {
             longitude:
@@ -349,7 +360,6 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       : []),
   ];
 
-  console.log(markers);
   return (
     <Box>
       <Section title="Product">
@@ -357,18 +367,41 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       </Section>
 
       <Section title="Location">
-        <Grid templateColumns="repeat(2, 1fr)" gap={8}>
+        <Grid
+          templateColumns={{
+            md: "repeat(2, 1fr)",
+            base: "repeat(1, 1fr)",
+          }}
+          gap={8}
+        >
           <GridItem>
             <List data={locationData} />
           </GridItem>
           <GridItem h={250}>
-            <PaymentMap markers={markers} />
+            {!!env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ? (
+              <PaymentMap markers={markers} />
+            ) : (
+              <Center height="full" width="full" bg="gray.100" p={4}>
+                <Text>
+                  Set NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN to view this map
+                </Text>
+              </Center>
+            )}
           </GridItem>
         </Grid>
       </Section>
 
       <Section title="Payment method">
-        <Grid templateColumns="repeat(2, 1fr)" gap={8}>
+        <Grid
+          templateColumns={{
+            md: "repeat(2, 1fr)",
+            base: "repeat(1, 1fr)",
+          }}
+          gap={{
+            md: 8,
+            base: 2,
+          }}
+        >
           <GridItem>
             <List
               data={paymentMethodData.slice(
@@ -389,7 +422,16 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       </Section>
 
       <Section title="Device">
-        <Grid templateColumns="repeat(2, 1fr)" gap={8}>
+        <Grid
+          templateColumns={{
+            md: "repeat(2, 1fr)",
+            base: "repeat(1, 1fr)",
+          }}
+          gap={{
+            md: 8,
+            base: 2,
+          }}
+        >
           <GridItem>
             <List
               data={deviceData.slice(0, Math.ceil(deviceData.length / 2))}

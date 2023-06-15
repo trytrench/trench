@@ -137,15 +137,17 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Description",
     accessorKey: "description",
     size: 300,
-  },
-  {
-    header: "Seller",
-    accessorKey: "sellerName",
+    cell({ row }) {
+      return row.original.description || "--";
+    },
   },
   {
     header: "Customer Email",
-    accessorKey: "customer.email",
+    // accessorKey: "customer.email",
     size: 200,
+    cell({ row }) {
+      return row.original.customerLink?.customer.email || "--";
+    },
   },
 
   {
@@ -154,7 +156,8 @@ const columns: ColumnDef<TxRow>[] = [
     cell({ row }) {
       return (
         row.original.customerLink?.customer.name ||
-        row.original.paymentMethod.name
+        row.original.paymentMethod.name ||
+        "--"
       );
     },
   },

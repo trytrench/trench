@@ -158,13 +158,14 @@ export const paymentAttemptsRouter = createTRPCRouter({
         outcome: {
           status: input.search?.status,
         },
-
-        customerLink: {
-          customer: {
-            email: getSearchOption(input.search?.email),
-          },
-          customerId: input.customerId,
-        },
+        customerLink: input.search?.email
+          ? {
+              customer: {
+                email: getSearchOption(input.search?.email),
+              },
+              customerId: input.customerId,
+            }
+          : undefined,
         ruleExecutions: input.executedRuleId
           ? {
               some: {
@@ -206,37 +207,28 @@ export const paymentAttemptsRouter = createTRPCRouter({
               },
             },
             {
-              customerLink: {
-                customer: {
-                  AND: [
-                    {
-                      email: linkedPaymentAttempt.customerLink?.customer.email,
-                    },
-                    { NOT: { email: null } },
-                  ],
-                },
-              },
-            },
-            {
-              customerLink: {
-                customer: {
-                  AND: [
-                    {
-                      phoneNumber:
-                        linkedPaymentAttempt.customerLink?.customer.phoneNumber,
-                    },
-                    { NOT: { phoneNumber: null } },
-                  ],
-                },
-              },
-            },
-            // { customer: { name: linkedPaymentAttempt.customer?.name } },
-            {
               paymentMethod: {
                 card: { id: linkedPaymentAttempt.paymentMethod.card?.id },
               },
             },
-            // { walletAddress: linkedPaymentAttempt.walletAddress },
+            {
+              customerLink: linkedPaymentAttempt.customerLink?.customer.email
+                ? {
+                    customer: {
+                      email: linkedPaymentAttempt.customerLink.customer.email,
+                    },
+                  }
+                : undefined,
+            },
+            {
+              customerLink: linkedPaymentAttempt.customerLink?.customer.phone
+                ? {
+                    customer: {
+                      phone: linkedPaymentAttempt.customerLink.customer.phone,
+                    },
+                  }
+                : undefined,
+            },
           ],
         }),
       };
@@ -248,7 +240,7 @@ export const paymentAttemptsRouter = createTRPCRouter({
         ctx.prisma.paymentAttempt.findMany({
           skip: input.offset,
           take: input.limit,
-          // where: filter,
+          where: filter,
           orderBy: {
             createdAt: "desc",
           },

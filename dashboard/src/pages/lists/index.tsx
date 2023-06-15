@@ -65,7 +65,7 @@ const columns: ColumnDef<
             as={IconButton}
             aria-label="Options"
             icon={<Icon as={MoreHorizontal} />}
-            size="sm"
+            size="xs"
           />
           <Portal>
             <MenuList>

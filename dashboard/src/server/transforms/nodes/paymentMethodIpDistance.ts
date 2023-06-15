@@ -3,6 +3,7 @@ import { geocodePlugin } from "../plugins/geocode";
 import { maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
+const ALWAYS_REFETCH_IP_DATA = true;
 export const ipDataNode = node
   .resolver(({ input }) => {
     const ipAddress =
@@ -14,18 +15,10 @@ export const ipDataNode = node
   })
   .then(async (ipAddressObj) => {
     const { location, ipAddress } = ipAddressObj;
-    if (!location?.latitude || !location?.longitude) {
+    if (ALWAYS_REFETCH_IP_DATA || !location?.latitude || !location?.longitude) {
       const maxmind = await maxmindPlugin(ipAddress);
 
-      return {
-        latitude: maxmind.latitude,
-        longitude: maxmind.longitude,
-        countryISOCode: maxmind.countryISOCode,
-        countryName: maxmind.countryName,
-        postalCode: maxmind.postalCode,
-        cityName: maxmind.cityName,
-        cityGeonameId: maxmind.cityGeonameId,
-      };
+      return maxmind;
     } else {
       return {
         ...location,

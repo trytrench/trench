@@ -1,12 +1,19 @@
 import { Layout } from "~/components/layouts/Layout";
 import { type RouterOutputs, api } from "~/lib/api";
 import {
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuIcon,
+  MenuItem,
+  MenuList,
   Modal,
   ModalBody,
   ModalCloseButton,
   ModalContent,
   ModalHeader,
   ModalOverlay,
+  Portal,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -18,12 +25,18 @@ import { type ColumnDef, type PaginationState } from "@tanstack/react-table";
 import { DataTable } from "../../components/DataTable";
 import NextLink from "next/link";
 import { RiskLevelTag } from "~/components/RiskLevelTag";
-import { EditIcon, InfoIcon, Plus } from "lucide-react";
+import {
+  ChevronDownIcon,
+  EditIcon,
+  InfoIcon,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { Highlight, themes } from "prism-react-renderer";
 import { PREFIX, SUFFIX } from "~/components/editor/constants";
 import { RiskLevel } from "../../common/types";
 
-type RulesRow = RouterOutputs["dashboard"]["rules"]["getAll"][number];
+type RulesRow = RouterOutputs["dashboard"]["rules"]["getAll"]["rows"][number];
 
 function RuleModal(props: { rule: RulesRow }) {
   const { rule } = props;
@@ -160,25 +173,27 @@ const columns: ColumnDef<RulesRow>[] = [
   },
   {
     header: "Edit",
+    meta: {
+      disableLink: true,
+    },
     cell({ row }) {
       return (
-        <Link href={`/rules/${row.original.id}/edit`}>
-          <Button
-            color="gray.400"
-            bg="transparent"
-            as="button"
-            m={-3}
-            p={3}
-            _hover={{
-              color: "black",
-            }}
-            _active={{
-              color: "black",
-            }}
-          >
-            <EditIcon height={16} width={16} />
-          </Button>
-        </Link>
+        <Menu placement="bottom-end">
+          <MenuButton
+            as={IconButton}
+            aria-label="Options"
+            icon={<Icon as={MoreHorizontal} />}
+            size="xs"
+          />
+          <Portal>
+            <MenuList>
+              <Link href={`/rules/${row.original.id}/edit`}>
+                <MenuItem>Edit</MenuItem>
+              </Link>
+              {/* <MenuItem color="red.500">Delete</MenuItem> */}
+            </MenuList>
+          </Portal>
+        </Menu>
       );
     },
   },
@@ -200,7 +215,12 @@ const RulesPage: CustomPage = () => {
       <Flex justify="space-between" mb={4} align="center">
         <Heading>Rules</Heading>
         <NextLink href="/rules/create" passHref>
-          <Button leftIcon={<Icon as={Plus} />} size="sm" as="a">
+          <Button
+            colorScheme="blue"
+            leftIcon={<Icon mb={0.5} mr={-0.5} as={Plus} />}
+            size="sm"
+            as="a"
+          >
             New
           </Button>
         </NextLink>
