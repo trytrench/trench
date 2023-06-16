@@ -90,6 +90,7 @@
     "eslint-config-next": "^13.4.1",
     "glob": "^10.2.7",
     "prisma": "^4.11.0",
+    "prisma-dbml-generator": "^0.10.0",
     "stripe": "^12.7.0",
     "ts-morph": "^18.0.0",
     "ts-node": "^10.9.1",

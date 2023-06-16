@@ -6,9 +6,297 @@ generator client {
   previewFeatures = ["views", "fullTextSearch", "filteredRelationCount"]
 }
 
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("POSTGRES_PRISMA_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email    String? @unique
+  name     String?
+  phone    String?
+  metadata Json    @default("{}")
+
+  sessions Session[]
+
+  paymentMethodLinks  UserPaymentMethodLink[]
+  paymentAttemptLinks UserPaymentAttemptLink[]
+  deviceLinks         UserDeviceLink[]
+  cardLinks           UserCardLink[]
+  ipAddressLinks      UserIpAddressLink[]
+}
+
+model SessionType {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String @unique
+
+  sessions Session[]
+  rules    Rule[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type   SessionType @relation(fields: [typeId], references: [id])
+  typeId String
+
+  user           User?           @relation(fields: [userId], references: [id])
+  userId         String?
+  deviceSnapshot DeviceSnapshot?
+
+  events           Event[]
+  evaluableActions EvaluableAction[]
+}
+
+model EvaluableAction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transformsOutput Json    @default("{}")
+  isFraud          Boolean @default(false)
+  riskLevel        String
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String
+
+  paymentAttempt PaymentAttempt?
+
+  ruleExecutions RuleExecution[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type    String
+  payload Json   @default("{}")
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String
+}
+
+model DeviceSnapshot {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionId String  @unique
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId String
+
+  ipAddress   IpAddress? @relation(fields: [ipAddressId], references: [id])
+  ipAddressId String?
+
+  fingerprint String?
+  userAgent   String?
+
+  browserName     String?
+  browserVersion  String?
+  deviceModel     String?
+  deviceType      String?
+  deviceVendor    String?
+  engineName      String?
+  engineVersion   String?
+  osName          String?
+  osVersion       String?
+  cpuArchitecture String?
+
+  isIncognito Boolean?
+
+  reqUserAgent String?
+
+  screenResolution String?
+  timezone         String?
+
+  metadata Json @default("{}")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  deviceSnapshots DeviceSnapshot[]
+
+  userLinks      UserDeviceLink[]
+  ipAddressLinks DeviceIpAddressLink[]
+}
+
+// Locations
+
+model Location {
+  id        String @id @default(cuid())
+  latitude  Float?
+  longitude Float?
+
+  cityGeonameId  Int?
+  cityName       String?
+  countryISOCode String?
+  countryName    String?
+
+  postalCode    String?
+  regionISOCode String?
+  regionName    String?
+
+  ipAddresses IpAddress[]
+  addresses   Address[]
+}
+
+model IpAddress {
+  id        String   @id @default(cuid())
+  ipAddress String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location   Location? @relation(fields: [locationId], references: [id])
+  locationId String?
+
+  metadata Json @default("{}")
+
+  deviceSnapshots DeviceSnapshot[]
+
+  deviceLinks         DeviceIpAddressLink[]
+  userLinks           UserIpAddressLink[]
+  cardLinks           CardIpAddressLink[]
+  paymentAttemptLinks PaymentAttemptIpAddressLink[]
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  city       String?
+  country    String?
+  line1      String?
+  line2      String?
+  postalCode String?
+  state      String?
+
+  location   Location? @relation(fields: [locationId], references: [id])
+  locationId String?
+
+  paymentMethods  PaymentMethod[]
+  paymentAttempts PaymentAttempt[]
+}
+
+// Rules
+
+model Rule {
+  id           String          @id @default(cuid())
+  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime        @default(now())
+  name         String
+  description  String?
+  tsCode       String
+  jsCode       String
+  riskLevel    String
+  executions   RuleExecution[]
+  sessionTypes SessionType[]
+}
+
+model RuleExecution {
+  id                String          @id @default(cuid())
+  createdAt         DateTime        @default(now())
+  evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
+  evaluableActionId String
+  ruleId            String
+  rule              Rule            @relation(fields: [ruleId], references: [id])
+  result            Boolean?
+  error             String?
+  riskLevel         String
+
+  @@unique([evaluableActionId, ruleId])
+}
+
+// Lists
+
+model List {
+  id        String     @id @default(cuid())
+  updatedAt DateTime   @updatedAt
+  createdAt DateTime   @default(now())
+  name      String
+  alias     String     @unique
+  regex     String?
+  createdBy String
+  items     ListItem[]
+}
+
+model ListItem {
+  id        String   @id @default(cuid())
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  value     String
+  listId    String
+  list      List     @relation(fields: [listId], references: [id])
+  createdBy String
+
+  @@unique([listId, value])
+}
+
+// Evaluable Action Types
+
+// Evaluable Action Type: Payment Attempt
+model Card {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  bin         String?
+  brand       String
+  country     String?
+  last4       String
+  funding     String?
+  issuer      String?
+  expiryMonth Int?
+  expiryYear  Int?
+
+  threeDSecureSupported Boolean?
+
+  paymentMethods PaymentMethod[]
+
+  userLinks      UserCardLink[]
+  ipAddressLinks CardIpAddressLink[]
+}
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  customId  String?  @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  name      String?
+  email     String?
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  cvcCheck          String?
+  addressLine1Check String?
+  postalCodeCheck   String?
+
+  card   Card?   @relation(fields: [cardId], references: [id])
+  cardId String?
+
+  cardWallet      String?
+  paymentAttempts PaymentAttempt[]
+
+  userLink UserPaymentMethodLink?
 }
 
 model PaymentAttempt {
@@ -21,11 +309,10 @@ model PaymentAttempt {
   description String?
   metadata    Json    @default("{}")
 
-  assessment PaymentAttemptAssessment?
-  outcome    PaymentOutcome?
+  evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
+  evaluableActionId String          @unique
 
-  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
-  checkoutSessionId String
+  outcome PaymentOutcome?
 
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId String
@@ -35,23 +322,8 @@ model PaymentAttempt {
   shippingAddress   Address? @relation(fields: [shippingAddressId], references: [id])
   shippingAddressId String?
 
-  ruleExecutions RuleExecution[]
-
   ipAddressLinks PaymentAttemptIpAddressLink[]
-  customerLink   CustomerPaymentAttemptLink?
-}
-
-model PaymentAttemptAssessment {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  transformsOutput Json    @default("{}")
-  isFraud          Boolean @default(false)
-  riskLevel        String
-
-  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
-  paymentAttemptId String         @unique
+  userLink       UserPaymentAttemptLink?
 }
 
 enum PaymentOutcomeStatus {
@@ -92,315 +364,66 @@ model StripePaymentOutcome {
   paymentOutcomeId String         @unique
 }
 
-model Customer {
-  id        String   @id @default(cuid())
-  customId  String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name     String?
-  email    String?
-  phone    String?
-  metadata Json    @default("{}")
-
-  checkoutSessions CheckoutSession[]
-
-  deviceLinks         CustomerDeviceLink[]
-  cardLinks           CustomerCardLink[]
-  ipAddressLinks      CustomerIpAddressLink[]
-  paymentMethodLinks  CustomerPaymentMethodLink[]
-  paymentAttemptLinks CustomerPaymentAttemptLink[]
-}
-
-model CheckoutSession {
-  id        String   @id @default(cuid())
-  customId  String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  customer       Customer?       @relation(fields: [customerId], references: [id])
-  customerId     String?
-  deviceSnapshot DeviceSnapshot?
-
-  events          Event[]
-  paymentAttempts PaymentAttempt[]
-}
-
-model Event {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  type    String
-  payload Json   @default("{}")
-
-  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
-  checkoutSessionId String
-}
-
-model DeviceSnapshot {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  device   Device @relation(fields: [deviceId], references: [id])
-  deviceId String
-
-  ipAddress   IpAddress? @relation(fields: [ipAddressId], references: [id])
-  ipAddressId String?
-
-  checkoutSessionId String          @unique
-  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id])
-
-  fingerprint String?
-  userAgent   String?
-
-  browserName     String?
-  browserVersion  String?
-  deviceModel     String?
-  deviceType      String?
-  deviceVendor    String?
-  engineName      String?
-  engineVersion   String?
-  osName          String?
-  osVersion       String?
-  cpuArchitecture String?
-
-  isIncognito Boolean?
-
-  reqUserAgent String?
-
-  screenResolution String?
-  timezone         String?
-
-  metadata Json @default("{}")
-}
-
-model Device {
-  id        String   @id @default(cuid())
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  deviceSnapshots DeviceSnapshot[]
-
-  customerLinks  CustomerDeviceLink[]
-  ipAddressLinks DeviceIpAddressLink[]
-}
-
-model PaymentMethod {
-  id        String   @id @default(cuid())
-  customId  String?  @unique
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  name      String?
-  email     String?
-  addressId String?
-  address   Address? @relation(fields: [addressId], references: [id])
-
-  cvcCheck          String?
-  addressLine1Check String?
-  postalCodeCheck   String?
-
-  card   Card?   @relation(fields: [cardId], references: [id])
-  cardId String?
-
-  cardWallet      String?
-  paymentAttempts PaymentAttempt[]
-
-  customerLink CustomerPaymentMethodLink?
-}
-
-model Card {
-  id          String   @id @default(cuid())
-  fingerprint String   @unique
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
-  bin         String?
-  brand       String
-  country     String?
-  last4       String
-  funding     String?
-  issuer      String?
-  expiryMonth Int?
-  expiryYear  Int?
-
-  threeDSecureSupported Boolean?
-
-  paymentMethods PaymentMethod[]
-
-  customerLinks  CustomerCardLink[]
-  ipAddressLinks CardIpAddressLink[]
-}
-
-// Locations
-
-model Location {
-  id        String @id @default(cuid())
-  latitude  Float?
-  longitude Float?
-
-  cityGeonameId  Int?
-  cityName       String?
-  countryISOCode String?
-  countryName    String?
-
-  postalCode    String?
-  regionISOCode String?
-  regionName    String?
-
-  ipAddresses IpAddress[]
-  addresses   Address[]
-}
-
-model IpAddress {
-  id        String   @id @default(cuid())
-  ipAddress String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  location   Location? @relation(fields: [locationId], references: [id])
-  locationId String?
-
-  metadata Json @default("{}")
-
-  deviceSnapshots DeviceSnapshot[]
-
-  deviceLinks         DeviceIpAddressLink[]
-  customerLinks       CustomerIpAddressLink[]
-  cardLinks           CardIpAddressLink[]
-  paymentAttemptLinks PaymentAttemptIpAddressLink[]
-}
-
-model Address {
-  id         String  @id @default(cuid())
-  city       String?
-  country    String?
-  line1      String?
-  line2      String?
-  postalCode String?
-  state      String?
-
-  location   Location? @relation(fields: [locationId], references: [id])
-  locationId String?
-
-  paymentMethods  PaymentMethod[]
-  paymentAttempts PaymentAttempt[]
-}
-
-// Rules
-
-model Rule {
-  id          String          @id @default(cuid())
-  updatedAt   DateTime        @updatedAt
-  createdAt   DateTime        @default(now())
-  name        String
-  description String?
-  tsCode      String
-  jsCode      String
-  riskLevel   String
-  executions  RuleExecution[]
-}
-
-model RuleExecution {
-  id               String         @id @default(cuid())
-  createdAt        DateTime       @default(now())
-  paymentAttemptId String
-  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
-  ruleId           String
-  rule             Rule           @relation(fields: [ruleId], references: [id])
-  result           Boolean?
-  error            String?
-  riskLevel        String
-
-  @@unique([paymentAttemptId, ruleId])
-}
-
-// Lists
-
-model List {
-  id        String     @id @default(cuid())
-  updatedAt DateTime   @updatedAt
-  createdAt DateTime   @default(now())
-  name      String
-  alias     String     @unique
-  regex     String?
-  createdBy String
-  items     ListItem[]
-}
-
-model ListItem {
-  id        String   @id @default(cuid())
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-  value     String
-  listId    String
-  list      List     @relation(fields: [listId], references: [id])
-  createdBy String
-
-  @@unique([listId, value])
-}
-
 // Views
 
-view CustomerPaymentMethodLink {
-  customer        Customer      @relation(fields: [customerId], references: [id])
-  customerId      String
+view UserPaymentMethodLink {
+  user            User          @relation(fields: [userId], references: [id])
+  userId          String
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId String        @unique
 
   firstSeen DateTime
   lastSeen  DateTime
 
-  @@id([paymentMethodId, customerId])
+  @@id([paymentMethodId, userId])
 }
 
-view CustomerPaymentAttemptLink {
-  customer         Customer       @relation(fields: [customerId], references: [id])
-  customerId       String
+view UserPaymentAttemptLink {
+  user             User           @relation(fields: [userId], references: [id])
+  userId           String
   paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
   paymentAttemptId String         @unique
 
   firstSeen DateTime
   lastSeen  DateTime
 
-  @@id([paymentAttemptId, customerId])
+  @@id([paymentAttemptId, userId])
 }
 
-view CustomerDeviceLink {
-  customer   Customer @relation(fields: [customerId], references: [id])
-  customerId String
-  device     Device   @relation(fields: [deviceId], references: [id])
-  deviceId   String
+view UserDeviceLink {
+  user     User   @relation(fields: [userId], references: [id])
+  userId   String
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId String
 
   firstSeen DateTime
   lastSeen  DateTime
 
-  @@id([deviceId, customerId])
+  @@id([deviceId, userId])
 }
 
-view CustomerCardLink {
-  customer   Customer @relation(fields: [customerId], references: [id])
-  customerId String
-  card       Card     @relation(fields: [cardId], references: [id])
-  cardId     String
+view UserCardLink {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  card   Card   @relation(fields: [cardId], references: [id])
+  cardId String
 
   firstSeen DateTime
   lastSeen  DateTime
 
-  @@id([cardId, customerId])
+  @@id([cardId, userId])
 }
 
-view CustomerIpAddressLink {
-  customer    Customer  @relation(fields: [customerId], references: [id])
-  customerId  String
+view UserIpAddressLink {
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
   ipAddress   IpAddress @relation(fields: [ipAddressId], references: [id])
   ipAddressId String
 
   firstSeen DateTime
   lastSeen  DateTime
 
-  @@id([customerId, ipAddressId])
+  @@id([userId, ipAddressId])
 }
 
 view PaymentAttemptIpAddressLink {
