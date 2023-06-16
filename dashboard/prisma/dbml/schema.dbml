@@ -25,7 +25,7 @@ Table SessionType {
   updatedAt DateTime [not null]
   name String [unique, not null]
   sessions Session [not null]
-  rules Rule [not null]
+  rules RuleToSessionType [not null]
 }
 
 Table Session {
@@ -60,7 +60,7 @@ Table Event {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   type String [not null]
-  payload Json [not null, default: '{}']
+  properties Json [not null, default: '{}']
   session Session [not null]
   sessionId String [not null]
 }
@@ -147,7 +147,7 @@ Table Address {
   paymentAttempts PaymentAttempt [not null]
 }
 
-Table Rule {
+Table RuleSnapshot {
   id String [pk]
   updatedAt DateTime [not null]
   createdAt DateTime [default: `now()`, not null]
@@ -156,8 +156,34 @@ Table Rule {
   tsCode String [not null]
   jsCode String [not null]
   riskLevel String [not null]
+  rule Rule
+  ruleId String
+  currentRule Rule
   executions RuleExecution [not null]
-  sessionTypes SessionType [not null]
+}
+
+Table Rule {
+  id String [pk]
+  updatedAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  currentRuleSnapshot RuleSnapshot [not null]
+  currentRuleSnapshotId String [unique, not null]
+  ruleSnapshots RuleSnapshot [not null]
+  sessionTypes RuleToSessionType [not null]
+}
+
+Table RuleToSessionType {
+  id String [pk]
+  updatedAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  rule Rule [not null]
+  ruleId String [not null]
+  sessionType SessionType [not null]
+  sessionTypeId String [not null]
+
+  indexes {
+    (ruleId, sessionTypeId) [unique]
+  }
 }
 
 Table RuleExecution {
@@ -165,14 +191,14 @@ Table RuleExecution {
   createdAt DateTime [default: `now()`, not null]
   evaluableAction EvaluableAction [not null]
   evaluableActionId String [not null]
-  ruleId String [not null]
-  rule Rule [not null]
+  ruleSnapshot RuleSnapshot [not null]
+  ruleSnapshotId String [not null]
   result Boolean
   error String
   riskLevel String [not null]
 
   indexes {
-    (evaluableActionId, ruleId) [unique]
+    (evaluableActionId, ruleSnapshotId) [unique]
   }
 }
 
@@ -417,9 +443,17 @@ Ref: IpAddress.locationId > Location.id
 
 Ref: Address.locationId > Location.id
 
+Ref: RuleSnapshot.ruleId - Rule.id
+
+Ref: Rule.currentRuleSnapshotId - RuleSnapshot.id
+
+Ref: RuleToSessionType.ruleId > Rule.id
+
+Ref: RuleToSessionType.sessionTypeId > SessionType.id
+
 Ref: RuleExecution.evaluableActionId > EvaluableAction.id
 
-Ref: RuleExecution.ruleId > Rule.id
+Ref: RuleExecution.ruleSnapshotId > RuleSnapshot.id
 
 Ref: ListItem.listId > List.id
 

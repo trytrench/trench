@@ -43,7 +43,7 @@ model SessionType {
   name String @unique
 
   sessions Session[]
-  rules    Rule[]
+  rules    RuleToSessionType[]
 }
 
 model Session {
@@ -86,7 +86,7 @@ model Event {
   updatedAt DateTime @updatedAt
 
   type    String
-  payload Json   @default("{}")
+  properties Json   @default("{}")
 
   session   Session @relation(fields: [sessionId], references: [id])
   sessionId String
@@ -198,17 +198,50 @@ model Address {
 
 // Rules
 
-model Rule {
+model RuleSnapshot {
   id           String          @id @default(cuid())
   updatedAt    DateTime        @updatedAt
   createdAt    DateTime        @default(now())
+
   name         String
   description  String?
   tsCode       String
   jsCode       String
   riskLevel    String
-  executions   RuleExecution[]
-  sessionTypes SessionType[]
+
+  rule        Rule?     @relation("ruleSnapshots", fields: [ruleId], references: [id])
+  ruleId       String?
+
+  currentRule Rule? @relation("currentRuleSnapshot")
+
+  executions RuleExecution[]
+}
+
+model Rule {
+  id           String          @id @default(cuid())
+  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime        @default(now())
+
+
+  currentRuleSnapshot RuleSnapshot @relation("currentRuleSnapshot", fields: [currentRuleSnapshotId], references: [id])
+  currentRuleSnapshotId String @unique
+
+  ruleSnapshots RuleSnapshot[] @relation("ruleSnapshots")
+  sessionTypes RuleToSessionType[]
+}
+
+model RuleToSessionType {
+  id           String   @id @default(cuid())
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  rule         Rule     @relation(fields: [ruleId], references: [id])
+  ruleId       String
+
+  sessionType  SessionType @relation(fields: [sessionTypeId], references: [id])
+  sessionTypeId String
+
+  @@unique([ruleId, sessionTypeId])
 }
 
 model RuleExecution {
@@ -216,13 +249,15 @@ model RuleExecution {
   createdAt         DateTime        @default(now())
   evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
   evaluableActionId String
-  ruleId            String
-  rule              Rule            @relation(fields: [ruleId], references: [id])
+
+  ruleSnapshot              RuleSnapshot            @relation(fields: [ruleSnapshotId], references: [id])
+  ruleSnapshotId            String
+
   result            Boolean?
   error             String?
   riskLevel         String
 
-  @@unique([evaluableActionId, ruleId])
+  @@unique([evaluableActionId, ruleSnapshotId])
 }
 
 // Lists

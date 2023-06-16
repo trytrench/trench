@@ -56,7 +56,7 @@ CREATE TABLE "Event" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "type" TEXT NOT NULL,
-    "payload" JSONB NOT NULL DEFAULT '{}',
+    "properties" JSONB NOT NULL DEFAULT '{}',
     "sessionId" TEXT NOT NULL,
 
     CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
@@ -143,7 +143,7 @@ CREATE TABLE "Address" (
 );
 
 -- CreateTable
-CREATE TABLE "Rule" (
+CREATE TABLE "RuleSnapshot" (
     "id" TEXT NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -152,8 +152,30 @@ CREATE TABLE "Rule" (
     "tsCode" TEXT NOT NULL,
     "jsCode" TEXT NOT NULL,
     "riskLevel" TEXT NOT NULL,
+    "ruleId" TEXT,
+
+    CONSTRAINT "RuleSnapshot_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Rule" (
+    "id" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "currentRuleSnapshotId" TEXT NOT NULL,
 
     CONSTRAINT "Rule_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RuleToSessionType" (
+    "id" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "ruleId" TEXT NOT NULL,
+    "sessionTypeId" TEXT NOT NULL,
+
+    CONSTRAINT "RuleToSessionType_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -161,7 +183,7 @@ CREATE TABLE "RuleExecution" (
     "id" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "evaluableActionId" TEXT NOT NULL,
-    "ruleId" TEXT NOT NULL,
+    "ruleSnapshotId" TEXT NOT NULL,
     "result" BOOLEAN,
     "error" TEXT,
     "riskLevel" TEXT NOT NULL,
@@ -282,12 +304,6 @@ CREATE TABLE "StripePaymentOutcome" (
     CONSTRAINT "StripePaymentOutcome_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "_RuleToSessionType" (
-    "A" TEXT NOT NULL,
-    "B" TEXT NOT NULL
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "User_customId_key" ON "User"("customId");
 
@@ -307,7 +323,10 @@ CREATE UNIQUE INDEX "DeviceSnapshot_sessionId_key" ON "DeviceSnapshot"("sessionI
 CREATE UNIQUE INDEX "IpAddress_ipAddress_key" ON "IpAddress"("ipAddress");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RuleExecution_evaluableActionId_ruleId_key" ON "RuleExecution"("evaluableActionId", "ruleId");
+CREATE UNIQUE INDEX "Rule_currentRuleSnapshotId_key" ON "Rule"("currentRuleSnapshotId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RuleExecution_evaluableActionId_ruleSnapshotId_key" ON "RuleExecution"("evaluableActionId", "ruleSnapshotId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "List_alias_key" ON "List"("alias");
@@ -332,12 +351,6 @@ CREATE UNIQUE INDEX "PaymentOutcome_paymentAttemptId_key" ON "PaymentOutcome"("p
 
 -- CreateIndex
 CREATE UNIQUE INDEX "StripePaymentOutcome_paymentOutcomeId_key" ON "StripePaymentOutcome"("paymentOutcomeId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "_RuleToSessionType_AB_unique" ON "_RuleToSessionType"("A", "B");
-
--- CreateIndex
-CREATE INDEX "_RuleToSessionType_B_index" ON "_RuleToSessionType"("B");
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "SessionType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -367,10 +380,22 @@ ALTER TABLE "IpAddress" ADD CONSTRAINT "IpAddress_locationId_fkey" FOREIGN KEY (
 ALTER TABLE "Address" ADD CONSTRAINT "Address_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "RuleSnapshot" ADD CONSTRAINT "RuleSnapshot_ruleId_fkey" FOREIGN KEY ("ruleId") REFERENCES "Rule"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Rule" ADD CONSTRAINT "Rule_currentRuleSnapshotId_fkey" FOREIGN KEY ("currentRuleSnapshotId") REFERENCES "RuleSnapshot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RuleToSessionType" ADD CONSTRAINT "RuleToSessionType_ruleId_fkey" FOREIGN KEY ("ruleId") REFERENCES "Rule"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RuleToSessionType" ADD CONSTRAINT "RuleToSessionType_sessionTypeId_fkey" FOREIGN KEY ("sessionTypeId") REFERENCES "SessionType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "RuleExecution" ADD CONSTRAINT "RuleExecution_evaluableActionId_fkey" FOREIGN KEY ("evaluableActionId") REFERENCES "EvaluableAction"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RuleExecution" ADD CONSTRAINT "RuleExecution_ruleId_fkey" FOREIGN KEY ("ruleId") REFERENCES "Rule"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RuleExecution" ADD CONSTRAINT "RuleExecution_ruleSnapshotId_fkey" FOREIGN KEY ("ruleSnapshotId") REFERENCES "RuleSnapshot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ListItem" ADD CONSTRAINT "ListItem_listId_fkey" FOREIGN KEY ("listId") REFERENCES "List"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -395,9 +420,3 @@ ALTER TABLE "PaymentOutcome" ADD CONSTRAINT "PaymentOutcome_paymentAttemptId_fke
 
 -- AddForeignKey
 ALTER TABLE "StripePaymentOutcome" ADD CONSTRAINT "StripePaymentOutcome_paymentOutcomeId_fkey" FOREIGN KEY ("paymentOutcomeId") REFERENCES "PaymentOutcome"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_RuleToSessionType" ADD CONSTRAINT "_RuleToSessionType_A_fkey" FOREIGN KEY ("A") REFERENCES "Rule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_RuleToSessionType" ADD CONSTRAINT "_RuleToSessionType_B_fkey" FOREIGN KEY ("B") REFERENCES "SessionType"("id") ON DELETE CASCADE ON UPDATE CASCADE;
