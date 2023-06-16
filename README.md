@@ -12,7 +12,7 @@
 
 ## Overview
 
-Trench is an open-source payment fraud prevention platform, built for engineers. This repo contains a data collection SDK
+Trench is an open-source payment fraud prevention platform, built for engineers.
 
 ## Features
 
