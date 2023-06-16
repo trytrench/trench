@@ -26,8 +26,6 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
  
 ## Design Philosophy
 
-<p><img alt="let him cook" src="https://github.com/trytrench/trench/assets/9043913/fd4399b1-a1d8-43ae-a1eb-f860e98119c1)" width="300px" /></p>
-
 - **Full customization.** You know your product and user interactions better than anyone else. To be effective, you should have full control over the data you collect and integrate.
 - **Full access to your data.** You shouldn’t be limited to dashboards and reports. Full access to your data is needed to properly understand your fraud.
 
