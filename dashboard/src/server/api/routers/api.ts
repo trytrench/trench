@@ -39,6 +39,7 @@ export const apiRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      console.log("Lol");
       const [paymentMethod, paymentIntent] = await Promise.all([
         stripe.paymentMethods.retrieve(input.paymentMethodId, {
           expand: ["user"],
@@ -49,6 +50,8 @@ export const apiRouter = createTRPCRouter({
       ]);
 
       const user = paymentIntent.user || paymentMethod.user;
+
+      console.log(user);
 
       if (!paymentMethod.card)
         throw new Error("No card found on payment method");
@@ -73,7 +76,7 @@ export const apiRouter = createTRPCRouter({
                   },
                 }
               : undefined,
-          paymentAttempts: {},
+          // paymentAttempts: {},
         },
         include: {
           deviceSnapshot: {
@@ -92,12 +95,16 @@ export const apiRouter = createTRPCRouter({
         throw new Error("No fingerprint found on payment method");
       }
 
-      const paymentAttempt = await ctx.prisma.paymentAttempt.create({
+      const evaluableAction = await ctx.prisma.evaluableAction.create({
         include: {
-          paymentMethod: {
+          paymentAttempt: {
             include: {
-              card: true,
-              address: true,
+              paymentMethod: {
+                include: {
+                  card: true,
+                  address: true,
+                },
+              },
             },
           },
           session: {
@@ -115,54 +122,58 @@ export const apiRouter = createTRPCRouter({
           },
         },
         data: {
-          amount: paymentIntent.amount,
-          currency: paymentIntent.currency,
-          description: paymentIntent.description,
-          metadata: paymentIntent.metadata,
           session: { connect: { id: session.id } },
-          shippingName: paymentIntent.shipping?.name,
-          shippingPhone: paymentIntent.shipping?.phone,
-          paymentMethod: {
-            connectOrCreate: {
-              where: { customId: paymentMethod.id },
-              create: {
-                customId: paymentMethod.id,
-                name: paymentMethod.billing_details.name,
-                email: paymentMethod.billing_details.email,
-                address: {
+          paymentAttempt: {
+            create: {
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              description: paymentIntent.description,
+              metadata: paymentIntent.metadata,
+              shippingName: paymentIntent.shipping?.name,
+              shippingPhone: paymentIntent.shipping?.phone,
+              paymentMethod: {
+                connectOrCreate: {
+                  where: { customId: paymentMethod.id },
                   create: {
-                    city: paymentMethod.billing_details.address?.city,
-                    country: paymentMethod.billing_details.address?.country,
-                    line1: paymentMethod.billing_details.address?.line1,
-                    line2: paymentMethod.billing_details.address?.line2,
-                    postalCode:
-                      paymentMethod.billing_details.address?.postal_code,
-                    state: paymentMethod.billing_details.address?.state,
-                  },
-                },
-                cvcCheck: paymentMethod.card?.checks?.cvc_check,
-                postalCodeCheck:
-                  paymentMethod.card?.checks?.address_postal_code_check,
-                addressLine1Check:
-                  paymentMethod.card?.checks?.address_line1_check,
-                cardWallet: paymentMethod.card?.wallet?.type,
-                card: {
-                  connectOrCreate: {
-                    where: {
-                      fingerprint: paymentMethod.card.fingerprint,
+                    customId: paymentMethod.id,
+                    name: paymentMethod.billing_details.name,
+                    email: paymentMethod.billing_details.email,
+                    address: {
+                      create: {
+                        city: paymentMethod.billing_details.address?.city,
+                        country: paymentMethod.billing_details.address?.country,
+                        line1: paymentMethod.billing_details.address?.line1,
+                        line2: paymentMethod.billing_details.address?.line2,
+                        postalCode:
+                          paymentMethod.billing_details.address?.postal_code,
+                        state: paymentMethod.billing_details.address?.state,
+                      },
                     },
-                    create: {
-                      fingerprint: paymentMethod.card.fingerprint,
-                      bin: paymentMethod.card.iin,
-                      brand: paymentMethod.card.brand,
-                      country: paymentMethod.card.country,
-                      last4: paymentMethod.card.last4,
-                      funding: paymentMethod.card.funding,
-                      issuer: paymentMethod.card.issuer,
-                      expiryMonth: paymentMethod.card.exp_month,
-                      expiryYear: paymentMethod.card.exp_year,
-                      threeDSecureSupported:
-                        paymentMethod.card.three_d_secure_usage?.supported,
+                    cvcCheck: paymentMethod.card?.checks?.cvc_check,
+                    postalCodeCheck:
+                      paymentMethod.card?.checks?.address_postal_code_check,
+                    addressLine1Check:
+                      paymentMethod.card?.checks?.address_line1_check,
+                    cardWallet: paymentMethod.card?.wallet?.type,
+                    card: {
+                      connectOrCreate: {
+                        where: {
+                          fingerprint: paymentMethod.card.fingerprint,
+                        },
+                        create: {
+                          fingerprint: paymentMethod.card.fingerprint,
+                          bin: paymentMethod.card.iin,
+                          brand: paymentMethod.card.brand,
+                          country: paymentMethod.card.country,
+                          last4: paymentMethod.card.last4,
+                          funding: paymentMethod.card.funding,
+                          issuer: paymentMethod.card.issuer,
+                          expiryMonth: paymentMethod.card.exp_month,
+                          expiryYear: paymentMethod.card.exp_year,
+                          threeDSecureSupported:
+                            paymentMethod.card.three_d_secure_usage?.supported,
+                        },
+                      },
                     },
                   },
                 },
@@ -175,7 +186,7 @@ export const apiRouter = createTRPCRouter({
       if (paymentIntent.shipping) {
         await ctx.prisma.address.create({
           data: {
-            paymentAttempts: { connect: { id: paymentAttempt.id } },
+            paymentAttempts: { connect: { id: evaluableAction.id } },
             city: paymentIntent.shipping?.address?.city,
             country: paymentIntent.shipping?.address?.country,
             line1: paymentIntent.shipping?.address?.line1,
@@ -187,7 +198,11 @@ export const apiRouter = createTRPCRouter({
       }
 
       const [rules, lists] = await ctx.prisma.$transaction([
-        ctx.prisma.rule.findMany(),
+        ctx.prisma.rule.findMany({
+          include: {
+            currentRuleSnapshot: true,
+          },
+        }),
         ctx.prisma.list.findMany({
           include: {
             items: true,
@@ -200,14 +215,14 @@ export const apiRouter = createTRPCRouter({
       }, {} as Record<string, string[]>);
 
       const ruleInput = await ruleInputNode.run({
-        paymentAttempt,
+        evaluableAction,
         blockLists,
       });
 
       // console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
 
       const { ruleExecutionResults, highestRiskLevel } = runRules({
-        rules,
+        rules: rules.map((rule) => rule.currentRuleSnapshot),
         input: ruleInput,
       });
 
@@ -239,27 +254,25 @@ export const apiRouter = createTRPCRouter({
                 result: result?.result,
                 error: result?.error,
                 riskLevel: result.riskLevel,
-                paymentAttemptId: paymentAttempt.id,
-                ruleId: rule.id,
+                evaluableActionId: evaluableAction.id,
+                ruleSnapshotId: rule.currentRuleSnapshot.id,
               };
             })
             .filter(
               (rule) => rule !== null
             ) as Prisma.RuleExecutionCreateManyInput[],
         }),
-        ctx.prisma.paymentAttemptAssessment.upsert({
-          where: { id: paymentAttempt.id },
-          update: {},
-          create: {
+        ctx.prisma.evaluableAction.update({
+          where: { id: evaluableAction.id },
+          data: {
             riskLevel: highestRiskLevel,
             transformsOutput: superjson.parse(
               superjson.stringify(ruleInput.transforms)
             ),
-            paymentAttempt: { connect: { id: paymentAttempt.id } },
           },
         }),
-        ctx.prisma.paymentAttempt.update({
-          where: { id: paymentAttempt.id },
+        ctx.prisma.evaluableAction.update({
+          where: { id: evaluableAction.id },
           data: {
             session: {
               update: {
@@ -282,17 +295,21 @@ export const apiRouter = createTRPCRouter({
                 },
               },
             },
-            paymentMethod: {
+            paymentAttempt: {
               update: {
-                address: {
+                paymentMethod: {
                   update: {
-                    location: {
-                      upsert: ruleInput.transforms.paymentMethodLocation
-                        ? {
-                            update: paymentMethodLocationUpdate,
-                            create: paymentMethodLocationUpdate,
-                          }
-                        : undefined,
+                    address: {
+                      update: {
+                        location: {
+                          upsert: ruleInput.transforms.paymentMethodLocation
+                            ? {
+                                update: paymentMethodLocationUpdate,
+                                create: paymentMethodLocationUpdate,
+                              }
+                            : undefined,
+                        },
+                      },
                     },
                   },
                 },
@@ -305,7 +322,7 @@ export const apiRouter = createTRPCRouter({
       return {
         success: true,
         riskLevel: highestRiskLevel,
-        paymentAttemptId: paymentAttempt.id,
+        paymentAttemptId: evaluableAction.id,
       };
     }),
 });
