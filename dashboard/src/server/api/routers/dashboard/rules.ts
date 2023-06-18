@@ -27,7 +27,19 @@ export const rulesRouter = createTRPCRouter({
           skip: input.offset,
           take: input.limit,
           include: {
-            _count: { select: { executions: { where: { result: true } } } },
+            currentRuleSnapshot: {
+              include: {
+                _count: {
+                  select: {
+                    executions: {
+                      where: {
+                        result: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         }),
       ]);
@@ -45,8 +57,8 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input: ruleToBacktest }) => {
-      const [paymentAttempts, lists] = await ctx.prisma.$transaction([
-        ctx.prisma.paymentAttempt.findMany({
+      const [actions, lists] = await ctx.prisma.$transaction([
+        ctx.prisma.evaluableAction.findMany({
           orderBy: {
             createdAt: "desc",
           },
@@ -59,11 +71,10 @@ export const rulesRouter = createTRPCRouter({
             },
           },
           include: {
-            assessment: true,
-            checkoutSession: {
+            session: {
               include: {
-                paymentAttempts: true,
-                customer: true,
+                evaluableActions: true,
+                user: true,
                 deviceSnapshot: {
                   include: {
                     device: true,
@@ -76,13 +87,17 @@ export const rulesRouter = createTRPCRouter({
                 },
               },
             },
-            paymentMethod: {
+            paymentAttempt: {
               include: {
-                address: true,
-                card: true,
+                paymentMethod: {
+                  include: {
+                    address: true,
+                    card: true,
+                  },
+                },
+                outcome: true,
               },
             },
-            outcome: true,
           },
         }),
         ctx.prisma.list.findMany({
@@ -97,38 +112,52 @@ export const rulesRouter = createTRPCRouter({
         return acc;
       }, {} as Record<string, string[]>);
 
-      const triggeredTransactions: typeof paymentAttempts = [];
+      const triggeredTransactions: typeof actions = [];
 
-      paymentAttempts.forEach((paymentAttempt) => {
+      actions.forEach((action) => {
         const result = runRule({
           rule: {
             jsCode: ruleToBacktest.jsCode,
             riskLevel: RiskLevel.VeryHigh,
           },
           input: {
-            paymentAttempt,
-            transforms: paymentAttempt.assessment
-              ?.transformsOutput as RuleInput["transforms"],
+            evaluableAction: action,
+            transforms: action?.transformsOutput as RuleInput["transforms"],
             lists: listsObj,
           },
         });
         if (result.result === true) {
-          triggeredTransactions.push(paymentAttempt);
+          triggeredTransactions.push(action);
         }
       });
 
       return {
         triggeredRows: triggeredTransactions,
         triggered: triggeredTransactions.length,
-        total: paymentAttempts.length,
+        total: actions.length,
       };
     }),
   create: protectedProcedure
     .input(ruleSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.prisma.rule.create({
-        data: input,
+        data: {
+          currentRuleSnapshot: {
+            create: input,
+          },
+        },
       });
+
+      // Point rule snapshot to the rule
+      await ctx.prisma.ruleSnapshot.update({
+        where: {
+          id: result.currentRuleSnapshotId,
+        },
+        data: {
+          rule: { connect: { id: result.id } },
+        },
+      });
+
       return result;
     }),
   get: protectedProcedure
@@ -142,6 +171,9 @@ export const rulesRouter = createTRPCRouter({
         where: {
           id: input.id,
         },
+        include: {
+          currentRuleSnapshot: true,
+        },
       });
     }),
 
@@ -153,11 +185,17 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const newRuleSnapshot = await ctx.prisma.ruleSnapshot.create({
+        data: input.data,
+      });
+
       const result = await ctx.prisma.rule.update({
         where: {
           id: input.id,
         },
-        data: input.data,
+        data: {
+          currentRuleSnapshot: { connect: { id: newRuleSnapshot.id } },
+        },
       });
       return result;
     }),

@@ -33,9 +33,7 @@ import {
   JCBIcon,
   DinersIcon,
 } from "./card-with-icon/icons";
-import { formatWalletAddress } from "~/utils/formatWalletAddress";
 import { handleError } from "~/lib/handleError";
-import { MoreHorizontal } from "lucide-react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
 
 import { useRouter } from "next/router";
@@ -46,19 +44,10 @@ type Option = {
   value: string;
 };
 
-const MAP_BRAND_TO_ICON = {
-  visa: VisaIcon,
-  mastercard: MastercardIcon,
-  amex: AmexIcon,
-  discover: DiscoverIcon,
-  jcb: JCBIcon,
-  diners: DinersIcon,
-};
+export type EvaluableActionRow =
+  RouterOutputs["dashboard"]["evaluableActions"]["getAll"]["rows"][number];
 
-export type TxRow =
-  RouterOutputs["dashboard"]["paymentAttempts"]["getAll"]["data"][number];
-
-const columns: ColumnDef<TxRow>[] = [
+const columns: ColumnDef<EvaluableActionRow>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -85,7 +74,8 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Status",
     id: "status",
     cell: ({ row }) => {
-      const status = row.original.outcome?.status || "incomplete";
+      const status =
+        row.original.paymentAttempt?.outcome?.status || "incomplete";
       return (
         <Tooltip
           // label={row.original.outcome?.sellerMessage}
@@ -109,9 +99,8 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Risk",
     id: "risk",
     cell: ({ row }) => {
-      const { assessment } = row.original;
-      const riskLevel = assessment?.riskLevel;
-      const isFraud = assessment?.isFraud;
+      const riskLevel = row.original.riskLevel;
+      const isFraud = row.original.isFraud;
 
       return (
         <Box display="flex" alignItems="center" gap={1}>
@@ -128,35 +117,41 @@ const columns: ColumnDef<TxRow>[] = [
   {
     header: "Amount",
     accessorFn: (row) =>
-      (row.amount / 100).toLocaleString("en-US", {
-        style: "currency",
-        currency: row.currency,
-      }),
+      row.paymentAttempt
+        ? (row.paymentAttempt.amount / 100).toLocaleString("en-US", {
+            style: "currency",
+            currency: row.paymentAttempt.currency,
+          })
+        : "--",
   },
   {
     header: "Description",
     accessorKey: "description",
     size: 300,
     cell({ row }) {
-      return row.original.description || "--";
+      return row.original.paymentAttempt?.description || "--";
     },
   },
   {
-    header: "Customer Email",
-    // accessorKey: "customer.email",
+    header: "User Email",
+    // accessorKey: "user.email",
     size: 200,
     cell({ row }) {
-      return row.original.customerLink?.customer.email || "--";
+      return (
+        row.original.session.user?.email ||
+        row.original.paymentAttempt?.paymentMethod.email ||
+        "--"
+      );
     },
   },
 
   {
-    header: "Customer Name",
+    header: "User Name",
     accessorKey: "paymentMethod.name",
     cell({ row }) {
       return (
-        row.original.customerLink?.customer.name ||
-        row.original.paymentMethod.name ||
+        row.original.session.user?.name ||
+        row.original.paymentAttempt?.paymentMethod.name ||
         "--"
       );
     },
@@ -165,8 +160,12 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Card",
     accessorKey: "row.paymentMethod.card",
     cell: ({ row }) => {
-      const { card } = row.original.paymentMethod;
+      const paymentMethod = row.original.paymentAttempt?.paymentMethod;
+      if (!paymentMethod) return null;
+
+      const { card } = paymentMethod;
       if (!card) return null;
+
       return <CardWithIcon brand={card.brand} last4={card.last4} />;
     },
   },
@@ -174,10 +173,6 @@ const columns: ColumnDef<TxRow>[] = [
     header: "Date",
     accessorFn: (row) => format(new Date(row.createdAt), "MMM d, p"),
   },
-  // {
-  //   header: "Wallet",
-  //   accessorFn: (row) => formatWalletAddress(row.walletAddress),
-  // },
 ];
 
 const searchOptions = [
@@ -211,15 +206,15 @@ const searchOptions = [
   },
   {
     label: `Pending`,
-    value: `status:${PaymentOutcomeStatus.Pending}`,
+    value: `status:${PaymentOutcomeStatus.PENDING}`,
   },
   {
     label: `Succeeded`,
-    value: `status:${PaymentOutcomeStatus.Succeeded}`,
+    value: `status:${PaymentOutcomeStatus.SUCCEEDED}`,
   },
   {
     label: `Failed`,
-    value: `status:${PaymentOutcomeStatus.Failed}`,
+    value: `status:${PaymentOutcomeStatus.FAILED}`,
   },
   {
     label: "isFraud:",
@@ -271,7 +266,7 @@ function queryKvToOption([key, val]: [string, string]): Option | null {
 }
 
 interface PaymentsTableProps {
-  paymentsData: TxRow[];
+  paymentsData: EvaluableActionRow[];
   count?: number;
 
   pagination: PaginationState;
@@ -304,14 +299,14 @@ export function PaymentsTable({
   const dataCount = count ?? paymentsData.length;
 
   const { mutateAsync } =
-    api.dashboard.paymentAttempts.assessment.updateMany.useMutation();
+    api.dashboard.evaluableActions.updateMany.useMutation();
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const createMarkSelectedAsFraud = useCallback(
     (markFraudAs: boolean) => () => {
       const ids = Object.keys(rowSelection);
       if (ids.length === 0) return;
-      mutateAsync({ paymentAttemptIds: ids, changes: { isFraud: markFraudAs } })
+      mutateAsync({ ids: ids, data: { isFraud: markFraudAs } })
         .then(() => {
           setRowSelection({});
           onMarkSelectedAsFraud?.(ids, markFraudAs);
@@ -508,14 +503,14 @@ function useQueryOptions(
   return [selectedOptions, setOptions];
 }
 
-export function usePaymentsTableProps({
-  linkedPaymentAttemptId,
+export function useEvaluableActionProps({
+  paymentAttemptActionId,
   executedRuleId,
-  customerId,
+  userId,
 }: {
-  linkedPaymentAttemptId?: string;
+  paymentAttemptActionId?: string;
   executedRuleId?: string;
-  customerId?: string;
+  userId?: string;
 }) {
   const [pagination, setPagination] = usePagination({
     pageIndex: 0,
@@ -525,7 +520,7 @@ export function usePaymentsTableProps({
   const { pageIndex, pageSize } = pagination;
   const [selectedOptions, setSelectedOptions] = useQueryOptions([]);
 
-  const options = useMemo(
+  const filters = useMemo(
     () =>
       selectedOptions.reduce<Record<string, string>>((acc, option) => {
         const [key, value] = option.value.split(":");
@@ -540,23 +535,25 @@ export function usePaymentsTableProps({
     () => ({
       limit: pageSize,
       offset: pageIndex * pageSize,
-      linkedPaymentAttemptId,
+      linkedTo: {
+        paymentAttemptActionId,
+      },
       executedRuleId,
-      customerId,
-      search: options,
+      userId,
+      filters,
     }),
     [
       pageSize,
       pageIndex,
-      linkedPaymentAttemptId,
+      paymentAttemptActionId,
       executedRuleId,
-      customerId,
-      options,
+      userId,
+      filters,
     ]
   );
 
   const { isLoading, data, refetch, isFetching, isPreviousData } =
-    api.dashboard.paymentAttempts.getAll.useQuery(queryProps, {
+    api.dashboard.evaluableActions.getAll.useQuery(queryProps, {
       keepPreviousData: true,
       refetchOnWindowFocus: false,
       staleTime: 5000,
@@ -568,7 +565,7 @@ export function usePaymentsTableProps({
       setPagination,
       selectedOptions,
       setSelectedOptions,
-      data: data?.data ?? [],
+      data: data?.rows ?? [],
       refetch,
       count: data?.count,
       isLoading,
@@ -581,7 +578,7 @@ export function usePaymentsTableProps({
       setPagination,
       selectedOptions,
       setSelectedOptions,
-      data?.data,
+      data?.rows,
       data?.count,
       refetch,
       isLoading,

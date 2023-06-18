@@ -16,7 +16,7 @@ type DeviceAggregations = {
   uniqueCountries: number;
   uniqueFirstNames: number;
   uniqueEmails: TimeBucketCounts;
-  customers: AllCounts;
+  users: AllCounts;
   ipAddresses: AllCounts;
 };
 
@@ -26,10 +26,10 @@ export const deviceAggregationsNode = node
   })
   .resolver(async ({ input, deps, ctx }): Promise<DeviceAggregations> => {
     const { ipData } = deps;
-    const { paymentAttempt } = input;
+    const { evaluableAction } = input;
 
-    const deviceId = paymentAttempt.checkoutSession.deviceSnapshot?.deviceId;
-    const timeOfPayment = new Date(paymentAttempt.createdAt);
+    const deviceId = evaluableAction.session.deviceSnapshot?.deviceId;
+    const timeOfPayment = new Date(evaluableAction.createdAt);
     const maxIntervalAgo = new Date(
       timeOfPayment.getTime() - MAX_TIME_INTERVAL_MS
     );
@@ -40,65 +40,63 @@ export const deviceAggregationsNode = node
         uniqueCountries: 0,
         uniqueFirstNames: 0,
         uniqueEmails: DEFAULT_TIME_BUCKET_AGGREGATIONS,
-        customers: DEFAULT_ALL_COUNTS,
+        users: DEFAULT_ALL_COUNTS,
         ipAddresses: DEFAULT_ALL_COUNTS,
       };
     }
 
     ctx.prisma.deviceIpAddressLink;
-    const [
-      linkedLocations,
-      linkedPaymentAttempts,
-      customerLinks,
-      ipAddressLinks,
-    ] = await ctx.prisma.$transaction([
-      // All locations
-      ctx.prisma.location.findMany({
-        where: {
-          ipAddresses: {
-            some: {
-              deviceLinks: {
-                some: {
-                  deviceId: deviceId,
-                  firstSeen: { lte: timeOfPayment },
+    const [linkedLocations, linkedPaymentAttempts, userLinks, ipAddressLinks] =
+      await ctx.prisma.$transaction([
+        // All locations
+        ctx.prisma.location.findMany({
+          where: {
+            ipAddresses: {
+              some: {
+                deviceLinks: {
+                  some: {
+                    deviceId: deviceId,
+                    firstSeen: { lte: timeOfPayment },
+                  },
                 },
               },
             },
           },
-        },
-      }),
-      // Get payment attempts and payment methods
-      ctx.prisma.paymentAttempt.findMany({
-        include: {
-          paymentMethod: true,
-        },
-        where: {
-          checkoutSession: {
-            deviceSnapshot: {
-              deviceId: deviceId,
-              createdAt: { lte: timeOfPayment, gte: maxIntervalAgo },
+        }),
+        // Get payment attempts and payment methods
+        ctx.prisma.paymentAttempt.findMany({
+          include: {
+            paymentMethod: true,
+          },
+          where: {
+            evaluableAction: {
+              session: {
+                deviceSnapshot: {
+                  deviceId: deviceId,
+                  createdAt: { lte: timeOfPayment, gte: maxIntervalAgo },
+                },
+              },
             },
           },
-        },
-      }),
-      // Get associated customers
-      ctx.prisma.customerDeviceLink.findMany({
-        where: {
-          deviceId: deviceId,
-          lastSeen: { lte: timeOfPayment, gte: maxIntervalAgo },
-        },
-        include: {
-          customer: true,
-        },
-      }),
-      // Get associated IP addresses
-      ctx.prisma.deviceIpAddressLink.findMany({
-        where: {
-          deviceId: deviceId,
-          firstSeen: { lte: timeOfPayment },
-        },
-      }),
-    ]);
+        }),
+        // Get associated users
+        ctx.prisma.userDeviceLink.findMany({
+          where: {
+            deviceId: deviceId,
+            lastSeen: { lte: timeOfPayment, gte: maxIntervalAgo },
+          },
+          include: {
+            user: true,
+          },
+        }),
+        // Get associated IP addresses
+        ctx.prisma.deviceIpAddressLink.findMany({
+          where: {
+            deviceId: deviceId,
+            firstSeen: { lte: timeOfPayment },
+          },
+        }),
+      ]);
 
     const prevCities = linkedLocations.map((location) => location.cityName);
     const uniqueCities = uniq([...prevCities, ipData.cityName]).filter(
@@ -118,13 +116,13 @@ export const deviceAggregationsNode = node
     );
     const uniqueFirstNames = uniq([
       ...prevFirstNames,
-      paymentAttempt.paymentMethod.name?.split(" ")[0],
+      evaluableAction.paymentAttempt?.paymentMethod.name?.split(" ")[0],
     ]).filter((x) => !!x) as string[];
 
     // Linked emails
 
-    const customerEmails = customerLinks.map((link) => ({
-      data: link.customer.email,
+    const userEmails = userLinks.map((link) => ({
+      data: link.user.email,
       timestamp: link.lastSeen,
     }));
     const paymentMethodEmails = linkedPaymentAttempts.map((paymentAttempt) => ({
@@ -135,15 +133,15 @@ export const deviceAggregationsNode = node
     const emailsCount = createTimeBucketCounts({
       timeOfPayment,
       items: [
-        ...customerEmails,
+        ...userEmails,
         ...paymentMethodEmails,
         {
-          data: paymentAttempt.paymentMethod.email,
-          timestamp: paymentAttempt.createdAt,
+          data: evaluableAction.paymentAttempt?.paymentMethod.email,
+          timestamp: evaluableAction.createdAt,
         },
         {
-          data: paymentAttempt.checkoutSession.customer?.email,
-          timestamp: paymentAttempt.createdAt,
+          data: evaluableAction.session.user?.email,
+          timestamp: evaluableAction.createdAt,
         },
       ].filter((item) => !!item.data),
       getTimeBucketCount(bucketItems) {
@@ -156,9 +154,9 @@ export const deviceAggregationsNode = node
       uniqueCountries: uniqueCountries.length,
       uniqueFirstNames: uniqueFirstNames.length,
       uniqueEmails: emailsCount,
-      customers: createAllCounts({
+      users: createAllCounts({
         timeOfPayment,
-        links: customerLinks,
+        links: userLinks,
       }),
       ipAddresses: createAllCounts({
         timeOfPayment,

@@ -15,7 +15,10 @@ import { startCase } from "lodash";
 import { CardWithIcon } from "../card-with-icon/CardWithIcon";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import { type ReactNode, useMemo, useState } from "react";
-import { PaymentsTable, usePaymentsTableProps } from "../PaymentsTable";
+import {
+  PaymentsTable,
+  useEvaluableActionProps,
+} from "../EvaluableActionsTable";
 import { type Address, type IpAddress } from "@prisma/client";
 import { handleError } from "~/lib/handleError";
 import { env } from "../../env.mjs";
@@ -85,9 +88,16 @@ interface PaymentDetailsProps {
 }
 
 export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
-  const { isLoading, data } = api.dashboard.paymentAttempts.get.useQuery({
-    id: paymentId,
-  });
+  const { isLoading, data: evaluableAction } =
+    api.dashboard.evaluableActions.get.useQuery({
+      id: paymentId,
+    });
+
+  const deviceSnapshot = evaluableAction?.session.deviceSnapshot;
+  const paymentAttempt = evaluableAction?.paymentAttempt;
+  const paymentMethod = paymentAttempt?.paymentMethod;
+  const user = evaluableAction?.session.user;
+  const session = evaluableAction?.session;
 
   // const getAnonymizers = (ipAddress: IpAddress) => {
   //   const anonymizers = [];
@@ -110,21 +120,23 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     count,
     refetch,
     isFetching,
-  } = usePaymentsTableProps({
-    linkedPaymentAttemptId: paymentId,
+  } = useEvaluableActionProps({
+    paymentAttemptActionId: paymentId,
   });
 
-  if (!data) return null;
+  if (!evaluableAction) return null;
 
   const paymentDetails = getLabelValuePairs([
     {
       label: "Price",
-      value: (data.amount / 100).toLocaleString("en-US", {
-        style: "currency",
-        currency: data.currency,
-      }),
+      value: paymentAttempt
+        ? (paymentAttempt.amount / 100).toLocaleString("en-US", {
+            style: "currency",
+            currency: paymentAttempt.currency,
+          })
+        : undefined,
     },
-    { label: "Description", value: data.description },
+    { label: "Description", value: paymentAttempt?.description },
 
     // {
     //   label: "Seller",
@@ -144,88 +156,85 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     // },
   ]);
 
-  const paymentMethod = data.paymentMethod;
   const paymentMethodData = getLabelValuePairs([
-    { label: "ID", value: paymentMethod.id },
-    { label: "Fingerprint", value: paymentMethod.card?.fingerprint },
+    { label: "ID", value: paymentMethod?.id },
+    { label: "Fingerprint", value: paymentMethod?.card?.fingerprint },
     {
       label: "Card",
       value: (
         <CardWithIcon
-          brand={paymentMethod.card?.brand}
-          last4={paymentMethod.card?.last4}
-          wallet={paymentMethod.cardWallet}
+          brand={paymentMethod?.card?.brand}
+          last4={paymentMethod?.card?.last4}
+          wallet={paymentMethod?.cardWallet}
         />
       ),
     },
     {
       label: "Type",
-      value: `${startCase(paymentMethod.card?.brand || "")} ${
-        paymentMethod.card?.funding || ""
+      value: `${startCase(paymentMethod?.card?.brand || "")} ${
+        paymentMethod?.card?.funding || ""
       }`,
     },
-    { label: "Issuer", value: paymentMethod.card?.issuer },
-    { label: "Country", value: paymentMethod.card?.country },
-    { label: "Owner", value: paymentMethod.name },
-    { label: "Email", value: paymentMethod.email },
+    { label: "Issuer", value: paymentMethod?.card?.issuer },
+    { label: "Country", value: paymentMethod?.card?.country },
+    { label: "Owner", value: paymentMethod?.name },
+    { label: "Email", value: paymentMethod?.email },
     {
       label:
-        paymentMethod.address?.line1 ||
-        paymentMethod.address?.line2 ||
-        paymentMethod.address?.city ||
-        paymentMethod.address?.state ||
-        paymentMethod.address?.country
+        paymentMethod?.address?.line1 ||
+        paymentMethod?.address?.line2 ||
+        paymentMethod?.address?.city ||
+        paymentMethod?.address?.state ||
+        paymentMethod?.address?.country
           ? "Address"
           : "Postal code",
-      value: getAddressString(paymentMethod.address),
+      value: getAddressString(paymentMethod?.address),
     },
     {
       label: "CVC Check",
       value:
-        paymentMethod.cvcCheck === "pass" ? (
+        paymentMethod?.cvcCheck === "pass" ? (
           <>
             <Icon color="green" as={IoCheckmarkCircle} />
             <Text>Passed</Text>
           </>
         ) : (
-          <Text>{startCase(paymentMethod.cvcCheck ?? "")}</Text>
+          <Text>{startCase(paymentMethod?.cvcCheck ?? "")}</Text>
         ),
     },
     {
       label: "ZIP Check",
-      show: !!paymentMethod.address?.postalCode,
+      show: !!paymentMethod?.address?.postalCode,
       value: (
         <HStack spacing={1}>
-          {paymentMethod.postalCodeCheck === "pass" ? (
+          {paymentMethod?.postalCodeCheck === "pass" ? (
             <>
               <Icon color="green" as={IoCheckmarkCircle} />
               <Text>Passed</Text>
             </>
           ) : (
-            <Text>{startCase(paymentMethod.postalCodeCheck ?? "")}</Text>
+            <Text>{startCase(paymentMethod?.postalCodeCheck ?? "")}</Text>
           )}
         </HStack>
       ),
     },
     {
       label: "Address Check",
-      show: !!paymentMethod.address?.line1,
-      value: paymentMethod.addressLine1Check && (
+      show: !!paymentMethod?.address?.line1,
+      value: paymentMethod?.addressLine1Check && (
         <HStack spacing={1}>
-          {paymentMethod.addressLine1Check === "pass" ? (
+          {paymentMethod?.addressLine1Check === "pass" ? (
             <>
               <Icon color="green" as={IoCheckmarkCircle} />
               <Text>Passed</Text>
             </>
           ) : (
-            <Text>{startCase(paymentMethod.addressLine1Check)}</Text>
+            <Text>{startCase(paymentMethod?.addressLine1Check)}</Text>
           )}
         </HStack>
       ),
     },
   ]);
-
-  const deviceSnapshot = data.checkoutSession.deviceSnapshot;
 
   const deviceData = getLabelValuePairs([
     {
@@ -290,16 +299,18 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     },
     {
       label: "Static IP Score",
-      value: deviceSnapshot?.ipAddress?.metadata.staticIPScore,
+      value: deviceSnapshot?.ipAddress?.metadata?.staticIPScore,
     },
     {
       label: "ISP",
       // value: data.session.ipAddress.isp,
-      value: deviceSnapshot?.ipAddress?.metadata.isp,
+      value: deviceSnapshot?.ipAddress?.metadata?.isp,
     },
     {
       label: "Anonymous",
-      value: deviceSnapshot?.ipAddress?.metadata.isAnonymous ? "True" : "False",
+      value: deviceSnapshot?.ipAddress?.metadata?.isAnonymous
+        ? "True"
+        : "False",
       // value: data.session.ipAddress.isAnonymous ? "True" : "False",
     },
     // ...(data.session.ipAddress.isAnonymous
@@ -320,7 +331,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     // },
     {
       label: "Fingerprint",
-      value: data.checkoutSession.deviceSnapshot?.fingerprint,
+      value: evaluableAction.session.deviceSnapshot?.fingerprint,
     },
   ]);
 
@@ -338,22 +349,24 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
   ]);
 
   const markers = [
-    ...(data.checkoutSession.deviceSnapshot?.ipAddress?.location
+    ...(evaluableAction.session.deviceSnapshot?.ipAddress?.location
       ? [
           {
             longitude:
-              data.checkoutSession.deviceSnapshot.ipAddress.location.longitude,
+              evaluableAction.session.deviceSnapshot.ipAddress.location
+                .longitude,
             latitude:
-              data.checkoutSession.deviceSnapshot.ipAddress.location.latitude,
+              evaluableAction.session.deviceSnapshot.ipAddress.location
+                .latitude,
             type: "device" as const,
           },
         ]
       : []),
-    ...(data.paymentMethod.address?.location
+    ...(paymentMethod?.address?.location
       ? [
           {
-            longitude: data.paymentMethod.address.location.longitude,
-            latitude: data.paymentMethod.address.location.latitude,
+            longitude: paymentMethod.address.location.longitude,
+            latitude: paymentMethod.address.location.latitude,
             type: "card" as const,
           },
         ]

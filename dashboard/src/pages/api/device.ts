@@ -98,7 +98,7 @@ export default async function handler(
 
   const userAgentData = userAgentFromString(fingerprint2Components.userAgent);
 
-  const checkoutSession = await prisma.checkoutSession.upsert({
+  const session = await prisma.session.upsert({
     where: { customId: paymentIntentId },
     update: {},
     create: { customId: paymentIntentId },
@@ -106,7 +106,7 @@ export default async function handler(
 
   const deviceSnapshot = await prisma.deviceSnapshot.create({
     data: {
-      checkoutSession: { connect: { id: checkoutSession.id } },
+      session: { connect: { id: session.id } },
       fingerprint: hashComponents(fingerprintComponents),
       userAgent: fingerprint2Components.userAgent,
       browserName: userAgentData.browser.name,

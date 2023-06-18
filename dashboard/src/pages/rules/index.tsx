@@ -43,9 +43,11 @@ function RuleModal(props: { rule: RulesRow }) {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
+  const ruleData = rule.currentRuleSnapshot;
+
   const realCode = useMemo(() => {
-    return `${PREFIX}\n${rule.tsCode ?? ""}\n${SUFFIX}`;
-  }, [rule.tsCode]);
+    return `${PREFIX}\n${ruleData.tsCode ?? ""}\n${SUFFIX}`;
+  }, [ruleData.tsCode]);
 
   return (
     <>
@@ -72,13 +74,13 @@ function RuleModal(props: { rule: RulesRow }) {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent maxW="56rem">
-          <ModalHeader>Rule: {rule.name}</ModalHeader>
+          <ModalHeader>Rule: {ruleData.name}</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={8}>
             <Heading mt={4} mb={2} size="sm">
               Description
             </Heading>
-            <Text>{rule.description || "None"}</Text>
+            <Text>{ruleData.description || "None"}</Text>
 
             <Heading mt={8} mb={2} size="sm">
               Code
@@ -149,18 +151,20 @@ const columns: ColumnDef<RulesRow>[] = [
   },
   {
     header: "Rule",
-    accessorKey: "name",
+    accessorKey: "currentRuleSnapshot.name",
   },
   {
     header: "Risk Level",
     accessorKey: "riskLevel",
     cell({ row }) {
-      return <RiskLevelTag riskLevel={row.original.riskLevel} />;
+      return (
+        <RiskLevelTag riskLevel={row.original.currentRuleSnapshot.riskLevel} />
+      );
     },
   },
   {
     header: "Triggers",
-    accessorKey: "_count.executions",
+    accessorKey: "currentRuleSnapshot._count.executions",
   },
   {
     header: "Info",

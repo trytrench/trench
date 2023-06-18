@@ -1,7 +1,7 @@
 import { initNodeBuilder } from "@trytrench/flow";
 import { prisma } from "../db";
 import {
-  type CheckoutSession,
+  type Session,
   type Device,
   type DeviceSnapshot,
   type IpAddress,
@@ -10,13 +10,14 @@ import {
   type PaymentAttempt,
   type Address,
   type Card,
-  type Customer,
+  type User,
   type Location,
+  type EvaluableAction,
 } from "@prisma/client";
 
 export type StreamInput = {
-  paymentAttempt: PaymentAttempt & {
-    checkoutSession: CheckoutSession & {
+  evaluableAction: EvaluableAction & {
+    session: Session & {
       deviceSnapshot:
         | (DeviceSnapshot & {
             device: Device;
@@ -27,12 +28,16 @@ export type StreamInput = {
               | null;
           })
         | null;
-      customer: Customer | null;
+      user: User | null;
     };
-    paymentMethod: PaymentMethod & {
-      address: Address | null;
-      card: Card | null;
-    };
+    paymentAttempt:
+      | (PaymentAttempt & {
+          paymentMethod: PaymentMethod & {
+            address: Address | null;
+            card: Card | null;
+          };
+        })
+      | null;
   };
   blockLists: Record<string, string[]>;
 };

@@ -3,8 +3,8 @@ import { type CustomPage } from "../../types/Page";
 import { Box, Heading, Skeleton } from "@chakra-ui/react";
 import {
   PaymentsTable,
-  usePaymentsTableProps,
-} from "~/components/PaymentsTable";
+  useEvaluableActionProps,
+} from "~/components/EvaluableActionsTable";
 import { api } from "../../lib/api";
 
 const ViewPage: CustomPage = () => {
@@ -17,7 +17,7 @@ const ViewPage: CustomPage = () => {
     count,
     queryProps,
     isFetching,
-  } = usePaymentsTableProps({});
+  } = useEvaluableActionProps({});
 
   const util = api.useContext();
 
@@ -34,26 +34,18 @@ const ViewPage: CustomPage = () => {
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud={true}
           onMarkSelectedAsFraud={(paymentIds, markedAs) => {
-            util.dashboard.paymentAttempts.getAll.setData(
+            util.dashboard.evaluableActions.getAll.setData(
               queryProps,
               (prev) => {
                 if (!prev) return prev;
                 return {
                   ...prev,
-                  data: prev.data.map((payment) => {
-                    if (paymentIds.includes(payment.id)) {
-                      return {
-                        ...payment,
-                        assessment: payment.assessment
-                          ? {
-                              ...payment.assessment,
-                              isFraud: markedAs,
-                            }
-                          : null,
-                      };
+                  data: prev.rows.map((action) => {
+                    if (paymentIds.includes(action.id)) {
+                      return { ...action, isFraud: markedAs };
+                    } else {
+                      return action;
                     }
-
-                    return payment;
                   }),
                 };
               }

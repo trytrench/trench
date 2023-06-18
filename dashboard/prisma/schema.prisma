@@ -68,9 +68,10 @@ model EvaluableAction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transformsOutput Json    @default("{}")
+  transformsOutput Json?    
+  riskLevel        String?
+  
   isFraud          Boolean @default(false)
-  riskLevel        String
 
   session   Session @relation(fields: [sessionId], references: [id])
   sessionId String

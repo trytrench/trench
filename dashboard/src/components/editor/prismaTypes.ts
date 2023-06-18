@@ -1,97 +1,55 @@
 export const PRISMA_TYPES = `
 /**
- * Model PaymentAttempt
+ * Model User
  * 
  */
-type PaymentAttempt = {
-  id: string
-  createdAt: Date
-  updatedAt: Date
-  amount: number
-  currency: string
-  description: string | null
-  metadata: Prisma.JsonValue
-  checkoutSessionId: string
-  paymentMethodId: string
-  shippingName: string | null
-  shippingPhone: string | null
-  shippingAddressId: string | null
-}
-
-/**
- * Model PaymentAttemptAssessment
- * 
- */
-type PaymentAttemptAssessment = {
-  id: string
-  createdAt: Date
-  updatedAt: Date
-  transformsOutput: Prisma.JsonValue
-  isFraud: boolean
-  riskLevel: string
-  paymentAttemptId: string
-}
-
-/**
- * Model PaymentOutcome
- * 
- */
-type PaymentOutcome = {
+type User = {
   id: string
   customId: string | null
   createdAt: Date
   updatedAt: Date
-  status: PaymentOutcomeStatus
-  threeDSecureFlow: string | null
-  threeDSecureResult: string | null
-  threeDSecureResultReason: string | null
-  threeDSecureVersion: string | null
-  paymentAttemptId: string
-}
-
-/**
- * Model StripePaymentOutcome
- * 
- */
-type StripePaymentOutcome = {
-  id: string
-  createdAt: Date
-  updatedAt: Date
-  networkStatus: string | null
-  reason: string | null
-  riskLevel: string | null
-  riskScore: number | null
-  rule: Prisma.JsonValue | null
-  sellerMessage: string | null
-  type: string | null
-  paymentOutcomeId: string
-}
-
-/**
- * Model Customer
- * 
- */
-type Customer = {
-  id: string
-  customId: string
-  createdAt: Date
-  updatedAt: Date
-  name: string | null
   email: string | null
+  name: string | null
   phone: string | null
   metadata: Prisma.JsonValue
 }
 
 /**
- * Model CheckoutSession
+ * Model SessionType
  * 
  */
-type CheckoutSession = {
+type SessionType = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  name: string
+}
+
+/**
+ * Model Session
+ * 
+ */
+type Session = {
   id: string
   customId: string | null
   createdAt: Date
   updatedAt: Date
-  customerId: string | null
+  typeId: string
+  userId: string | null
+}
+
+/**
+ * Model EvaluableAction
+ * 
+ */
+type EvaluableAction = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  transformsOutput: Prisma.JsonValue | null
+  riskLevel: string | null
+  isFraud: boolean
+  sessionId: string
 }
 
 /**
@@ -103,8 +61,8 @@ type Event = {
   createdAt: Date
   updatedAt: Date
   type: string
-  payload: Prisma.JsonValue
-  checkoutSessionId: string
+  properties: Prisma.JsonValue
+  sessionId: string
 }
 
 /**
@@ -115,9 +73,9 @@ type DeviceSnapshot = {
   id: string
   createdAt: Date
   updatedAt: Date
+  sessionId: string
   deviceId: string
   ipAddressId: string | null
-  checkoutSessionId: string
   fingerprint: string | null
   userAgent: string | null
   browserName: string | null
@@ -145,45 +103,6 @@ type Device = {
   id: string
   updatedAt: Date
   createdAt: Date
-}
-
-/**
- * Model PaymentMethod
- * 
- */
-type PaymentMethod = {
-  id: string
-  customId: string | null
-  updatedAt: Date
-  createdAt: Date
-  name: string | null
-  email: string | null
-  addressId: string | null
-  cvcCheck: string | null
-  addressLine1Check: string | null
-  postalCodeCheck: string | null
-  cardId: string | null
-  cardWallet: string | null
-}
-
-/**
- * Model Card
- * 
- */
-type Card = {
-  id: string
-  fingerprint: string
-  updatedAt: Date
-  createdAt: Date
-  bin: string | null
-  brand: string
-  country: string | null
-  last4: string
-  funding: string | null
-  issuer: string | null
-  expiryMonth: number | null
-  expiryYear: number | null
-  threeDSecureSupported: boolean | null
 }
 
 /**
@@ -232,10 +151,10 @@ type Address = {
 }
 
 /**
- * Model Rule
+ * Model RuleSnapshot
  * 
  */
-type Rule = {
+type RuleSnapshot = {
   id: string
   updatedAt: Date
   createdAt: Date
@@ -244,6 +163,30 @@ type Rule = {
   tsCode: string
   jsCode: string
   riskLevel: string
+  ruleId: string | null
+}
+
+/**
+ * Model Rule
+ * 
+ */
+type Rule = {
+  id: string
+  updatedAt: Date
+  createdAt: Date
+  currentRuleSnapshotId: string
+}
+
+/**
+ * Model RuleToSessionType
+ * 
+ */
+type RuleToSessionType = {
+  id: string
+  updatedAt: Date
+  createdAt: Date
+  ruleId: string
+  sessionTypeId: string
 }
 
 /**
@@ -253,8 +196,8 @@ type Rule = {
 type RuleExecution = {
   id: string
   createdAt: Date
-  paymentAttemptId: string
-  ruleId: string
+  evaluableActionId: string
+  ruleSnapshotId: string
   result: boolean | null
   error: string | null
   riskLevel: string
@@ -288,55 +231,148 @@ type ListItem = {
 }
 
 /**
- * Model CustomerPaymentMethodLink
+ * Model Card
  * 
  */
-type CustomerPaymentMethodLink = {
-  customerId: string
+type Card = {
+  id: string
+  fingerprint: string
+  updatedAt: Date
+  createdAt: Date
+  bin: string | null
+  brand: string
+  country: string | null
+  last4: string
+  funding: string | null
+  issuer: string | null
+  expiryMonth: number | null
+  expiryYear: number | null
+  threeDSecureSupported: boolean | null
+}
+
+/**
+ * Model PaymentMethod
+ * 
+ */
+type PaymentMethod = {
+  id: string
+  customId: string | null
+  updatedAt: Date
+  createdAt: Date
+  name: string | null
+  email: string | null
+  addressId: string | null
+  cvcCheck: string | null
+  addressLine1Check: string | null
+  postalCodeCheck: string | null
+  cardId: string | null
+  cardWallet: string | null
+}
+
+/**
+ * Model PaymentAttempt
+ * 
+ */
+type PaymentAttempt = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  amount: number
+  currency: string
+  description: string | null
+  metadata: Prisma.JsonValue
+  evaluableActionId: string
+  paymentMethodId: string
+  shippingName: string | null
+  shippingPhone: string | null
+  shippingAddressId: string | null
+}
+
+/**
+ * Model PaymentOutcome
+ * 
+ */
+type PaymentOutcome = {
+  id: string
+  customId: string | null
+  createdAt: Date
+  updatedAt: Date
+  status: PaymentOutcomeStatus
+  threeDSecureFlow: string | null
+  threeDSecureResult: string | null
+  threeDSecureResultReason: string | null
+  threeDSecureVersion: string | null
+  paymentAttemptId: string
+}
+
+/**
+ * Model StripePaymentOutcome
+ * 
+ */
+type StripePaymentOutcome = {
+  id: string
+  createdAt: Date
+  updatedAt: Date
+  networkStatus: string | null
+  reason: string | null
+  riskLevel: string | null
+  riskScore: number | null
+  rule: Prisma.JsonValue | null
+  sellerMessage: string | null
+  type: string | null
+  paymentOutcomeId: string
+}
+
+/**
+ * Model UserPaymentMethodLink
+ * 
+ */
+type UserPaymentMethodLink = {
+  userId: string
   paymentMethodId: string
   firstSeen: Date
   lastSeen: Date
 }
 
 /**
- * Model CustomerPaymentAttemptLink
+ * Model UserPaymentAttemptLink
  * 
  */
-type CustomerPaymentAttemptLink = {
-  customerId: string
+type UserPaymentAttemptLink = {
+  userId: string
   paymentAttemptId: string
   firstSeen: Date
   lastSeen: Date
 }
 
 /**
- * Model CustomerDeviceLink
+ * Model UserDeviceLink
  * 
  */
-type CustomerDeviceLink = {
-  customerId: string
+type UserDeviceLink = {
+  userId: string
   deviceId: string
   firstSeen: Date
   lastSeen: Date
 }
 
 /**
- * Model CustomerCardLink
+ * Model UserCardLink
  * 
  */
-type CustomerCardLink = {
-  customerId: string
+type UserCardLink = {
+  userId: string
   cardId: string
   firstSeen: Date
   lastSeen: Date
 }
 
 /**
- * Model CustomerIpAddressLink
+ * Model UserIpAddressLink
  * 
  */
-type CustomerIpAddressLink = {
-  customerId: string
+type UserIpAddressLink = {
+  userId: string
   ipAddressId: string
   firstSeen: Date
   lastSeen: Date
@@ -388,7 +424,7 @@ namespace Prisma {
    * Prisma Client JS version: 4.15.0
    * Query Engine version: 8fbc245156db7124f997f4cecdd8d1219e360944
    */
-  type PrismaVersion = {
+  export type PrismaVersion = {
     client: string
   }
 
@@ -401,31 +437,31 @@ namespace Prisma {
    * Matches a JSON object.
    * This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from. 
    */
-  type JsonObject = {[Key in string]?: JsonValue}
+  export type JsonObject = {[Key in string]?: JsonValue}
 
   /**
    * From https://github.com/sindresorhus/type-fest/
    * Matches a JSON array.
    */
-  interface JsonArray extends Array<JsonValue> {}
+  export interface JsonArray extends Array<JsonValue> {}
 
   /**
    * From https://github.com/sindresorhus/type-fest/
    * Matches any valid JSON value.
    */
-  type JsonValue = string | number | boolean | JsonObject | JsonArray | null
+  export type JsonValue = string | number | boolean | JsonObject | JsonArray | null
 
   /**
    * Matches a JSON object.
    * Unlike \`JsonObject\`, this type allows undefined and read-only properties.
    */
-  type InputJsonObject = {readonly [Key in string]?: InputJsonValue | null}
+  export type InputJsonObject = {readonly [Key in string]?: InputJsonValue | null}
 
   /**
    * Matches a JSON array.
    * Unlike \`JsonArray\`, readonly arrays are assignable to this type.
    */
-  interface InputJsonArray extends ReadonlyArray<InputJsonValue | null> {}
+  export interface InputJsonArray extends ReadonlyArray<InputJsonValue | null> {}
 
   /**
    * Matches any valid value that can be used as an input for operations like
@@ -440,7 +476,7 @@ namespace Prisma {
    *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-by-null-values
    */
-  type InputJsonValue = string | number | boolean | InputJsonObject | InputJsonArray
+  export type InputJsonValue = string | number | boolean | InputJsonObject | InputJsonArray
 }
   
 `.trim();

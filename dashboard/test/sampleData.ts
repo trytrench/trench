@@ -6,7 +6,7 @@ export function mockTransaction(props?: { externalSessionId?: string }) {
   const { externalSessionId = Defaults.ExternalSessionId } = props ?? {};
 
   return {
-    customer: {
+    user: {
       externalId: "1234",
       email: "johndoe@example.com",
     },

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
 
-export const customersRouter = createTRPCRouter({
+export const usersRouter = createTRPCRouter({
   get: protectedProcedure
     .input(
       z.object({
@@ -9,7 +9,7 @@ export const customersRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.customer.findUnique({
+      return ctx.prisma.user.findUnique({
         where: {
           id: input.id,
         },

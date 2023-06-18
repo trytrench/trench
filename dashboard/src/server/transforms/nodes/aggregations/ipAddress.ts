@@ -10,7 +10,7 @@ import {
 
 type IpAddressAggregations = {
   devices: AllCounts;
-  customers: AllCounts;
+  users: AllCounts;
   cards: {
     uniqueCountries: number;
   };
@@ -19,16 +19,15 @@ type IpAddressAggregations = {
 
 export const ipAddressAggregationsNode = node.resolver(
   async ({ input, ctx }): Promise<IpAddressAggregations> => {
-    const { paymentAttempt } = input;
+    const { evaluableAction } = input;
 
-    const ipAddressId =
-      paymentAttempt.checkoutSession.deviceSnapshot?.ipAddressId;
-    const timeOfPayment = new Date(paymentAttempt.createdAt);
+    const ipAddressId = evaluableAction.session.deviceSnapshot?.ipAddressId;
+    const timeOfPayment = new Date(evaluableAction.createdAt);
 
     if (!ipAddressId) {
       return {
         devices: DEFAULT_ALL_COUNTS,
-        customers: DEFAULT_ALL_COUNTS,
+        users: DEFAULT_ALL_COUNTS,
         cards: {
           uniqueCountries: 0,
         },
@@ -36,51 +35,47 @@ export const ipAddressAggregationsNode = node.resolver(
       };
     }
 
-    const [
-      customerLinks,
-      deviceLinks,
-      uniqueCardCountries,
-      paymentAttemptLinks,
-    ] = await ctx.prisma.$transaction([
-      // Customer links
-      ctx.prisma.customerIpAddressLink.findMany({
-        where: {
-          ipAddressId: ipAddressId,
-          firstSeen: { lte: timeOfPayment },
-        },
-      }),
-      // Device links
-      ctx.prisma.deviceIpAddressLink.findMany({
-        where: {
-          ipAddressId: ipAddressId,
-          firstSeen: { lte: timeOfPayment },
-        },
-      }),
-      // Unique country count
-      ctx.prisma.card.findMany({
-        select: { id: true },
-        distinct: ["country"],
-        where: {
-          ipAddressLinks: { some: { ipAddressId: ipAddressId } },
-          createdAt: { lte: timeOfPayment },
-        },
-      }),
-      // Payment attempt links
-      ctx.prisma.paymentAttemptIpAddressLink.findMany({
-        where: {
-          ipAddressId: ipAddressId,
-          paymentAttempt: {
+    const [userLinks, deviceLinks, uniqueCardCountries, paymentAttemptLinks] =
+      await ctx.prisma.$transaction([
+        // User links
+        ctx.prisma.userIpAddressLink.findMany({
+          where: {
+            ipAddressId: ipAddressId,
+            firstSeen: { lte: timeOfPayment },
+          },
+        }),
+        // Device links
+        ctx.prisma.deviceIpAddressLink.findMany({
+          where: {
+            ipAddressId: ipAddressId,
+            firstSeen: { lte: timeOfPayment },
+          },
+        }),
+        // Unique country count
+        ctx.prisma.card.findMany({
+          select: { id: true },
+          distinct: ["country"],
+          where: {
+            ipAddressLinks: { some: { ipAddressId: ipAddressId } },
             createdAt: { lte: timeOfPayment },
           },
-        },
-        include: {
-          paymentAttempt: true,
-        },
-      }),
-    ]);
+        }),
+        // Payment attempt links
+        ctx.prisma.paymentAttemptIpAddressLink.findMany({
+          where: {
+            ipAddressId: ipAddressId,
+            paymentAttempt: {
+              createdAt: { lte: timeOfPayment },
+            },
+          },
+          include: {
+            paymentAttempt: true,
+          },
+        }),
+      ]);
 
-    const customerCounts = createAllCounts({
-      links: customerLinks,
+    const userCounts = createAllCounts({
+      links: userLinks,
       timeOfPayment,
     });
     const deviceCounts = createAllCounts({
@@ -97,7 +92,7 @@ export const ipAddressAggregationsNode = node.resolver(
     });
 
     return {
-      customers: customerCounts,
+      users: userCounts,
       devices: deviceCounts,
       cards: {
         uniqueCountries: uniqueCardCountries.length,

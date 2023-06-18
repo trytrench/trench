@@ -22,7 +22,7 @@ import { PREFIX, SUFFIX, TYPES_SOURCE } from "./editor/constants";
 import { createProject, ts } from "@ts-morph/bootstrap";
 import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
-import { PaymentsTable } from "./PaymentsTable";
+import { PaymentsTable } from "./EvaluableActionsTable";
 import { type PaginationState } from "@tanstack/react-table";
 import { RiskLevel } from "../common/types";
 
@@ -118,7 +118,7 @@ function WriteRule(props: WriteRuleProps) {
     const program = project.createProgram();
     const allDiagnostics = ts.getPreEmitDiagnostics(program); // check these
 
-    setDiagnostics(allDiagnostics);
+    setDiagnostics([...allDiagnostics]);
 
     setSubmitted(true);
     if (!allDiagnostics.length) {
@@ -149,7 +149,13 @@ function WriteRule(props: WriteRuleProps) {
         />
       )}
       <Box h={4} />
-      <Button onClick={handleCompile}>Compile</Button>
+      <Button
+        onClick={() => {
+          handleCompile().catch(handleError);
+        }}
+      >
+        Compile
+      </Button>
       <Box h={4} />
 
       <RenderDiagnostics diagnostics={diagnostics} />
@@ -192,7 +198,8 @@ export function RuleForm({
     mutateAsync: backtest,
     data: backtestData,
     isLoading: loadingBacktests,
-  } = api.dashboard.rules.backtest.useMutation();
+    reset: clearBacktestData,
+  } = api.dashboard.rules.backtest.useMutation({});
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -200,13 +207,13 @@ export function RuleForm({
   });
 
   const paginatedBacktestData = useMemo(() => {
-    if (!backtestData.triggeredRows) return null;
+    if (!backtestData?.triggeredRows) return null;
     const { pageIndex, pageSize } = pagination;
     return backtestData.triggeredRows.slice(
       pageIndex * pageSize,
       pageIndex * pageSize + pageSize
     );
-  }, [backtestData.triggeredRows, pagination]);
+  }, [backtestData?.triggeredRows, pagination]);
 
   return (
     <Box p={8}>
@@ -255,6 +262,8 @@ export function RuleForm({
             value={tsCode}
             onChange={(newCode) => {
               onChange({ ...rule, tsCode: newCode, jsCode: "" });
+              clearBacktestData();
+              setNewlyCompiledJsCode("");
             }}
             onCompile={(compiledCode) => {
               onChange({ ...rule, jsCode: compiledCode });
@@ -303,7 +312,7 @@ export function RuleForm({
                 width="auto"
                 value={lastNDays}
                 onChange={(e) => {
-                  setLastNDays(e.target.value);
+                  setLastNDays(e.target.value as typeof lastNDays);
                 }}
               >
                 <option value={"3"}>3 days</option>
@@ -315,7 +324,7 @@ export function RuleForm({
             {paginatedBacktestData && (
               <PaymentsTable
                 paymentsData={paginatedBacktestData}
-                count={backtestData?.length ?? 0}
+                count={backtestData?.triggeredRows.length ?? 0}
                 pagination={pagination}
                 onPaginationChange={setPagination}
               />

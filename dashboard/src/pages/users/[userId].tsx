@@ -5,8 +5,8 @@ import { CardWithIcon } from "~/components/card-with-icon/CardWithIcon";
 import { DataTable } from "~/components/DataTable";
 import {
   PaymentsTable,
-  usePaymentsTableProps,
-} from "~/components/PaymentsTable";
+  useEvaluableActionProps,
+} from "~/components/EvaluableActionsTable";
 import { Layout } from "~/components/layouts/Layout";
 import { Section } from "~/components/views/PaymentDetails";
 import { type RouterOutputs, api } from "~/lib/api";
@@ -18,7 +18,7 @@ import { handleError } from "~/lib/handleError";
 
 const columns: ColumnDef<
   NonNullable<
-    RouterOutputs["dashboard"]["customers"]["get"]
+    RouterOutputs["dashboard"]["users"]["get"]
   >["paymentMethodLinks"][number]["paymentMethod"]
 >[] = [
   {
@@ -134,7 +134,7 @@ const columns: ColumnDef<
 
 const Page: CustomPage = () => {
   const router = useRouter();
-  const customerId = router.query.customerId as string;
+  const userId = router.query.userId as string;
 
   const {
     pagination,
@@ -145,19 +145,19 @@ const Page: CustomPage = () => {
     count,
     refetch,
     isFetching: isPaymentsFetching,
-  } = usePaymentsTableProps({
-    customerId,
+  } = useEvaluableActionProps({
+    userId,
   });
 
-  const { isFetching, data } = api.dashboard.customers.get.useQuery({
-    id: customerId,
+  const { isFetching, data } = api.dashboard.users.get.useQuery({
+    id: userId,
   });
 
   if (!data) return null;
 
-  //   const customerDetails = [
+  //   const userDetails = [
   //     { label: "Name", value: data.paymentMethod.name || "Unknown" },
-  //     { label: "Email", value: data.customer.email || "Unknown" },
+  //     { label: "Email", value: data.user.email || "Unknown" },
   //     {
   //       label: "Payment",
   //       value: (
@@ -173,13 +173,13 @@ const Page: CustomPage = () => {
   return (
     <Box>
       <Text mb={1} fontWeight="medium" fontSize="sm" color="subtle">
-        Customer
+        User
       </Text>
       <Heading mb={4}>{data.email}</Heading>
 
-      {/* <Section title="Customer">
+      {/* <Section title="User">
         <HStack>
-          {customerDetails.map((item) => (
+          {userDetails.map((item) => (
             <Box key={item.label} fontSize="sm">
               <Text w={200} color="subtle">
                 {item.label}

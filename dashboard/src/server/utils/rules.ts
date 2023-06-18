@@ -1,7 +1,7 @@
 import {
   type Card,
-  type CheckoutSession,
-  type Customer,
+  type Session,
+  type User,
   type Device,
   type DeviceSnapshot,
   type IpAddress,

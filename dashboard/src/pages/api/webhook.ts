@@ -55,7 +55,7 @@ export default async function handler(
   switch (event.type) {
     case "payment_intent.created":
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await prisma.checkoutSession.upsert({
+      await prisma.session.upsert({
         where: { customId: paymentIntent.id },
         update: {},
         create: { customId: paymentIntent.id },
@@ -71,10 +71,10 @@ export default async function handler(
       if (!charge.metadata.paymentAttemptId) {
         const [paymentMethod, paymentIntent] = await Promise.all([
           stripe.paymentMethods.retrieve(charge.payment_method as string, {
-            expand: ["customer"],
+            expand: ["user"],
           }),
           stripe.paymentIntents.retrieve(charge.payment_intent as string, {
-            expand: ["customer"],
+            expand: ["user"],
           }),
         ]);
 
@@ -89,9 +89,9 @@ export default async function handler(
                 address: true,
               },
             },
-            checkoutSession: {
+            session: {
               include: {
-                customer: true,
+                user: true,
                 deviceSnapshot: {
                   include: {
                     ipAddress: true,
@@ -106,7 +106,7 @@ export default async function handler(
             currency: paymentIntent.currency,
             description: paymentIntent.description,
             metadata: paymentIntent.metadata,
-            checkoutSession: { connect: { customId: paymentIntent.id } },
+            session: { connect: { customId: paymentIntent.id } },
             shippingName: paymentIntent.shipping?.name,
             shippingPhone: paymentIntent.shipping?.phone,
             outcome: {

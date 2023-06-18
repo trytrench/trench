@@ -23,7 +23,7 @@ function selectRandom<T>(arr: T[]): T {
 }
 
 const NUM_ROWS = 40;
-// Generate customers
+// Generate users
 const PAYMENT_ATTEMPTS: {
   getPaymentAttempt: (props: {
     rules: (Rule & {

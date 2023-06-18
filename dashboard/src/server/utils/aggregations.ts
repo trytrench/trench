@@ -37,35 +37,35 @@ const ONE_WEEK_IN_MS = 1000 * 60 * 60 * 24 * 7;
 
 export const getAggregations = async (
   transactionTime: Date,
-  customerId: string,
+  userId: string,
   ipAddressId: string,
   deviceId: string,
   cardId: string | null
 ) => {
   /**
    * Inputs
-   * - customerId: string,
+   * - userId: string,
    * = ipAddressId: string,
    * - deviceId: string
    *
    * List of aggregation queries to make.
-   * - num cards of the customer
-   * - num wallets of the customer
-   * - num devices of the customer
-   * - num IPs of the customer
+   * - num cards of the user
+   * - num wallets of the user
+   * - num devices of the user
+   * - num IPs of the user
    * - num devices of the IP
    * - num countries of the IP
-   * - num customers of the IP
+   * - num users of the IP
    * - num transactions of the IP
    * - num cities of the device
    * - num countries of the device
    *
    * Time-sensitive aggregation queries (basically, anything transaction related)
-   * - num transactions of the customer in the last 30 minutes
-   * - num unique payment methods used by the customer in the last 30 minutes
-   * - num unique wallets used by the customer in the last 30 minutes
-   * - num unique IPs used by the customer in the last 30 minutes
-   * - num unique devices used by the customer in the last 30 minutes
+   * - num transactions of the user in the last 30 minutes
+   * - num unique payment methods used by the user in the last 30 minutes
+   * - num unique wallets used by the user in the last 30 minutes
+   * - num unique IPs used by the user in the last 30 minutes
+   * - num unique devices used by the user in the last 30 minutes
    */
 
   const TX_TIME = transactionTime.getTime();
@@ -82,7 +82,7 @@ export const getAggregations = async (
 
   const queries = [
     queryObjectHelper({
-      label: "customerCardCount",
+      label: "userCardCount",
       query: prisma.card.findMany({
         select: { id: true },
         where: {
@@ -90,7 +90,7 @@ export const getAggregations = async (
             some: {
               transactions: {
                 some: {
-                  customerId: customerId,
+                  userId: userId,
                   createdAt: { lte: new Date(TX_TIME) },
                 },
               },
@@ -102,11 +102,11 @@ export const getAggregations = async (
       postProcess: (res) => res.length,
     }),
     queryObjectHelper({
-      label: "customerWalletCount",
+      label: "userWalletCount",
       query: prisma.transaction.findMany({
         select: { id: true },
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: { lte: new Date(TX_TIME) },
         },
         distinct: ["walletAddress"],
@@ -114,7 +114,7 @@ export const getAggregations = async (
       postProcess: (res) => res.length,
     }),
     queryObjectHelper({
-      label: "customerDeviceCount",
+      label: "userDeviceCount",
       query: prisma.device.findMany({
         select: { id: true },
         where: {
@@ -123,7 +123,7 @@ export const getAggregations = async (
             some: {
               transactions: {
                 some: {
-                  customerId: customerId,
+                  userId: userId,
                   createdAt: { lte: new Date(TX_TIME) },
                 },
               },
@@ -134,7 +134,7 @@ export const getAggregations = async (
       postProcess: (res) => res.length,
     }),
     queryObjectHelper({
-      label: "customerIpCount",
+      label: "userIpCount",
       query: prisma.ipAddress.findMany({
         where: {
           createdAt: {
@@ -143,7 +143,7 @@ export const getAggregations = async (
           transactions: {
             some: {
               transaction: {
-                customerId: customerId,
+                userId: userId,
                 createdAt: { lte: new Date(TX_TIME) },
               },
             },
@@ -179,8 +179,8 @@ export const getAggregations = async (
       postProcess: (res) => res.length,
     }),
     queryObjectHelper({
-      label: "ipCustomerCount",
-      query: prisma.customer.findMany({
+      label: "ipUserCount",
+      query: prisma.user.findMany({
         where: {
           createdAt: { lte: new Date(TX_TIME) },
           ipAddresses: {
@@ -229,8 +229,8 @@ export const getAggregations = async (
       postProcess: (res) => res.length,
     }),
     queryObjectHelper({
-      label: "cardCustomerCount",
-      query: prisma.customer.findMany({
+      label: "cardUserCount",
+      query: prisma.user.findMany({
         where: {
           cards: { some: { cardId: cardId ?? "" } },
           createdAt: { lte: new Date(TX_TIME) },
@@ -260,7 +260,7 @@ export const getAggregations = async (
     // TIME SENSITIVE QUERIES BELOW
     queryObjectHelper({
       label: "emailsLinkedToDeviceCount",
-      query: prisma.customer.findMany({
+      query: prisma.user.findMany({
         where: {
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
@@ -275,12 +275,12 @@ export const getAggregations = async (
       postProcess: (res) => {
         return mapValues(INTERVALS, (interval) => {
           const cutoff = new Date(TX_TIME - interval.ms);
-          return res.filter((customer) => customer.createdAt >= cutoff).length;
+          return res.filter((user) => user.createdAt >= cutoff).length;
         });
       },
     }),
     queryObjectHelper({
-      label: "customerCardsCreatedCount",
+      label: "userCardsCreatedCount",
       query: prisma.card.findMany({
         select: {
           createdAt: true,
@@ -290,8 +290,8 @@ export const getAggregations = async (
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),
           },
-          customers: {
-            some: { customerId: customerId },
+          users: {
+            some: { userId: userId },
           },
         },
       }),
@@ -303,8 +303,8 @@ export const getAggregations = async (
       },
     }),
     queryObjectHelper({
-      label: "ipCustomerCreatedCount",
-      query: prisma.customer.findMany({
+      label: "ipUserCreatedCount",
+      query: prisma.user.findMany({
         select: {
           createdAt: true,
         },
@@ -318,23 +318,22 @@ export const getAggregations = async (
           },
         },
       }),
-      postProcess: (customers) => {
+      postProcess: (users) => {
         return mapValues(INTERVALS, (interval) => {
           const cutoff = new Date(TX_TIME - interval.ms);
-          return customers.filter((customer) => customer.createdAt >= cutoff)
-            .length;
+          return users.filter((user) => user.createdAt >= cutoff).length;
         });
       },
     }),
 
     queryObjectHelper({
-      label: "customerTransactionCount",
+      label: "userTransactionCount",
       query: prisma.transaction.findMany({
         select: {
           createdAt: true,
         },
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),
@@ -349,13 +348,13 @@ export const getAggregations = async (
       },
     }),
     queryObjectHelper({
-      label: "customerPaymentMethodsUsedCount",
+      label: "userPaymentMethodsUsedCount",
       query: prisma.transaction.findMany({
         select: {
           createdAt: true,
         },
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),
@@ -373,13 +372,13 @@ export const getAggregations = async (
     }),
 
     queryObjectHelper({
-      label: "customerWalletsUsedCount",
+      label: "userWalletsUsedCount",
       query: prisma.transaction.findMany({
         select: {
           createdAt: true,
         },
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),
@@ -397,10 +396,10 @@ export const getAggregations = async (
     }),
 
     queryObjectHelper({
-      label: "customerIpsUsedCount",
+      label: "userIpsUsedCount",
       query: prisma.transaction.findMany({
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),
@@ -432,10 +431,10 @@ export const getAggregations = async (
       },
     }),
     queryObjectHelper({
-      label: "customerDevicesUsedCount",
+      label: "userDevicesUsedCount",
       query: prisma.transaction.findMany({
         where: {
-          customerId: customerId,
+          userId: userId,
           createdAt: {
             gte: new Date(TX_TIME - ONE_WEEK_IN_MS),
             lte: new Date(TX_TIME),

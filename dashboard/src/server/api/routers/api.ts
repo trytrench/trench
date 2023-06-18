@@ -41,34 +41,34 @@ export const apiRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [paymentMethod, paymentIntent] = await Promise.all([
         stripe.paymentMethods.retrieve(input.paymentMethodId, {
-          expand: ["customer"],
+          expand: ["user"],
         }),
         stripe.paymentIntents.retrieve(input.paymentIntentId, {
-          expand: ["customer"],
+          expand: ["user"],
         }),
       ]);
 
-      const customer = paymentIntent.customer || paymentMethod.customer;
+      const user = paymentIntent.user || paymentMethod.user;
 
       if (!paymentMethod.card)
         throw new Error("No card found on payment method");
 
-      const checkoutSession = await ctx.prisma.checkoutSession.update({
+      const session = await ctx.prisma.session.update({
         where: { customId: paymentIntent.id },
         data: {
-          customer:
-            customer && typeof customer !== "string" && !customer.deleted
+          user:
+            user && typeof user !== "string" && !user.deleted
               ? {
                   connectOrCreate: {
                     where: {
-                      customId: customer.id,
+                      customId: user.id,
                     },
                     create: {
-                      customId: customer.id,
-                      name: customer.name,
-                      phone: customer.phone,
-                      email: customer.email,
-                      metadata: customer.metadata,
+                      customId: user.id,
+                      name: user.name,
+                      phone: user.phone,
+                      email: user.email,
+                      metadata: user.metadata,
                     },
                   },
                 }
@@ -100,9 +100,9 @@ export const apiRouter = createTRPCRouter({
               address: true,
             },
           },
-          checkoutSession: {
+          session: {
             include: {
-              customer: true,
+              user: true,
               deviceSnapshot: {
                 include: {
                   ipAddress: {
@@ -119,7 +119,7 @@ export const apiRouter = createTRPCRouter({
           currency: paymentIntent.currency,
           description: paymentIntent.description,
           metadata: paymentIntent.metadata,
-          checkoutSession: { connect: { id: checkoutSession.id } },
+          session: { connect: { id: session.id } },
           shippingName: paymentIntent.shipping?.name,
           shippingPhone: paymentIntent.shipping?.phone,
           paymentMethod: {
@@ -261,7 +261,7 @@ export const apiRouter = createTRPCRouter({
         ctx.prisma.paymentAttempt.update({
           where: { id: paymentAttempt.id },
           data: {
-            checkoutSession: {
+            session: {
               update: {
                 deviceSnapshot: {
                   update: {

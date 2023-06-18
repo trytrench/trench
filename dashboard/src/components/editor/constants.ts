@@ -26,7 +26,7 @@ type AllCounts = {
 
 
 type CardAggregations = {
-  customers: AllCounts;
+  users: AllCounts;
   uniqueCountries: number;
 };
 
@@ -35,11 +35,11 @@ type DeviceAggregations = {
   uniqueCountries: number;
   uniqueFirstNames: number;
   uniqueEmails: TimeBucketCounts;
-  customers: AllCounts;
+  users: AllCounts;
   ipAddresses: AllCounts;
 };
 
-type CustomerAggregations = {
+type UserAggregations = {
   cards: AllCounts;
   devices: AllCounts;
   ipAddresses: AllCounts;
@@ -49,7 +49,7 @@ type CustomerAggregations = {
 
 type IpAddressAggregations = {
   devices: AllCounts;
-  customers: AllCounts;
+  users: AllCounts;
   cards: {
     uniqueCountries: number;
   };
@@ -57,19 +57,35 @@ type IpAddressAggregations = {
 };
 
 type RuleInput = {
-  paymentAttempt: PaymentAttempt & {
-    checkoutSession: CheckoutSession & {
-      deviceSnapshot: DeviceSnapshot & { device: Device; ipAddress: IpAddress };
-      customer: Customer;
+  evaluableAction: EvaluableAction & {
+    session: Session & {
+      deviceSnapshot:
+        | (DeviceSnapshot & {
+            device: Device;
+            ipAddress:
+              | (IpAddress & {
+                  location: Location | null;
+                })
+              | null;
+          })
+        | null;
+      user: User | null;
     };
-    paymentMethod: PaymentMethod & { address: Address; card: Card };
+    paymentAttempt:
+      | (PaymentAttempt & {
+          paymentMethod: PaymentMethod & {
+            address: Address | null;
+            card: Card | null;
+          };
+        })
+      | null;
   };
   lists: Record<string, string[]>;
   transforms: {
     aggregations: {
       card: CardAggregations;
       device: DeviceAggregations;
-      customer: CustomerAggregations;
+      user: UserAggregations;
       ipAddresses: IpAddressAggregations;
     };
   };

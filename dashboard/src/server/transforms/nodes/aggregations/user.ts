@@ -1,7 +1,7 @@
 import { node } from "../../flow";
 import { type AllCounts, createAllCounts, DEFAULT_ALL_COUNTS } from "./utils";
 
-type CustomerAggregations = {
+type UserAggregations = {
   cards: AllCounts;
   devices: AllCounts;
   ipAddresses: AllCounts;
@@ -9,14 +9,14 @@ type CustomerAggregations = {
   paymentMethods: AllCounts;
 };
 
-export const customerAggregationsNode = node.resolver(
-  async ({ input, ctx }): Promise<CustomerAggregations> => {
+export const userAggregationsNode = node.resolver(
+  async ({ input, ctx }): Promise<UserAggregations> => {
     const { paymentAttempt } = input;
 
-    const customerId = paymentAttempt.checkoutSession.customerId;
+    const userId = paymentAttempt.session.userId;
     const timeOfPayment = new Date(paymentAttempt.createdAt);
 
-    if (!customerId) {
+    if (!userId) {
       return {
         cards: DEFAULT_ALL_COUNTS,
         devices: DEFAULT_ALL_COUNTS,
@@ -28,24 +28,24 @@ export const customerAggregationsNode = node.resolver(
 
     const [cardLinks, deviceLinks, ipAddressLinks, paymentAttemptLinks] =
       await ctx.prisma.$transaction([
-        ctx.prisma.customerCardLink.findMany({
-          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        ctx.prisma.userCardLink.findMany({
+          where: { userId: userId, firstSeen: { lte: timeOfPayment } },
         }),
 
-        ctx.prisma.customerDeviceLink.findMany({
-          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        ctx.prisma.userDeviceLink.findMany({
+          where: { userId: userId, firstSeen: { lte: timeOfPayment } },
         }),
 
-        ctx.prisma.customerIpAddressLink.findMany({
-          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        ctx.prisma.userIpAddressLink.findMany({
+          where: { userId: userId, firstSeen: { lte: timeOfPayment } },
         }),
 
-        ctx.prisma.customerPaymentAttemptLink.findMany({
-          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        ctx.prisma.userPaymentAttemptLink.findMany({
+          where: { userId: userId, firstSeen: { lte: timeOfPayment } },
         }),
 
-        ctx.prisma.customerPaymentMethodLink.findMany({
-          where: { customerId: customerId, firstSeen: { lte: timeOfPayment } },
+        ctx.prisma.userPaymentMethodLink.findMany({
+          where: { userId: userId, firstSeen: { lte: timeOfPayment } },
         }),
       ]);
 

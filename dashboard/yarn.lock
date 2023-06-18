@@ -8564,6 +8564,11 @@ trpc-openapi@^1.1.2:
     openapi-types "^12.1.1"
     zod-to-json-schema "^3.21.1"
 
+ts-deepmerge@^6.0.3:
+  version "6.0.3"
+  resolved "https://registry.yarnpkg.com/ts-deepmerge/-/ts-deepmerge-6.0.3.tgz#4ca1f7f3bf38b02e44b363702b7e5ed5fbffd0a9"
+  integrity sha512-MBBJL0UK/mMnZRONMz4J1CRu5NsGtsh+gR1nkn8KLE9LXo/PCzeHhQduhNary8m5/m9ryOOyFwVKxq81cPlaow==
+
 ts-morph@^18.0.0:
   version "18.0.0"
   resolved "https://registry.yarnpkg.com/ts-morph/-/ts-morph-18.0.0.tgz#b9e7a898ea115064585a8a775d86da6edc9c5b4e"

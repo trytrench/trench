@@ -17,10 +17,10 @@ export const ruleInputNode = node
     },
   })
   .resolver(({ input, deps }) => {
-    const { paymentAttempt, blockLists } = input;
+    const { evaluableAction, blockLists } = input;
     const { transforms } = deps;
     return {
-      paymentAttempt: paymentAttempt,
+      evaluableAction,
       lists: blockLists,
       transforms,
     };

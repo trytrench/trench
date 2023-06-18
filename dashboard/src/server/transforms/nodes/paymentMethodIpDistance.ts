@@ -6,8 +6,7 @@ import { convertDistance, getPreciseDistance } from "geolib";
 const ALWAYS_REFETCH_IP_DATA = true;
 export const ipDataNode = node
   .resolver(({ input }) => {
-    const ipAddress =
-      input.paymentAttempt.checkoutSession.deviceSnapshot?.ipAddress;
+    const ipAddress = input.evaluableAction.session.deviceSnapshot?.ipAddress;
     if (!ipAddress) {
       throw new Error("IP address not found");
     }
@@ -30,12 +29,13 @@ export const ipDataNode = node
 
 export const geocodePaymentMethodNode = node
   .resolver(({ input }) => {
-    const paymentMethod = input.paymentAttempt.paymentMethod;
+    const address =
+      input.evaluableAction.paymentAttempt?.paymentMethod?.address;
 
-    if (!paymentMethod.address) {
+    if (!address) {
       throw new Error("Address not found");
     }
-    return paymentMethod.address;
+    return address;
   })
   .then(geocodePlugin);
 

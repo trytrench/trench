@@ -4,3 +4,7 @@ export enum RiskLevel {
   Medium = "Medium",
   Normal = "Normal",
 }
+
+export enum EvaluableActionType {
+  PaymentAttempt = "PaymentAttempt",
+}

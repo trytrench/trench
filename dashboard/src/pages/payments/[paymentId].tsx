@@ -37,15 +37,8 @@ import { Layout } from "~/components/layouts/Layout";
 import { Section, PaymentDetails } from "~/components/views/PaymentDetails";
 import { type RouterOutputs, api } from "~/lib/api";
 import { type CustomPage } from "../../types/Page";
-import {
-  CreditCard,
-  Globe,
-  Mail,
-  MoreHorizontal,
-  Phone,
-  Wallet,
-} from "lucide-react";
-import { type ReactNode, useCallback, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
+import { useCallback, useState } from "react";
 import {
   DEFAULT_BLOCKLISTS,
   DefaultBlockListAlias,
@@ -55,14 +48,14 @@ import { handleError } from "~/lib/handleError";
 import { format } from "date-fns";
 import NextLink from "next/link";
 
-type PaymentAttempt = RouterOutputs["dashboard"]["paymentAttempts"]["get"];
+type EvaluableAction = RouterOutputs["dashboard"]["evaluableActions"]["get"];
 type BlockListItem = {
   tempId: string;
   alias: DefaultBlockListAlias;
   value: string;
 };
 
-function getBlockListItems(paymentAttempt: PaymentAttempt): BlockListItem[] {
+function getBlockListItems(action: EvaluableAction): BlockListItem[] {
   const items: BlockListItem[] = [];
   function addItem({
     value,
@@ -82,32 +75,32 @@ function getBlockListItems(paymentAttempt: PaymentAttempt): BlockListItem[] {
 
   addItem({
     alias: DefaultBlockListAlias.EmailBlocklist,
-    value: paymentAttempt?.customerLink?.customer.email,
+    value: action?.session.user?.email,
   });
   addItem({
     alias: DefaultBlockListAlias.IpBlocklist,
-    value: paymentAttempt?.checkoutSession.deviceSnapshot?.ipAddress.ipAddress,
+    value: action?.session.deviceSnapshot?.ipAddress?.ipAddress,
   });
   addItem({
     alias: DefaultBlockListAlias.DeviceBlocklist,
-    value: paymentAttempt?.checkoutSession.deviceSnapshot?.deviceId,
+    value: action?.session.deviceSnapshot?.deviceId,
   });
   addItem({
     alias: DefaultBlockListAlias.CardFingerprintBlocklist,
-    value: paymentAttempt?.paymentMethod.card?.fingerprint,
+    value: action?.paymentAttempt?.paymentMethod.card?.fingerprint,
   });
 
   return items;
 }
 
-function BlockPayment(props: { paymentAttempt: PaymentAttempt }) {
-  const { paymentAttempt } = props;
+function BlockPayment(props: { action: EvaluableAction }) {
+  const { action } = props;
 
   const [selectedItems, setSelectedItems] = useState<BlockListItem[]>([]);
   const [blockListItems, setBlockListItems] = useState<BlockListItem[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure({
     onOpen: () => {
-      const blockListItems = getBlockListItems(paymentAttempt);
+      const blockListItems = getBlockListItems(action);
       setSelectedItems(blockListItems);
       setBlockListItems(blockListItems);
     },
@@ -232,14 +225,14 @@ function BlockPayment(props: { paymentAttempt: PaymentAttempt }) {
   );
 }
 
-type Row = NonNullable<
-  RouterOutputs["dashboard"]["paymentAttempts"]["get"]
+type ExecutedRuleRow = NonNullable<
+  RouterOutputs["dashboard"]["evaluableActions"]["get"]
 >["ruleExecutions"][number];
 
-const columns: ColumnDef<Row>[] = [
+const columns: ColumnDef<ExecutedRuleRow>[] = [
   {
     header: "Executed Rule",
-    accessorKey: "rule.name",
+    accessorKey: "ruleSnapshot.name",
   },
 
   {
@@ -255,38 +248,33 @@ const Page: CustomPage = () => {
   const router = useRouter();
   const paymentId = router.query.paymentId as string;
 
-  const { isLoading, data: paymentAttemptData } =
-    api.dashboard.paymentAttempts.get.useQuery({
+  const { isLoading, data: evaluableAction } =
+    api.dashboard.evaluableActions.get.useQuery({
       id: paymentId,
     });
 
-  if (!paymentAttemptData) return null;
+  if (!evaluableAction) return null;
 
-  const customerDetails = [
+  const deviceSnapshot = evaluableAction.session.deviceSnapshot;
+  const paymentAttempt = evaluableAction.paymentAttempt;
+  const paymentMethod = paymentAttempt?.paymentMethod;
+  const user = evaluableAction.session.user;
+  const session = evaluableAction.session;
+
+  const userDetails = [
     {
       label: "Name",
       value: (
-        <Link
-          as={NextLink}
-          href={`/customers/${
-            paymentAttemptData.customerLink?.customer?.id ?? ""
-          }`}
-        >
-          {paymentAttemptData.customerLink?.customer?.name ||
-            paymentAttemptData.paymentMethod.name}
+        <Link as={NextLink} href={`/users/${user?.id ?? ""}`}>
+          {(user?.name || paymentMethod?.name) ?? "--"}
         </Link>
       ),
     },
     {
       label: "Email",
       value: (
-        <Link
-          as={NextLink}
-          href={`/customers/${
-            paymentAttemptData.customerLink?.customer?.id ?? ""
-          }`}
-        >
-          {paymentAttemptData.customerLink?.customer?.email ?? "--"}
+        <Link as={NextLink} href={`/users/${user?.id ?? ""}`}>
+          {(user?.email || paymentMethod?.email) ?? "--"}
         </Link>
       ),
     },
@@ -294,9 +282,9 @@ const Page: CustomPage = () => {
       label: "Payment",
       value: (
         <CardWithIcon
-          last4={paymentAttemptData.paymentMethod.card?.last4}
-          brand={paymentAttemptData.paymentMethod.card?.brand}
-          wallet={paymentAttemptData.paymentMethod.cardWallet}
+          last4={paymentMethod?.card?.last4}
+          brand={paymentMethod?.card?.brand}
+          wallet={paymentMethod?.cardWallet}
         />
       ),
     },
@@ -311,10 +299,12 @@ const Page: CustomPage = () => {
       <Flex justify="space-between" align="center">
         <HStack align="baseline" spacing={4}>
           <Heading mb={2}>
-            {(paymentAttemptData.amount / 100).toLocaleString("en-US", {
-              style: "currency",
-              currency: paymentAttemptData.currency,
-            })}
+            {paymentAttempt
+              ? (paymentAttempt.amount / 100).toLocaleString("en-US", {
+                  style: "currency",
+                  currency: paymentAttempt.currency,
+                })
+              : "--"}
           </Heading>
 
           <Box>
@@ -332,7 +322,7 @@ const Page: CustomPage = () => {
               p={4}
             >
               <PaymentStatusTag
-                status={paymentAttemptData.outcome?.status || "incomplete"}
+                status={paymentAttempt?.outcome?.status || "incomplete"}
               />
             </Tooltip>
           </Box>
@@ -346,29 +336,26 @@ const Page: CustomPage = () => {
             icon={<Icon as={MoreHorizontal} />}
           ></MenuButton>
           <MenuList minWidth="150px">
-            <BlockPayment paymentAttempt={paymentAttemptData} />
+            <BlockPayment action={evaluableAction} />
           </MenuList>
         </Menu>
       </Flex>
       <HStack spacing={6} mb={2}>
         <Text color="gray.600" fontWeight="medium">
-          {format(
-            new Date(paymentAttemptData.createdAt),
-            "MMM dd, yyyy, h:mm a"
-          )}
+          {format(new Date(evaluableAction?.createdAt), "MMM dd, yyyy, h:mm a")}
         </Text>
         <Text color="gray.500">
           <Text userSelect="none" display="inline">
             ID:{" "}
           </Text>
-          {paymentAttemptData.id}
+          {evaluableAction.id}
         </Text>
       </HStack>
       <HStack mb={2}></HStack>
       <Divider borderColor="gray.200" mb={2} />
-      <Section title="Customer">
+      <Section title="User">
         <HStack>
-          {customerDetails.map((item) => (
+          {userDetails.map((item) => (
             <Box key={item.label} fontSize="sm">
               <Text w={200} mb={1} color="subtle">
                 {item.label}
@@ -383,13 +370,11 @@ const Page: CustomPage = () => {
         title={
           <Box display="flex" gap={2} alignItems="center">
             Risk Level
-            <RiskLevelTag
-              riskLevel={paymentAttemptData.assessment?.riskLevel}
-            />
+            <RiskLevelTag riskLevel={evaluableAction?.riskLevel} />
           </Box>
         }
       >
-        {!paymentAttemptData?.ruleExecutions.length ? (
+        {!evaluableAction?.ruleExecutions.length ? (
           <Flex justify="center" align="center">
             <Text fontSize="sm" color="subtle">
               No executed rules
@@ -398,7 +383,7 @@ const Page: CustomPage = () => {
         ) : (
           <DataTable
             columns={columns}
-            data={paymentAttemptData.ruleExecutions}
+            data={evaluableAction.ruleExecutions}
             showPagination={false}
             isLoading={isLoading}
           />

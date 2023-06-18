@@ -24,8 +24,8 @@ import dynamic from "next/dynamic";
 import { EditIcon } from "lucide-react";
 import {
   PaymentsTable,
-  usePaymentsTableProps,
-} from "~/components/PaymentsTable";
+  useEvaluableActionProps,
+} from "~/components/EvaluableActionsTable";
 import { RiskLevelTag } from "../../../components/RiskLevelTag";
 
 // const DynamicBarChart = dynamic(
@@ -57,7 +57,7 @@ const EditRulePage: CustomPage = () => {
     setSelectedOptions,
     data: paymentsData,
     count,
-  } = usePaymentsTableProps({
+  } = useEvaluableActionProps({
     executedRuleId: ruleId,
   });
 

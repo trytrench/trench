@@ -6,6 +6,7 @@ import { api } from "../../../lib/api";
 import { handleError } from "../../../lib/handleError";
 import { type CustomPage } from "../../../types/Page";
 import { Layout } from "../../../components/layouts/Layout";
+import { type RiskLevel } from "../../../common/types";
 
 const EditRulePage: CustomPage = () => {
   const router = useRouter();
@@ -13,15 +14,23 @@ const EditRulePage: CustomPage = () => {
 
   const ruleId = router.query.ruleId as string;
 
-  const { data: ruleData } = api.dashboard.rules.get.useQuery({
-    id: ruleId,
-  });
+  const { data: ruleData } = api.dashboard.rules.get.useQuery(
+    {
+      id: ruleId,
+    },
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
 
   const [rule, setRule] = useState<RuleFormType>();
 
   useEffect(() => {
     if (ruleData) {
-      setRule(ruleData);
+      setRule({
+        ...ruleData.currentRuleSnapshot,
+        riskLevel: ruleData.currentRuleSnapshot.riskLevel as RiskLevel,
+      });
     }
   }, [ruleData]);
 

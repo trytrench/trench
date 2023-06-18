@@ -4,7 +4,7 @@ import { geocodePaymentMethodNode } from "../paymentMethodIpDistance";
 import { type AllCounts, DEFAULT_ALL_COUNTS, createAllCounts } from "./utils";
 
 type CardAggregations = {
-  customers: AllCounts;
+  users: AllCounts;
   uniqueCountries: number;
 };
 
@@ -13,22 +13,26 @@ export const cardAggregationsNode = node
     cardGeocode: geocodePaymentMethodNode,
   })
   .resolver(async ({ input, ctx, deps }): Promise<CardAggregations> => {
-    const { paymentAttempt } = input;
+    const { paymentAttempt } = input.evaluableAction;
     const { cardGeocode } = deps;
+
+    if (!paymentAttempt) {
+      throw new Error("No payment attempt in action");
+    }
 
     const cardId = paymentAttempt.paymentMethod.cardId;
     const timeOfPayment = new Date(paymentAttempt.createdAt);
 
     if (!cardId) {
       return {
-        customers: DEFAULT_ALL_COUNTS,
+        users: DEFAULT_ALL_COUNTS,
         uniqueCountries: 0,
       };
     }
 
-    const [customerLinks, paymentMethods] = await ctx.prisma.$transaction([
-      // Customer count
-      ctx.prisma.customerCardLink.findMany({
+    const [userLinks, paymentMethods] = await ctx.prisma.$transaction([
+      // User count
+      ctx.prisma.userCardLink.findMany({
         where: {
           cardId: cardId,
           firstSeen: { lte: new Date(timeOfPayment) },
@@ -53,9 +57,9 @@ export const cardAggregationsNode = node
     ).length;
 
     return {
-      customers: createAllCounts({
+      users: createAllCounts({
         timeOfPayment,
-        links: customerLinks,
+        links: userLinks,
       }),
       uniqueCountries,
     };
