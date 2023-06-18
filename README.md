@@ -16,12 +16,18 @@ Trench is an open-source payment fraud prevention platform, built for engineers.
 
 ## Features
 
-- Set up in 10 minutes!
-- Fully customizable to meet your business needs
-- Collect rich data through our SDK
-- Respond to fraud in real time in our dashboard
-- Integrate complex custom data into your rule engine
-- Write rules in TypeScript
+- SDK to collect device signals
+- Dashboard for fraud workflows
+    - Identify and label fraud
+    - Export raw data for analysis
+- Custom rule engine
+    - Integrate complex custom data using [Flow](https://github.com/trytrench/flow)
+    - Write rules in TypeScript
+ 
+## Design Philosophy
+
+- **Full customization.** You know your product and user interactions better than anyone else. To be effective, you should have full control over the data you collect and integrate.
+- **Full access to your data.** You shouldn’t be limited to dashboards and reports. Full access to your data is needed to properly understand your fraud.
 
 ![screenshot](https://github.com/trytrench/trench/assets/9043913/e655c6dc-849f-406b-b528-a39b91a76cc6)
 
