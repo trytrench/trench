@@ -8,6 +8,7 @@ import { env } from "~/env.mjs";
 import { getIpData, maxMind } from "~/server/lib/maxMind";
 import { prisma } from "../../server/db";
 import cors from "nextjs-cors";
+import { SessionType } from "../../common/types";
 
 const componentSchema = z.object({
   value: z.any(),
@@ -101,7 +102,19 @@ export default async function handler(
   const session = await prisma.session.upsert({
     where: { customId: paymentIntentId },
     update: {},
-    create: { customId: paymentIntentId },
+    create: {
+      customId: paymentIntentId,
+      type: {
+        connectOrCreate: {
+          where: {
+            name: SessionType.StripePayment,
+          },
+          create: {
+            name: SessionType.StripePayment,
+          },
+        },
+      },
+    },
   });
 
   const deviceSnapshot = await prisma.deviceSnapshot.create({

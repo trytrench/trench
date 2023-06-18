@@ -130,8 +130,6 @@ export const listsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { items } = input;
 
-      console.log(ctx.session);
-
       const listAliases = uniq(items.map((item) => item.listAlias));
 
       const lists = await ctx.prisma.$transaction(

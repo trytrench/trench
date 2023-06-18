@@ -17,7 +17,7 @@ export const cardAggregationsNode = node
     const { cardGeocode } = deps;
 
     if (!paymentAttempt) {
-      throw new Error("No payment attempt in action");
+      throw new Error("No payment attempt data in action");
     }
 
     const cardId = paymentAttempt.paymentMethod.cardId;

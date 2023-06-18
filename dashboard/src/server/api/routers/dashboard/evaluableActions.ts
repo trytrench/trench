@@ -47,6 +47,9 @@ export const evaluableActionsRouter = createTRPCRouter({
           skip: input.offset,
           take: input.limit,
           include: getFindManyIncludeArgs(input.type),
+          orderBy: {
+            createdAt: "desc",
+          },
           where: whereArgs,
         }),
       ]);
@@ -82,7 +85,7 @@ export const evaluableActionsRouter = createTRPCRouter({
 async function getLinkedToPaymentAttemptWhereArgs(
   prisma: PrismaClient,
   evaluableActionId: string
-) {
+): Promise<Prisma.EvaluableActionWhereInput> {
   const linkedAction = await prisma.evaluableAction.findUnique({
     where: { id: evaluableActionId },
     include: getFindManyIncludeArgs(EvaluableActionType.PaymentAttempt),
@@ -92,58 +95,65 @@ async function getLinkedToPaymentAttemptWhereArgs(
   }
 
   const deviceSnapshot = linkedAction.session.deviceSnapshot;
-  const additionalWhere = {
-    OR: [
-      {
-        session: {
-          user: {
-            AND: [
-              { email: linkedAction.session.user?.email },
-              { email: { not: null } },
-            ],
-          },
-        },
-      },
-      {
-        session: {
-          user: {
-            AND: [
-              { phone: linkedAction.session.user?.phone },
-              { phone: { not: null } },
-            ],
-          },
-        },
-      },
-      {
-        session: {
-          deviceSnapshot: {
-            deviceId: deviceSnapshot?.deviceId,
-          },
-        },
-      },
-      {
-        session: {
-          deviceSnapshot: { fingerprint: deviceSnapshot?.fingerprint },
-        },
-      },
-      {
-        session: {
-          deviceSnapshot: {
-            ipAddress: { ipAddress: deviceSnapshot?.ipAddress?.ipAddress },
-          },
-        },
-      },
-      {
-        paymentAttempt: {
-          paymentMethod: {
-            card: {
-              id: linkedAction.paymentAttempt?.paymentMethod.card?.id,
-            },
-          },
-        },
-      },
-    ],
-  } satisfies Prisma.EvaluableActionWhereInput;
 
-  return additionalWhere;
+  const orClauses: Prisma.EvaluableActionWhereInput[] = [
+    {
+      session: {
+        deviceSnapshot: {
+          deviceId: deviceSnapshot?.deviceId,
+        },
+      },
+    },
+    {
+      session: {
+        deviceSnapshot: { fingerprint: deviceSnapshot?.fingerprint },
+      },
+    },
+    {
+      session: {
+        deviceSnapshot: {
+          ipAddress: { ipAddress: deviceSnapshot?.ipAddress?.ipAddress },
+        },
+      },
+    },
+    {
+      paymentAttempt: {
+        paymentMethod: {
+          card: {
+            id: linkedAction.paymentAttempt?.paymentMethod.card?.id,
+          },
+        },
+      },
+    },
+  ];
+
+  const userEmail = linkedAction.session.user?.email;
+  if (userEmail) {
+    orClauses.push({
+      session: {
+        user: {
+          AND: [{ email: userEmail }, { email: { not: null } }],
+        },
+      },
+    });
+  }
+
+  const userPhone = linkedAction.session.user?.phone;
+  if (userPhone) {
+    orClauses.push({
+      session: {
+        user: {
+          AND: [
+            { phone: linkedAction.session.user?.phone },
+            { phone: { not: null } },
+          ],
+        },
+      },
+    });
+  }
+
+  return {
+    id: { not: evaluableActionId },
+    OR: orClauses,
+  };
 }

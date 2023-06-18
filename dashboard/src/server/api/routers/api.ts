@@ -39,19 +39,16 @@ export const apiRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      console.log("Lol");
       const [paymentMethod, paymentIntent] = await Promise.all([
         stripe.paymentMethods.retrieve(input.paymentMethodId, {
-          expand: ["user"],
+          expand: ["customer"],
         }),
         stripe.paymentIntents.retrieve(input.paymentIntentId, {
-          expand: ["user"],
+          expand: ["customer"],
         }),
       ]);
 
-      const user = paymentIntent.user || paymentMethod.user;
-
-      console.log(user);
+      const customer = paymentIntent.customer || paymentMethod.customer;
 
       if (!paymentMethod.card)
         throw new Error("No card found on payment method");
@@ -60,18 +57,18 @@ export const apiRouter = createTRPCRouter({
         where: { customId: paymentIntent.id },
         data: {
           user:
-            user && typeof user !== "string" && !user.deleted
+            customer && typeof customer !== "string" && !customer.deleted
               ? {
                   connectOrCreate: {
                     where: {
-                      customId: user.id,
+                      customId: customer.id,
                     },
                     create: {
-                      customId: user.id,
-                      name: user.name,
-                      phone: user.phone,
-                      email: user.email,
-                      metadata: user.metadata,
+                      customId: customer.id,
+                      name: customer.name,
+                      phone: customer.phone,
+                      email: customer.email,
+                      metadata: customer.metadata,
                     },
                   },
                 }
@@ -239,8 +236,6 @@ export const apiRouter = createTRPCRouter({
         longitude: ruleInput.transforms.paymentMethodLocation?.longitude,
         countryISOCode: ruleInput.transforms.paymentMethodLocation.countryCode,
       };
-
-      console.log(ruleInput.transforms.ipData);
 
       await ctx.prisma.$transaction([
         ctx.prisma.ruleExecution.createMany({

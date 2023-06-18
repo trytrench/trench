@@ -8,3 +8,7 @@ export enum RiskLevel {
 export enum EvaluableActionType {
   PaymentAttempt = "PaymentAttempt",
 }
+
+export enum SessionType {
+  StripePayment = "StripePayment",
+}
