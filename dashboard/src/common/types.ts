@@ -9,6 +9,6 @@ export enum EvaluableActionType {
   PaymentAttempt = "PaymentAttempt",
 }
 
-export enum SessionType {
+export enum UserFlow {
   StripePayment = "StripePayment",
 }

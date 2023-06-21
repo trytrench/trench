@@ -30,7 +30,7 @@ const PAYMENT_ATTEMPTS: {
       currentRuleSnapshot: RuleSnapshot;
     })[];
     users: User[];
-    sessionTypeId: string;
+    userFlowId: string;
   }) => Prisma.PaymentAttemptCreateArgs["data"];
 }[] = Array.from({ length: NUM_ROWS }, () => {
   const name = faker.person.fullName();
@@ -39,7 +39,7 @@ const PAYMENT_ATTEMPTS: {
   const userAgentData = userAgentFromString(userAgent);
 
   return {
-    getPaymentAttempt: ({ rules, sessionTypeId, users }) => {
+    getPaymentAttempt: ({ rules, userFlowId, users }) => {
       const ruleExecutions = rules.map(({ currentRuleSnapshot }) => {
         const shouldError = faker.number.int({ min: 0, max: 20 }) > 19;
         const shouldPass = faker.number.int({ min: 0, max: 20 }) > 18;
@@ -84,7 +84,7 @@ const PAYMENT_ATTEMPTS: {
             session: {
               create: {
                 customId: faker.string.uuid(),
-                typeId: sessionTypeId,
+                userFlowId: userFlowId,
                 userId: selectRandom(users).id,
                 deviceSnapshot: {
                   create: {
@@ -173,7 +173,7 @@ const PAYMENT_ATTEMPTS: {
 });
 
 async function main() {
-  const sessionType = await devPrisma.sessionType.create({
+  const userFlow = await devPrisma.userFlow.create({
     data: {
       name: "Payment",
     },
@@ -198,9 +198,9 @@ async function main() {
           currentRuleSnapshot: true,
         },
         data: {
-          sessionTypes: {
+          userFlows: {
             create: {
-              sessionTypeId: sessionType.id,
+              userFlowId: userFlow.id,
             },
           },
           currentRuleSnapshot: {
@@ -233,7 +233,7 @@ async function main() {
             data: getPaymentAttempt({
               users: createdUsers,
               rules: createdRules,
-              sessionTypeId: sessionType.id,
+              userFlowId: userFlow.id,
             }),
           }),
         ])

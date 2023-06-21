@@ -3,7 +3,7 @@ CREATE TYPE "PaymentOutcomeStatus" AS ENUM ('SUCCEEDED', 'FAILED', 'PENDING');
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "customId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "SessionType" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "name" TEXT NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE "SessionType" (
 
 -- CreateTable
 CREATE TABLE "Session" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "customId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -39,12 +39,12 @@ CREATE TABLE "Session" (
 
 -- CreateTable
 CREATE TABLE "EvaluableAction" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "transformsOutput" JSONB NOT NULL DEFAULT '{}',
+    "transformsOutput" JSONB,
+    "riskLevel" TEXT,
     "isFraud" BOOLEAN NOT NULL DEFAULT false,
-    "riskLevel" TEXT NOT NULL,
     "sessionId" TEXT NOT NULL,
 
     CONSTRAINT "EvaluableAction_pkey" PRIMARY KEY ("id")
@@ -52,7 +52,7 @@ CREATE TABLE "EvaluableAction" (
 
 -- CreateTable
 CREATE TABLE "Event" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "type" TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE "Event" (
 
 -- CreateTable
 CREATE TABLE "DeviceSnapshot" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "sessionId" TEXT NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE "DeviceSnapshot" (
 
 -- CreateTable
 CREATE TABLE "Device" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -102,7 +102,7 @@ CREATE TABLE "Device" (
 
 -- CreateTable
 CREATE TABLE "Location" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
     "cityGeonameId" INTEGER,
@@ -118,7 +118,7 @@ CREATE TABLE "Location" (
 
 -- CreateTable
 CREATE TABLE "IpAddress" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "ipAddress" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE "IpAddress" (
 
 -- CreateTable
 CREATE TABLE "Address" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "city" TEXT,
     "country" TEXT,
     "line1" TEXT,
@@ -144,7 +144,7 @@ CREATE TABLE "Address" (
 
 -- CreateTable
 CREATE TABLE "RuleSnapshot" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE "RuleSnapshot" (
 
 -- CreateTable
 CREATE TABLE "Rule" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "currentRuleSnapshotId" TEXT NOT NULL,
@@ -169,7 +169,7 @@ CREATE TABLE "Rule" (
 
 -- CreateTable
 CREATE TABLE "RuleToSessionType" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "ruleId" TEXT NOT NULL,
@@ -180,7 +180,7 @@ CREATE TABLE "RuleToSessionType" (
 
 -- CreateTable
 CREATE TABLE "RuleExecution" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "evaluableActionId" TEXT NOT NULL,
     "ruleSnapshotId" TEXT NOT NULL,
@@ -193,7 +193,7 @@ CREATE TABLE "RuleExecution" (
 
 -- CreateTable
 CREATE TABLE "List" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
@@ -206,7 +206,7 @@ CREATE TABLE "List" (
 
 -- CreateTable
 CREATE TABLE "ListItem" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "value" TEXT NOT NULL,
@@ -218,7 +218,7 @@ CREATE TABLE "ListItem" (
 
 -- CreateTable
 CREATE TABLE "Card" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "fingerprint" TEXT NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -237,7 +237,7 @@ CREATE TABLE "Card" (
 
 -- CreateTable
 CREATE TABLE "PaymentMethod" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "customId" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -255,7 +255,7 @@ CREATE TABLE "PaymentMethod" (
 
 -- CreateTable
 CREATE TABLE "PaymentAttempt" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "amount" INTEGER NOT NULL,
@@ -273,7 +273,7 @@ CREATE TABLE "PaymentAttempt" (
 
 -- CreateTable
 CREATE TABLE "PaymentOutcome" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "customId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -289,7 +289,7 @@ CREATE TABLE "PaymentOutcome" (
 
 -- CreateTable
 CREATE TABLE "StripePaymentOutcome" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT nanoid(),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "networkStatus" TEXT,
@@ -324,6 +324,9 @@ CREATE UNIQUE INDEX "IpAddress_ipAddress_key" ON "IpAddress"("ipAddress");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Rule_currentRuleSnapshotId_key" ON "Rule"("currentRuleSnapshotId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RuleToSessionType_ruleId_sessionTypeId_key" ON "RuleToSessionType"("ruleId", "sessionTypeId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RuleExecution_evaluableActionId_ruleSnapshotId_key" ON "RuleExecution"("evaluableActionId", "ruleSnapshotId");

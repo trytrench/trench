@@ -16,7 +16,7 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   customId  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -35,25 +35,25 @@ model User {
   ipAddressLinks      UserIpAddressLink[]
 }
 
-model SessionType {
-  id        String   @id @default(cuid())
+model UserFlow {
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   name String @unique
 
   sessions Session[]
-  rules    RuleToSessionType[]
+  rules    RuleToUserFlow[]
 }
 
 model Session {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   customId  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type   SessionType @relation(fields: [typeId], references: [id])
-  typeId String
+  userFlow   UserFlow @relation(fields: [userFlowId], references: [id])
+  userFlowId String
 
   user           User?           @relation(fields: [userId], references: [id])
   userId         String?
@@ -64,7 +64,7 @@ model Session {
 }
 
 model EvaluableAction {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -82,7 +82,7 @@ model EvaluableAction {
 }
 
 model Event {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -94,7 +94,7 @@ model Event {
 }
 
 model DeviceSnapshot {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -132,7 +132,7 @@ model DeviceSnapshot {
 }
 
 model Device {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
@@ -145,7 +145,7 @@ model Device {
 // Locations
 
 model Location {
-  id        String @id @default(cuid())
+  id        String @id @default(dbgenerated("nanoid()"))
   latitude  Float?
   longitude Float?
 
@@ -163,7 +163,7 @@ model Location {
 }
 
 model IpAddress {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   ipAddress String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,7 +182,7 @@ model IpAddress {
 }
 
 model Address {
-  id         String  @id @default(cuid())
+  id         String  @id @default(dbgenerated("nanoid()"))
   city       String?
   country    String?
   line1      String?
@@ -200,7 +200,7 @@ model Address {
 // Rules
 
 model RuleSnapshot {
-  id           String          @id @default(cuid())
+  id           String          @id @default(dbgenerated("nanoid()"))
   updatedAt    DateTime        @updatedAt
   createdAt    DateTime        @default(now())
 
@@ -219,7 +219,7 @@ model RuleSnapshot {
 }
 
 model Rule {
-  id           String          @id @default(cuid())
+  id           String          @id @default(dbgenerated("nanoid()"))
   updatedAt    DateTime        @updatedAt
   createdAt    DateTime        @default(now())
 
@@ -228,25 +228,25 @@ model Rule {
   currentRuleSnapshotId String @unique
 
   ruleSnapshots RuleSnapshot[] @relation("ruleSnapshots")
-  sessionTypes RuleToSessionType[]
+  userFlows RuleToUserFlow[]
 }
 
-model RuleToSessionType {
-  id           String   @id @default(cuid())
+model RuleToUserFlow {
+  id           String   @id @default(dbgenerated("nanoid()"))
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 
   rule         Rule     @relation(fields: [ruleId], references: [id])
   ruleId       String
 
-  sessionType  SessionType @relation(fields: [sessionTypeId], references: [id])
-  sessionTypeId String
+  userFlow  UserFlow @relation(fields: [userFlowId], references: [id])
+  userFlowId String
 
-  @@unique([ruleId, sessionTypeId])
+  @@unique([ruleId, userFlowId])
 }
 
 model RuleExecution {
-  id                String          @id @default(cuid())
+  id                String          @id @default(dbgenerated("nanoid()"))
   createdAt         DateTime        @default(now())
   evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
   evaluableActionId String
@@ -264,7 +264,7 @@ model RuleExecution {
 // Lists
 
 model List {
-  id        String     @id @default(cuid())
+  id        String     @id @default(dbgenerated("nanoid()"))
   updatedAt DateTime   @updatedAt
   createdAt DateTime   @default(now())
   name      String
@@ -275,7 +275,7 @@ model List {
 }
 
 model ListItem {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
   value     String
@@ -290,7 +290,7 @@ model ListItem {
 
 // Evaluable Action Type: Payment Attempt
 model Card {
-  id          String   @id @default(cuid())
+  id          String   @id @default(dbgenerated("nanoid()"))
   fingerprint String   @unique
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
@@ -312,7 +312,7 @@ model Card {
 }
 
 model PaymentMethod {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   customId  String?  @unique
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
@@ -336,7 +336,7 @@ model PaymentMethod {
 }
 
 model PaymentAttempt {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -369,7 +369,7 @@ enum PaymentOutcomeStatus {
 }
 
 model PaymentOutcome {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("nanoid()"))
   customId  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -386,7 +386,7 @@ model PaymentOutcome {
 }
 
 model StripePaymentOutcome {
-  id               String         @id @default(cuid())
+  id               String         @id @default(dbgenerated("nanoid()"))
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   networkStatus    String?

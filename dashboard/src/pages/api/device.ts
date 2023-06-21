@@ -8,7 +8,7 @@ import { env } from "~/env.mjs";
 import { getIpData, maxMind } from "~/server/lib/maxMind";
 import { prisma } from "../../server/db";
 import cors from "nextjs-cors";
-import { SessionType } from "../../common/types";
+import { UserFlow } from "../../common/types";
 
 const componentSchema = z.object({
   value: z.any(),
@@ -104,13 +104,13 @@ export default async function handler(
     update: {},
     create: {
       customId: paymentIntentId,
-      type: {
+      userFlow: {
         connectOrCreate: {
           where: {
-            name: SessionType.StripePayment,
+            name: UserFlow.StripePayment,
           },
           create: {
-            name: SessionType.StripePayment,
+            name: UserFlow.StripePayment,
           },
         },
       },

@@ -19,13 +19,13 @@ Table User {
   ipAddressLinks UserIpAddressLink [not null]
 }
 
-Table SessionType {
+Table UserFlow {
   id String [pk]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   name String [unique, not null]
   sessions Session [not null]
-  rules RuleToSessionType [not null]
+  rules RuleToUserFlow [not null]
 }
 
 Table Session {
@@ -33,8 +33,8 @@ Table Session {
   customId String [unique]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  type SessionType [not null]
-  typeId String [not null]
+  userFlow UserFlow [not null]
+  userFlowId String [not null]
   user User
   userId String
   deviceSnapshot DeviceSnapshot
@@ -169,20 +169,20 @@ Table Rule {
   currentRuleSnapshot RuleSnapshot [not null]
   currentRuleSnapshotId String [unique, not null]
   ruleSnapshots RuleSnapshot [not null]
-  sessionTypes RuleToSessionType [not null]
+  userFlows RuleToUserFlow [not null]
 }
 
-Table RuleToSessionType {
+Table RuleToUserFlow {
   id String [pk]
   updatedAt DateTime [not null]
   createdAt DateTime [default: `now()`, not null]
   rule Rule [not null]
   ruleId String [not null]
-  sessionType SessionType [not null]
-  sessionTypeId String [not null]
+  userFlow UserFlow [not null]
+  userFlowId String [not null]
 
   indexes {
-    (ruleId, sessionTypeId) [unique]
+    (ruleId, userFlowId) [unique]
   }
 }
 
@@ -425,7 +425,7 @@ Enum PaymentOutcomeStatus {
   PENDING
 }
 
-Ref: Session.typeId > SessionType.id
+Ref: Session.userFlowId > UserFlow.id
 
 Ref: Session.userId > User.id
 
@@ -447,9 +447,9 @@ Ref: RuleSnapshot.ruleId - Rule.id
 
 Ref: Rule.currentRuleSnapshotId - RuleSnapshot.id
 
-Ref: RuleToSessionType.ruleId > Rule.id
+Ref: RuleToUserFlow.ruleId > Rule.id
 
-Ref: RuleToSessionType.sessionTypeId > SessionType.id
+Ref: RuleToUserFlow.userFlowId > UserFlow.id
 
 Ref: RuleExecution.evaluableActionId > EvaluableAction.id
 

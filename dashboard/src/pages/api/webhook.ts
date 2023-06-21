@@ -5,7 +5,7 @@ import type { Readable } from "node:stream";
 import { prisma } from "~/server/db";
 import { PaymentOutcomeStatus } from "@prisma/client";
 import { create } from "node:domain";
-import { SessionType } from "../../common/types";
+import { UserFlow } from "../../common/types";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
@@ -65,10 +65,10 @@ export default async function handler(
           type: {
             connectOrCreate: {
               where: {
-                name: SessionType.StripePayment,
+                name: UserFlow.StripePayment,
               },
               create: {
-                name: SessionType.StripePayment,
+                name: UserFlow.StripePayment,
               },
             },
           },

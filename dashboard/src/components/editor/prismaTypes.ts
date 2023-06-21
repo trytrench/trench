@@ -15,10 +15,10 @@ type User = {
 }
 
 /**
- * Model SessionType
+ * Model UserFlow
  * 
  */
-type SessionType = {
+type UserFlow = {
   id: string
   createdAt: Date
   updatedAt: Date
@@ -34,7 +34,7 @@ type Session = {
   customId: string | null
   createdAt: Date
   updatedAt: Date
-  typeId: string
+  userFlowId: string
   userId: string | null
 }
 
@@ -178,15 +178,15 @@ type Rule = {
 }
 
 /**
- * Model RuleToSessionType
+ * Model RuleToUserFlow
  * 
  */
-type RuleToSessionType = {
+type RuleToUserFlow = {
   id: string
   updatedAt: Date
   createdAt: Date
   ruleId: string
-  sessionTypeId: string
+  userFlowId: string
 }
 
 /**

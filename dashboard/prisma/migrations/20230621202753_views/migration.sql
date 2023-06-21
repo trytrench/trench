@@ -125,3 +125,4 @@ FROM
 GROUP BY
     "Card"."id",
     "DeviceSnapshot"."ipAddressId";
+
