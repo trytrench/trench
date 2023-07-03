@@ -14,6 +14,9 @@ const EditRulePage: CustomPage = () => {
 
   const ruleId = router.query.ruleId as string;
 
+  const { isLoading: userFlowsLoading, data: userFlows } =
+    api.dashboard.userFlows.getAll.useQuery();
+
   const { data: ruleData } = api.dashboard.rules.get.useQuery(
     {
       id: ruleId,
@@ -30,6 +33,7 @@ const EditRulePage: CustomPage = () => {
       setRule({
         ...ruleData.currentRuleSnapshot,
         riskLevel: ruleData.currentRuleSnapshot.riskLevel as RiskLevel,
+        userFlow: ruleData.userFlows[0]?.userFlowId ?? "",
       });
     }
   }, [ruleData]);
@@ -62,7 +66,8 @@ const EditRulePage: CustomPage = () => {
     [editRule, ruleId, toast, router]
   );
 
-  if (!rule) return null;
+  if (!rule || !userFlows) return null;
+
   return (
     <RuleForm
       mode="edit"
@@ -72,6 +77,10 @@ const EditRulePage: CustomPage = () => {
       }}
       onSubmit={handleSubmit}
       loading={loadingEditRule}
+      userFlows={userFlows.map((userFlow) => ({
+        id: userFlow.id,
+        name: userFlow.name,
+      }))}
     />
   );
 };

@@ -79,6 +79,7 @@ type RuleInput = {
           };
         })
       | null;
+    kycAttempt: KycAttempt | null;
   };
   lists: Record<string, string[]>;
   transforms: {

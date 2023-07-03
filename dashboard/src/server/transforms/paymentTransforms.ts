@@ -7,7 +7,7 @@ import {
   ipDataNode,
 } from "./nodes/paymentMethodIpDistance";
 
-export const ruleInputNode = node
+export const paymentTransforms = node
   .depend({
     transforms: {
       aggregations: aggregationNode,
@@ -26,4 +26,4 @@ export const ruleInputNode = node
     };
   });
 
-export type RuleInput = inferNodeOutput<typeof ruleInputNode>;
+export type PaymentTransformInput = inferNodeOutput<typeof paymentTransforms>;

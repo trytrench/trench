@@ -9,7 +9,7 @@ import {
   type PaymentMethod,
 } from "@prisma/client";
 import { RiskLevel } from "../../common/types";
-import { type RuleInput } from "../transforms/ruleInput";
+import { type PaymentTransformInput } from "../transforms/paymentTransforms";
 
 function convertStringToFn(jsString: string) {
   if (jsString === "" || jsString === null) {
@@ -27,7 +27,7 @@ export function runRule({
     jsCode: string;
     riskLevel: string;
   };
-  input: RuleInput;
+  input: PaymentTransformInput;
 }) {
   try {
     const fn = convertStringToFn(rule.jsCode) as unknown as (
@@ -54,7 +54,7 @@ export function runRules({
   input,
 }: {
   rules: { jsCode: string; riskLevel: string }[];
-  input: RuleInput;
+  input: PaymentTransformInput;
 }) {
   const ruleExecutionResults = rules.map((rule) => runRule({ rule, input }));
 

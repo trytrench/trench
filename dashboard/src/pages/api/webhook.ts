@@ -1,10 +1,9 @@
+import { PaymentOutcomeStatus } from "@prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Readable } from "node:stream";
 import Stripe from "stripe";
 import { env } from "~/env.mjs";
-import type { Readable } from "node:stream";
 import { prisma } from "~/server/db";
-import { PaymentOutcomeStatus } from "@prisma/client";
-import { create } from "node:domain";
 import { UserFlow } from "../../common/types";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -62,7 +61,7 @@ export default async function handler(
         update: {},
         create: {
           customId: paymentIntent.id,
-          type: {
+          userFlow: {
             connectOrCreate: {
               where: {
                 name: UserFlow.StripePayment,
@@ -215,7 +214,7 @@ export default async function handler(
         if (paymentIntent.shipping) {
           await prisma.address.create({
             data: {
-              paymentAttempts: { connect: { id: evaluableAction.id } },
+              paymentAttempt: { connect: { id: evaluableAction.id } },
               city: paymentIntent.shipping?.address?.city,
               country: paymentIntent.shipping?.address?.country,
               line1: paymentIntent.shipping?.address?.line1,
@@ -258,6 +257,79 @@ export default async function handler(
       });
 
       console.log(`💵 Charge id: ${charge.id}`);
+      break;
+    case "identity.verification_session.requires_input":
+    case "identity.verification_session.verified":
+      const verificationSession = event.data
+        .object as Stripe.Identity.VerificationSession;
+
+      if (typeof verificationSession.last_verification_report !== "string")
+        throw new Error("No last verification report found");
+
+      const verificationReport =
+        await stripe.identity.verificationReports.retrieve(
+          verificationSession.last_verification_report,
+          { expand: ["document.dob", "document.expiration_date"] }
+        );
+
+      if (!verificationReport) throw new Error("No verification report found");
+      if (!verificationReport.document || !verificationReport.selfie)
+        throw new Error("No document or selfie found");
+
+      await prisma.evaluableAction.create({
+        data: {
+          session: {
+            connectOrCreate: {
+              where: { verificationSessionId: verificationSession.id },
+              create: {
+                verificationSessionId: verificationSession.id,
+                userFlow: {
+                  connectOrCreate: {
+                    where: { name: UserFlow.SellerKyc },
+                    create: { name: UserFlow.SellerKyc },
+                  },
+                },
+              },
+            },
+          },
+          kycAttempt: {
+            create: {
+              firstName: verificationReport.document.first_name,
+              lastName: verificationReport.document.last_name,
+              documentErrorReason: verificationReport.document.error?.reason,
+              documentErrorCode: verificationReport.document.error?.code,
+              dobDay: verificationReport.document.dob?.day,
+              dobMonth: verificationReport.document.dob?.month,
+              dobYear: verificationReport.document.dob?.year,
+              expiryDay: verificationReport.document.expiration_date?.day,
+              expiryMonth: verificationReport.document.expiration_date?.month,
+              expiryYear: verificationReport.document.expiration_date?.year,
+              issuedDay: verificationReport.document.issued_date?.day,
+              issuedMonth: verificationReport.document.issued_date?.month,
+              issuedYear: verificationReport.document.issued_date?.year,
+              documentStatus: verificationReport.document.status,
+              documentType: verificationReport.document.type,
+              issuingCountry: verificationReport.document.issuing_country,
+              address: {
+                create: {
+                  city: verificationReport.document.address?.city,
+                  country: verificationReport.document.address?.country,
+                  line1: verificationReport.document.address?.line1,
+                  line2: verificationReport.document.address?.line2,
+                  postalCode: verificationReport.document.address?.postal_code,
+                  state: verificationReport.document.address?.state,
+                },
+              },
+              selfieDocument: verificationReport.selfie.document,
+              selfieErrorReason: verificationReport.selfie.error?.reason,
+              selfieErrorCode: verificationReport.selfie.error?.code,
+              selfieFile: verificationReport.selfie.selfie,
+              selfieStatus: verificationReport.selfie.status,
+            },
+          },
+        },
+      });
+
       break;
     default:
       console.warn(`🤷‍♀️ Unhandled event type: ${event.type}`);

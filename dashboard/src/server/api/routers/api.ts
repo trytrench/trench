@@ -2,11 +2,13 @@ import superjson from "superjson";
 import Stripe from "stripe";
 import { z } from "zod";
 import { env } from "~/env.mjs";
-import { RiskLevel } from "../../../common/types";
+import { RiskLevel, UserFlow } from "../../../common/types";
 import { createTRPCRouter, openApiProcedure } from "../trpc";
-import { ruleInputNode } from "../../transforms/ruleInput";
+import { paymentTransforms } from "../../transforms/paymentTransforms";
 import { runRules } from "../../utils/rules";
 import { type Prisma } from "@prisma/client";
+import { kycTransforms } from "~/server/transforms/kycTransforms";
+import { last } from "lodash";
 
 const addressSchema = z.object({
   city: z.string().optional(),
@@ -23,11 +25,136 @@ const schema = z.object({
   paymentMethodId: z.string(),
 });
 
+const kycSchema = z.object({
+  verificationSessionId: z.string(),
+});
+
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
 
 export const apiRouter = createTRPCRouter({
+  kycAssess: openApiProcedure
+    .meta({ openapi: { method: "POST", path: "/kyc/assess" } })
+    .input(kycSchema)
+    .output(
+      z.object({
+        success: z.boolean(),
+        riskLevel: z.nativeEnum(RiskLevel),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Find the kycAttempt or session that was created associated to this verification session
+      const evaluableAction = await ctx.prisma.evaluableAction.findFirstOrThrow(
+        {
+          where: {
+            session: {
+              verificationSessionId: input.verificationSessionId,
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            kycAttempt: true,
+            // TODO: Remove
+            paymentAttempt: {
+              include: {
+                paymentMethod: {
+                  include: {
+                    card: true,
+                    address: true,
+                  },
+                },
+              },
+            },
+            session: {
+              include: {
+                user: true,
+                deviceSnapshot: {
+                  include: {
+                    ipAddress: {
+                      include: { location: true },
+                    },
+                    device: true,
+                  },
+                },
+              },
+            },
+          },
+        }
+      );
+
+      const [rules, lists] = await ctx.prisma.$transaction([
+        ctx.prisma.rule.findMany({
+          where: {
+            userFlows: {
+              some: {
+                userFlow: {
+                  name: UserFlow.SellerKyc,
+                },
+              },
+            },
+          },
+          include: {
+            currentRuleSnapshot: true,
+          },
+        }),
+        ctx.prisma.list.findMany({
+          include: {
+            items: true,
+          },
+        }),
+      ]);
+
+      const blockLists = lists.reduce((acc, list) => {
+        acc[list.alias] = list.items.map((item) => item.value);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      const ruleInput = await kycTransforms.run({
+        evaluableAction,
+        blockLists,
+      });
+
+      const { ruleExecutionResults, highestRiskLevel } = runRules({
+        rules: rules.map((rule) => rule.currentRuleSnapshot),
+        input: ruleInput,
+      });
+
+      await ctx.prisma.$transaction([
+        ctx.prisma.ruleExecution.createMany({
+          data: rules
+            .map((rule, index) => {
+              const result = ruleExecutionResults[index];
+              if (!result) {
+                return null;
+              }
+              return {
+                result: result?.result,
+                error: result?.error,
+                riskLevel: result.riskLevel,
+                evaluableActionId: evaluableAction.id,
+                ruleSnapshotId: rule.currentRuleSnapshot.id,
+              };
+            })
+            .filter(
+              (rule) => rule !== null
+            ) as Prisma.RuleExecutionCreateManyInput[],
+        }),
+        ctx.prisma.evaluableAction.update({
+          where: { id: evaluableAction.id },
+          data: {
+            riskLevel: highestRiskLevel,
+            transformsOutput: superjson.parse(
+              superjson.stringify(ruleInput.transforms)
+            ),
+          },
+        }),
+      ]);
+
+      return { success: true, riskLevel: highestRiskLevel };
+    }),
   transactionAssess: openApiProcedure
     .meta({ openapi: { method: "POST", path: "/payment/assess" } })
     .input(schema)
@@ -92,6 +219,7 @@ export const apiRouter = createTRPCRouter({
         throw new Error("No fingerprint found on payment method");
       }
 
+      // TODO: Move create to webhook?
       const evaluableAction = await ctx.prisma.evaluableAction.create({
         include: {
           paymentAttempt: {
@@ -183,7 +311,7 @@ export const apiRouter = createTRPCRouter({
       if (paymentIntent.shipping) {
         await ctx.prisma.address.create({
           data: {
-            paymentAttempts: { connect: { id: evaluableAction.id } },
+            paymentAttempt: { connect: { id: evaluableAction.id } },
             city: paymentIntent.shipping?.address?.city,
             country: paymentIntent.shipping?.address?.country,
             line1: paymentIntent.shipping?.address?.line1,
@@ -196,6 +324,15 @@ export const apiRouter = createTRPCRouter({
 
       const [rules, lists] = await ctx.prisma.$transaction([
         ctx.prisma.rule.findMany({
+          where: {
+            userFlows: {
+              some: {
+                userFlow: {
+                  name: UserFlow.StripePayment,
+                },
+              },
+            },
+          },
           include: {
             currentRuleSnapshot: true,
           },
@@ -211,12 +348,10 @@ export const apiRouter = createTRPCRouter({
         return acc;
       }, {} as Record<string, string[]>);
 
-      const ruleInput = await ruleInputNode.run({
+      const ruleInput = await paymentTransforms.run({
         evaluableAction,
         blockLists,
       });
-
-      // console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
 
       const { ruleExecutionResults, highestRiskLevel } = runRules({
         rules: rules.map((rule) => rule.currentRuleSnapshot),

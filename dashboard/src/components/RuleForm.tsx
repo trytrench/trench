@@ -29,6 +29,7 @@ import { RiskLevel } from "../common/types";
 const ruleSchema = z.object({
   name: z.string().nonempty(),
   description: z.string().nullable(),
+  userFlow: z.string().nonempty(),
   jsCode: z.string().nonempty(),
   tsCode: z.string().nonempty(),
   riskLevel: z.nativeEnum(RiskLevel),
@@ -175,6 +176,7 @@ interface RuleFormProps {
   onSubmit: (rule: RuleFormType) => void;
   loading: boolean;
   mode: "create" | "edit";
+  userFlows: { id: string; name: string }[];
 }
 
 export function RuleForm({
@@ -183,8 +185,9 @@ export function RuleForm({
   onSubmit,
   loading,
   mode,
+  userFlows,
 }: RuleFormProps) {
-  const { name, description, tsCode, jsCode, riskLevel } = rule;
+  const { name, description, tsCode, jsCode, riskLevel, userFlow } = rule;
 
   const toast = useToast();
 
@@ -240,6 +243,23 @@ export function RuleForm({
             }}
           />
         </FormControl>
+
+        <FormControl>
+          <FormLabel>User Flow</FormLabel>
+          <Select
+            value={userFlow}
+            onChange={(e) => {
+              onChange({ ...rule, userFlow: e.target.value });
+            }}
+          >
+            {userFlows?.map((userFlow) => (
+              <option key={userFlow.id} value={userFlow.id}>
+                {userFlow.name}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+
         <FormControl>
           <FormLabel>Risk Level</FormLabel>
           <Select
