@@ -4,7 +4,6 @@ import { env } from "~/env.mjs";
 import type { Readable } from "node:stream";
 import { prisma } from "~/server/db";
 import { PaymentOutcomeStatus } from "@prisma/client";
-import { create } from "node:domain";
 import { UserFlow } from "../../common/types";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -55,6 +54,33 @@ export default async function handler(
   }
 
   switch (event.type) {
+    case "review.opened":
+    case "review.closed": {
+      const review = event.data.object as Stripe.Review;
+
+      const chargeId = review.charge;
+      if (!(typeof chargeId === "string")) {
+        throw new Error("No charge id found on review");
+      }
+
+      await prisma.paymentAttempt.update({
+        where: {
+          customId: chargeId,
+        },
+        data: {
+          stripeReview: {
+            create: {
+              open: review.open,
+              reason: review.reason,
+              openedReason: review.opened_reason,
+              closedReason: review.closed_reason,
+            },
+          },
+        },
+      });
+      break;
+    }
+
     case "payment_intent.created":
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       await prisma.session.upsert({
@@ -62,7 +88,7 @@ export default async function handler(
         update: {},
         create: {
           customId: paymentIntent.id,
-          type: {
+          userFlow: {
             connectOrCreate: {
               where: {
                 name: UserFlow.StripePayment,
@@ -124,6 +150,7 @@ export default async function handler(
 
             paymentAttempt: {
               create: {
+                customId: charge.id,
                 amount: paymentIntent.amount,
                 currency: paymentIntent.currency,
                 description: paymentIntent.description,

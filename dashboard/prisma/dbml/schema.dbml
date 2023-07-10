@@ -267,6 +267,7 @@ Table PaymentMethod {
 
 Table PaymentAttempt {
   id String [pk]
+  customId String [unique]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   amount Int [not null]
@@ -276,6 +277,7 @@ Table PaymentAttempt {
   evaluableAction EvaluableAction [not null]
   evaluableActionId String [unique, not null]
   outcome PaymentOutcome
+  stripeReview StripePaymentReview
   paymentMethod PaymentMethod [not null]
   paymentMethodId String [not null]
   shippingName String
@@ -284,6 +286,18 @@ Table PaymentAttempt {
   shippingAddressId String
   ipAddressLinks PaymentAttemptIpAddressLink [not null]
   userLink UserPaymentAttemptLink
+}
+
+Table StripePaymentReview {
+  id String [pk]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  open Boolean [not null]
+  reason String [not null]
+  openedReason String [not null]
+  closedReason String
+  paymentAttempt PaymentAttempt [not null]
+  paymentAttemptId String [unique, not null]
 }
 
 Table PaymentOutcome {
@@ -466,6 +480,8 @@ Ref: PaymentAttempt.evaluableActionId - EvaluableAction.id
 Ref: PaymentAttempt.paymentMethodId > PaymentMethod.id
 
 Ref: PaymentAttempt.shippingAddressId > Address.id
+
+Ref: StripePaymentReview.paymentAttemptId - PaymentAttempt.id
 
 Ref: PaymentOutcome.paymentAttemptId - PaymentAttempt.id
 
