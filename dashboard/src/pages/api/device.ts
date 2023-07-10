@@ -99,21 +99,20 @@ export default async function handler(
 
   const userAgentData = userAgentFromString(fingerprint2Components.userAgent);
 
+  const userFlow = await prisma.userFlow.findFirst({
+    where: {
+      name: UserFlow.StripePayment,
+    },
+  });
+  if (!userFlow) throw new Error("User flow not found");
   const session = await prisma.session.upsert({
     where: { customId: paymentIntentId },
-    update: {},
+    update: {
+      customId: paymentIntentId,
+    },
     create: {
       customId: paymentIntentId,
-      userFlow: {
-        connectOrCreate: {
-          where: {
-            name: UserFlow.StripePayment,
-          },
-          create: {
-            name: UserFlow.StripePayment,
-          },
-        },
-      },
+      userFlowId: userFlow.id,
     },
   });
 
