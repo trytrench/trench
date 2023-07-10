@@ -21,6 +21,7 @@ export type Address = z.infer<typeof addressSchema>;
 const schema = z.object({
   paymentIntentId: z.string(),
   paymentMethodId: z.string(),
+  sessionId: z.string(),
 });
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -54,7 +55,7 @@ export const apiRouter = createTRPCRouter({
         throw new Error("No card found on payment method");
 
       const session = await ctx.prisma.session.update({
-        where: { customId: paymentIntent.id },
+        where: { customId: input.sessionId },
         data: {
           user:
             customer && typeof customer !== "string" && !customer.deleted
@@ -234,7 +235,7 @@ export const apiRouter = createTRPCRouter({
       const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
         latitude: ruleInput.transforms.paymentMethodLocation?.latitude,
         longitude: ruleInput.transforms.paymentMethodLocation?.longitude,
-        countryISOCode: ruleInput.transforms.paymentMethodLocation.countryCode,
+        countryISOCode: ruleInput.transforms.paymentMethodLocation?.countryCode,
       };
 
       await ctx.prisma.$transaction([
