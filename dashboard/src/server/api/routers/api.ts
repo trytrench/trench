@@ -223,12 +223,13 @@ export const apiRouter = createTRPCRouter({
         input: ruleInput,
       });
 
+      const ipData = ruleInput.transforms.ipData;
       const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
-        latitude: ruleInput.transforms.ipData.latitude,
-        longitude: ruleInput.transforms.ipData.longitude,
-        countryISOCode: ruleInput.transforms.ipData.countryISOCode,
-        countryName: ruleInput.transforms.ipData.countryName,
-        postalCode: ruleInput.transforms.ipData.postalCode,
+        latitude: ipData?.latitude,
+        longitude: ipData?.longitude,
+        countryISOCode: ipData?.countryISOCode,
+        countryName: ipData?.countryName,
+        postalCode: ipData?.postalCode,
       };
 
       const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
@@ -274,17 +275,17 @@ export const apiRouter = createTRPCRouter({
                 deviceSnapshot: {
                   update: {
                     ipAddress: {
-                      update: {
-                        metadata: ruleInput.transforms.ipData,
-                        location: ruleInput.transforms.ipData
-                          ? {
+                      update: ipData
+                        ? {
+                            metadata: ipData,
+                            location: {
                               upsert: {
                                 update: ipLocationUpdate,
                                 create: ipLocationUpdate,
                               },
-                            }
-                          : undefined,
-                      },
+                            },
+                          }
+                        : undefined,
                     },
                   },
                 },
