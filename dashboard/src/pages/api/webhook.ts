@@ -101,8 +101,7 @@ export default async function handler(
 
       await prisma.paymentOutcome.create({
         data: {
-          paymentAttemptId: charge.id,
-          // paymentAttempt: { connect: { customId: charge.id } },
+          paymentAttempt: { connect: { customId: charge.id } },
           status: stripeStatusToPaymentOutcomeStatus[charge.status],
           stripeOutcome: {
             create: {

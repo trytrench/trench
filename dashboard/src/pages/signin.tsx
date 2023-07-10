@@ -14,7 +14,10 @@ import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getCsrfToken } from "next-auth/react";
+import { getCsrfToken, signIn } from "next-auth/react";
+import { handleError } from "../lib/handleError";
+import { IoLogoGoogle } from "react-icons/io5";
+import { env } from "../env.mjs";
 
 export default function SignIn({
   csrfToken,
@@ -33,6 +36,23 @@ export default function SignIn({
             to enjoy all of our cool <Link color={"blue.400"}>features</Link> ✌️
           </Text> */}
         </Stack>
+
+        {env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN === "true" && (
+          <Button
+            onClick={() => {
+              signIn("google", {
+                callbackUrl: "/",
+              }).catch(handleError);
+            }}
+            display="flex"
+            alignItems="center"
+          >
+            <Box mr={2}>
+              <IoLogoGoogle />
+            </Box>
+            Sign in with Google
+          </Button>
+        )}
         <Box
           rounded={"lg"}
           bg={useColorModeValue("white", "gray.700")}
