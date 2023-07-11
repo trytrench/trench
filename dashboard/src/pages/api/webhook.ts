@@ -4,7 +4,6 @@ import { env } from "~/env.mjs";
 import type { Readable } from "node:stream";
 import { prisma } from "~/server/db";
 import { PaymentOutcomeStatus } from "@prisma/client";
-import { UserFlow } from "../../common/types";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
@@ -80,28 +79,21 @@ export default async function handler(
       });
       break;
     }
-    case "payment_intent.succeeded":
-      break;
-    case "payment_intent.payment_failed":
-      break;
     case "charge.succeeded":
     case "charge.failed": {
       const charge = event.data.object as Stripe.Charge;
-      // const [paymentMethod, paymentIntent] = await Promise.all([
-      //   stripe.paymentMethods.retrieve(charge.payment_method as string, {
-      //     expand: ["customer"],
-      //   }),
-      //   stripe.paymentIntents.retrieve(charge.payment_intent as string, {
-      //     expand: ["customer"],
-      //   }),
-      // ]);
 
-      // if (!paymentMethod.card)
-      //   throw new Error("No card found on payment method");
+      if (typeof charge.payment_intent !== "string")
+        throw new Error("No payment intent id");
+
+      const paymentAttempt = await prisma.paymentAttempt.findFirstOrThrow({
+        where: { paymentIntentId: charge.payment_intent },
+      });
 
       await prisma.paymentOutcome.create({
         data: {
-          paymentAttempt: { connect: { customId: charge.id } },
+          chargeId: charge.id,
+          paymentAttempt: { connect: { id: paymentAttempt.id } },
           status: stripeStatusToPaymentOutcomeStatus[charge.status],
           stripeOutcome: {
             create: {

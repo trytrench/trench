@@ -17,7 +17,7 @@ const componentSchema = z.object({
 });
 
 const deviceSchema = z.object({
-  paymentIntentId: z.string(),
+  sessionId: z.string(),
   deviceToken: z.string().optional(),
   fingerprintComponents: z.object({
     ...mapValues(sources, () => componentSchema),
@@ -57,7 +57,7 @@ export default async function handler(
     fingerprintComponents,
     fingerprint2Components,
     isIncognito,
-    paymentIntentId,
+    sessionId,
   } = response.data;
 
   let existingDeviceId;
@@ -106,74 +106,89 @@ export default async function handler(
   });
   if (!userFlow) throw new Error("User flow not found");
   const session = await prisma.session.upsert({
-    where: { customId: paymentIntentId },
-    update: {
-      customId: paymentIntentId,
-    },
+    where: { customId: sessionId },
+    update: {},
     create: {
-      customId: paymentIntentId,
-      userFlowId: userFlow.id,
-    },
-  });
-
-  const deviceSnapshot = await prisma.deviceSnapshot.create({
-    data: {
-      session: { connect: { id: session.id } },
-      fingerprint: hashComponents(fingerprintComponents),
-      userAgent: fingerprint2Components.userAgent,
-      browserName: userAgentData.browser.name,
-      browserVersion: userAgentData.browser.version,
-      deviceModel: userAgentData.device.model,
-      deviceType: userAgentData.device.type,
-      deviceVendor: userAgentData.device.vendor,
-      engineName: userAgentData.engine.name,
-      engineVersion: userAgentData.engine.version,
-      osName: userAgentData.os.name,
-      osVersion: userAgentData.os.version,
-      cpuArchitecture: userAgentData.cpu.architecture,
-      isIncognito,
-      reqUserAgent: req.headers["user-agent"],
-      screenResolution: Array.isArray(
-        fingerprintComponents.screenResolution.value
-      )
-        ? fingerprintComponents.screenResolution.value.join("x")
-        : undefined,
-      timezone:
-        typeof fingerprintComponents.timezone.value === "string"
-          ? fingerprintComponents.timezone.value
-          : undefined,
-      device: existingDeviceId
-        ? { connectOrCreate: { where: { id: existingDeviceId }, create: {} } }
-        : { create: {} },
-      ipAddress: existingIpAddress
-        ? { connect: { id: existingIpAddress.id } }
-        : ipAddress
-        ? {
-            create: {
-              ipAddress,
-              ...(ipData && {
-                location: {
-                  create: {
-                    latitude: ipData.latitude,
-                    longitude: ipData.longitude,
-                    cityGeonameId: ipData.cityGeonameId,
-                    cityName: ipData.cityName,
-                    countryISOCode: ipData.countryISOCode,
-                    countryName: ipData.countryName,
-                    postalCode: ipData.postalCode,
-                    regionISOCode: ipData.subdivisionISOCode,
-                    regionName: ipData.subdivisionName,
-                  },
+      customId: sessionId,
+      userFlow: {
+        connectOrCreate: {
+          where: {
+            name: UserFlow.StripePayment,
+          },
+          create: {
+            name: UserFlow.StripePayment,
+          },
+        },
+      },
+      deviceSnapshot: {
+        create: {
+          fingerprint: hashComponents(fingerprintComponents),
+          userAgent: fingerprint2Components.userAgent,
+          browserName: userAgentData.browser.name,
+          browserVersion: userAgentData.browser.version,
+          deviceModel: userAgentData.device.model,
+          deviceType: userAgentData.device.type,
+          deviceVendor: userAgentData.device.vendor,
+          engineName: userAgentData.engine.name,
+          engineVersion: userAgentData.engine.version,
+          osName: userAgentData.os.name,
+          osVersion: userAgentData.os.version,
+          cpuArchitecture: userAgentData.cpu.architecture,
+          isIncognito,
+          reqUserAgent: req.headers["user-agent"],
+          screenResolution: Array.isArray(
+            fingerprintComponents.screenResolution.value
+          )
+            ? fingerprintComponents.screenResolution.value.join("x")
+            : undefined,
+          timezone:
+            typeof fingerprintComponents.timezone.value === "string"
+              ? fingerprintComponents.timezone.value
+              : undefined,
+          device: existingDeviceId
+            ? {
+                connectOrCreate: {
+                  where: { id: existingDeviceId },
+                  create: {},
                 },
-                metadata: ipData,
-              }),
-            },
-          }
-        : undefined,
+              }
+            : { create: {} },
+          ipAddress: existingIpAddress
+            ? { connect: { id: existingIpAddress.id } }
+            : ipAddress
+            ? {
+                create: {
+                  ipAddress,
+                  ...(ipData && {
+                    location: {
+                      create: {
+                        latitude: ipData.latitude,
+                        longitude: ipData.longitude,
+                        cityGeonameId: ipData.cityGeonameId,
+                        cityName: ipData.cityName,
+                        countryISOCode: ipData.countryISOCode,
+                        countryName: ipData.countryName,
+                        postalCode: ipData.postalCode,
+                        regionISOCode: ipData.subdivisionISOCode,
+                        regionName: ipData.subdivisionName,
+                      },
+                    },
+                    metadata: ipData,
+                  }),
+                },
+              }
+            : undefined,
+        },
+      },
+    },
+    include: {
+      deviceSnapshot: true,
     },
   });
 
-  const { deviceId } = deviceSnapshot;
+  if (!session.deviceSnapshot) throw new Error("No device snapshot");
+
+  const { deviceId } = session.deviceSnapshot;
   const token = jwt.sign({ deviceId }, env.JWT_SECRET);
 
   res.status(200).json({ deviceId, deviceToken: token });
