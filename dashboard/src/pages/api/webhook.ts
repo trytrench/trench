@@ -62,9 +62,19 @@ export default async function handler(
         throw new Error("review charge is not a string");
       }
 
+      const outcome = await prisma.paymentOutcome.findFirst({
+        where: {
+          chargeId: chargeId,
+        },
+      });
+
+      if (!outcome) {
+        throw new Error("No outcome found for charge");
+      }
+
       await prisma.paymentAttempt.update({
         where: {
-          customId: chargeId,
+          id: outcome.paymentAttemptId,
         },
         data: {
           stripeReview: {
