@@ -6,10 +6,6 @@ generator client {
   previewFeatures = ["views", "fullTextSearch", "filteredRelationCount"]
 }
 
-generator dbml {
-  provider = "prisma-dbml-generator"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("POSTGRES_PRISMA_URL")
@@ -68,10 +64,10 @@ model EvaluableAction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transformsOutput Json?    
+  transformsOutput Json?
   riskLevel        String?
-  
-  isFraud          Boolean @default(false)
+
+  isFraud Boolean @default(false)
 
   session   Session @relation(fields: [sessionId], references: [id])
   sessionId String
@@ -86,7 +82,7 @@ model Event {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type    String
+  type       String
   properties Json   @default("{}")
 
   session   Session @relation(fields: [sessionId], references: [id])
@@ -200,18 +196,18 @@ model Address {
 // Rules
 
 model RuleSnapshot {
-  id           String          @id @default(dbgenerated("nanoid()"))
-  updatedAt    DateTime        @updatedAt
-  createdAt    DateTime        @default(now())
+  id        String   @id @default(dbgenerated("nanoid()"))
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
-  name         String
-  description  String?
-  tsCode       String
-  jsCode       String
-  riskLevel    String
+  name        String
+  description String?
+  tsCode      String
+  jsCode      String
+  riskLevel   String
 
-  rule        Rule?     @relation("ruleSnapshots", fields: [ruleId], references: [id])
-  ruleId       String?
+  rule   Rule?   @relation("ruleSnapshots", fields: [ruleId], references: [id])
+  ruleId String?
 
   currentRule Rule? @relation("currentRuleSnapshot")
 
@@ -219,27 +215,26 @@ model RuleSnapshot {
 }
 
 model Rule {
-  id           String          @id @default(dbgenerated("nanoid()"))
-  updatedAt    DateTime        @updatedAt
-  createdAt    DateTime        @default(now())
+  id        String   @id @default(dbgenerated("nanoid()"))
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
+  currentRuleSnapshot   RuleSnapshot @relation("currentRuleSnapshot", fields: [currentRuleSnapshotId], references: [id])
+  currentRuleSnapshotId String       @unique
 
-  currentRuleSnapshot RuleSnapshot @relation("currentRuleSnapshot", fields: [currentRuleSnapshotId], references: [id])
-  currentRuleSnapshotId String @unique
-
-  ruleSnapshots RuleSnapshot[] @relation("ruleSnapshots")
-  userFlows RuleToUserFlow[]
+  ruleSnapshots RuleSnapshot[]   @relation("ruleSnapshots")
+  userFlows     RuleToUserFlow[]
 }
 
 model RuleToUserFlow {
-  id           String   @id @default(dbgenerated("nanoid()"))
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  id        String   @id @default(dbgenerated("nanoid()"))
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
-  rule         Rule     @relation(fields: [ruleId], references: [id])
-  ruleId       String
+  rule   Rule   @relation(fields: [ruleId], references: [id])
+  ruleId String
 
-  userFlow  UserFlow @relation(fields: [userFlowId], references: [id])
+  userFlow   UserFlow @relation(fields: [userFlowId], references: [id])
   userFlowId String
 
   @@unique([ruleId, userFlowId])
@@ -251,12 +246,12 @@ model RuleExecution {
   evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
   evaluableActionId String
 
-  ruleSnapshot              RuleSnapshot            @relation(fields: [ruleSnapshotId], references: [id])
-  ruleSnapshotId            String
+  ruleSnapshot   RuleSnapshot @relation(fields: [ruleSnapshotId], references: [id])
+  ruleSnapshotId String
 
-  result            Boolean?
-  error             String?
-  riskLevel         String
+  result    Boolean?
+  error     String?
+  riskLevel String
 
   @@unique([evaluableActionId, ruleSnapshotId])
 }
@@ -358,6 +353,8 @@ model PaymentAttempt {
   shippingAddress   Address? @relation(fields: [shippingAddressId], references: [id])
   shippingAddressId String?
 
+  paymentIntentId String?
+
   ipAddressLinks PaymentAttemptIpAddressLink[]
   userLink       UserPaymentAttemptLink?
 }
@@ -380,6 +377,7 @@ model PaymentOutcome {
   threeDSecureResult       String?
   threeDSecureResultReason String?
   threeDSecureVersion      String?
+  chargeId                 String?               @unique
 
   paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
   paymentAttemptId String         @unique

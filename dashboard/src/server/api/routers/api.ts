@@ -129,6 +129,7 @@ export const apiRouter = createTRPCRouter({
               metadata: paymentIntent.metadata,
               shippingName: paymentIntent.shipping?.name,
               shippingPhone: paymentIntent.shipping?.phone,
+              paymentIntentId: paymentIntent.id,
               paymentMethod: {
                 connectOrCreate: {
                   where: { customId: paymentMethod.id },
