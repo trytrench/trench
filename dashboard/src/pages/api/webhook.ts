@@ -60,14 +60,10 @@ export default async function handler(
       if (typeof charge.payment_intent !== "string")
         throw new Error("No payment intent id");
 
-      const paymentAttempt = await prisma.paymentAttempt.findFirstOrThrow({
-        where: { paymentIntentId: charge.payment_intent },
-      });
-
       await prisma.paymentOutcome.create({
         data: {
           chargeId: charge.id,
-          paymentAttempt: { connect: { id: paymentAttempt.id } },
+          paymentAttempt: { connect: { id: charge.metadata.paymentAttemptId } },
           status: stripeStatusToPaymentOutcomeStatus[charge.status],
           stripeOutcome: {
             create: {
