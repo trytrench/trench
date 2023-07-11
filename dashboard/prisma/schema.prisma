@@ -54,6 +54,8 @@ model Session {
   user           User?           @relation(fields: [userId], references: [id])
   userId         String?
   deviceSnapshot DeviceSnapshot?
+  
+  stripeReview StripePaymentReview?
 
   events           Event[]
   evaluableActions EvaluableAction[]
@@ -349,7 +351,6 @@ model PaymentAttempt {
   evaluableActionId String          @unique
 
   outcome PaymentOutcome?
-  stripeReview StripePaymentReview?
 
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId String
@@ -384,8 +385,8 @@ model StripePaymentReview {
   
 
 
-  paymentAttempt   PaymentAttempt @relation(fields: [paymentAttemptId], references: [id])
-  paymentAttemptId String         @unique
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String @unique
 }
 
 model PaymentOutcome {

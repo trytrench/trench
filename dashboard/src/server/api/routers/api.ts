@@ -22,6 +22,7 @@ const schema = z.object({
   paymentIntentId: z.string(),
   paymentMethodId: z.string(),
   sessionId: z.string(),
+  metadata: z.record(z.any()).optional(),
 });
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -126,7 +127,7 @@ export const apiRouter = createTRPCRouter({
               amount: paymentIntent.amount,
               currency: paymentIntent.currency,
               description: paymentIntent.description,
-              metadata: paymentIntent.metadata,
+              metadata: input.metadata || paymentIntent.metadata,
               shippingName: paymentIntent.shipping?.name,
               shippingPhone: paymentIntent.shipping?.phone,
               paymentIntentId: paymentIntent.id,
@@ -181,6 +182,9 @@ export const apiRouter = createTRPCRouter({
           },
         },
       });
+
+      if (!evaluableAction.paymentAttempt)
+        throw new Error("No payment attempt");
 
       if (paymentIntent.shipping) {
         await ctx.prisma.address.create({
@@ -320,7 +324,7 @@ export const apiRouter = createTRPCRouter({
       return {
         success: true,
         riskLevel: highestRiskLevel,
-        paymentAttemptId: evaluableAction.id,
+        paymentAttemptId: evaluableAction.paymentAttempt.id,
       };
     }),
 });
