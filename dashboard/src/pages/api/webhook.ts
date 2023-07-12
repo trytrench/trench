@@ -53,8 +53,52 @@ export default async function handler(
   }
 
   switch (event.type) {
+    case "review.opened":
+    case "review.closed": {
+      const review = event.data.object as Stripe.Review;
+
+      if (typeof review.charge === "string") {
+        throw new Error("webhook payload has charge as string");
+      }
+
+      const chargeId = review.charge?.id;
+
+      const outcome = await prisma.paymentOutcome.findFirst({
+        include: {
+          paymentAttempt: {
+            include: {
+              evaluableAction: true,
+            },
+          },
+        },
+        where: {
+          chargeId: chargeId,
+        },
+      });
+
+      if (!outcome) {
+        throw new Error("No outcome found for charge");
+      }
+
+      await prisma.session.update({
+        where: {
+          id: outcome.paymentAttempt.evaluableAction.sessionId,
+        },
+        data: {
+          stripeReview: {
+            create: {
+              open: review.open,
+              reason: review.reason,
+              openedReason: review.opened_reason,
+              closedReason: review.closed_reason,
+            },
+          },
+        },
+      });
+      break;
+    }
     case "charge.succeeded":
-    case "charge.failed":
+    case "charge.failed": {
       const charge = event.data.object as Stripe.Charge;
 
       if (typeof charge.payment_intent !== "string")
@@ -90,6 +134,8 @@ export default async function handler(
 
       console.log(`💵 Charge id: ${charge.id}`);
       break;
+    }
+
     default:
       console.warn(`🤷‍♀️ Unhandled event type: ${event.type}`);
       break;

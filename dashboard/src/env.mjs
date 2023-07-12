@@ -12,12 +12,15 @@ export const env = createEnv({
     JWT_SECRET: z.string(),
     MAXMIND_ACCOUNT_ID: z.string().optional(),
     MAXMIND_LICENSE_KEY: z.string().optional(),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
     API_KEY: z.string(),
     ADMIN_USERNAME: z.string(),
     ADMIN_PASSWORD: z.string(),
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
+    NEXTAUTH_URL: z.string().url(),
   },
 
   /**
@@ -27,6 +30,7 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: z.string().optional(),
+    NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN: z.enum(["true", "false"]).optional(),
   },
 
   /**
@@ -34,6 +38,11 @@ export const env = createEnv({
    * middlewares) or client-side so we need to destruct manually.
    */
   runtimeEnv: {
+    NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN:
+      process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN === "true" ? "true" : "false",
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL,
     NODE_ENV: process.env.NODE_ENV,
     JWT_SECRET: process.env.JWT_SECRET,

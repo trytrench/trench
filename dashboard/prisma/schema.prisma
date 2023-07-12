@@ -54,10 +54,14 @@ model Session {
   user           User?           @relation(fields: [userId], references: [id])
   userId         String?
   deviceSnapshot DeviceSnapshot?
+  
+  stripeReview StripePaymentReview?
 
   events           Event[]
   evaluableActions EvaluableAction[]
 }
+
+
 
 model EvaluableAction {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -330,8 +334,11 @@ model PaymentMethod {
   userLink UserPaymentMethodLink?
 }
 
+
+
 model PaymentAttempt {
   id        String   @id @default(dbgenerated("nanoid()"))
+  customId  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -363,6 +370,23 @@ enum PaymentOutcomeStatus {
   SUCCEEDED
   FAILED
   PENDING
+}
+
+// https://stripe.com/docs/api/radar/reviews/object
+model StripePaymentReview {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  open   Boolean
+  reason String
+  openedReason String
+  closedReason String?
+  
+
+
+  session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String @unique
 }
 
 model PaymentOutcome {

@@ -6,6 +6,7 @@ import {
   type DefaultSession,
 } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
 
@@ -51,12 +52,33 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
+    signIn({ account, profile }) {
+      // if (account?.provider === "google") {
+      //   return profile?.email?.endsWith("@example.com") ?? false;
+      // }
+      return true; // Do different verification for other providers that don't have `email_verified`
+    },
   },
   pages: {
     signIn: "/signin",
   },
   // adapter: PrismaAdapter(prisma),
   providers: [
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                prompt: "consent",
+                access_type: "offline",
+                response_type: "code",
+              },
+            },
+          }),
+        ]
+      : []),
     CredentialsProvider({
       // The name to display on the sign in form (e.g. "Sign in with...")
       name: "Credentials",
