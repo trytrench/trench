@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { handleError } from "../../lib/handleError";
 import { useRouter } from "next/router";
 import { RuleForm, type RuleFormType } from "../../components/RuleForm";
-import { RiskLevel } from "@prisma/client";
+import { RiskLevel } from "../../common/types";
 
 const RulesPage: CustomPage = () => {
   const router = useRouter();

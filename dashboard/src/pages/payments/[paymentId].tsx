@@ -47,6 +47,7 @@ import { nanoid } from "nanoid";
 import { handleError } from "~/lib/handleError";
 import { format } from "date-fns";
 import NextLink from "next/link";
+import { RuleModal } from "../../components/RuleModal";
 
 type EvaluableAction = RouterOutputs["dashboard"]["evaluableActions"]["get"];
 type BlockListItem = {
@@ -240,6 +241,12 @@ const columns: ColumnDef<ExecutedRuleRow>[] = [
     accessorKey: "riskLevel",
     cell: ({ row }) => {
       return <RiskLevelTag riskLevel={row.original.riskLevel} />;
+    },
+  },
+  {
+    header: "Rule Info",
+    cell({ row }) {
+      return <RuleModal ruleSnapshot={row.original.ruleSnapshot} />;
     },
   },
 ];
