@@ -10,7 +10,6 @@ export const findManyZod = z.object({
     // Directly corresponds to search bar filters
     userId: z.string().optional(),
     email: z.string().optional(),
-    ruleSnapshotId: z.string().optional(),
     riskLevel: z.nativeEnum(RiskLevel).optional(),
     isFraud: z.boolean().optional(),
 
@@ -20,6 +19,7 @@ export const findManyZod = z.object({
     // sellerName: z.string().optional(),
     // sellerId: z.string().optional(),
   }),
+  executedRuleSnapshotId: z.string().optional(),
   linkedTo: z
     .object({
       // Other evaluable actions that are linked to this one
@@ -100,10 +100,10 @@ export function getFindManyWhereArgs(input: FindManyArgs) {
           }
         : undefined,
     },
-    ruleExecutions: filters?.ruleSnapshotId
+    ruleExecutions: input.executedRuleSnapshotId
       ? {
           some: {
-            ruleSnapshotId: filters.ruleSnapshotId,
+            ruleSnapshotId: input.executedRuleSnapshotId,
             result: true,
           },
         }
