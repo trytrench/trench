@@ -7,7 +7,7 @@ import {
   getHasLiedResolution,
 } from "./utils/fingerprint2";
 
-export const initialize = async (baseUrl: string, clientSecret: string) => {
+export const initialize = async (baseUrl: string, sessionId: string) => {
   const fp = await FingerprintJS.load({ monitoring: false });
   const { components } = await fp.get();
 
@@ -21,7 +21,7 @@ export const initialize = async (baseUrl: string, clientSecret: string) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        paymentIntentId: clientSecret.split("_secret")[0],
+        sessionId,
         isIncognito: incognitoResult?.isPrivate,
         fingerprintComponents: components,
         fingerprint2Components: {

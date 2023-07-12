@@ -23,6 +23,8 @@ export type Address = z.infer<typeof addressSchema>;
 const schema = z.object({
   paymentIntentId: z.string(),
   paymentMethodId: z.string(),
+  sessionId: z.string(),
+  metadata: z.record(z.any()).optional(),
 });
 
 const kycSchema = z.object({
@@ -181,7 +183,7 @@ export const apiRouter = createTRPCRouter({
         throw new Error("No card found on payment method");
 
       const session = await ctx.prisma.session.update({
-        where: { customId: paymentIntent.id },
+        where: { customId: input.sessionId },
         data: {
           user:
             customer && typeof customer !== "string" && !customer.deleted
@@ -253,9 +255,10 @@ export const apiRouter = createTRPCRouter({
               amount: paymentIntent.amount,
               currency: paymentIntent.currency,
               description: paymentIntent.description,
-              metadata: paymentIntent.metadata,
+              metadata: input.metadata || paymentIntent.metadata,
               shippingName: paymentIntent.shipping?.name,
               shippingPhone: paymentIntent.shipping?.phone,
+              paymentIntentId: paymentIntent.id,
               paymentMethod: {
                 connectOrCreate: {
                   where: { customId: paymentMethod.id },
@@ -308,6 +311,9 @@ export const apiRouter = createTRPCRouter({
         },
       });
 
+      if (!evaluableAction.paymentAttempt)
+        throw new Error("No payment attempt");
+
       if (paymentIntent.shipping) {
         await ctx.prisma.address.create({
           data: {
@@ -358,18 +364,19 @@ export const apiRouter = createTRPCRouter({
         input: ruleInput,
       });
 
+      const ipData = ruleInput.transforms.ipData;
       const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
-        latitude: ruleInput.transforms.ipData.latitude,
-        longitude: ruleInput.transforms.ipData.longitude,
-        countryISOCode: ruleInput.transforms.ipData.countryISOCode,
-        countryName: ruleInput.transforms.ipData.countryName,
-        postalCode: ruleInput.transforms.ipData.postalCode,
+        latitude: ipData?.latitude,
+        longitude: ipData?.longitude,
+        countryISOCode: ipData?.countryISOCode,
+        countryName: ipData?.countryName,
+        postalCode: ipData?.postalCode,
       };
 
       const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
         latitude: ruleInput.transforms.paymentMethodLocation?.latitude,
         longitude: ruleInput.transforms.paymentMethodLocation?.longitude,
-        countryISOCode: ruleInput.transforms.paymentMethodLocation.countryCode,
+        countryISOCode: ruleInput.transforms.paymentMethodLocation?.countryCode,
       };
 
       await ctx.prisma.$transaction([
@@ -409,17 +416,17 @@ export const apiRouter = createTRPCRouter({
                 deviceSnapshot: {
                   update: {
                     ipAddress: {
-                      update: {
-                        metadata: ruleInput.transforms.ipData,
-                        location: ruleInput.transforms.ipData
-                          ? {
+                      update: ipData
+                        ? {
+                            metadata: ipData,
+                            location: {
                               upsert: {
                                 update: ipLocationUpdate,
                                 create: ipLocationUpdate,
                               },
-                            }
-                          : undefined,
-                      },
+                            },
+                          }
+                        : undefined,
                     },
                   },
                 },
@@ -452,7 +459,7 @@ export const apiRouter = createTRPCRouter({
       return {
         success: true,
         riskLevel: highestRiskLevel,
-        paymentAttemptId: evaluableAction.id,
+        paymentAttemptId: evaluableAction.paymentAttempt.id,
       };
     }),
 });

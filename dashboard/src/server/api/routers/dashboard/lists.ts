@@ -138,7 +138,9 @@ export const listsRouter = createTRPCRouter({
             where: {
               alias,
             },
-            update: {},
+            update: {
+              alias,
+            },
             create: {
               alias,
               name: DEFAULT_BLOCKLISTS[alias].name,
@@ -167,7 +169,10 @@ export const listsRouter = createTRPCRouter({
                 value: item.value,
               },
             },
-            update: {},
+            update: {
+              listId: item.listId,
+              value: item.value,
+            },
             create: item,
           })
         )

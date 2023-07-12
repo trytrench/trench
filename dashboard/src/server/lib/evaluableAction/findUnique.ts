@@ -14,6 +14,7 @@ export function getFindUniqueIncludeArgs(actionType?: EvaluableActionType) {
     session: {
       include: {
         user: true,
+        stripeReview: true,
         deviceSnapshot: {
           include: {
             device: true,

@@ -34,6 +34,7 @@ export function getFindManyIncludeArgs(actionType?: EvaluableActionType) {
   const baseArgs = {
     session: {
       include: {
+        stripeReview: true,
         user: true,
         deviceSnapshot: {
           include: {

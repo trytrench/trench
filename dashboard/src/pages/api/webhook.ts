@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
 import { UserFlow } from "../../common/types";
+import { PaymentOutcomeStatus } from "@prisma/client";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
@@ -54,183 +55,60 @@ export default async function handler(
   }
 
   switch (event.type) {
-    case "payment_intent.created":
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await prisma.session.upsert({
-        where: { customId: paymentIntent.id },
-        update: {},
-        create: {
-          customId: paymentIntent.id,
-          userFlow: {
-            connectOrCreate: {
-              where: {
-                name: UserFlow.StripePayment,
-              },
-              create: {
-                name: UserFlow.StripePayment,
-              },
+    case "review.opened":
+    case "review.closed": {
+      const review = event.data.object as Stripe.Review;
+
+      if (typeof review.charge === "string") {
+        throw new Error("webhook payload has charge as string");
+      }
+
+      const chargeId = review.charge?.id;
+
+      const outcome = await prisma.paymentOutcome.findFirst({
+        include: {
+          paymentAttempt: {
+            include: {
+              evaluableAction: true,
+            },
+          },
+        },
+        where: {
+          chargeId: chargeId,
+        },
+      });
+
+      if (!outcome) {
+        throw new Error("No outcome found for charge");
+      }
+
+      await prisma.session.update({
+        where: {
+          id: outcome.paymentAttempt.evaluableAction.sessionId,
+        },
+        data: {
+          stripeReview: {
+            create: {
+              open: review.open,
+              reason: review.reason,
+              openedReason: review.opened_reason,
+              closedReason: review.closed_reason,
             },
           },
         },
       });
       break;
-    case "payment_intent.succeeded":
-      break;
-    case "payment_intent.payment_failed":
-      break;
+    }
     case "charge.succeeded":
-    case "charge.failed":
+    case "charge.failed": {
       const charge = event.data.object as Stripe.Charge;
-      if (!charge.metadata.paymentAttemptId) {
-        const [paymentMethod, paymentIntent] = await Promise.all([
-          stripe.paymentMethods.retrieve(charge.payment_method as string, {
-            expand: ["customer"],
-          }),
-          stripe.paymentIntents.retrieve(charge.payment_intent as string, {
-            expand: ["customer"],
-          }),
-        ]);
 
-        if (!paymentMethod.card)
-          throw new Error("No card found on payment method");
-
-        const evaluableAction = await prisma.evaluableAction.create({
-          include: {
-            paymentAttempt: {
-              include: {
-                paymentMethod: {
-                  include: {
-                    card: true,
-                    address: true,
-                  },
-                },
-              },
-            },
-            session: {
-              include: {
-                user: true,
-                deviceSnapshot: {
-                  include: {
-                    ipAddress: true,
-                    device: true,
-                  },
-                },
-              },
-            },
-          },
-          data: {
-            session: { connect: { customId: paymentIntent.id } },
-
-            paymentAttempt: {
-              create: {
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                description: paymentIntent.description,
-                metadata: paymentIntent.metadata,
-                shippingName: paymentIntent.shipping?.name,
-                shippingPhone: paymentIntent.shipping?.phone,
-                outcome: {
-                  create: {
-                    status: stripeStatusToPaymentOutcomeStatus[charge.status],
-                    stripeOutcome: {
-                      create: {
-                        networkStatus: charge.outcome?.network_status,
-                        reason: charge.outcome?.reason,
-                        riskLevel: charge.outcome?.risk_level,
-                        riskScore: charge.outcome?.risk_score,
-                        rule: charge.outcome?.rule as object,
-                        sellerMessage: charge.outcome?.seller_message,
-                        type: charge.outcome?.type,
-                      },
-                    },
-                    threeDSecureFlow:
-                      charge.payment_method_details?.card?.three_d_secure
-                        ?.authentication_flow,
-                    threeDSecureResult:
-                      charge.payment_method_details?.card?.three_d_secure
-                        ?.result,
-                    threeDSecureResultReason:
-                      charge.payment_method_details?.card?.three_d_secure
-                        ?.result_reason,
-                    threeDSecureVersion:
-                      charge.payment_method_details?.card?.three_d_secure
-                        ?.version,
-                  },
-                },
-                paymentMethod: {
-                  connectOrCreate: {
-                    where: { customId: paymentMethod.id },
-                    create: {
-                      customId: paymentMethod.id,
-                      name: paymentMethod.billing_details.name,
-                      email: paymentMethod.billing_details.email,
-                      address: {
-                        create: {
-                          city: paymentMethod.billing_details.address?.city,
-                          country:
-                            paymentMethod.billing_details.address?.country,
-                          line1: paymentMethod.billing_details.address?.line1,
-                          line2: paymentMethod.billing_details.address?.line2,
-                          postalCode:
-                            paymentMethod.billing_details.address?.postal_code,
-                          state: paymentMethod.billing_details.address?.state,
-                        },
-                      },
-                      cvcCheck: paymentMethod.card?.checks?.cvc_check,
-                      postalCodeCheck:
-                        paymentMethod.card?.checks?.address_postal_code_check,
-                      addressLine1Check:
-                        paymentMethod.card?.checks?.address_line1_check,
-                      cardWallet: paymentMethod.card?.wallet?.type,
-                      card: {
-                        connectOrCreate: {
-                          where: {
-                            fingerprint: paymentMethod.card.fingerprint!,
-                          },
-                          create: {
-                            fingerprint: paymentMethod.card.fingerprint!,
-                            bin: paymentMethod.card.iin,
-                            brand: paymentMethod.card.brand,
-                            country: paymentMethod.card.country,
-                            last4: paymentMethod.card.last4,
-                            funding: paymentMethod.card.funding,
-                            issuer: paymentMethod.card.issuer,
-                            expiryMonth: paymentMethod.card.exp_month,
-                            expiryYear: paymentMethod.card.exp_year,
-                            threeDSecureSupported:
-                              paymentMethod.card.three_d_secure_usage
-                                ?.supported,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (paymentIntent.shipping) {
-          await prisma.address.create({
-            data: {
-              paymentAttempt: { connect: { id: evaluableAction.id } },
-              city: paymentIntent.shipping?.address?.city,
-              country: paymentIntent.shipping?.address?.country,
-              line1: paymentIntent.shipping?.address?.line1,
-              line2: paymentIntent.shipping?.address?.line2,
-              postalCode: paymentIntent.shipping?.address?.postal_code,
-              state: paymentIntent.shipping?.address?.state,
-            },
-          });
-        }
-
-        res.json({ received: true });
-        return;
-      }
+      if (typeof charge.payment_intent !== "string")
+        throw new Error("No payment intent id");
 
       await prisma.paymentOutcome.create({
         data: {
+          chargeId: charge.id,
           paymentAttempt: { connect: { id: charge.metadata.paymentAttemptId } },
           status: stripeStatusToPaymentOutcomeStatus[charge.status],
           stripeOutcome: {
@@ -258,79 +136,8 @@ export default async function handler(
 
       console.log(`💵 Charge id: ${charge.id}`);
       break;
-    case "identity.verification_session.requires_input":
-    case "identity.verification_session.verified":
-      const verificationSession = event.data
-        .object as Stripe.Identity.VerificationSession;
+    }
 
-      if (typeof verificationSession.last_verification_report !== "string")
-        throw new Error("No last verification report found");
-
-      const verificationReport =
-        await stripe.identity.verificationReports.retrieve(
-          verificationSession.last_verification_report,
-          { expand: ["document.dob", "document.expiration_date"] }
-        );
-
-      if (!verificationReport) throw new Error("No verification report found");
-      if (!verificationReport.document || !verificationReport.selfie)
-        throw new Error("No document or selfie found");
-
-      await prisma.evaluableAction.create({
-        data: {
-          session: {
-            connectOrCreate: {
-              where: { verificationSessionId: verificationSession.id },
-              create: {
-                verificationSessionId: verificationSession.id,
-                userFlow: {
-                  connectOrCreate: {
-                    where: { name: UserFlow.SellerKyc },
-                    create: { name: UserFlow.SellerKyc },
-                  },
-                },
-              },
-            },
-          },
-          kycAttempt: {
-            create: {
-              firstName: verificationReport.document.first_name,
-              lastName: verificationReport.document.last_name,
-              documentErrorReason: verificationReport.document.error?.reason,
-              documentErrorCode: verificationReport.document.error?.code,
-              dobDay: verificationReport.document.dob?.day,
-              dobMonth: verificationReport.document.dob?.month,
-              dobYear: verificationReport.document.dob?.year,
-              expiryDay: verificationReport.document.expiration_date?.day,
-              expiryMonth: verificationReport.document.expiration_date?.month,
-              expiryYear: verificationReport.document.expiration_date?.year,
-              issuedDay: verificationReport.document.issued_date?.day,
-              issuedMonth: verificationReport.document.issued_date?.month,
-              issuedYear: verificationReport.document.issued_date?.year,
-              documentStatus: verificationReport.document.status,
-              documentType: verificationReport.document.type,
-              issuingCountry: verificationReport.document.issuing_country,
-              address: {
-                create: {
-                  city: verificationReport.document.address?.city,
-                  country: verificationReport.document.address?.country,
-                  line1: verificationReport.document.address?.line1,
-                  line2: verificationReport.document.address?.line2,
-                  postalCode: verificationReport.document.address?.postal_code,
-                  state: verificationReport.document.address?.state,
-                },
-              },
-              selfieDocument: verificationReport.selfie.document,
-              selfieErrorReason: verificationReport.selfie.error?.reason,
-              selfieErrorCode: verificationReport.selfie.error?.code,
-              selfieFile: verificationReport.selfie.selfie,
-              selfieStatus: verificationReport.selfie.status,
-            },
-          },
-        },
-      });
-
-      break;
     default:
       console.warn(`🤷‍♀️ Unhandled event type: ${event.type}`);
       break;
