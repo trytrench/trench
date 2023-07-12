@@ -3,7 +3,8 @@ import { geocodePlugin } from "../plugins/geocode";
 import { maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
-const ALWAYS_REFETCH_IP_DATA = true;
+const ALWAYS_REFETCH_IP_DATA = false;
+
 export const ipDataNode = node
   .resolver(({ input }) => {
     const ipAddress = input.evaluableAction.session.deviceSnapshot?.ipAddress;

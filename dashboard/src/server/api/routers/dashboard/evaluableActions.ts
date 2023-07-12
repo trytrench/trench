@@ -9,8 +9,185 @@ import {
   getFindManyWhereArgs,
 } from "../../../lib/evaluableAction/findMany";
 import { getFindUniqueIncludeArgs } from "../../../lib/evaluableAction/findUnique";
+import { ruleInputNode } from "../../../transforms/ruleInput";
+import { runRules } from "../../../utils/rules";
+import SuperJSON from "superjson";
+import { cardAggregationsNode } from "../../../transforms/nodes/aggregations/card";
 
 export const evaluableActionsRouter = createTRPCRouter({
+  evaluate: protectedProcedure
+    .input(
+      z.object({
+        evaluableActionId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const evaluableAction = await ctx.prisma.evaluableAction.findUnique({
+        include: {
+          paymentAttempt: {
+            include: {
+              paymentMethod: {
+                include: {
+                  card: true,
+                  address: true,
+                },
+              },
+            },
+          },
+          session: {
+            include: {
+              user: true,
+              deviceSnapshot: {
+                include: {
+                  ipAddress: {
+                    include: { location: true },
+                  },
+                  device: true,
+                },
+              },
+            },
+          },
+        },
+        where: {
+          id: input.evaluableActionId,
+        },
+      });
+
+      if (!evaluableAction) {
+        throw new Error("Evaluable action not found");
+      }
+
+      const [rules, lists] = await ctx.prisma.$transaction([
+        ctx.prisma.rule.findMany({
+          include: {
+            currentRuleSnapshot: true,
+          },
+        }),
+        ctx.prisma.list.findMany({
+          include: {
+            items: true,
+          },
+        }),
+      ]);
+      const blockLists = lists.reduce((acc, list) => {
+        acc[list.alias] = list.items.map((item) => item.value);
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      const ruleInput = await ruleInputNode.run({
+        evaluableAction,
+        blockLists,
+      });
+
+      // console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
+
+      const { ruleExecutionResults, highestRiskLevel } = runRules({
+        rules: rules.map((rule) => rule.currentRuleSnapshot),
+        input: ruleInput,
+      });
+
+      const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+        latitude: ruleInput.transforms.ipData?.latitude,
+        longitude: ruleInput.transforms.ipData?.longitude,
+        countryISOCode: ruleInput.transforms.ipData?.countryISOCode,
+        countryName: ruleInput.transforms.ipData?.countryName,
+        postalCode: ruleInput.transforms.ipData?.postalCode,
+      };
+
+      const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+        latitude: ruleInput.transforms.paymentMethodLocation?.latitude,
+        longitude: ruleInput.transforms.paymentMethodLocation?.longitude,
+        countryISOCode: ruleInput.transforms.paymentMethodLocation?.countryCode,
+      };
+
+      await ctx.prisma.$transaction([
+        ctx.prisma.ruleExecution.deleteMany({
+          where: {
+            evaluableActionId: evaluableAction.id,
+          },
+        }),
+        ctx.prisma.ruleExecution.createMany({
+          data: rules
+            .map((rule, index) => {
+              const result = ruleExecutionResults[index];
+              if (!result) {
+                return null;
+              }
+              return {
+                result: result?.result,
+                error: result?.error,
+                riskLevel: result.riskLevel,
+                evaluableActionId: evaluableAction.id,
+                ruleSnapshotId: rule.currentRuleSnapshot.id,
+              };
+            })
+            .filter(
+              (rule) => rule !== null
+            ) as Prisma.RuleExecutionCreateManyInput[],
+        }),
+        ctx.prisma.evaluableAction.update({
+          where: { id: evaluableAction.id },
+          data: {
+            riskLevel: highestRiskLevel,
+            transformsOutput: SuperJSON.parse(
+              SuperJSON.stringify(ruleInput.transforms)
+            ),
+          },
+        }),
+        ctx.prisma.evaluableAction.update({
+          where: { id: evaluableAction.id },
+          data: {
+            session: {
+              update: {
+                deviceSnapshot: {
+                  update: {
+                    ipAddress: {
+                      update: {
+                        metadata: ruleInput.transforms.ipData,
+                        location: ruleInput.transforms.ipData
+                          ? {
+                              upsert: {
+                                update: ipLocationUpdate,
+                                create: ipLocationUpdate,
+                              },
+                            }
+                          : undefined,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            paymentAttempt: {
+              update: {
+                paymentMethod: {
+                  update: {
+                    address: {
+                      update: {
+                        location: {
+                          upsert: ruleInput.transforms.paymentMethodLocation
+                            ? {
+                                update: paymentMethodLocationUpdate,
+                                create: paymentMethodLocationUpdate,
+                              }
+                            : undefined,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      ]);
+
+      return {
+        highestRiskLevel,
+        ruleExecutionResults,
+      };
+    }),
+
   get: protectedProcedure
     .input(
       z.object({

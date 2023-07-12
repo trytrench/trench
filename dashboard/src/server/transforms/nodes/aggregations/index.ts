@@ -7,8 +7,8 @@ import { ipAddressAggregationsNode } from "./ipAddress";
 export const aggregationNode = node
   .depend({
     card: cardAggregationsNode,
-    device: deviceAggregationsNode,
     user: userAggregationsNode,
+    device: deviceAggregationsNode,
     ipAddresses: ipAddressAggregationsNode,
   })
   .resolver(({ deps }) => {
