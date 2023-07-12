@@ -101,6 +101,9 @@ const columns: ColumnDef<EvaluableActionRow>[] = [
     cell: ({ row }) => {
       const riskLevel = row.original.riskLevel;
       const isFraud = row.original.isFraud;
+      const stripeReview = row.original.session.stripeReview;
+
+      const reviewOpen = stripeReview?.open ?? false;
 
       return (
         <Box display="flex" alignItems="center" gap={1}>
@@ -108,6 +111,11 @@ const columns: ColumnDef<EvaluableActionRow>[] = [
           {isFraud && (
             <Tag colorScheme="red" size="sm" px={1.5}>
               <TagLabel>Fraud</TagLabel>
+            </Tag>
+          )}
+          {reviewOpen && (
+            <Tag colorScheme="yellow" size="sm" px={1.5}>
+              <TagLabel>Needs Review</TagLabel>
             </Tag>
           )}
         </Box>

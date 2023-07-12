@@ -56,7 +56,6 @@ export default async function handler(
     case "review.opened":
     case "review.closed": {
       const review = event.data.object as Stripe.Review;
-      console.log(review);
 
       if (typeof review.charge === "string") {
         throw new Error("webhook payload has charge as string");
@@ -65,6 +64,13 @@ export default async function handler(
       const chargeId = review.charge?.id;
 
       const outcome = await prisma.paymentOutcome.findFirst({
+        include: {
+          paymentAttempt: {
+            include: {
+              evaluableAction: true,
+            },
+          },
+        },
         where: {
           chargeId: chargeId,
         },
@@ -74,9 +80,9 @@ export default async function handler(
         throw new Error("No outcome found for charge");
       }
 
-      await prisma.paymentAttempt.update({
+      await prisma.session.update({
         where: {
-          id: outcome.paymentAttemptId,
+          id: outcome.paymentAttempt.evaluableAction.sessionId,
         },
         data: {
           stripeReview: {
