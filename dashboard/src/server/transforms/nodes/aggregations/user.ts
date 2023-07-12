@@ -11,10 +11,10 @@ type UserAggregations = {
 
 export const userAggregationsNode = node.resolver(
   async ({ input, ctx }): Promise<UserAggregations> => {
-    const { paymentAttempt } = input;
+    const { evaluableAction } = input;
 
-    const userId = paymentAttempt.session.userId;
-    const timeOfPayment = new Date(paymentAttempt.createdAt);
+    const userId = evaluableAction.session.userId;
+    const timeOfPayment = new Date(evaluableAction.createdAt);
 
     if (!userId) {
       return {

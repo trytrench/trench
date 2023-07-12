@@ -47,6 +47,7 @@ import { nanoid } from "nanoid";
 import { handleError } from "~/lib/handleError";
 import { format } from "date-fns";
 import NextLink from "next/link";
+import { RuleModal } from "../../components/RuleModal";
 
 type EvaluableAction = RouterOutputs["dashboard"]["evaluableActions"]["get"];
 type BlockListItem = {
@@ -242,11 +243,22 @@ const columns: ColumnDef<ExecutedRuleRow>[] = [
       return <RiskLevelTag riskLevel={row.original.riskLevel} />;
     },
   },
+  {
+    header: "Rule Info",
+    cell({ row }) {
+      return <RuleModal ruleSnapshot={row.original.ruleSnapshot} />;
+    },
+  },
 ];
 
 const Page: CustomPage = () => {
   const router = useRouter();
   const paymentId = router.query.paymentId as string;
+
+  const toast = useToast();
+
+  const { mutateAsync: evaluateAction } =
+    api.dashboard.evaluableActions.evaluate.useMutation();
 
   const { isLoading, data: evaluableAction } =
     api.dashboard.evaluableActions.get.useQuery({
@@ -337,6 +349,32 @@ const Page: CustomPage = () => {
           ></MenuButton>
           <MenuList minWidth="150px">
             <BlockPayment action={evaluableAction} />
+            <MenuItem
+              onClick={() => {
+                toast.promise(
+                  evaluateAction({
+                    evaluableActionId: evaluableAction.id,
+                  }),
+                  {
+                    success: {
+                      title: "Successfully reran rules",
+                    },
+                    error: (err) => {
+                      const message = err.message;
+                      handleError(err);
+                      return {
+                        title: `Error: ${message ?? "Unknown"}`,
+                      };
+                    },
+                    loading: {
+                      title: "Loading...",
+                    },
+                  }
+                );
+              }}
+            >
+              Rerun rules
+            </MenuItem>
           </MenuList>
         </Menu>
       </Flex>
@@ -390,6 +428,7 @@ const Page: CustomPage = () => {
         )}
       </Section>
       <PaymentDetails paymentId={paymentId} />
+      <Text whiteSpace={"pre"}>{JSON.stringify(evaluableAction, null, 2)}</Text>
     </Box>
   );
 };

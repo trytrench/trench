@@ -51,9 +51,11 @@ export const cardAggregationsNode = node
     const pastCountries = paymentMethods
       .map((paymentMethod) => paymentMethod.address?.location?.countryISOCode)
       .filter((countryCode) => !!countryCode) as string[];
-    const currentCountry = cardGeocode.countryCode;
+    const currentCountry = cardGeocode?.countryCode;
     const uniqueCountries = uniq(
-      [...pastCountries, currentCountry].map((code) => code.trim())
+      [...pastCountries, currentCountry]
+        .map((code) => code?.trim())
+        .filter(Boolean)
     ).length;
 
     return {
