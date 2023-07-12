@@ -11,7 +11,7 @@ type User = {
   email: string | null
   name: string | null
   phone: string | null
-  metadata: Prisma.JsonValue
+  metadata: any
 }
 
 /**
@@ -46,7 +46,7 @@ type EvaluableAction = {
   id: string
   createdAt: Date
   updatedAt: Date
-  transformsOutput: Prisma.JsonValue | null
+  transformsOutput: any | null
   riskLevel: string | null
   isFraud: boolean
   sessionId: string
@@ -61,7 +61,7 @@ type Event = {
   createdAt: Date
   updatedAt: Date
   type: string
-  properties: Prisma.JsonValue
+  properties: any
   sessionId: string
 }
 
@@ -92,7 +92,7 @@ type DeviceSnapshot = {
   reqUserAgent: string | null
   screenResolution: string | null
   timezone: string | null
-  metadata: Prisma.JsonValue
+  metadata: any
 }
 
 /**
@@ -132,7 +132,7 @@ type IpAddress = {
   createdAt: Date
   updatedAt: Date
   locationId: string | null
-  metadata: Prisma.JsonValue
+  metadata: any
 }
 
 /**
@@ -280,7 +280,7 @@ type PaymentAttempt = {
   amount: number
   currency: string
   description: string | null
-  metadata: Prisma.JsonValue
+  metadata: any
   evaluableActionId: string
   paymentMethodId: string
   shippingName: string | null
@@ -358,7 +358,7 @@ type StripePaymentOutcome = {
   reason: string | null
   riskLevel: string | null
   riskScore: number | null
-  rule: Prisma.JsonValue | null
+  rule: any | null
   sellerMessage: string | null
   type: string | null
   paymentOutcomeId: string

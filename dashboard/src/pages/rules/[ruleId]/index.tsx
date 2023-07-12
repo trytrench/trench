@@ -44,6 +44,8 @@ const EditRulePage: CustomPage = () => {
     id: ruleId,
   });
 
+  const ruleSnapshot = ruleData?.currentRuleSnapshot;
+
   // const { data: statsData } = api.dashboard.rules.getStatistics.useQuery({
   //   id: ruleId,
   // });
@@ -58,19 +60,19 @@ const EditRulePage: CustomPage = () => {
     data: paymentsData,
     count,
   } = useEvaluableActionProps({
-    executedRuleId: ruleId,
+    executedRuleSnapshotId: ruleSnapshot?.id,
   });
 
   const realCode = useMemo(() => {
-    return `${PREFIX}\n${ruleData?.tsCode ?? ""}\n${SUFFIX}`;
-  }, [ruleData?.tsCode]);
+    return `${PREFIX}\n${ruleSnapshot?.tsCode ?? ""}\n${SUFFIX}`;
+  }, [ruleSnapshot?.tsCode]);
 
-  if (!ruleData) return null;
+  if (!ruleSnapshot) return null;
   return (
     <Box>
       <Box flexDirection="column">
         <Heading>
-          Rule: {ruleData.name}
+          Rule: {ruleSnapshot.name}
           <Link
             href={`/rules/${ruleData.id}/edit`}
             ml={4}
@@ -85,14 +87,14 @@ const EditRulePage: CustomPage = () => {
         <Heading mt={8} mb={2} size="sm">
           Description
         </Heading>
-        <Text color={ruleData.description ? "black" : "gray.500"}>
-          {ruleData.description || "None"}
+        <Text color={ruleSnapshot.description ? "black" : "gray.500"}>
+          {ruleSnapshot.description || "None"}
         </Text>
 
         <Heading mt={8} mb={2} size="sm">
           Risk Level
         </Heading>
-        <RiskLevelTag riskLevel={ruleData.riskLevel} />
+        <RiskLevelTag riskLevel={ruleSnapshot.riskLevel} />
 
         <Heading mt={8} mb={2} size="sm">
           Code{" "}

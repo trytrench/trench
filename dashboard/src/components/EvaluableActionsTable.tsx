@@ -513,11 +513,11 @@ function useQueryOptions(
 
 export function useEvaluableActionProps({
   paymentAttemptActionId,
-  executedRuleId,
+  executedRuleSnapshotId,
   userId,
 }: {
   paymentAttemptActionId?: string;
-  executedRuleId?: string;
+  executedRuleSnapshotId?: string;
   userId?: string;
 }) {
   const [pagination, setPagination] = usePagination({
@@ -546,7 +546,7 @@ export function useEvaluableActionProps({
       linkedTo: {
         paymentAttemptActionId,
       },
-      executedRuleId,
+      executedRuleSnapshotId,
       userId,
       filters,
     }),
@@ -554,7 +554,7 @@ export function useEvaluableActionProps({
       pageSize,
       pageIndex,
       paymentAttemptActionId,
-      executedRuleId,
+      executedRuleSnapshotId,
       userId,
       filters,
     ]
