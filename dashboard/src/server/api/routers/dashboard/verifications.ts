@@ -87,6 +87,10 @@ export const verificationsRouter = createTRPCRouter({
           file: result.selfieFile,
           expires_at: Math.floor(Date.now() / 1000) + 30,
         }),
+        selfieDocument: await stripe.fileLinks.create({
+          file: result.selfieDocument,
+          expires_at: Math.floor(Date.now() / 1000) + 30,
+        }),
         files: await Promise.all(
           result.documentFiles.map((file) =>
             stripe.fileLinks.create({

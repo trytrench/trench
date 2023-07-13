@@ -1,15 +1,14 @@
-import { Box, Divider, HStack, Image, Stack, Text } from "@chakra-ui/react";
-import { useRouter } from "next/router";
-import { type ReactNode } from "react";
-import { Layout } from "~/components/layouts/Layout";
-import { RouterOutputs, api } from "~/lib/api";
-import { startCase } from "lodash";
-import { DataTable } from "~/components/DataTable";
+import { Box, Flex, HStack, Image, Stack, Text } from "@chakra-ui/react";
 import { ColumnDef } from "@tanstack/react-table";
-import { RiskLevelTag } from "~/components/RiskLevelTag";
-import { LocationSection } from "~/components/LocationSection";
-import { Section } from "~/components/views/PaymentDetails";
+import { startCase } from "lodash";
+import { useRouter } from "next/router";
+import { DataTable } from "~/components/DataTable";
 import { DeviceSection } from "~/components/DeviceSection";
+import { LocationSection } from "~/components/LocationSection";
+import { RiskLevelTag } from "~/components/RiskLevelTag";
+import { Layout } from "~/components/layouts/Layout";
+import { Section } from "~/components/views/PaymentDetails";
+import { RouterOutputs, api } from "~/lib/api";
 
 const List = ({
   data,
@@ -106,9 +105,16 @@ const Page = () => {
         showPagination={false}
         isLoading={isLoading}
       />
-      <Image src={data?.selfie.url} />
-      <Image src={data?.files[0]?.url} />
-      <Image src={data?.files[1]?.url} />
+      <Flex my={6} gap={4}>
+        <Box>
+          <Image w={300} src={data?.selfie.url} />
+        </Box>
+        <Box>
+          <Image w={400} src={data?.selfieDocument.url} />
+        </Box>
+      </Flex>
+      {/* <Image src={data?.files[0]?.url} />
+      <Image src={data?.files[1]?.url} /> */}
       <Section title="Verified outputs">
         <List data={selfieData} />
       </Section>
