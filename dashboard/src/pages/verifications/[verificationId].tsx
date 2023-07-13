@@ -7,22 +7,9 @@ import { startCase } from "lodash";
 import { DataTable } from "~/components/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { RiskLevelTag } from "~/components/RiskLevelTag";
-
-export const Section = ({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string | ReactNode;
-}) => (
-  <Box py={4}>
-    <Text fontSize="lg" fontWeight="bold" mb={2}>
-      {title}
-    </Text>
-    <Divider borderColor="gray.300" mb={4} />
-    {children}
-  </Box>
-);
+import { LocationSection } from "~/components/LocationSection";
+import { Section } from "~/components/views/PaymentDetails";
+import { DeviceSection } from "~/components/DeviceSection";
 
 const List = ({
   data,
@@ -69,6 +56,8 @@ const Page = () => {
   });
 
   if (!data) return null;
+
+  const ipAddress = data.evaluableAction.session.deviceSnapshot?.ipAddress;
 
   const selfieData = [
     {
@@ -123,6 +112,23 @@ const Page = () => {
       <Section title="Verified outputs">
         <List data={selfieData} />
       </Section>
+      <LocationSection
+        ipAddress={ipAddress}
+        markers={[
+          ...(ipAddress?.location
+            ? [
+                {
+                  longitude: ipAddress.location.longitude,
+                  latitude: ipAddress.location.latitude,
+                  type: "device" as const,
+                },
+              ]
+            : []),
+        ]}
+      />
+      <DeviceSection
+        deviceSnapshot={data.evaluableAction.session.deviceSnapshot}
+      />
       <Section title="Metadata">
         <Text fontSize="sm" whiteSpace="pre">
           {JSON.stringify(data.metadata, null, 2)}
