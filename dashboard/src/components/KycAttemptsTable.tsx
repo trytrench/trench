@@ -1,8 +1,10 @@
-import { Checkbox } from "@chakra-ui/react";
+import { Box, Checkbox, Flex, Tag, TagLabel } from "@chakra-ui/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { DataTable } from "~/components/DataTable";
 import { RouterOutputs } from "~/lib/api";
+import { RiskLevelTag } from "./RiskLevelTag";
+import { VerificationStatusTag } from "./VerificationStatusTag";
 
 interface Props {
   data: RouterOutputs["dashboard"]["verifications"]["getAll"];
@@ -38,74 +40,7 @@ const columns: ColumnDef<
     id: "status",
     cell: ({ row }) => {
       const status = row.original.status;
-      return status;
-      //   return (
-      //     <Tooltip
-      //       // label={row.original.outcome?.sellerMessage}
-      //       bgColor="white"
-      //       fontWeight="medium"
-      //       fontSize="sm"
-      //       color="inherit"
-      //       borderColor="gray.200"
-      //       borderWidth={1}
-      //       rounded="md"
-      //       placement="top"
-      //       hasArrow
-      //       p={4}
-      //     >
-      //       <PaymentStatusTag status={status} />
-      //     </Tooltip>
-      //   );
-    },
-  },
-  {
-    header: "Selfie Status",
-    id: "selfieStatus",
-    cell: ({ row }) => {
-      const status = row.original.selfieStatus;
-      return status;
-      //   return (
-      //     <Tooltip
-      //       // label={row.original.outcome?.sellerMessage}
-      //       bgColor="white"
-      //       fontWeight="medium"
-      //       fontSize="sm"
-      //       color="inherit"
-      //       borderColor="gray.200"
-      //       borderWidth={1}
-      //       rounded="md"
-      //       placement="top"
-      //       hasArrow
-      //       p={4}
-      //     >
-      //       <PaymentStatusTag status={status} />
-      //     </Tooltip>
-      //   );
-    },
-  },
-  {
-    header: "Document Status",
-    id: "documentStatus",
-    cell: ({ row }) => {
-      const status = row.original.documentStatus;
-      return status;
-      //   return (
-      //     <Tooltip
-      //       // label={row.original.outcome?.sellerMessage}
-      //       bgColor="white"
-      //       fontWeight="medium"
-      //       fontSize="sm"
-      //       color="inherit"
-      //       borderColor="gray.200"
-      //       borderWidth={1}
-      //       rounded="md"
-      //       placement="top"
-      //       hasArrow
-      //       p={4}
-      //     >
-      //       <PaymentStatusTag status={status} />
-      //     </Tooltip>
-      //   );
+      return <VerificationStatusTag status={status} />;
     },
   },
   {
@@ -113,18 +48,35 @@ const columns: ColumnDef<
     id: "risk",
     cell: ({ row }) => {
       const riskLevel = row.original.evaluableAction.riskLevel;
-      return riskLevel;
-      //   const isFraud = row.original.isFraud;
-      //   return (
-      //     <Box display="flex" alignItems="center" gap={1}>
-      //       {riskLevel && <RiskLevelTag riskLevel={riskLevel} />}
-      //       {isFraud && (
-      //         <Tag colorScheme="red" size="sm" px={1.5}>
-      //           <TagLabel>Fraud</TagLabel>
-      //         </Tag>
-      //       )}
-      //     </Box>
-      //   );
+      return riskLevel ? <RiskLevelTag riskLevel={riskLevel} /> : null;
+    },
+  },
+  {
+    header: "Verification Checks",
+    id: "checks",
+    cell: ({ row }) => {
+      return (
+        <Flex gap={2}>
+          <Tag
+            colorScheme={
+              row.original.documentStatus === "verified" ? "green" : "red"
+            }
+            size="sm"
+            px={1.5}
+          >
+            <TagLabel>Document</TagLabel>
+          </Tag>
+          <Tag
+            colorScheme={
+              row.original.selfieStatus === "verified" ? "green" : "red"
+            }
+            size="sm"
+            px={1.5}
+          >
+            <TagLabel>Selfie</TagLabel>
+          </Tag>
+        </Flex>
+      );
     },
   },
   {
@@ -132,18 +84,6 @@ const columns: ColumnDef<
     // size: 300,
     cell({ row }) {
       return row.original.firstName + " " + row.original.lastName;
-    },
-  },
-  {
-    header: "User Email",
-    // accessorKey: "user.email",
-    size: 200,
-    cell({ row }) {
-      //   return (
-      //     row.original.session.user?.email ||
-      //     row.original.paymentAttempt?.paymentMethod.email ||
-      //     "--"
-      //   );
     },
   },
   {
