@@ -44,6 +44,8 @@
     "@visx/scale": "^3.0.0",
     "@visx/shape": "^3.0.0",
     "@visx/tooltip": "^3.1.2",
+    "alchemy-sdk": "^2.9.2",
+    "axios": "^1.4.0",
     "chakra-react-select": "^4.6.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.12.8",

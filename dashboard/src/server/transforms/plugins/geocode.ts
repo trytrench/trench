@@ -30,7 +30,6 @@ export const geocodePlugin = async (address: Address) => {
     .forwardGeocode({
       query,
       limit: 1,
-      types: ["address"],
     })
     .send();
 

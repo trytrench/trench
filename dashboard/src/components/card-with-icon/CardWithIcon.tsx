@@ -28,9 +28,10 @@ interface Props {
   last4?: string | null;
   brand?: string | null;
   wallet?: string | null;
+  bold?: boolean;
 }
 
-export const CardWithIcon = ({ brand, last4, wallet }: Props) => {
+export const CardWithIcon = ({ brand, last4, wallet, bold }: Props) => {
   const BrandIcon =
     MAP_BRAND_TO_ICON[brand as keyof typeof MAP_BRAND_TO_ICON] ?? null;
   const WalletIcon =
@@ -55,7 +56,9 @@ export const CardWithIcon = ({ brand, last4, wallet }: Props) => {
       <Text fontWeight="bold" fontSize="2xs" ml={3}>
         ••••
       </Text>
-      <Text ml={1}>{last4}</Text>
+      <Text ml={1} fontWeight={bold ? "bold" : "normal"}>
+        {last4}
+      </Text>
     </Flex>
   );
 };
