@@ -94,7 +94,9 @@ export const apiPaymentsRouter = createTRPCRouter({
               paymentMethod: {
                 include: {
                   card: true,
-                  address: true,
+                  address: {
+                    include: { location: true },
+                  },
                 },
               },
             },
