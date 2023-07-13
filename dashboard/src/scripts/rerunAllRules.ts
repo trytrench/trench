@@ -1,5 +1,5 @@
 import { type Prisma, PrismaClient } from "@prisma/client";
-import { ruleInputNode } from "../server/transforms/ruleInput";
+import { paymentTransforms } from "../server/transforms/paymentTransforms";
 import { runRules } from "../server/utils/rules";
 import SuperJSON from "superjson";
 
@@ -74,7 +74,7 @@ async function main() {
 
     await Promise.all(
       batch.map(async (evaluableAction) => {
-        const ruleInput = await ruleInputNode.run({
+        const ruleInput = await paymentTransforms.run({
           evaluableAction,
           blockLists,
         });

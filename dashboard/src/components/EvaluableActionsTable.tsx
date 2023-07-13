@@ -354,6 +354,12 @@ export function PaymentsTable({
         header: "Date",
         accessorFn: (row) => format(new Date(row.createdAt), "MMM d, p"),
       },
+    ],
+    [linkedAction]
+  );
+
+  const linkedColumns: ColumnDef<EvaluableActionRow>[] = useMemo(
+    () => [
       {
         header: "Device ID",
         cell({ row }) {
@@ -380,15 +386,35 @@ export function PaymentsTable({
           );
         },
       },
+      {
+        header: "IP Address",
+        cell({ row }) {
+          const displayed =
+            row.original.session.deviceSnapshot?.ipAddress?.ipAddress;
+          const linked =
+            linkedAction?.session.deviceSnapshot?.ipAddress?.ipAddress;
+
+          return (
+            <Text fontWeight={displayed === linked ? "bold" : undefined}>
+              {displayed || "--"}
+            </Text>
+          );
+        },
+      },
     ],
     [linkedAction]
+  );
+
+  const allColumns = useMemo(
+    () => [...columns, ...(linkedAction ? linkedColumns : [])],
+    [columns, linkedAction, linkedColumns]
   );
 
   return (
     <DataTable
       rowHeight={9}
       getRowId={(row) => row.id}
-      columns={columns}
+      columns={allColumns}
       data={paymentsData}
       onPaginationChange={onPaginationChange}
       pageIndex={pageIndex}
