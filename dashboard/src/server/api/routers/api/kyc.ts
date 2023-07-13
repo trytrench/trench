@@ -1,4 +1,4 @@
-import { type Prisma } from "@prisma/client";
+import { KycAttemptStatus, type Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import superjson from "superjson";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { prisma } from "~/server/db";
 
 const kycSchema = z.object({
   verificationSessionId: z.string(),
+  metadata: z.record(z.any()).optional(),
 });
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -18,7 +19,8 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 });
 
 const createEvaluableAction = async (
-  verificationSession: Stripe.Identity.VerificationSession
+  verificationSession: Stripe.Identity.VerificationSession,
+  metadata?: Record<string, any>
 ) => {
   if (typeof verificationSession.last_verification_report !== "string")
     throw new Error("No verification report found");
@@ -77,6 +79,14 @@ const createEvaluableAction = async (
       },
       kycAttempt: {
         create: {
+          metadata,
+          status:
+            verificationSession.status === "verified"
+              ? KycAttemptStatus.SUCCEEDED
+              : verificationSession.status === "requires_input" &&
+                verificationSession.last_error
+              ? KycAttemptStatus.FAILED
+              : KycAttemptStatus.PENDING,
           verificationReportId: verificationReport.id,
           firstName: verificationReport.document.first_name,
           lastName: verificationReport.document.last_name,
@@ -139,7 +149,8 @@ export const apiKycRouter = createTRPCRouter({
 
       if (verificationSession.status === "verified") {
         const evaluableAction = await createEvaluableAction(
-          verificationSession
+          verificationSession,
+          input.metadata
         );
 
         const [rules, lists] = await ctx.prisma.$transaction([
@@ -220,7 +231,7 @@ export const apiKycRouter = createTRPCRouter({
         verificationSession.last_error
       ) {
         if (verificationSession.last_verification_report)
-          await createEvaluableAction(verificationSession);
+          await createEvaluableAction(verificationSession, input.metadata);
 
         // return error
         return {

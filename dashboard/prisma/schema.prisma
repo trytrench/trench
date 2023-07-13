@@ -340,6 +340,8 @@ model KycAttempt {
   createdAt            DateTime @default(now())
   verificationReportId String?
 
+  status KycAttemptStatus
+
   firstName           String?
   lastName            String?
   documentStatus      String
@@ -407,6 +409,12 @@ model PaymentAttempt {
 }
 
 enum PaymentOutcomeStatus {
+  SUCCEEDED
+  FAILED
+  PENDING
+}
+
+enum KycAttemptStatus {
   SUCCEEDED
   FAILED
   PENDING
