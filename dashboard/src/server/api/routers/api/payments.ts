@@ -49,17 +49,19 @@ export const apiPaymentsRouter = createTRPCRouter({
         where: { customId: input.sessionId },
         data: {
           user:
-            customer && typeof customer !== "string" && !customer.deleted
+            customer &&
+            typeof customer !== "string" &&
+            !customer.deleted &&
+            customer.email
               ? {
                   connectOrCreate: {
                     where: {
-                      customId: customer.id,
+                      email: customer.email,
                     },
                     create: {
-                      customId: customer.id,
+                      email: customer.email,
                       name: customer.name,
                       phone: customer.phone,
-                      email: customer.email,
                       metadata: customer.metadata,
                     },
                   },
