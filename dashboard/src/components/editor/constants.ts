@@ -88,6 +88,15 @@ type RuleInput = {
       user: UserAggregations;
       ipAddresses: IpAddressAggregations;
     };
+    paymentMethodIpDistance: {
+      value: number;
+      unit: string;
+    };
+    ethWalletInfo: {
+      ethBalance: number;
+      outgoingTxCount: number;
+    };
+    isUnregisteredGmail: boolean;
   };
 };
 

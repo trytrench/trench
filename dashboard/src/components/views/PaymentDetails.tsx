@@ -458,6 +458,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
 
       <Section title="Related payments">
         <PaymentsTable
+          linkedPaymentAttemptActionId={evaluableAction.id}
           paymentsData={relatedData || []}
           count={count}
           pagination={pagination}

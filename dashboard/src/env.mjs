@@ -21,6 +21,7 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
     NEXTAUTH_URL: z.string().url().optional(),
+    ALCHEMY_API_KEY: z.string().optional(),
   },
 
   /**
@@ -55,5 +56,6 @@ export const env = createEnv({
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    ALCHEMY_API_KEY: process.env.ALCHEMY_API_KEY,
   },
 });
