@@ -53,6 +53,7 @@ export const rulesRouter = createTRPCRouter({
   backtest: protectedProcedure
     .input(
       z.object({
+        userFlow: z.string(),
         jsCode: z.string().nonempty(),
         lastNDays: z.enum(["3", "7", "30"]),
       })
@@ -69,6 +70,9 @@ export const rulesRouter = createTRPCRouter({
                 new Date().getTime() -
                   Number(ruleToBacktest.lastNDays) * 24 * 60 * 60 * 1000
               ),
+            },
+            session: {
+              userFlowId: ruleToBacktest.userFlow,
             },
           },
           include: {
@@ -88,6 +92,7 @@ export const rulesRouter = createTRPCRouter({
                 },
               },
             },
+            kycAttempt: true,
             paymentAttempt: {
               include: {
                 paymentMethod: {

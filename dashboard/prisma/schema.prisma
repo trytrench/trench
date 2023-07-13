@@ -43,12 +43,10 @@ model UserFlow {
 }
 
 model Session {
-  id                    String   @id @default(dbgenerated("nanoid()"))
-  customId              String?  @unique
-  paymentIntentId       String?  @unique
-  verificationSessionId String?  @unique
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id        String   @id @default(dbgenerated("nanoid()"))
+  customId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userFlow   UserFlow @relation(fields: [userFlowId], references: [id])
   userFlowId String
@@ -337,9 +335,10 @@ model PaymentMethod {
 }
 
 model KycAttempt {
-  id        String   @id @default(cuid())
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  id                   String   @id @default(cuid())
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  verificationReportId String?
 
   firstName           String?
   lastName            String?

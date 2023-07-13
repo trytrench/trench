@@ -24,7 +24,8 @@ import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
 import { PaymentsTable } from "./EvaluableActionsTable";
 import { type PaginationState } from "@tanstack/react-table";
-import { RiskLevel } from "../common/types";
+import { RiskLevel, UserFlow } from "../common/types";
+import { KycAttemptsTable } from "./KycAttemptsTable";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
@@ -312,6 +313,7 @@ export function RuleForm({
               <Button
                 onClick={() => {
                   backtest({
+                    userFlow,
                     lastNDays: lastNDays,
                     jsCode: newlyCompiledJsCode,
                   }).catch((err) => {
@@ -341,14 +343,22 @@ export function RuleForm({
               </Select>
             </HStack>
 
-            {paginatedBacktestData && (
-              <PaymentsTable
-                paymentsData={paginatedBacktestData}
-                count={backtestData?.triggeredRows.length ?? 0}
-                pagination={pagination}
-                onPaginationChange={setPagination}
-              />
-            )}
+            {paginatedBacktestData &&
+              (userFlows.find((u) => u.id === userFlow)?.name ===
+              UserFlow.SellerKyc ? (
+                <KycAttemptsTable
+                  data={paginatedBacktestData.map(
+                    (evaluableAction) => evaluableAction.kycAttempt
+                  )}
+                />
+              ) : (
+                <PaymentsTable
+                  paymentsData={paginatedBacktestData}
+                  count={backtestData?.triggeredRows.length ?? 0}
+                  pagination={pagination}
+                  onPaginationChange={setPagination}
+                />
+              ))}
           </Box>
         )}
       </VStack>
