@@ -3,7 +3,7 @@ import { geocodePlugin } from "../plugins/geocode";
 import { maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
-global.crypto = require("crypto");
+// global.crypto = require("crypto");
 
 const ALWAYS_REFETCH_IP_DATA = false;
 
