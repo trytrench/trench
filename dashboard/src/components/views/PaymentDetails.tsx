@@ -1,27 +1,27 @@
 import {
   Box,
-  Center,
   Divider,
   Grid,
   GridItem,
   HStack,
   Icon,
-  Stack,
   Text,
 } from "@chakra-ui/react";
-import { api } from "~/lib/api";
-import { PaymentMap } from "../payment-map/PaymentMap";
+import { type Address } from "@prisma/client";
 import { startCase } from "lodash";
-import { CardWithIcon } from "../card-with-icon/CardWithIcon";
+import { type ReactNode } from "react";
 import { IoCheckmarkCircle } from "react-icons/io5";
-import { type ReactNode, useMemo, useState } from "react";
+import { api } from "~/lib/api";
+import { handleError } from "~/lib/handleError";
+import { getLabelValuePairs } from "~/utils/getLabelValuePairs";
+import { DeviceSection } from "../DeviceSection";
 import {
   PaymentsTable,
   useEvaluableActionProps,
 } from "../EvaluableActionsTable";
-import { type Address, type IpAddress } from "@prisma/client";
-import { handleError } from "~/lib/handleError";
-import { env } from "../../env.mjs";
+import { List } from "../List";
+import { LocationSection } from "../LocationSection";
+import { CardWithIcon } from "../card-with-icon/CardWithIcon";
 
 export const Section = ({
   children,
@@ -38,34 +38,6 @@ export const Section = ({
     {children}
   </Box>
 );
-
-const List = ({
-  data,
-}: {
-  data: { label: string; value: React.ReactNode }[];
-}) => (
-  <Stack>
-    {data.map((item) => (
-      <HStack key={item.label} fontSize="sm">
-        <Text w={180} color="subtle" flexShrink={0}>
-          {item.label}
-        </Text>
-        <Text>{item.value}</Text>
-      </HStack>
-    ))}
-  </Stack>
-);
-
-function getLabelValuePairs(
-  data: { label: string; value?: string | null | ReactNode; show?: boolean }[]
-) {
-  return data
-    .filter((item) => item.show !== false && typeof item.value !== "undefined")
-    .map((item) => ({
-      label: item.label,
-      value: item.value ?? "--",
-    }));
-}
 
 function getAddressString(address?: Address | null) {
   if (!address) return "No address";
@@ -236,118 +208,6 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     },
   ]);
 
-  const deviceData = getLabelValuePairs([
-    {
-      label: "Browser",
-      show: !!deviceSnapshot,
-      value: `${deviceSnapshot?.browserName ?? ""} ${
-        deviceSnapshot?.browserVersion ?? ""
-      }`,
-    },
-    {
-      label: "OS",
-      show: !!deviceSnapshot,
-      value: `${deviceSnapshot?.osName ?? ""} ${
-        deviceSnapshot?.osVersion ?? ""
-      }`,
-    },
-
-    {
-      label: "Device",
-      show: !!(deviceSnapshot?.deviceVendor || deviceSnapshot?.deviceModel),
-      value: [deviceSnapshot?.deviceVendor, deviceSnapshot?.deviceModel]
-        .filter(Boolean)
-        .join(" "),
-    },
-
-    {
-      label: "Resolution",
-      show: !!deviceSnapshot?.screenResolution,
-      value: deviceSnapshot?.screenResolution,
-    },
-    {
-      label: "Engine",
-      value: [deviceSnapshot?.engineName, deviceSnapshot?.engineVersion]
-        .filter(Boolean)
-        .join(" "),
-    },
-
-    {
-      label: "CPU",
-      show: !!(deviceSnapshot?.cpuArchitecture || deviceSnapshot?.deviceModel),
-      value: [deviceSnapshot?.cpuArchitecture, deviceSnapshot?.deviceModel]
-        .filter(Boolean)
-        .join(" "),
-    },
-
-    // {
-    //   label: "Bot",
-    //   value: deviceSnapshot.bot ? "True" : "False",
-    // },
-
-    {
-      label: "Timezone",
-      value: deviceSnapshot?.timezone,
-    },
-    // {
-    //   label: "OS",
-    //   value: data.session.device.components.os.value,
-    // },
-    {
-      label: "IP Address",
-      value: deviceSnapshot?.ipAddress?.ipAddress,
-    },
-    {
-      label: "Static IP Score",
-      value: deviceSnapshot?.ipAddress?.metadata?.staticIPScore,
-    },
-    {
-      label: "ISP",
-      // value: data.session.ipAddress.isp,
-      value: deviceSnapshot?.ipAddress?.metadata?.isp,
-    },
-    {
-      label: "Anonymous",
-      value: deviceSnapshot?.ipAddress?.metadata?.isAnonymous
-        ? "True"
-        : "False",
-      // value: data.session.ipAddress.isAnonymous ? "True" : "False",
-    },
-    // ...(data.session.ipAddress.isAnonymous
-    //   ? [
-    //       {
-    //         label: "Anonymizer",
-    //         value: getAnonymizers(data.session.ipAddress).join(", "),
-    //       },
-    //     ]
-    //   : []),
-    // {
-    //   label: "User type",
-    //   value: startCase(data.session.ipAddress.userType),
-    // },
-    // {
-    //   label: "User count",
-    //   value: data.session.ipAddress.userCount,
-    // },
-    {
-      label: "Fingerprint",
-      value: evaluableAction.session.deviceSnapshot?.fingerprint,
-    },
-  ]);
-
-  const locationData = getLabelValuePairs([
-    { label: "City", value: deviceSnapshot?.ipAddress?.location?.cityName },
-    {
-      label: "Subdivision",
-      value: deviceSnapshot?.ipAddress?.location?.regionName,
-    },
-    {
-      label: "Country",
-      value: deviceSnapshot?.ipAddress?.location?.countryName,
-    },
-    // { label: "IP Timezone", value: deviceSnapshot?.ipAddress?.location.ip },
-  ]);
-
   const markers = [
     ...(evaluableAction.session.deviceSnapshot?.ipAddress?.location
       ? [
@@ -379,30 +239,10 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
         <List data={paymentDetails} />
       </Section>
 
-      <Section title="Location">
-        <Grid
-          templateColumns={{
-            md: "repeat(2, 1fr)",
-            base: "repeat(1, 1fr)",
-          }}
-          gap={8}
-        >
-          <GridItem>
-            <List data={locationData} />
-          </GridItem>
-          <GridItem h={250}>
-            {!!env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ? (
-              <PaymentMap markers={markers} />
-            ) : (
-              <Center height="full" width="full" bg="gray.100" p={4}>
-                <Text>
-                  Set NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN to view this map
-                </Text>
-              </Center>
-            )}
-          </GridItem>
-        </Grid>
-      </Section>
+      <LocationSection
+        ipAddress={deviceSnapshot?.ipAddress}
+        markers={markers}
+      />
 
       <Section title="Payment method">
         <Grid
@@ -434,27 +274,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
         </Grid>
       </Section>
 
-      <Section title="Device">
-        <Grid
-          templateColumns={{
-            md: "repeat(2, 1fr)",
-            base: "repeat(1, 1fr)",
-          }}
-          gap={{
-            md: 8,
-            base: 2,
-          }}
-        >
-          <GridItem>
-            <List
-              data={deviceData.slice(0, Math.ceil(deviceData.length / 2))}
-            />
-          </GridItem>
-          <GridItem>
-            <List data={deviceData.slice(Math.ceil(deviceData.length / 2))} />
-          </GridItem>
-        </Grid>
-      </Section>
+      <DeviceSection deviceSnapshot={deviceSnapshot} />
 
       <Section title="Related payments">
         <PaymentsTable

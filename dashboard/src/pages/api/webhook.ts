@@ -1,8 +1,10 @@
+import { PaymentOutcomeStatus } from "@prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Readable } from "node:stream";
 import Stripe from "stripe";
 import { env } from "~/env.mjs";
-import type { Readable } from "node:stream";
 import { prisma } from "~/server/db";
+import { UserFlow } from "../../common/types";
 import { PaymentOutcomeStatus } from "@prisma/client";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {

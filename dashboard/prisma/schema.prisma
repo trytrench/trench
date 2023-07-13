@@ -54,14 +54,12 @@ model Session {
   user           User?           @relation(fields: [userId], references: [id])
   userId         String?
   deviceSnapshot DeviceSnapshot?
-  
+
   stripeReview StripePaymentReview?
 
   events           Event[]
   evaluableActions EvaluableAction[]
 }
-
-
 
 model EvaluableAction {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -79,6 +77,7 @@ model EvaluableAction {
   paymentAttempt PaymentAttempt?
 
   ruleExecutions RuleExecution[]
+  kycAttempt     KycAttempt?
 }
 
 model Event {
@@ -193,8 +192,9 @@ model Address {
   location   Location? @relation(fields: [locationId], references: [id])
   locationId String?
 
-  paymentMethods  PaymentMethod[]
-  paymentAttempts PaymentAttempt[]
+  paymentMethods PaymentMethod[]
+  paymentAttempt PaymentAttempt?
+  kycAttempt     KycAttempt?
 }
 
 // Rules
@@ -334,7 +334,49 @@ model PaymentMethod {
   userLink UserPaymentMethodLink?
 }
 
+model KycAttempt {
+  id                   String   @id @default(cuid())
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  verificationReportId String?
 
+  status KycAttemptStatus
+
+  firstName           String?
+  lastName            String?
+  documentStatus      String
+  documentType        String?
+  documentErrorReason String?
+  documentErrorCode   String?
+  issuingCountry      String?
+
+  dobDay      Int?
+  dobMonth    Int?
+  dobYear     Int?
+  expiryDay   Int?
+  expiryMonth Int?
+  expiryYear  Int?
+  issuedDay   Int?
+  issuedMonth Int?
+  issuedYear  Int?
+
+  address   Address @relation(fields: [addressId], references: [id])
+  addressId String  @unique
+
+  documentFiles String[]
+
+  // Selfie
+  selfieFile        String?
+  selfieDocument    String?
+  selfieStatus      String?
+  selfieErrorReason String?
+  selfieErrorCode   String?
+
+  evaluableAction   EvaluableAction @relation(fields: [evaluableActionId], references: [id])
+  evaluableActionId String          @unique
+
+  metadata Json @default("{}")
+}
 
 model PaymentAttempt {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -358,7 +400,7 @@ model PaymentAttempt {
   shippingName      String?
   shippingPhone     String?
   shippingAddress   Address? @relation(fields: [shippingAddressId], references: [id])
-  shippingAddressId String?
+  shippingAddressId String?  @unique
 
   paymentIntentId String?
 
@@ -372,21 +414,25 @@ enum PaymentOutcomeStatus {
   PENDING
 }
 
+enum KycAttemptStatus {
+  SUCCEEDED
+  FAILED
+  PENDING
+}
+
 // https://stripe.com/docs/api/radar/reviews/object
 model StripePaymentReview {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  open   Boolean
-  reason String
+  open         Boolean
+  reason       String
   openedReason String
   closedReason String?
-  
-
 
   session   Session @relation(fields: [sessionId], references: [id])
-  sessionId String @unique
+  sessionId String  @unique
 }
 
 model PaymentOutcome {

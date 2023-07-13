@@ -289,6 +289,47 @@ type PaymentAttempt = {
 }
 
 /**
+ * Model KycAttempt
+ * 
+ */
+type KycAttempt = {
+  id: string
+  updatedAt: Date
+  createdAt: Date
+  firstName: string | null
+  lastName: string | null
+  documentStatus: string
+  documentType: string | null
+  documentErrorReason: string | null
+  documentErrorCode: string | null
+  issuingCountry: string | null
+  dobDay: number | null
+  dobMonth: number | null
+  dobYear: number | null
+  expiryDay: number | null
+  expiryMonth: number | null
+  expiryYear: number | null
+  issuedDay: number | null
+  issuedMonth: number | null
+  issuedYear: number | null
+  manipulatedDocument: string | null
+  misrepresentedIdentity: string | null
+  unknownIdentity: string | null
+  addressId: string
+  files: string[]
+  selfie: string | null
+  selfieDocument: string | null
+  selfieStatus: string | null
+  selfieErrorReason: string | null
+  selfieErrorCode: string | null
+  staticImage: string | null
+  faceMismatch: string | null
+  biometricDuplicate: string | null
+  evaluableActionId: string
+  metadata: Prisma.JsonValue
+}
+
+/**
  * Model PaymentOutcome
  * 
  */

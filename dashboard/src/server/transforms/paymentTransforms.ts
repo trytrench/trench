@@ -34,7 +34,7 @@ export const isUnregisteredGmailNode = node.resolver(async ({ input }) => {
   return !isRegisteredGmail;
 });
 
-export const ruleInputNode = node
+export const paymentTransforms = node
   .depend({
     transforms: {
       aggregations: aggregationNode,
@@ -55,4 +55,4 @@ export const ruleInputNode = node
     };
   });
 
-export type RuleInput = inferNodeOutput<typeof ruleInputNode>;
+export type PaymentTransformInput = inferNodeOutput<typeof paymentTransforms>;
