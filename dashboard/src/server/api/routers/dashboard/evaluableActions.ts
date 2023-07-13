@@ -29,7 +29,9 @@ export const evaluableActionsRouter = createTRPCRouter({
               paymentMethod: {
                 include: {
                   card: true,
-                  address: true,
+                  address: {
+                    include: { location: true },
+                  },
                 },
               },
             },

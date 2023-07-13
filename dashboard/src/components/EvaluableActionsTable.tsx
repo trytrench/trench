@@ -9,6 +9,7 @@ import {
   Portal,
   Tag,
   TagLabel,
+  Text,
   Tooltip,
 } from "@chakra-ui/react";
 import {
@@ -46,142 +47,6 @@ type Option = {
 
 export type EvaluableActionRow =
   RouterOutputs["dashboard"]["evaluableActions"]["getAll"]["rows"][number];
-
-const columns: ColumnDef<EvaluableActionRow>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        isChecked={table.getIsAllPageRowsSelected()}
-        onChange={(e) => table.toggleAllPageRowsSelected(!!e.target.checked)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        isChecked={row.getIsSelected()}
-        onChange={(e) => row.toggleSelected(!!e.target.checked)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    meta: {
-      disableLink: true,
-    },
-  },
-  {
-    header: "Status",
-    id: "status",
-    cell: ({ row }) => {
-      const status =
-        row.original.paymentAttempt?.outcome?.status || "incomplete";
-      return (
-        <Tooltip
-          // label={row.original.outcome?.sellerMessage}
-          bgColor="white"
-          fontWeight="medium"
-          fontSize="sm"
-          color="inherit"
-          borderColor="gray.200"
-          borderWidth={1}
-          rounded="md"
-          placement="top"
-          hasArrow
-          p={4}
-        >
-          <PaymentStatusTag status={status} />
-        </Tooltip>
-      );
-    },
-  },
-  {
-    header: "Risk",
-    id: "risk",
-    cell: ({ row }) => {
-      const riskLevel = row.original.riskLevel;
-      const isFraud = row.original.isFraud;
-      const stripeReview = row.original.session.stripeReview;
-
-      const reviewOpen = stripeReview?.open ?? false;
-
-      return (
-        <Box display="flex" alignItems="center" gap={1}>
-          {riskLevel && <RiskLevelTag riskLevel={riskLevel} />}
-          {isFraud && (
-            <Tag colorScheme="red" size="sm" px={1.5}>
-              <TagLabel>Fraud</TagLabel>
-            </Tag>
-          )}
-          {reviewOpen && (
-            <Tag colorScheme="yellow" size="sm" px={1.5}>
-              <TagLabel>Needs Review</TagLabel>
-            </Tag>
-          )}
-        </Box>
-      );
-    },
-  },
-  {
-    header: "Amount",
-    accessorFn: (row) =>
-      row.paymentAttempt
-        ? (row.paymentAttempt.amount / 100).toLocaleString("en-US", {
-            style: "currency",
-            currency: row.paymentAttempt.currency,
-          })
-        : "--",
-  },
-  {
-    header: "Description",
-    accessorKey: "description",
-    size: 300,
-    cell({ row }) {
-      return row.original.paymentAttempt?.description || "--";
-    },
-  },
-  {
-    header: "User Email",
-    // accessorKey: "user.email",
-    size: 200,
-    cell({ row }) {
-      return (
-        row.original.session.user?.email ||
-        row.original.paymentAttempt?.paymentMethod.email ||
-        "--"
-      );
-    },
-  },
-
-  {
-    header: "User Name",
-    accessorKey: "paymentMethod.name",
-    cell({ row }) {
-      return (
-        row.original.session.user?.name ||
-        row.original.paymentAttempt?.paymentMethod.name ||
-        "--"
-      );
-    },
-  },
-  {
-    header: "Card",
-    accessorKey: "row.paymentMethod.card",
-    cell: ({ row }) => {
-      const paymentMethod = row.original.paymentAttempt?.paymentMethod;
-      if (!paymentMethod) return null;
-
-      const { card } = paymentMethod;
-      if (!card) return null;
-
-      return <CardWithIcon brand={card.brand} last4={card.last4} />;
-    },
-  },
-  {
-    header: "Date",
-    accessorFn: (row) => format(new Date(row.createdAt), "MMM d, p"),
-  },
-];
 
 const searchOptions = [
   {
@@ -286,6 +151,8 @@ interface PaymentsTableProps {
   allowMarkAsFraud?: boolean;
   onMarkSelectedAsFraud?: (ids: string[], markedTo: boolean) => void;
   isLoading?: boolean;
+
+  linkedPaymentAttemptActionId?: string;
 }
 
 export function PaymentsTable({
@@ -301,6 +168,8 @@ export function PaymentsTable({
   onMarkSelectedAsFraud,
 
   isLoading = false,
+
+  linkedPaymentAttemptActionId,
 }: PaymentsTableProps) {
   const { pageIndex, pageSize } = pagination;
 
@@ -308,6 +177,15 @@ export function PaymentsTable({
 
   const { mutateAsync } =
     api.dashboard.evaluableActions.updateMany.useMutation();
+
+  const { data: linkedAction } = api.dashboard.evaluableActions.get.useQuery(
+    {
+      id: linkedPaymentAttemptActionId ?? "",
+    },
+    {
+      enabled: !!linkedPaymentAttemptActionId,
+    }
+  );
 
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const createMarkSelectedAsFraud = useCallback(
@@ -325,6 +203,186 @@ export function PaymentsTable({
   );
 
   const numSelected = Object.values(rowSelection).filter(Boolean).length;
+
+  const columns: ColumnDef<EvaluableActionRow>[] = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            isChecked={table.getIsAllPageRowsSelected()}
+            onChange={(e) =>
+              table.toggleAllPageRowsSelected(!!e.target.checked)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            isChecked={row.getIsSelected()}
+            onChange={(e) => row.toggleSelected(!!e.target.checked)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        meta: {
+          disableLink: true,
+        },
+      },
+      {
+        header: "Status",
+        id: "status",
+        cell: ({ row }) => {
+          const status =
+            row.original.paymentAttempt?.outcome?.status || "incomplete";
+          return (
+            <Tooltip
+              // label={row.original.outcome?.sellerMessage}
+              bgColor="white"
+              fontWeight="medium"
+              fontSize="sm"
+              color="inherit"
+              borderColor="gray.200"
+              borderWidth={1}
+              rounded="md"
+              placement="top"
+              hasArrow
+              p={4}
+            >
+              <PaymentStatusTag status={status} />
+            </Tooltip>
+          );
+        },
+      },
+      {
+        header: "Risk",
+        id: "risk",
+        cell: ({ row }) => {
+          const riskLevel = row.original.riskLevel;
+          const isFraud = row.original.isFraud;
+          const stripeReview = row.original.session.stripeReview;
+
+          const reviewOpen = stripeReview?.open ?? false;
+
+          return (
+            <Box display="flex" alignItems="center" gap={1}>
+              {riskLevel && <RiskLevelTag riskLevel={riskLevel} />}
+              {isFraud && (
+                <Tag colorScheme="red" size="sm" px={1.5}>
+                  <TagLabel>Fraud</TagLabel>
+                </Tag>
+              )}
+              {reviewOpen && (
+                <Tag colorScheme="yellow" size="sm" px={1.5}>
+                  <TagLabel>Needs Review</TagLabel>
+                </Tag>
+              )}
+            </Box>
+          );
+        },
+      },
+      {
+        header: "Amount",
+        accessorFn: (row) =>
+          row.paymentAttempt
+            ? (row.paymentAttempt.amount / 100).toLocaleString("en-US", {
+                style: "currency",
+                currency: row.paymentAttempt.currency,
+              })
+            : "--",
+      },
+      {
+        header: "Description",
+        accessorKey: "description",
+        size: 200,
+        cell({ row }) {
+          return row.original.paymentAttempt?.description || "--";
+        },
+      },
+      {
+        header: "User Email",
+        // accessorKey: "user.email",
+        size: 200,
+        cell({ row }) {
+          const displayedEmail =
+            row.original.session.user?.email ||
+            row.original.paymentAttempt?.paymentMethod.email;
+          const linkedEmail =
+            linkedAction?.session.user?.email ||
+            linkedAction?.paymentAttempt?.paymentMethod.email;
+
+          return (
+            <Text
+              fontWeight={displayedEmail === linkedEmail ? "bold" : undefined}
+            >
+              {displayedEmail || "--"}
+            </Text>
+          );
+        },
+      },
+
+      {
+        header: "User Name",
+        accessorKey: "paymentMethod.name",
+        cell({ row }) {
+          return (
+            row.original.session.user?.name ||
+            row.original.paymentAttempt?.paymentMethod.name ||
+            "--"
+          );
+        },
+      },
+      {
+        header: "Card",
+        accessorKey: "row.paymentMethod.card",
+        cell({ row }) {
+          const card = row.original.paymentAttempt?.paymentMethod.card;
+          const linkedCard = linkedAction?.paymentAttempt?.paymentMethod.card;
+
+          if (!card) return null;
+          return (
+            <CardWithIcon
+              brand={card.brand}
+              last4={card.last4}
+              bold={card.fingerprint === linkedCard?.fingerprint}
+            />
+          );
+        },
+      },
+      {
+        header: "Date",
+        accessorFn: (row) => format(new Date(row.createdAt), "MMM d, p"),
+      },
+      {
+        header: "Device ID",
+        cell({ row }) {
+          const displayed = row.original.session.deviceSnapshot?.deviceId;
+          const linked = linkedAction?.session.deviceSnapshot?.deviceId;
+
+          return (
+            <Text fontWeight={displayed === linked ? "bold" : undefined}>
+              {displayed || "--"}
+            </Text>
+          );
+        },
+      },
+      {
+        header: "Device Fingerprint",
+        cell({ row }) {
+          const displayed = row.original.session.deviceSnapshot?.fingerprint;
+          const linked = linkedAction?.session.deviceSnapshot?.fingerprint;
+
+          return (
+            <Text fontWeight={displayed === linked ? "bold" : undefined}>
+              {displayed || "--"}
+            </Text>
+          );
+        },
+      },
+    ],
+    [linkedAction]
+  );
 
   return (
     <DataTable

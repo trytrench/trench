@@ -33,7 +33,11 @@ export type StreamInput = {
     paymentAttempt:
       | (PaymentAttempt & {
           paymentMethod: PaymentMethod & {
-            address: Address | null;
+            address:
+              | (Address & {
+                  location: Location | null;
+                })
+              | null;
             card: Card | null;
           };
         })

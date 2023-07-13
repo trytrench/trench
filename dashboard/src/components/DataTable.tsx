@@ -116,7 +116,7 @@ export function DataTable<TData, TValue>({
           )}
         </Box>
       )}
-      <Box borderRadius="md" borderWidth="1px" overflowX="auto">
+      <Box borderRadius="md" borderWidth="1px" overflowX="scroll">
         <Table>
           <Thead>
             {table.getHeaderGroups().map((headerGroup) => (
