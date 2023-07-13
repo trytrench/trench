@@ -24,11 +24,13 @@ import { api } from "~/lib/api";
 import { handleError } from "~/lib/handleError";
 import { PaymentsTable } from "./EvaluableActionsTable";
 import { type PaginationState } from "@tanstack/react-table";
-import { RiskLevel } from "../common/types";
+import { RiskLevel, UserFlow } from "../common/types";
+import { KycAttemptsTable } from "./KycAttemptsTable";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
   description: z.string().nullable(),
+  userFlow: z.string().nonempty(),
   jsCode: z.string().nonempty(),
   tsCode: z.string().nonempty(),
   riskLevel: z.nativeEnum(RiskLevel),
@@ -175,6 +177,7 @@ interface RuleFormProps {
   onSubmit: (rule: RuleFormType) => void;
   loading: boolean;
   mode: "create" | "edit";
+  userFlows: { id: string; name: string }[];
 }
 
 export function RuleForm({
@@ -183,8 +186,9 @@ export function RuleForm({
   onSubmit,
   loading,
   mode,
+  userFlows,
 }: RuleFormProps) {
-  const { name, description, tsCode, jsCode, riskLevel } = rule;
+  const { name, description, tsCode, jsCode, riskLevel, userFlow } = rule;
 
   const toast = useToast();
 
@@ -240,6 +244,23 @@ export function RuleForm({
             }}
           />
         </FormControl>
+
+        <FormControl>
+          <FormLabel>User Flow</FormLabel>
+          <Select
+            value={userFlow}
+            onChange={(e) => {
+              onChange({ ...rule, userFlow: e.target.value });
+            }}
+          >
+            {userFlows?.map((userFlow) => (
+              <option key={userFlow.id} value={userFlow.id}>
+                {userFlow.name}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+
         <FormControl>
           <FormLabel>Risk Level</FormLabel>
           <Select
@@ -292,6 +313,7 @@ export function RuleForm({
               <Button
                 onClick={() => {
                   backtest({
+                    userFlow,
                     lastNDays: lastNDays,
                     jsCode: newlyCompiledJsCode,
                   }).catch((err) => {
@@ -321,14 +343,22 @@ export function RuleForm({
               </Select>
             </HStack>
 
-            {paginatedBacktestData && (
-              <PaymentsTable
-                paymentsData={paginatedBacktestData}
-                count={backtestData?.triggeredRows.length ?? 0}
-                pagination={pagination}
-                onPaginationChange={setPagination}
-              />
-            )}
+            {paginatedBacktestData &&
+              (userFlows.find((u) => u.id === userFlow)?.name ===
+              UserFlow.SellerKyc ? (
+                <KycAttemptsTable
+                  data={paginatedBacktestData.map(
+                    (evaluableAction) => evaluableAction.kycAttempt
+                  )}
+                />
+              ) : (
+                <PaymentsTable
+                  paymentsData={paginatedBacktestData}
+                  count={backtestData?.triggeredRows.length ?? 0}
+                  pagination={pagination}
+                  onPaginationChange={setPagination}
+                />
+              ))}
           </Box>
         )}
       </VStack>

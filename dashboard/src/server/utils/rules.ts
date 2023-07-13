@@ -1,15 +1,4 @@
-import {
-  type Card,
-  type Session,
-  type User,
-  type Device,
-  type DeviceSnapshot,
-  type IpAddress,
-  type PaymentAttempt,
-  type PaymentMethod,
-} from "@prisma/client";
 import { RiskLevel } from "../../common/types";
-import { type RuleInput } from "../transforms/ruleInput";
 
 function convertStringToFn(jsString: string) {
   if (jsString === "" || jsString === null) {
@@ -27,7 +16,7 @@ export function runRule({
     jsCode: string;
     riskLevel: string;
   };
-  input: RuleInput;
+  input: any;
 }) {
   try {
     const fn = convertStringToFn(rule.jsCode) as unknown as (
@@ -54,8 +43,9 @@ export function runRules({
   input,
 }: {
   rules: { jsCode: string; riskLevel: string }[];
-  input: RuleInput;
+  input: any;
 }) {
+  // eslint-disable-next-line
   const ruleExecutionResults = rules.map((rule) => runRule({ rule, input }));
 
   const severitiesOrder = [

@@ -11,4 +11,5 @@ export enum EvaluableActionType {
 
 export enum UserFlow {
   StripePayment = "StripePayment",
+  SellerKyc = "SellerKyc",
 }

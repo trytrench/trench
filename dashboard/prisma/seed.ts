@@ -7,7 +7,7 @@ import {
   type User,
 } from "@prisma/client";
 import { faker } from "@faker-js/faker";
-import { RiskLevel } from "../src/common/types";
+import { RiskLevel, UserFlow } from "../src/common/types";
 import { userAgentFromString } from "next/server";
 
 const devPrisma = new PrismaClient({
@@ -175,7 +175,12 @@ const PAYMENT_ATTEMPTS: {
 async function main() {
   const userFlow = await devPrisma.userFlow.create({
     data: {
-      name: "Payment",
+      name: UserFlow.StripePayment,
+    },
+  });
+  await devPrisma.userFlow.create({
+    data: {
+      name: UserFlow.SellerKyc,
     },
   });
 

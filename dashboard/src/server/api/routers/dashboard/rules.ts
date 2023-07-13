@@ -2,13 +2,14 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
 import { runRule } from "~/server/utils/rules";
 import { RiskLevel } from "../../../../common/types";
-import { type RuleInput } from "../../../transforms/ruleInput";
+import { type PaymentTransformInput } from "../../../transforms/paymentTransforms";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
   description: z.string().nullable(),
   tsCode: z.string().nonempty(),
   jsCode: z.string().nonempty(),
+  userFlow: z.string().nonempty(),
   riskLevel: z.nativeEnum(RiskLevel),
 });
 
@@ -52,6 +53,7 @@ export const rulesRouter = createTRPCRouter({
   backtest: protectedProcedure
     .input(
       z.object({
+        userFlow: z.string(),
         jsCode: z.string().nonempty(),
         lastNDays: z.enum(["3", "7", "30"]),
       })
@@ -68,6 +70,9 @@ export const rulesRouter = createTRPCRouter({
                 new Date().getTime() -
                   Number(ruleToBacktest.lastNDays) * 24 * 60 * 60 * 1000
               ),
+            },
+            session: {
+              userFlowId: ruleToBacktest.userFlow,
             },
           },
           include: {
@@ -87,6 +92,7 @@ export const rulesRouter = createTRPCRouter({
                 },
               },
             },
+            kycAttempt: true,
             paymentAttempt: {
               include: {
                 paymentMethod: {
@@ -122,7 +128,8 @@ export const rulesRouter = createTRPCRouter({
           },
           input: {
             evaluableAction: action,
-            transforms: action?.transformsOutput as RuleInput["transforms"],
+            transforms:
+              action?.transformsOutput as PaymentTransformInput["transforms"],
             lists: listsObj,
           },
         });
@@ -140,11 +147,20 @@ export const rulesRouter = createTRPCRouter({
   create: protectedProcedure
     .input(ruleSchema)
     .mutation(async ({ ctx, input }) => {
+      const { userFlow, ...rest } = input;
+
       const result = await ctx.prisma.rule.create({
         data: {
           currentRuleSnapshot: {
-            create: input,
+            create: rest,
           },
+        },
+      });
+
+      await ctx.prisma.ruleToUserFlow.create({
+        data: {
+          rule: { connect: { id: result.id } },
+          userFlow: { connect: { id: userFlow } },
         },
       });
 
@@ -173,6 +189,7 @@ export const rulesRouter = createTRPCRouter({
         },
         include: {
           currentRuleSnapshot: true,
+          userFlows: true,
         },
       });
     }),
@@ -185,8 +202,9 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const { userFlow, ...rest } = input.data;
       const newRuleSnapshot = await ctx.prisma.ruleSnapshot.create({
-        data: input.data,
+        data: rest,
       });
 
       const result = await ctx.prisma.rule.update({
@@ -197,6 +215,9 @@ export const rulesRouter = createTRPCRouter({
           currentRuleSnapshot: { connect: { id: newRuleSnapshot.id } },
         },
       });
+
+      // TODO: Update user flow here
+
       return result;
     }),
 });

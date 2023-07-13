@@ -6,17 +6,21 @@ import { api } from "../../lib/api";
 import { handleError } from "../../lib/handleError";
 import { useRouter } from "next/router";
 import { RuleForm, type RuleFormType } from "../../components/RuleForm";
-import { RiskLevel } from "../../common/types";
+import { RiskLevel } from "~/common/types";
 
 const RulesPage: CustomPage = () => {
   const router = useRouter();
   const toast = useToast();
+
+  const { isLoading: userFlowsLoading, data: userFlows } =
+    api.dashboard.userFlows.getAll.useQuery();
 
   const [rule, setRule] = useState<RuleFormType>({
     name: "",
     description: "",
     tsCode: "",
     jsCode: "",
+    userFlow: userFlows?.[0]?.id ?? "",
     riskLevel: RiskLevel.Medium,
   });
 
@@ -46,10 +50,16 @@ const RulesPage: CustomPage = () => {
     [createRule, router, toast]
   );
 
+  if (!userFlows) return null;
+
   return (
     <RuleForm
       mode="create"
       rule={rule}
+      userFlows={userFlows.map((userFlow) => ({
+        id: userFlow.id,
+        name: userFlow.name,
+      }))}
       onChange={setRule}
       onSubmit={handleSubmit}
       loading={loadingCreateRule}

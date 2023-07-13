@@ -9,7 +9,7 @@ import {
   getFindManyWhereArgs,
 } from "../../../lib/evaluableAction/findMany";
 import { getFindUniqueIncludeArgs } from "../../../lib/evaluableAction/findUnique";
-import { ruleInputNode } from "../../../transforms/ruleInput";
+import { paymentTransforms } from "../../../transforms/paymentTransforms";
 import { runRules } from "../../../utils/rules";
 import SuperJSON from "superjson";
 import { cardAggregationsNode } from "../../../transforms/nodes/aggregations/card";
@@ -76,12 +76,10 @@ export const evaluableActionsRouter = createTRPCRouter({
         return acc;
       }, {} as Record<string, string[]>);
 
-      const ruleInput = await ruleInputNode.run({
+      const ruleInput = await paymentTransforms.run({
         evaluableAction,
         blockLists,
       });
-
-      // console.log(JSON.stringify(ruleInputNode.getArtifacts(), null, 2));
 
       const { ruleExecutionResults, highestRiskLevel } = runRules({
         rules: rules.map((rule) => rule.currentRuleSnapshot),
