@@ -123,6 +123,11 @@ const Page = () => {
       <Section title="Verified outputs">
         <List data={selfieData} />
       </Section>
+      <Section title="Metadata">
+        <Text fontSize="sm" whiteSpace="pre">
+          {JSON.stringify(data.metadata, null, 2)}
+        </Text>
+      </Section>
     </Box>
   );
 };

@@ -34,6 +34,31 @@ const columns: ColumnDef<
     },
   },
   {
+    header: "Status",
+    id: "status",
+    cell: ({ row }) => {
+      const status = row.original.status;
+      return status;
+      //   return (
+      //     <Tooltip
+      //       // label={row.original.outcome?.sellerMessage}
+      //       bgColor="white"
+      //       fontWeight="medium"
+      //       fontSize="sm"
+      //       color="inherit"
+      //       borderColor="gray.200"
+      //       borderWidth={1}
+      //       rounded="md"
+      //       placement="top"
+      //       hasArrow
+      //       p={4}
+      //     >
+      //       <PaymentStatusTag status={status} />
+      //     </Tooltip>
+      //   );
+    },
+  },
+  {
     header: "Selfie Status",
     id: "selfieStatus",
     cell: ({ row }) => {
@@ -87,7 +112,8 @@ const columns: ColumnDef<
     header: "Risk",
     id: "risk",
     cell: ({ row }) => {
-      //   const riskLevel = row.original.riskLevel;
+      const riskLevel = row.original.evaluableAction.riskLevel;
+      return riskLevel;
       //   const isFraud = row.original.isFraud;
       //   return (
       //     <Box display="flex" alignItems="center" gap={1}>

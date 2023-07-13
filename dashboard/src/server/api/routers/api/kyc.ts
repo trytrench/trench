@@ -230,8 +230,18 @@ export const apiKycRouter = createTRPCRouter({
         verificationSession.status === "requires_input" &&
         verificationSession.last_error
       ) {
-        if (verificationSession.last_verification_report)
-          await createEvaluableAction(verificationSession, input.metadata);
+        if (verificationSession.last_verification_report) {
+          const evaluableAction = await createEvaluableAction(
+            verificationSession,
+            input.metadata
+          );
+          await ctx.prisma.evaluableAction.update({
+            where: { id: evaluableAction.id },
+            data: {
+              riskLevel: RiskLevel.High,
+            },
+          });
+        }
 
         // return error
         return {

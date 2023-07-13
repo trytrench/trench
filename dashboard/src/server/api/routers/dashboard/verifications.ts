@@ -24,6 +24,9 @@ export const verificationsRouter = createTRPCRouter({
           orderBy: {
             createdAt: "desc",
           },
+          include: {
+            evaluableAction: true,
+          },
         }),
       ]);
 
