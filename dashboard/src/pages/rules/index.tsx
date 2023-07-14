@@ -40,7 +40,7 @@ import { RuleModal } from "../../components/RuleModal";
 type RulesRow = RouterOutputs["dashboard"]["rules"]["getAll"]["rows"][number];
 
 const RISK_LEVEL_ORDER = [
-  RiskLevel.Normal,
+  RiskLevel.Low,
   RiskLevel.Medium,
   RiskLevel.High,
   RiskLevel.VeryHigh,
