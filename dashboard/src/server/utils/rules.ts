@@ -52,7 +52,7 @@ export function runRules({
     RiskLevel.VeryHigh,
     RiskLevel.High,
     RiskLevel.Medium,
-    RiskLevel.Normal,
+    RiskLevel.Low,
   ];
   const firedRules = ruleExecutionResults.filter(
     (result) => result?.result === true
@@ -61,7 +61,7 @@ export function runRules({
     const prevIndex = severitiesOrder.indexOf(prev);
     const currIndex = severitiesOrder.indexOf(curr.riskLevel);
     return currIndex < prevIndex ? curr.riskLevel : prev;
-  }, RiskLevel.Normal as RiskLevel);
+  }, RiskLevel.Low as RiskLevel);
 
   return { ruleExecutionResults, highestRiskLevel };
 }

@@ -4,8 +4,6 @@ import type { Readable } from "node:stream";
 import Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
-import { UserFlow } from "../../common/types";
-import { PaymentOutcomeStatus } from "@prisma/client";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",

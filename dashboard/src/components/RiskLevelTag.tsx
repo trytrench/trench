@@ -20,7 +20,7 @@ export const MAP_RISK_LEVEL_TO_DATA: Record<
     color: "orange",
     label: "Medium",
   },
-  [RiskLevel.Normal]: {
+  [RiskLevel.Low]: {
     color: "gray",
     label: "Normal",
   },

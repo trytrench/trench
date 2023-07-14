@@ -25,7 +25,6 @@ export const apiPaymentsRouter = createTRPCRouter({
     .input(schema)
     .output(
       z.object({
-        success: z.boolean(),
         riskLevel: z.nativeEnum(RiskLevel),
         paymentAttemptId: z.string(),
       })
@@ -332,7 +331,6 @@ export const apiPaymentsRouter = createTRPCRouter({
       ]);
 
       return {
-        success: true,
         riskLevel: highestRiskLevel,
         paymentAttemptId: evaluableAction.paymentAttempt.id,
       };

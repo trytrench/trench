@@ -1,8 +1,8 @@
 export enum RiskLevel {
-  VeryHigh = "Very High",
-  High = "High",
-  Medium = "Medium",
-  Normal = "Normal",
+  VeryHigh = "very_high",
+  High = "high",
+  Medium = "medium",
+  Low = "low",
 }
 
 export enum EvaluableActionType {
