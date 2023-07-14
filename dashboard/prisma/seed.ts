@@ -52,7 +52,7 @@ const PAYMENT_ATTEMPTS: {
       });
 
       const riskLevelOrder = [
-        RiskLevel.Normal,
+        RiskLevel.Low,
         RiskLevel.Medium,
         RiskLevel.High,
         RiskLevel.VeryHigh,
@@ -67,7 +67,7 @@ const PAYMENT_ATTEMPTS: {
           return curr.riskLevel;
         }
         return acc;
-      }, RiskLevel.Normal as string);
+      }, RiskLevel.Low as string);
 
       return {
         amount: faker.number.int({ min: 1, max: 1000000 }),
