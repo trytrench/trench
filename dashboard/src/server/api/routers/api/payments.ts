@@ -31,12 +31,20 @@ export const apiPaymentsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const [paymentMethod, paymentIntent] = await Promise.all([
-        stripe.paymentMethods.retrieve(input.paymentMethodId, {
-          expand: ["customer"],
-        }),
-        stripe.paymentIntents.retrieve(input.paymentIntentId, {
-          expand: ["customer"],
-        }),
+        stripe.paymentMethods.retrieve(
+          input.paymentMethodId,
+          {
+            expand: ["customer"],
+          },
+          { maxNetworkRetries: 2 }
+        ),
+        stripe.paymentIntents.retrieve(
+          input.paymentIntentId,
+          {
+            expand: ["customer"],
+          },
+          { maxNetworkRetries: 2 }
+        ),
       ]);
 
       const customer = paymentIntent.customer || paymentMethod.customer;
@@ -95,7 +103,9 @@ export const apiPaymentsRouter = createTRPCRouter({
               paymentMethod: {
                 include: {
                   card: true,
-                  address: true,
+                  address: {
+                    include: { location: true },
+                  },
                 },
               },
             },

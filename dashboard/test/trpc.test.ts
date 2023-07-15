@@ -11,7 +11,10 @@ test("transaction insert should work", async () => {
     apiKey: process.env.API_KEY ?? "",
     clientIp: CLIENT_IP,
     session: {
-      userId: "1234",
+      user: {
+        id: "1234",
+      },
+      expires: new Date().toDateString(),
     },
   });
   const caller = appRouter.createCaller(ctx);

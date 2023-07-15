@@ -49,3 +49,5 @@ const getIpData = (data: Insights) => {
     userType: data.traits?.userType,
   };
 };
+
+export type IpData = ReturnType<typeof getIpData>;

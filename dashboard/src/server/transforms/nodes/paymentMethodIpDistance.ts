@@ -1,6 +1,6 @@
 import { node } from "../flow";
 import { geocodePlugin } from "../plugins/geocode";
-import { maxmindPlugin } from "../plugins/maxmind";
+import { type IpData, maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
 // global.crypto = require("crypto");
@@ -22,11 +22,7 @@ export const ipDataNode = node
 
       return maxmind;
     } else {
-      return {
-        ...location,
-        latitude: location.latitude,
-        longitude: location.longitude,
-      };
+      return ipAddressObj.metadata as IpData;
     }
   });
 
