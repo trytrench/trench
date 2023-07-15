@@ -44,41 +44,43 @@ export const apiPaymentsRouter = createTRPCRouter({
       if (!paymentMethod.card)
         throw new Error("No card found on payment method");
 
-      const session = await ctx.prisma.session.update({
-        where: { customId: input.sessionId },
-        data: {
-          user:
-            customer &&
-            typeof customer !== "string" &&
-            !customer.deleted &&
-            customer.email
-              ? {
-                  connectOrCreate: {
-                    where: {
-                      email: customer.email,
-                    },
-                    create: {
-                      email: customer.email,
-                      name: customer.name,
-                      phone: customer.phone,
-                      metadata: customer.metadata,
-                    },
+      const sessionData = {
+        user:
+          customer &&
+          typeof customer !== "string" &&
+          !customer.deleted &&
+          customer.email
+            ? {
+                connectOrCreate: {
+                  where: {
+                    email: customer.email,
                   },
-                }
-              : undefined,
-          // paymentAttempts: {},
-        },
-        include: {
-          deviceSnapshot: {
-            include: {
-              ipAddress: {
-                include: {
-                  location: true,
+                  create: {
+                    email: customer.email,
+                    name: customer.name,
+                    phone: customer.phone,
+                    metadata: customer.metadata,
+                  },
                 },
-              },
+              }
+            : undefined,
+      };
+
+      const session = await ctx.prisma.session.upsert({
+        where: { customId: input.sessionId },
+        update: sessionData,
+        create: {
+          customId: input.sessionId,
+          userFlow: {
+            connectOrCreate: {
+              where: { name: UserFlow.StripePayment },
+              create: { name: UserFlow.StripePayment },
             },
           },
+          ...sessionData,
+          // paymentAttempts: {},
         },
+        select: { id: true },
       });
 
       if (!paymentMethod.card.fingerprint) {
@@ -270,32 +272,29 @@ export const apiPaymentsRouter = createTRPCRouter({
             transformsOutput: superjson.parse(
               superjson.stringify(ruleInput.transforms)
             ),
-          },
-        }),
-        ctx.prisma.evaluableAction.update({
-          where: { id: evaluableAction.id },
-          data: {
-            session: {
-              update: {
-                deviceSnapshot: {
-                  update: {
-                    ipAddress: {
-                      update: ipData
-                        ? {
-                            metadata: ipData,
-                            location: {
-                              upsert: {
-                                update: ipLocationUpdate,
-                                create: ipLocationUpdate,
+            ...(evaluableAction.session.deviceSnapshot && {
+              session: {
+                update: {
+                  deviceSnapshot: {
+                    update: {
+                      ipAddress: {
+                        update: ipData
+                          ? {
+                              metadata: ipData,
+                              location: {
+                                upsert: {
+                                  update: ipLocationUpdate,
+                                  create: ipLocationUpdate,
+                                },
                               },
-                            },
-                          }
-                        : undefined,
+                            }
+                          : undefined,
+                      },
                     },
                   },
                 },
               },
-            },
+            }),
             paymentAttempt: {
               update: {
                 paymentMethod: {
