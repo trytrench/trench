@@ -37,10 +37,11 @@ const ViewPage: CustomPage = () => {
             util.dashboard.evaluableActions.getAll.setData(
               queryProps,
               (prev) => {
+                console.log(prev);
                 if (!prev) return prev;
                 return {
                   ...prev,
-                  data: prev.rows.map((action) => {
+                  rows: prev.rows.map((action) => {
                     if (paymentIds.includes(action.id)) {
                       return { ...action, isFraud: markedAs };
                     } else {

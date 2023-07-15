@@ -58,7 +58,7 @@
     "mapbox-gl": "^2.15.0",
     "monaco-editor": "^0.38.0",
     "nanoid": "^4.0.2",
-    "next": "^13.4.1",
+    "next": "13.4.9",
     "next-auth": "^4.22.1",
     "nextjs-cors": "^2.1.2",
     "prism-react-renderer": "^2.0.4",
