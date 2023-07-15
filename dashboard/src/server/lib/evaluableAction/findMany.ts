@@ -95,9 +95,7 @@ export function getFindManyWhereArgs(input: FindManyArgs) {
     session: {
       userId: filters?.userId,
       user: filters?.email
-        ? {
-            email: getSearchOption(filters?.email),
-          }
+        ? { email: getSearchOption(filters?.email) }
         : undefined,
     },
     ruleExecutions: input.executedRuleSnapshotId
@@ -112,9 +110,12 @@ export function getFindManyWhereArgs(input: FindManyArgs) {
     // Payment attempt specific filters
     paymentAttempt: {
       description: getSearchOption(filters?.description),
-      outcome: {
-        status: filters?.status,
-      },
+      outcome:
+        filters?.status === PaymentOutcomeStatus.PENDING
+          ? null
+          : {
+              status: filters?.status,
+            },
     },
   } satisfies Prisma.EvaluableActionFindManyArgs["where"];
 
