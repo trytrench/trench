@@ -32,6 +32,10 @@ async function main() {
     orderBy: {
       createdAt: "desc",
     },
+    where: {
+      isFraud: true,
+    },
+    take: 20,
     include: {
       paymentAttempt: {
         include: {

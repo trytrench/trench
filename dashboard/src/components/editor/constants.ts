@@ -98,6 +98,7 @@ type RuleInput = {
       outgoingTxCount: number;
     };
     isUnregisteredGmail: boolean;
+    numRelatedFraudPayments: number;
   };
 };
 

@@ -614,9 +614,16 @@ export function useEvaluableActionProps({
 
   const filters = useMemo(
     () =>
-      selectedOptions.reduce<Record<string, string>>((acc, option) => {
+      selectedOptions.reduce<Record<string, any>>((acc, option) => {
         const [key, value] = option.value.split(":");
         if (!key || !value) return acc;
+
+        // isFraud specifically takes a boolean
+        if (key === "isFraud") {
+          acc[key] = value === "true";
+          return acc;
+        }
+
         acc[key] = value;
         return acc;
       }, {}),
