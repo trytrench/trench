@@ -8,7 +8,7 @@ import {
 } from "./nodes/paymentMethodIpDistance";
 import { getEthWalletInfo } from "./plugins/getEthWalletInfo";
 import { isGmailRegistered } from "./plugins/isGmailRegistered";
-import { numRelatedFraudPayments } from "./nodes/numRelatedFraudPayments";
+import { numRelatedFraudPaymentsNode } from "./nodes/numRelatedFraudPayments";
 
 export const ethWalletInfoNode = node
   .resolver(({ input }) => {
@@ -44,7 +44,7 @@ export const paymentTransforms = node
       paymentMethodIpDistance: paymentMethodIpDistanceNode,
       ethWalletInfo: ethWalletInfoNode,
       isUnregisteredGmail: isUnregisteredGmailNode,
-      numRelatedFraudPayments: numRelatedFraudPayments,
+      numRelatedFraudPayments: numRelatedFraudPaymentsNode,
     },
   })
   .resolver(({ input, deps }) => {

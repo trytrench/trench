@@ -3,20 +3,22 @@ import { getFindManyIncludeArgs } from "../../lib/evaluableAction/findMany";
 import { EvaluableActionType } from "../../../common/types";
 import { type PrismaClient, type Prisma } from "@prisma/client";
 
-export const numRelatedFraudPayments = node.resolver(async ({ input, ctx }) => {
-  const { evaluableAction } = input;
+export const numRelatedFraudPaymentsNode = node.resolver(
+  async ({ input, ctx }) => {
+    const { evaluableAction } = input;
 
-  const where = await getLinkedToFraudPaymentAttemptWhereArgs(
-    ctx.prisma,
-    evaluableAction.id
-  );
+    const where = await getLinkedToFraudPaymentAttemptWhereArgs(
+      ctx.prisma,
+      evaluableAction.id
+    );
 
-  const results = await ctx.prisma.evaluableAction.findMany({
-    where,
-  });
+    const results = await ctx.prisma.evaluableAction.findMany({
+      where,
+    });
 
-  return results.length;
-});
+    return results.length;
+  }
+);
 
 // Link to other fraudulent payment attempts
 // only consider device, card, and email.
