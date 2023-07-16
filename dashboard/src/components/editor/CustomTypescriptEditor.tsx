@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useMemo, useCallback, useState } from "react";
+import React, { useRef, useMemo, useCallback } from "react";
 import Editor, { type OnChange, type Monaco } from "@monaco-editor/react";
 import { Position, type editor } from "monaco-editor";
 import { TYPES_SOURCE } from "./constants";
