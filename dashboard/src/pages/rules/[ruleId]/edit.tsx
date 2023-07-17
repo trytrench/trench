@@ -33,7 +33,7 @@ const EditRulePage: CustomPage = () => {
       setRule({
         ...ruleData.currentRuleSnapshot,
         riskLevel: ruleData.currentRuleSnapshot.riskLevel as RiskLevel,
-        userFlow: ruleData.userFlows[0]?.userFlowId ?? "",
+        userFlowId: ruleData.userFlows[0]?.userFlowId ?? "",
       });
     }
   }, [ruleData]);

@@ -30,7 +30,7 @@ import { KycAttemptsTable } from "./KycAttemptsTable";
 const ruleSchema = z.object({
   name: z.string().nonempty(),
   description: z.string().nullable(),
-  userFlow: z.string().nonempty(),
+  userFlowId: z.string().nonempty(),
   jsCode: z.string().nonempty(),
   tsCode: z.string().nonempty(),
   riskLevel: z.nativeEnum(RiskLevel),
@@ -188,7 +188,7 @@ export function RuleForm({
   mode,
   userFlows,
 }: RuleFormProps) {
-  const { name, description, tsCode, jsCode, riskLevel, userFlow } = rule;
+  const { name, description, tsCode, jsCode, riskLevel, userFlowId } = rule;
 
   const toast = useToast();
 
@@ -248,9 +248,9 @@ export function RuleForm({
         <FormControl>
           <FormLabel>User Flow</FormLabel>
           <Select
-            value={userFlow}
+            value={userFlowId}
             onChange={(e) => {
-              onChange({ ...rule, userFlow: e.target.value });
+              onChange({ ...rule, userFlowId: e.target.value });
             }}
           >
             {userFlows?.map((userFlow) => (
@@ -313,7 +313,7 @@ export function RuleForm({
               <Button
                 onClick={() => {
                   backtest({
-                    userFlow,
+                    userFlowId,
                     lastNDays: lastNDays,
                     jsCode: newlyCompiledJsCode,
                   }).catch((err) => {
@@ -344,7 +344,7 @@ export function RuleForm({
             </HStack>
 
             {paginatedBacktestData &&
-              (userFlows.find((u) => u.id === userFlow)?.name ===
+              (userFlows.find((u) => u.id === userFlowId)?.name ===
               UserFlow.SellerKyc ? (
                 <KycAttemptsTable
                   data={paginatedBacktestData.map(

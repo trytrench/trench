@@ -9,7 +9,7 @@ const ruleSchema = z.object({
   description: z.string().nullable(),
   tsCode: z.string().nonempty(),
   jsCode: z.string().nonempty(),
-  userFlow: z.string().nonempty(),
+  userFlowId: z.string().nonempty(),
   riskLevel: z.nativeEnum(RiskLevel),
 });
 
@@ -53,7 +53,7 @@ export const rulesRouter = createTRPCRouter({
   backtest: protectedProcedure
     .input(
       z.object({
-        userFlow: z.string(),
+        userFlowId: z.string(),
         jsCode: z.string().nonempty(),
         lastNDays: z.enum(["3", "7", "30"]),
       })
@@ -72,7 +72,7 @@ export const rulesRouter = createTRPCRouter({
               ),
             },
             session: {
-              userFlowId: ruleToBacktest.userFlow,
+              userFlowId: ruleToBacktest.userFlowId,
             },
           },
           include: {
@@ -147,7 +147,7 @@ export const rulesRouter = createTRPCRouter({
   create: protectedProcedure
     .input(ruleSchema)
     .mutation(async ({ ctx, input }) => {
-      const { userFlow, ...rest } = input;
+      const { userFlowId, ...rest } = input;
 
       const result = await ctx.prisma.rule.create({
         data: {
@@ -160,7 +160,7 @@ export const rulesRouter = createTRPCRouter({
       await ctx.prisma.ruleToUserFlow.create({
         data: {
           rule: { connect: { id: result.id } },
-          userFlow: { connect: { id: userFlow } },
+          userFlow: { connect: { id: userFlowId } },
         },
       });
 
@@ -202,7 +202,7 @@ export const rulesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { userFlow, ...rest } = input.data;
+      const { userFlowId, ...rest } = input.data;
       const newRuleSnapshot = await ctx.prisma.ruleSnapshot.create({
         data: rest,
       });
