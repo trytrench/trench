@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
-import Stripe from "stripe";
-import { env } from "~/env.mjs";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
-});
+import { stripe } from "../../../lib/stripe";
 
 export const verificationsRouter = createTRPCRouter({
   getAll: protectedProcedure

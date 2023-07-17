@@ -29,6 +29,7 @@ async function main() {
   }, {} as Record<string, string[]>);
 
   const allEvaluableActions = await prisma.evaluableAction.findMany({
+    take: 1,
     orderBy: {
       createdAt: "desc",
     },

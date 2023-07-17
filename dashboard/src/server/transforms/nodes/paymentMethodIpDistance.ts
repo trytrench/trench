@@ -3,8 +3,6 @@ import { geocodePlugin } from "../plugins/geocode";
 import { type IpData, maxmindPlugin } from "../plugins/maxmind";
 import { convertDistance, getPreciseDistance } from "geolib";
 
-// global.crypto = require("crypto");
-
 const ALWAYS_REFETCH_IP_DATA = false;
 
 export const ipDataNode = node
