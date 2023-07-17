@@ -22,7 +22,7 @@ export const env = createEnv({
     STRIPE_WEBHOOK_SECRET: z.string(),
     STRIPE_HOST: z.string().optional(),
     STRIPE_PORT: z.string().optional(),
-    STRIPE_PROTOCOL: z.string().optional(),
+    STRIPE_PROTOCOL: z.enum(["http", "https"]).optional(),
     NEXTAUTH_URL: z.string().url().optional(),
     ALCHEMY_API_KEY: z.string().optional(),
   },
