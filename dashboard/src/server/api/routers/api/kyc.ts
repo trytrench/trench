@@ -1,5 +1,5 @@
 import { KycAttemptStatus, type Prisma } from "@prisma/client";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import superjson from "superjson";
 import { z } from "zod";
 import { env } from "~/env.mjs";
@@ -8,14 +8,11 @@ import { createTRPCRouter, openApiProcedure } from "../../trpc";
 import { RiskLevel, UserFlow } from "~/common/types";
 import { runRules } from "~/server/utils/rules";
 import { prisma } from "~/server/db";
+import { stripe } from "../../../lib/stripe";
 
 const kycSchema = z.object({
   verificationSessionId: z.string(),
   metadata: z.record(z.any()).optional(),
-});
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
 });
 
 const createEvaluableAction = async (

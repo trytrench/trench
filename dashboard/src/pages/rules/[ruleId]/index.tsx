@@ -37,9 +37,9 @@ const EditRulePage: CustomPage = () => {
   const router = useRouter();
 
   const [showCode, setShowCode] = useState(false);
+  const util = api.useContext();
 
   const ruleId = router.query.ruleId as string;
-
   const { data: ruleData } = api.dashboard.rules.get.useQuery({
     id: ruleId,
   });
@@ -59,6 +59,7 @@ const EditRulePage: CustomPage = () => {
     setSelectedOptions,
     data: paymentsData,
     count,
+    queryProps,
   } = useEvaluableActionProps({
     executedRuleSnapshotId: ruleSnapshot?.id,
   });
@@ -149,6 +150,25 @@ const EditRulePage: CustomPage = () => {
         <Heading mb={4}>Payments</Heading>
         {paymentsData ? (
           <PaymentsTable
+            onMarkSelectedAsFraud={(paymentIds, markedAs) => {
+              util.dashboard.evaluableActions.getAll.setData(
+                queryProps,
+                (prev) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    rows: prev.rows.map((action) => {
+                      if (paymentIds.includes(action.id)) {
+                        return { ...action, isFraud: markedAs };
+                      } else {
+                        return action;
+                      }
+                    }),
+                  };
+                }
+              );
+            }}
+            allowMarkAsFraud={true}
             paymentsData={paymentsData}
             count={count}
             pagination={pagination}

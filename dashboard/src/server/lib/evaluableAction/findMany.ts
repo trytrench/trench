@@ -16,7 +16,7 @@ export const findManyZod = z.object({
     // Payment attempt specific filters
     description: z.string().optional(),
     status: z.nativeEnum(PaymentOutcomeStatus).optional(),
-    // sellerName: z.string().optional(),
+    sellerName: z.string().optional(),
     // sellerId: z.string().optional(),
   }),
   executedRuleSnapshotId: z.string().optional(),
@@ -109,6 +109,13 @@ export function getFindManyWhereArgs(input: FindManyArgs) {
 
     // Payment attempt specific filters
     paymentAttempt: {
+      metadata: filters?.sellerName
+        ? {
+            path: ["sellerName"],
+            string_contains: filters.sellerName,
+            // string_contains: filters?.sellerName,
+          }
+        : undefined,
       description: getSearchOption(filters?.description),
       outcome:
         filters?.status === PaymentOutcomeStatus.PENDING

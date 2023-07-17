@@ -1,22 +1,17 @@
 import { type Prisma } from "@prisma/client";
-import Stripe from "stripe";
 import superjson from "superjson";
 import { z } from "zod";
-import { env } from "~/env.mjs";
 import { createTRPCRouter, openApiProcedure } from "../../trpc";
 import { RiskLevel, UserFlow } from "~/common/types";
 import { runRules } from "~/server/utils/rules";
 import { paymentTransforms } from "~/server/transforms/paymentTransforms";
+import { stripe } from "../../../lib/stripe";
 
 const schema = z.object({
   paymentIntentId: z.string(),
   paymentMethodId: z.string(),
   sessionId: z.string(),
   metadata: z.record(z.any()).optional(),
-});
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
 });
 
 export const apiPaymentsRouter = createTRPCRouter({
@@ -33,9 +28,7 @@ export const apiPaymentsRouter = createTRPCRouter({
       const [paymentMethod, paymentIntent] = await Promise.all([
         stripe.paymentMethods.retrieve(
           input.paymentMethodId,
-          {
-            expand: ["customer"],
-          },
+          { expand: ["customer"] },
           { maxNetworkRetries: 2 }
         ),
         stripe.paymentIntents.retrieve(

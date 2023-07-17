@@ -1,13 +1,9 @@
 import { PaymentOutcomeStatus } from "@prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { Readable } from "node:stream";
-import Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
-});
+import { stripe } from "../../server/lib/stripe";
 
 const stripeStatusToPaymentOutcomeStatus = {
   succeeded: PaymentOutcomeStatus.SUCCEEDED,

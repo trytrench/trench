@@ -60,6 +60,7 @@ interface PaymentDetailsProps {
 }
 
 export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
+  const utils = api.useContext();
   const { isLoading, data: evaluableAction } =
     api.dashboard.evaluableActions.get.useQuery({
       id: paymentId,
@@ -92,6 +93,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     count,
     refetch,
     isFetching,
+    queryProps,
   } = useEvaluableActionProps({
     paymentAttemptActionId: paymentId,
   });
@@ -286,8 +288,23 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
           selectedOptions={selectedOptions}
           onSelectedOptionsChange={setSelectedOptions}
           allowMarkAsFraud
-          onMarkSelectedAsFraud={() => {
-            refetch().catch(handleError);
+          onMarkSelectedAsFraud={(paymentIds, markedAs) => {
+            utils.dashboard.evaluableActions.getAll.setData(
+              queryProps,
+              (prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  rows: prev.rows.map((action) => {
+                    if (paymentIds.includes(action.id)) {
+                      return { ...action, isFraud: markedAs };
+                    } else {
+                      return action;
+                    }
+                  }),
+                };
+              }
+            );
           }}
           isLoading={isFetching}
         />
