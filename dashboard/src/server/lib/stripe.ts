@@ -5,5 +5,5 @@ export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
   host: env.STRIPE_HOST,
   port: env.STRIPE_PORT,
-  protocol: "http",
+  protocol: (env.STRIPE_PROTOCOL as Stripe.HttpProtocol) ?? undefined,
 });
