@@ -1,6 +1,6 @@
 import { Layout } from "~/components/layouts/Layout";
 import { useToast } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type CustomPage } from "../../types/Page";
 import { api } from "../../lib/api";
 import { handleError } from "../../lib/handleError";
@@ -20,9 +20,16 @@ const RulesPage: CustomPage = () => {
     description: "",
     tsCode: "",
     jsCode: "",
-    userFlow: userFlows?.[0]?.id ?? "",
+    userFlowId: userFlows?.[0]?.id ?? "",
     riskLevel: RiskLevel.Medium,
   });
+
+  useEffect(() => {
+    const userFlowId = userFlows?.[0]?.id;
+    if (userFlowId) {
+      setRule((rule) => ({ ...rule, userFlowId: userFlowId }));
+    }
+  }, [userFlows]);
 
   const { mutateAsync: createRule, isLoading: loadingCreateRule } =
     api.dashboard.rules.create.useMutation();
