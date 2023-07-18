@@ -237,9 +237,13 @@ export const apiPaymentsRouter = createTRPCRouter({
       const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
         latitude: ipData?.latitude,
         longitude: ipData?.longitude,
+        cityGeonameId: ipData?.cityGeonameId,
+        cityName: ipData?.cityName,
         countryISOCode: ipData?.countryISOCode,
         countryName: ipData?.countryName,
         postalCode: ipData?.postalCode,
+        regionISOCode: ipData?.subdivisionISOCode,
+        regionName: ipData?.subdivisionName,
       };
 
       const paymentMethodLocationUpdate: Prisma.LocationCreateArgs["data"] = {
