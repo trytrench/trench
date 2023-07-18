@@ -1,4 +1,4 @@
-import { Grid, GridItem } from "@chakra-ui/react";
+import { Grid, GridItem, Text } from "@chakra-ui/react";
 import { getLabelValuePairs } from "~/utils/getLabelValuePairs";
 import { List } from "./List";
 import { Section } from "./views/PaymentDetails";
@@ -110,23 +110,31 @@ export const DeviceSection = ({ deviceSnapshot }: Props) => {
 
   return (
     <Section title="Device">
-      <Grid
-        templateColumns={{
-          md: "repeat(2, 1fr)",
-          base: "repeat(1, 1fr)",
-        }}
-        gap={{
-          md: 8,
-          base: 2,
-        }}
-      >
-        <GridItem>
-          <List data={deviceData.slice(0, Math.ceil(deviceData.length / 2))} />
-        </GridItem>
-        <GridItem>
-          <List data={deviceData.slice(Math.ceil(deviceData.length / 2))} />
-        </GridItem>
-      </Grid>
+      {deviceSnapshot ? (
+        <Grid
+          templateColumns={{
+            md: "repeat(2, 1fr)",
+            base: "repeat(1, 1fr)",
+          }}
+          gap={{
+            md: 8,
+            base: 2,
+          }}
+        >
+          <GridItem>
+            <List
+              data={deviceData.slice(0, Math.ceil(deviceData.length / 2))}
+            />
+          </GridItem>
+          <GridItem>
+            <List data={deviceData.slice(Math.ceil(deviceData.length / 2))} />
+          </GridItem>
+        </Grid>
+      ) : (
+        <Text color="subtle" variant="sm">
+          Device data unavailable
+        </Text>
+      )}
     </Section>
   );
 };

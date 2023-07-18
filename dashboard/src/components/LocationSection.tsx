@@ -13,14 +13,14 @@ interface Props {
 
 export const LocationSection = ({ ipAddress, markers }: Props) => {
   const locationData = getLabelValuePairs([
-    { label: "City", value: ipAddress.location?.cityName },
+    { label: "City", value: ipAddress?.location?.cityName },
     {
       label: "Subdivision",
-      value: ipAddress.location?.regionName,
+      value: ipAddress?.location?.regionName,
     },
     {
       label: "Country",
-      value: ipAddress.location?.countryName,
+      value: ipAddress?.location?.countryName,
     },
     // { label: "IP Timezone", value: deviceSnapshot?.ipAddress?.location.ip },
   ]);
@@ -35,7 +35,13 @@ export const LocationSection = ({ ipAddress, markers }: Props) => {
         gap={8}
       >
         <GridItem>
-          <List data={locationData} />
+          {ipAddress ? (
+            <List data={locationData} />
+          ) : (
+            <Text color="subtle" variant="sm">
+              Location data unavailable
+            </Text>
+          )}
         </GridItem>
         <GridItem h={250}>
           {!!env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ? (
