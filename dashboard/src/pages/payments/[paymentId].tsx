@@ -429,7 +429,7 @@ const Page: CustomPage = () => {
       </Section>
       <PaymentDetails paymentId={paymentId} />
       <Section title="Raw Transforms Data">
-        <Text fontFamily="mono" whiteSpace={"pre"}>
+        <Text fontFamily="mono" whiteSpace={"pre"} fontSize="sm">
           {JSON.stringify(evaluableAction.transformsOutput, null, 2)}
         </Text>
       </Section>
