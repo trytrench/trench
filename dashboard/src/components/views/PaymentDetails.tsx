@@ -95,7 +95,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     isFetching,
     queryProps,
   } = useEvaluableActionProps({
-    paymentAttemptActionId: paymentId,
+    paymentAttemptActionId: evaluableAction?.id,
   });
 
   if (!evaluableAction) return null;
