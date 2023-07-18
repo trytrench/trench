@@ -420,7 +420,7 @@ export function PaymentsTable({
       pageIndex={pageIndex}
       pageSize={pageSize}
       pageCount={Math.ceil(dataCount / pageSize)}
-      getRowHref={(row) => `/payments/${row.original.id}`}
+      getRowHref={(row) => `/payments/${row.original.paymentAttempt?.id}`}
       header={
         <Box
           w="full"
