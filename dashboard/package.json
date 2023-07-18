@@ -20,6 +20,7 @@
     "@fingerprintjs/fingerprintjs": "^3.4.1",
     "@hookform/resolvers": "^3.1.0",
     "@mapbox/mapbox-sdk": "^0.15.2",
+    "@math.gl/web-mercator": "^3.6.3",
     "@maxmind/geoip2-node": "^3.5.0",
     "@monaco-editor/react": "^4.5.1",
     "@next-auth/prisma-adapter": "^1.0.7",
