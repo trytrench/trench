@@ -196,13 +196,21 @@ export const evaluableActionsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      // TODO: this is a temp fix
+      return ctx.prisma.evaluableAction.findUnique({
+        where: { id: input.id },
+        include: getFindUniqueIncludeArgs(input.type),
+      });
+    }),
+  getByPaymentAttempt: protectedProcedure
+    .input(
+      z.object({
+        paymentAttemptId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
       return ctx.prisma.evaluableAction.findFirst({
-        where: {
-          paymentAttempt: {
-            id: input.id,
-          },
-        },
+        where: { paymentAttempt: { id: input.paymentAttemptId } },
+        include: getFindUniqueIncludeArgs(),
       });
     }),
 

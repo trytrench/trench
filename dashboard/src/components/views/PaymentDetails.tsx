@@ -62,8 +62,8 @@ interface PaymentDetailsProps {
 export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
   const utils = api.useContext();
   const { isLoading, data: evaluableAction } =
-    api.dashboard.evaluableActions.get.useQuery({
-      id: paymentId,
+    api.dashboard.evaluableActions.getByPaymentAttempt.useQuery({
+      paymentAttemptId: paymentId,
     });
 
   const deviceSnapshot = evaluableAction?.session.deviceSnapshot;
