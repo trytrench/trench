@@ -4,6 +4,7 @@ import { CardIcon, DeviceIcon } from "./icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import circle from "@turf/circle";
 import { env } from "~/env.mjs";
+import WebMercatorViewport from "@math.gl/web-mercator";
 
 interface Marker {
   latitude: number | null;
@@ -38,7 +39,16 @@ export const PaymentMap = ({ markers }: PaymentMapProps) => {
       bounds = bounds.extend([marker.longitude, marker.latitude]);
     }
 
-    return { bounds, fitBoundsOptions: { padding: 50 } };
+    const viewport = new WebMercatorViewport({
+      width: 600,
+      height: 400,
+    }).fitBounds(bounds.toArray() as [[number, number], [number, number]], {
+      padding: 100,
+      maxZoom: 10,
+    });
+
+    const { longitude, latitude, zoom } = viewport;
+    return { longitude, latitude, zoom };
   };
 
   return (
