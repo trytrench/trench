@@ -78,7 +78,6 @@ export const rulesRouter = createTRPCRouter({
           include: {
             session: {
               include: {
-                evaluableActions: true,
                 user: true,
                 deviceSnapshot: {
                   include: {
