@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/trpc/[...trpc].ts": {
+      "memory": 3008
+    }
+  }
+}
