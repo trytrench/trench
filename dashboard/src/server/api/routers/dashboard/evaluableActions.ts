@@ -196,9 +196,13 @@ export const evaluableActionsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.evaluableAction.findUnique({
-        where: { id: input.id },
-        include: getFindUniqueIncludeArgs(input.type),
+      // TODO: this is a temp fix
+      return ctx.prisma.evaluableAction.findFirst({
+        where: {
+          paymentAttempt: {
+            id: input.id,
+          },
+        },
       });
     }),
 
