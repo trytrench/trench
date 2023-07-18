@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/trpc/[...trpc].ts": {
+    "api/trpc/[...trpc]": {
       "memory": 3008
     }
   }
