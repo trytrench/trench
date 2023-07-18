@@ -286,25 +286,29 @@ async function getLinkedToPaymentAttemptWhereArgs(
   const deviceSnapshot = linkedAction.session.deviceSnapshot;
 
   const orClauses: Prisma.EvaluableActionWhereInput[] = [
-    {
-      session: {
-        deviceSnapshot: {
-          deviceId: deviceSnapshot?.deviceId,
-        },
-      },
-    },
-    {
-      session: {
-        deviceSnapshot: { fingerprint: deviceSnapshot?.fingerprint },
-      },
-    },
-    {
-      session: {
-        deviceSnapshot: {
-          ipAddress: { ipAddress: deviceSnapshot?.ipAddress?.ipAddress },
-        },
-      },
-    },
+    ...(deviceSnapshot
+      ? [
+          {
+            session: {
+              deviceSnapshot: {
+                deviceId: deviceSnapshot?.deviceId,
+              },
+            },
+          },
+          {
+            session: {
+              deviceSnapshot: { fingerprint: deviceSnapshot?.fingerprint },
+            },
+          },
+          {
+            session: {
+              deviceSnapshot: {
+                ipAddress: { ipAddress: deviceSnapshot?.ipAddress?.ipAddress },
+              },
+            },
+          },
+        ]
+      : []),
     {
       paymentAttempt: {
         paymentMethod: {
