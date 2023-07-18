@@ -77,24 +77,12 @@ export default async function handler(
       ? "99.120.79.196"
       : (req.headers["x-forwarded-for"] as string | undefined);
 
-  let ipData, existingIpAddress;
+  let existingIpAddress;
   if (ipAddress) {
     existingIpAddress = await prisma.ipAddress.findUnique({
       where: { ipAddress },
       select: { id: true },
     });
-
-    if (
-      !existingIpAddress &&
-      env.MAXMIND_LICENSE_KEY &&
-      env.MAXMIND_ACCOUNT_ID
-    ) {
-      try {
-        ipData = getIpData(await maxMind.insights(ipAddress));
-      } catch (error) {
-        console.error(error);
-      }
-    }
   }
 
   const userAgentData = userAgentFromString(fingerprint2Components.userAgent);
@@ -150,28 +138,12 @@ export default async function handler(
           ipAddress: existingIpAddress
             ? { connect: { id: existingIpAddress.id } }
             : ipAddress
-            ? {
-                create: {
-                  ipAddress,
-                  ...(ipData && {
-                    location: {
-                      create: {
-                        latitude: ipData.latitude,
-                        longitude: ipData.longitude,
-                        cityGeonameId: ipData.cityGeonameId,
-                        cityName: ipData.cityName,
-                        countryISOCode: ipData.countryISOCode,
-                        countryName: ipData.countryName,
-                        postalCode: ipData.postalCode,
-                        regionISOCode: ipData.subdivisionISOCode,
-                        regionName: ipData.subdivisionName,
-                      },
-                    },
-                    metadata: ipData,
-                  }),
-                },
-              }
+            ? { create: { ipAddress } }
             : undefined,
+          metadata: {
+            ...fingerprintComponents,
+            ...fingerprint2Components,
+          },
         },
       },
     },
