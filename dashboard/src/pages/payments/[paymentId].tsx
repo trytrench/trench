@@ -261,8 +261,8 @@ const Page: CustomPage = () => {
     api.dashboard.evaluableActions.evaluate.useMutation();
 
   const { isLoading, data: evaluableAction } =
-    api.dashboard.evaluableActions.get.useQuery({
-      id: paymentId,
+    api.dashboard.evaluableActions.getByPaymentAttempt.useQuery({
+      paymentAttemptId: paymentId,
     });
 
   if (!evaluableAction) return null;
