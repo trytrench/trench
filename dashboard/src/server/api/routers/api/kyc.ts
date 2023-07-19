@@ -187,6 +187,19 @@ export const apiKycRouter = createTRPCRouter({
           input: ruleInput,
         });
 
+        const ipData = ruleInput.transforms.ipData;
+        const ipLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+          latitude: ipData?.latitude,
+          longitude: ipData?.longitude,
+          cityGeonameId: ipData?.cityGeonameId,
+          cityName: ipData?.cityName,
+          countryISOCode: ipData?.countryISOCode,
+          countryName: ipData?.countryName,
+          postalCode: ipData?.postalCode,
+          regionISOCode: ipData?.subdivisionISOCode,
+          regionName: ipData?.subdivisionName,
+        };
+
         await ctx.prisma.$transaction([
           ctx.prisma.ruleExecution.createMany({
             data: rules
@@ -214,6 +227,29 @@ export const apiKycRouter = createTRPCRouter({
               transformsOutput: superjson.parse(
                 superjson.stringify(ruleInput.transforms)
               ),
+              ...(evaluableAction.session.deviceSnapshot && {
+                session: {
+                  update: {
+                    deviceSnapshot: {
+                      update: {
+                        ipAddress: {
+                          update: ipData
+                            ? {
+                                metadata: ipData,
+                                location: {
+                                  upsert: {
+                                    update: ipLocationUpdate,
+                                    create: ipLocationUpdate,
+                                  },
+                                },
+                              }
+                            : undefined,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
             },
           }),
         ]);
