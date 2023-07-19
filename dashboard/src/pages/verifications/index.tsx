@@ -11,7 +11,7 @@ const Page: CustomPage = () => {
 
   return (
     <Box>
-      <Heading>Verifications</Heading>
+      <Heading mb={4}>Verifications</Heading>
       <KycAttemptsTable data={data.rows} />
     </Box>
   );

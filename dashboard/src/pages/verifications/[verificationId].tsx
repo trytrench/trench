@@ -126,7 +126,7 @@ const Page = () => {
         Verification
       </Text>
       <Flex justify="space-between" align="center">
-        <HStack align="baseline" spacing={4}>
+        <HStack align="center" spacing={4}>
           <Heading mb={2}>
             {data.firstName} {data.lastName}
           </Heading>
@@ -188,7 +188,7 @@ const Page = () => {
           </MenuList>
         </Menu>
       </Flex>
-      <HStack spacing={6} mb={2}>
+      <HStack spacing={6} mb={4}>
         <Text color="gray.600" fontWeight="medium">
           {format(
             new Date(data.evaluableAction.createdAt),
