@@ -216,9 +216,9 @@ export const verificationsRouter = createTRPCRouter({
       };
 
       const kycLocationUpdate: Prisma.LocationCreateArgs["data"] = {
-        latitude: ruleInput.transforms.kycLocation.latitude,
-        longitude: ruleInput.transforms.kycLocation.longitude,
-        countryISOCode: ruleInput.transforms.kycLocation.countryCode,
+        latitude: ruleInput.transforms.kycLocation?.latitude,
+        longitude: ruleInput.transforms.kycLocation?.longitude,
+        countryISOCode: ruleInput.transforms.kycLocation?.countryCode,
       };
 
       await ctx.prisma.$transaction([
