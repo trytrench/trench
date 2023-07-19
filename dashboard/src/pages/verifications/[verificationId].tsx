@@ -107,10 +107,10 @@ const Page = () => {
       />
       <Flex my={6} gap={4}>
         <Box>
-          <Image w={300} src={data?.selfie.url} />
+          <Image w={300} src={data?.selfie?.url} />
         </Box>
         <Box>
-          <Image w={400} src={data?.selfieDocument.url} />
+          <Image w={400} src={data?.selfieDocument?.url} />
         </Box>
       </Flex>
       {/* <Image src={data?.files[0]?.url} />

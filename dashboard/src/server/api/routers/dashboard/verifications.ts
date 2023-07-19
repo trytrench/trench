@@ -76,24 +76,31 @@ export const verificationsRouter = createTRPCRouter({
 
       if (!result) return null;
 
+      let stripeFiles;
+      try {
+        stripeFiles = {
+          selfie: await stripe.fileLinks.create({
+            file: result.selfieFile,
+            expires_at: Math.floor(Date.now() / 1000) + 30,
+          }),
+          selfieDocument: await stripe.fileLinks.create({
+            file: result.selfieDocument,
+            expires_at: Math.floor(Date.now() / 1000) + 30,
+          }),
+          files: await Promise.all(
+            result.documentFiles.map((file) =>
+              stripe.fileLinks.create({
+                file,
+                expires_at: Math.floor(Date.now() / 1000) + 30,
+              })
+            )
+          ),
+        };
+      } catch (error) {}
+
       return {
         ...result,
-        selfie: await stripe.fileLinks.create({
-          file: result.selfieFile,
-          expires_at: Math.floor(Date.now() / 1000) + 30,
-        }),
-        selfieDocument: await stripe.fileLinks.create({
-          file: result.selfieDocument,
-          expires_at: Math.floor(Date.now() / 1000) + 30,
-        }),
-        files: await Promise.all(
-          result.documentFiles.map((file) =>
-            stripe.fileLinks.create({
-              file,
-              expires_at: Math.floor(Date.now() / 1000) + 30,
-            })
-          )
-        ),
+        ...stripeFiles,
       };
     }),
 });
