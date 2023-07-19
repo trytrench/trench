@@ -32,7 +32,15 @@ const createEvaluableAction = async (
 
   return prisma.evaluableAction.create({
     include: {
-      kycAttempt: true,
+      kycAttempt: {
+        include: {
+          address: {
+            include: {
+              location: true,
+            },
+          },
+        },
+      },
       // TODO: Remove
       // We include this to fix types
       paymentAttempt: {
@@ -200,6 +208,12 @@ export const apiKycRouter = createTRPCRouter({
           regionName: ipData?.subdivisionName,
         };
 
+        const kycLocationUpdate: Prisma.LocationCreateArgs["data"] = {
+          latitude: ruleInput.transforms.kycLocation.latitude,
+          longitude: ruleInput.transforms.kycLocation.longitude,
+          countryISOCode: ruleInput.transforms.kycLocation.countryCode,
+        };
+
         await ctx.prisma.$transaction([
           ctx.prisma.ruleExecution.createMany({
             data: rules
@@ -250,6 +264,22 @@ export const apiKycRouter = createTRPCRouter({
                   },
                 },
               }),
+              kycAttempt: {
+                update: {
+                  address: {
+                    update: {
+                      location: {
+                        upsert: ruleInput.transforms.kycLocation
+                          ? {
+                              update: kycLocationUpdate,
+                              create: kycLocationUpdate,
+                            }
+                          : undefined,
+                      },
+                    },
+                  },
+                },
+              },
             },
           }),
         ]);

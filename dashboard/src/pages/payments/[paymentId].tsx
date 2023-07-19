@@ -386,7 +386,7 @@ const Page: CustomPage = () => {
           <Text userSelect="none" display="inline">
             ID:{" "}
           </Text>
-          {evaluableAction.id}
+          {evaluableAction.paymentAttempt.id}
         </Text>
       </HStack>
       <HStack mb={2}></HStack>

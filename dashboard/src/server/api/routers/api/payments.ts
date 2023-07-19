@@ -91,6 +91,17 @@ export const apiPaymentsRouter = createTRPCRouter({
       // TODO: Move create to webhook?
       const evaluableAction = await ctx.prisma.evaluableAction.create({
         include: {
+          // TODO: Remove
+          // We include this to fix types
+          kycAttempt: {
+            include: {
+              address: {
+                include: {
+                  location: true,
+                },
+              },
+            },
+          },
           paymentAttempt: {
             include: {
               paymentMethod: {
