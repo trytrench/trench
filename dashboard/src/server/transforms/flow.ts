@@ -1,18 +1,19 @@
 import { initNodeBuilder } from "@trytrench/flow";
 import { prisma } from "../db";
-import {
-  type Session,
-  type Device,
-  type DeviceSnapshot,
-  type IpAddress,
-  type PaymentMethod,
-  type List,
-  type PaymentAttempt,
-  type Address,
-  type Card,
-  type User,
-  type Location,
-  type EvaluableAction,
+import type {
+  Session,
+  Device,
+  DeviceSnapshot,
+  IpAddress,
+  PaymentMethod,
+  List,
+  PaymentAttempt,
+  Address,
+  Card,
+  User,
+  Location,
+  EvaluableAction,
+  KycAttempt,
 } from "@prisma/client";
 
 export type StreamInput = {
@@ -40,6 +41,11 @@ export type StreamInput = {
               | null;
             card: Card | null;
           };
+        })
+      | null;
+    kycAttempt:
+      | (KycAttempt & {
+          address: (Address & { location: Location | null }) | null;
         })
       | null;
   };

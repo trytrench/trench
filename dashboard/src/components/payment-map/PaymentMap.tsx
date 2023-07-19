@@ -1,6 +1,6 @@
 import Map, { Layer, Marker, Source } from "react-map-gl";
 import { LngLatBounds } from "mapbox-gl";
-import { CardIcon, DeviceIcon } from "./icons";
+import { CardIcon, DeviceIcon, KycIcon } from "./icons";
 import "mapbox-gl/dist/mapbox-gl.css";
 import circle from "@turf/circle";
 import { env } from "~/env.mjs";
@@ -10,7 +10,7 @@ interface Marker {
   latitude: number | null;
   longitude: number | null;
   radius?: number;
-  type: "device" | "card";
+  type: "device" | "card" | "kyc";
 }
 
 interface PaymentMapProps {
@@ -66,7 +66,13 @@ export const PaymentMap = ({ markers }: PaymentMapProps) => {
         return (
           <>
             <Marker latitude={marker.latitude} longitude={marker.longitude}>
-              {marker.type === "device" ? <DeviceIcon /> : <CardIcon />}
+              {marker.type === "device" ? (
+                <DeviceIcon />
+              ) : marker.type === "kyc" ? (
+                <KycIcon />
+              ) : (
+                <CardIcon />
+              )}
             </Marker>
             {marker.radius && (
               <Source
