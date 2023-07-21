@@ -59,7 +59,7 @@ const columns: ColumnDef<
   },
   {
     header: "Name",
-    accessorKey: "paymentMethod.name",
+    accessorKey: "name",
   },
   {
     header: "Address",
@@ -77,19 +77,18 @@ const columns: ColumnDef<
   },
   {
     header: "Postal code",
-    accessorKey: "paymentMethod.postalCode",
+    accessorKey: "address.postalCode",
   },
   {
     header: "Issuer",
-    accessorKey: "paymentMethod.card.issuer",
+    accessorKey: "card.issuer",
   },
   {
     header: "Country",
-    accessorKey: "paymentMethod.card.country",
+    accessorKey: "card.country",
   },
   {
     header: "CVC check",
-    accessorKey: "paymentMethod.card.cvcCheck",
     cell: ({ row }) =>
       row.original.cvcCheck === "pass" && (
         <HStack spacing={1}>
