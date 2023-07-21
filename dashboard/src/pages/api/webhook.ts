@@ -4,6 +4,7 @@ import type { Readable } from "node:stream";
 import { env } from "~/env.mjs";
 import { prisma } from "~/server/db";
 import { stripe } from "../../server/lib/stripe";
+import type Stripe from "stripe";
 
 const stripeStatusToPaymentOutcomeStatus = {
   succeeded: PaymentOutcomeStatus.SUCCEEDED,
