@@ -3,12 +3,31 @@ import { getLabelValuePairs } from "~/utils/getLabelValuePairs";
 import { List } from "./List";
 import { Section } from "./views/PaymentDetails";
 import { DeviceSnapshot } from "@prisma/client";
+import { startCase } from "lodash";
 
 interface Props {
   deviceSnapshot: DeviceSnapshot;
 }
 
 export const DeviceSection = ({ deviceSnapshot }: Props) => {
+  const getAnonymizers = (metadata: {
+    isAnonymousVpn: boolean;
+    isHostingProvider: boolean;
+    isPublicProxy: boolean;
+    isResidentialProxy: boolean;
+    isTorExitNode: boolean;
+  }) => {
+    const anonymizers = [];
+
+    if (metadata.isAnonymousVpn) anonymizers.push("VPN");
+    if (metadata.isHostingProvider) anonymizers.push("Hosting provider");
+    if (metadata.isPublicProxy) anonymizers.push("Public proxy");
+    if (metadata.isResidentialProxy) anonymizers.push("Residential proxy");
+    if (metadata.isTorExitNode) anonymizers.push("Tor exit node");
+
+    return anonymizers;
+  };
+
   const deviceData = getLabelValuePairs([
     {
       label: "Browser",
@@ -86,18 +105,15 @@ export const DeviceSection = ({ deviceSnapshot }: Props) => {
         : "False",
       // value: data.session.ipAddress.isAnonymous ? "True" : "False",
     },
-    // ...(data.session.ipAddress.isAnonymous
-    //   ? [
-    //       {
-    //         label: "Anonymizer",
-    //         value: getAnonymizers(data.session.ipAddress).join(", "),
-    //       },
-    //     ]
-    //   : []),
-    // {
-    //   label: "User type",
-    //   value: startCase(data.session.ipAddress.userType),
-    // },
+    {
+      label: "Anonymizer",
+      value: getAnonymizers(deviceSnapshot?.ipAddress?.metadata).join(", "),
+      show: !!deviceSnapshot?.ipAddress?.metadata?.isAnonymous,
+    },
+    {
+      label: "User type",
+      value: startCase(deviceSnapshot.ipAddress.metadata.userType),
+    },
     // {
     //   label: "User count",
     //   value: data.session.ipAddress.userCount,
