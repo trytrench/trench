@@ -48,6 +48,8 @@ import { handleError } from "~/lib/handleError";
 import { format } from "date-fns";
 import NextLink from "next/link";
 import { RuleModal } from "../../components/RuleModal";
+import { omit } from "lodash";
+import ReactJson from "react-json-view";
 
 type EvaluableAction = RouterOutputs["dashboard"]["evaluableActions"]["get"];
 type BlockListItem = {
@@ -254,6 +256,7 @@ const columns: ColumnDef<ExecutedRuleRow>[] = [
 const Page: CustomPage = () => {
   const router = useRouter();
   const paymentId = router.query.paymentId as string;
+  const [showAllData, setShowAllData] = useState(false);
 
   const toast = useToast();
 
@@ -349,6 +352,29 @@ const Page: CustomPage = () => {
           ></MenuButton>
           <MenuList minWidth="150px">
             <BlockPayment action={evaluableAction} />
+            <Modal
+              isOpen={showAllData}
+              onClose={() => setShowAllData(false)}
+              scrollBehavior="inside"
+              size="3xl"
+            >
+              <ModalOverlay />
+              <ModalContent>
+                <ModalHeader>Raw Data</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                  <Text fontFamily="mono" whiteSpace={"pre"} fontSize="sm">
+                    <ReactJson
+                      src={omit(evaluableAction, "ruleExecutions")}
+                      style={{ fontFamily: "inherit" }}
+                    />
+                  </Text>
+                </ModalBody>
+              </ModalContent>
+            </Modal>
+            <MenuItem onClick={() => setShowAllData(true)}>
+              View all data
+            </MenuItem>
             <MenuItem
               onClick={() => {
                 toast.promise(
@@ -428,11 +454,6 @@ const Page: CustomPage = () => {
         )}
       </Section>
       <PaymentDetails paymentId={paymentId} />
-      <Section title="Raw Transforms Data">
-        <Text fontFamily="mono" whiteSpace={"pre"} fontSize="sm">
-          {JSON.stringify(evaluableAction.transformsOutput, null, 2)}
-        </Text>
-      </Section>
     </Box>
   );
 };

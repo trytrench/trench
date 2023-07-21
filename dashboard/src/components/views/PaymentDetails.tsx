@@ -72,18 +72,6 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
   const user = evaluableAction?.session.user;
   const session = evaluableAction?.session;
 
-  // const getAnonymizers = (ipAddress: IpAddress) => {
-  //   const anonymizers = [];
-
-  //   if (ipAddress.isAnonymousVpn) anonymizers.push("VPN");
-  //   if (ipAddress.isHostingProvider) anonymizers.push("Hosting provider");
-  //   if (ipAddress.isPublicProxy) anonymizers.push("Public proxy");
-  //   if (ipAddress.isResidentialProxy) anonymizers.push("Residential proxy");
-  //   if (ipAddress.isTorExitNode) anonymizers.push("Tor exit node");
-
-  //   return anonymizers;
-  // };
-
   const {
     pagination,
     setPagination,
@@ -150,7 +138,12 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       }`,
     },
     { label: "Issuer", value: paymentMethod?.card?.issuer },
-    { label: "Country", value: paymentMethod?.card?.country },
+    {
+      label: "Country",
+      value: `${new Intl.DisplayNames(["en"], { type: "region" }).of(
+        paymentMethod?.card?.country
+      )}`,
+    },
     { label: "Owner", value: paymentMethod?.name },
     { label: "Email", value: paymentMethod?.email },
     {
@@ -168,10 +161,10 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       label: "CVC Check",
       value:
         paymentMethod?.cvcCheck === "pass" ? (
-          <>
+          <HStack spacing={1}>
             <Icon color="green" as={IoCheckmarkCircle} />
             <Text>Passed</Text>
-          </>
+          </HStack>
         ) : (
           <Text>{startCase(paymentMethod?.cvcCheck ?? "")}</Text>
         ),
