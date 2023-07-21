@@ -19,6 +19,7 @@ export const findManyZod = z.object({
     sellerName: z.string().optional(),
     // sellerId: z.string().optional(),
   }),
+  userId: z.string().optional(),
   executedRuleSnapshotId: z.string().optional(),
   linkedTo: z
     .object({
@@ -93,7 +94,7 @@ export function getFindManyWhereArgs(input: FindManyArgs) {
     isFraud: filters?.isFraud,
     riskLevel: filters?.riskLevel,
     session: {
-      userId: filters?.userId,
+      userId: input.userId,
       user: filters?.email
         ? { email: getSearchOption(filters?.email) }
         : undefined,
