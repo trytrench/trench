@@ -30,25 +30,27 @@ export const PaymentMap = ({ markers }: PaymentMapProps) => {
   const getInitialViewState = (): React.ComponentProps<
     typeof Map
   >["initialViewState"] => {
-    let bounds = new LngLatBounds();
+    if (markers.length >= 1) {
+      let bounds = new LngLatBounds();
 
-    for (const marker of markers) {
-      if (!marker.latitude || !marker.longitude) {
-        continue;
+      for (const marker of markers) {
+        if (!marker.latitude || !marker.longitude) {
+          continue;
+        }
+        bounds = bounds.extend([marker.longitude, marker.latitude]);
       }
-      bounds = bounds.extend([marker.longitude, marker.latitude]);
+
+      const viewport = new WebMercatorViewport({
+        width: 600,
+        height: 400,
+      }).fitBounds(bounds.toArray() as [[number, number], [number, number]], {
+        padding: 100,
+        maxZoom: 10,
+      });
+
+      const { longitude, latitude, zoom } = viewport;
+      return { longitude, latitude, zoom };
     }
-
-    const viewport = new WebMercatorViewport({
-      width: 600,
-      height: 400,
-    }).fitBounds(bounds.toArray() as [[number, number], [number, number]], {
-      padding: 100,
-      maxZoom: 10,
-    });
-
-    const { longitude, latitude, zoom } = viewport;
-    return { longitude, latitude, zoom };
   };
 
   return (

@@ -49,7 +49,9 @@ import { format } from "date-fns";
 import NextLink from "next/link";
 import { RuleModal } from "../../components/RuleModal";
 import { omit } from "lodash";
-import ReactJson from "react-json-view";
+import dynamic from "next/dynamic";
+
+const DynamicReactJson = dynamic(import("react-json-view"), { ssr: false });
 
 type EvaluableAction = RouterOutputs["dashboard"]["evaluableActions"]["get"];
 type BlockListItem = {
@@ -364,7 +366,7 @@ const Page: CustomPage = () => {
                 <ModalCloseButton />
                 <ModalBody>
                   <Text fontFamily="mono" whiteSpace={"pre"} fontSize="sm">
-                    <ReactJson
+                    <DynamicReactJson
                       src={omit(evaluableAction, "ruleExecutions")}
                       style={{ fontFamily: "inherit" }}
                     />

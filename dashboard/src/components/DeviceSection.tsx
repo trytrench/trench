@@ -107,12 +107,14 @@ export const DeviceSection = ({ deviceSnapshot }: Props) => {
     },
     {
       label: "Anonymizer",
-      value: getAnonymizers(deviceSnapshot?.ipAddress?.metadata).join(", "),
+      value: deviceSnapshot?.ipAddress?.metadata
+        ? getAnonymizers(deviceSnapshot.ipAddress.metadata).join(", ")
+        : undefined,
       show: !!deviceSnapshot?.ipAddress?.metadata?.isAnonymous,
     },
     {
       label: "User type",
-      value: startCase(deviceSnapshot.ipAddress.metadata.userType),
+      value: startCase(deviceSnapshot?.ipAddress?.metadata.userType),
     },
     // {
     //   label: "User count",
