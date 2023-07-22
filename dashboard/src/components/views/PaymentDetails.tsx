@@ -7,7 +7,14 @@ import {
   Icon,
   Text,
 } from "@chakra-ui/react";
-import { type Address } from "@prisma/client";
+import {
+  PaymentMethod,
+  type Address,
+  Card,
+  Location,
+  PaymentAttempt,
+  PaymentOutcome,
+} from "@prisma/client";
 import { startCase } from "lodash";
 import { type ReactNode } from "react";
 import { IoCheckmarkCircle } from "react-icons/io5";
@@ -67,8 +74,15 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
     });
 
   const deviceSnapshot = evaluableAction?.session.deviceSnapshot;
-  const paymentAttempt = evaluableAction?.paymentAttempt;
-  const paymentMethod = paymentAttempt?.paymentMethod;
+  const paymentAttempt = evaluableAction?.paymentAttempt as
+    | (PaymentAttempt & { outcome: PaymentOutcome | null })
+    | null;
+  const paymentMethod = paymentAttempt?.paymentMethod as
+    | (PaymentMethod & {
+        card: Card;
+        address: (Address & { location: Location | null }) | null;
+      })
+    | null;
   const user = evaluableAction?.session.user;
   const session = evaluableAction?.session;
 
@@ -158,7 +172,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       value: getAddressString(paymentMethod?.address),
     },
     {
-      label: "CVC Check",
+      label: "CVC check",
       value:
         paymentMethod?.cvcCheck === "pass" ? (
           <HStack spacing={1}>
@@ -170,7 +184,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
         ),
     },
     {
-      label: "ZIP Check",
+      label: "ZIP check",
       show: !!paymentMethod?.address?.postalCode,
       value: (
         <HStack spacing={1}>
@@ -186,7 +200,7 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
       ),
     },
     {
-      label: "Address Check",
+      label: "Address check",
       show: !!paymentMethod?.address?.line1,
       value: paymentMethod?.addressLine1Check && (
         <HStack spacing={1}>
@@ -200,6 +214,13 @@ export const PaymentDetails = ({ paymentId }: PaymentDetailsProps) => {
           )}
         </HStack>
       ),
+    },
+    {
+      label: "3D Secure",
+      show: !!paymentAttempt?.outcome?.threeDSecureResult,
+      value: `${startCase(paymentAttempt?.outcome?.threeDSecureResult)} via ${
+        paymentAttempt?.outcome?.threeDSecureFlow
+      } flow`,
     },
   ]);
 
