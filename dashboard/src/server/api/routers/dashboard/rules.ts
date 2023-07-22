@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "../../trpc";
 import { runRule } from "~/server/utils/rules";
 import { RiskLevel } from "../../../../common/types";
 import { type PaymentTransformInput } from "../../../transforms/paymentTransforms";
+import { omit } from "lodash";
 
 const ruleSchema = z.object({
   name: z.string().nonempty(),
@@ -138,7 +139,9 @@ export const rulesRouter = createTRPCRouter({
       });
 
       return {
-        triggeredRows: triggeredTransactions,
+        triggeredRows: triggeredTransactions.map((action) =>
+          omit(action, ["transformsOutput", "session.deviceSnapshot"])
+        ),
         triggered: triggeredTransactions.length,
         total: actions.length,
       };
