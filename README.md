@@ -48,7 +48,7 @@ Trench lets marketplaces prevent buyer and seller fraud in one platform. With Tr
 - `STRIPE_WEBHOOK_SECRET` - used to verify Stripe webhooks
 - `JWT_SECRET` - used to sign JWT tokens
 - `SENTRY_DSN` (optional) - Sentry DSN for error reporting
-- `NEXT_PUBLIC_MAPBOX_TOKEN` (optional) - Mapbox token for geocoding and maps
+- `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (optional) - Mapbox token for geocoding and maps
 
 ### Stripe integration
 
