@@ -43,10 +43,10 @@ Trench lets marketplaces prevent buyer and seller fraud in one platform. With Tr
 
 #### Environment variables
 
-- `API_KEY` - used to authenticate requests from your backend
 - `STRIPE_SECRET_KEY` - Stripe key with read permissions on `PaymentIntent`, `PaymentMethod`, and `Customer`
 - `STRIPE_WEBHOOK_SECRET` - used to verify Stripe webhooks
-- `JWT_SECRET` - used to sign JWT tokens
+- `API_KEY` (optional, default is "secret") - used to authenticate requests from your backend
+- `JWT_SECRET` (optional, default is "secret") - used to sign JWT tokens
 - `SENTRY_DSN` (optional) - Sentry DSN for error reporting
 - `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (optional) - Mapbox token for geocoding and maps
 
