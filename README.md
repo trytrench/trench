@@ -12,17 +12,15 @@
 
 ## Overview
 
-Trench is an open-source payment fraud prevention platform, built for engineers.
+Trench is an open-source fraud prevention platform for marketplaces.
 
 ## Features
 
-- SDK to collect device signals
-- Dashboard for fraud workflows
-    - Identify and label fraud
-    - Export raw data for analysis
-- Custom rule engine
-    - Integrate complex custom data using [Flow](https://github.com/trytrench/flow)
-    - Write rules in TypeScript
+Trench lets marketplaces prevent buyer and seller fraud in one platform. With Trench, you can:
+- Review sellers by KYC/KYB and by buyer history
+- Set risk controls for buyers and sellers, like transaction and volume limits
+- Automatically assess payments based on buyer and seller data
+- Integrate directly with Stripe Payments, Identity, and Connect
  
 ## Design Philosophy
 
