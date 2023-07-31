@@ -17,7 +17,7 @@
 
 ## Overview
 
-Trench is an open-source fraud prevention platform for marketplaces.
+Trench is an open source fraud prevention platform for marketplaces.
 
 ## Features
 
