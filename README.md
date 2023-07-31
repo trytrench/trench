@@ -2,12 +2,17 @@
 
 <p align="center">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/trytrench/trench?style=social">
-    <a href="https://discord.gg/cSYC47MXTR">
-        <img src="https://img.shields.io/badge/Discord-Join%20us-%237289da?logo=discord" alt="discord">
-    </a>
     <a href="https://github.com/trytrench/trench/blob/main/LICENSE">
         <img alt="License: AGPL v3" src="https://img.shields.io/github/license/trytrench/trench" />
     </a>
+</p>
+
+<p align="center">
+    <a href="https://discord.gg/cSYC47MXTR" target="_blank">Discord</a>
+    -
+    <a href="https://www.trytrench.com" target="_blank">Website</a>
+    -
+    <a href="https://docs.trytrench.com" target="_blank">Docs</a>
 </p>
 
 ## Overview
