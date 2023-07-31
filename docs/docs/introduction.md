@@ -1,19 +1,8 @@
 ---
-title: Introduction
+title: Getting Started
 sidebar_position: 1
 slug: /
 ---
-
-Trench is an open-source payment fraud prevention platform.
-
-## Features
-
-- Set up in 10 minutes!
-- Fully customizable to meet your business needs
-- Collect rich data through our SDK
-- Respond to fraud in real time in our dashboard
-- Integrate complex custom data into your rule engine
-- Write rules in TypeScript
 
 ## Getting started
 
@@ -29,13 +18,9 @@ Trench is an open-source payment fraud prevention platform.
 
 #### Environment variables
 
-- `API_KEY` - used to authenticate requests from your backend
 - `STRIPE_SECRET_KEY` - Stripe key with read permissions on `PaymentIntent`, `PaymentMethod`, and `Customer`
 - `STRIPE_WEBHOOK_SECRET` - used to verify Stripe webhooks
-- `JWT_SECRET` - used to sign JWT tokens
+- `API_KEY` (optional, default is "secret") - used to authenticate requests from your backend
+- `JWT_SECRET` (optional, default is "secret") - used to sign JWT tokens
 - `SENTRY_DSN` (optional) - Sentry DSN for error reporting
-- `NEXT_PUBLIC_MAPBOX_TOKEN` (optional) - Mapbox token for geocoding and maps
-
-### Stripe integration
-
-Integrate Trench into your payment flow by following our [Stripe Integration Guide](/stripe-integration) or our [Stripe Example](https://github.com/trytrench/stripe-example) code.
+- `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (optional) - Mapbox token for geocoding and maps
