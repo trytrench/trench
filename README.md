@@ -18,7 +18,7 @@ Trench is an open-source fraud prevention platform for marketplaces.
 
 Trench lets marketplaces prevent buyer and seller fraud in one platform. With Trench, you can:
 - Review sellers by KYC/KYB and by buyer history
-- Set risk controls for buyers and sellers, like transaction and volume limits
+- Set transaction limits for buyers and sellers
 - Automatically assess payments based on buyer and seller data
 - Integrate directly with Stripe Payments, Identity, and Connect
  
