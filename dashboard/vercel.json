@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "src/pages/api/trpc/*": {
-      "memory": 3008
-    }
-  }
-}
