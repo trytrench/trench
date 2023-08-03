@@ -6,6 +6,7 @@ import { RiskLevel, UserFlow } from "~/common/types";
 import { runRules } from "~/server/utils/rules";
 import { paymentTransforms } from "~/server/transforms/paymentTransforms";
 import { stripe } from "../../../lib/stripe";
+import { trackEvent } from "~/server/lib/analytics";
 
 const schema = z.object({
   paymentIntentId: z.string(),
@@ -25,6 +26,8 @@ export const apiPaymentsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      trackEvent("payment assessed");
+
       const [paymentMethod, paymentIntent] = await Promise.all([
         stripe.paymentMethods.retrieve(
           input.paymentMethodId,
