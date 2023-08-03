@@ -9,6 +9,7 @@ import { RiskLevel, UserFlow } from "~/common/types";
 import { runRules } from "~/server/utils/rules";
 import { prisma } from "~/server/db";
 import { stripe } from "../../../lib/stripe";
+import { trackEvent } from "~/server/lib/analytics";
 
 const kycSchema = z.object({
   verificationSessionId: z.string(),
@@ -147,6 +148,8 @@ export const apiKycRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      trackEvent("kyc assessed");
+
       const verificationSession =
         await stripe.identity.verificationSessions.retrieve(
           input.verificationSessionId

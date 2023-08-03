@@ -9,6 +9,8 @@ import { type AppPropsType } from "next/dist/shared/lib/utils";
 import { useRouter, type NextRouter } from "next/router";
 import { handleError } from "../lib/handleError";
 import "../styles/globals.css";
+import posthog from "posthog-js";
+import { PostHogProvider } from "posthog-js/react";
 
 type CustomAppProps = AppPropsType<NextRouter, { session: Session | null }> & {
   Component: CustomPage;
@@ -18,6 +20,16 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
 });
+
+if (typeof window !== "undefined") {
+  posthog.init("phc_geKdMR6WVsF9KRdlRh4dU6xRFhSzPLca6o7dlQzS4E", {
+    api_host: "https://app.posthog.com",
+    autocapture: false,
+    loaded: (posthog) => {
+      if (process.env.NODE_ENV === "development") posthog.debug();
+    },
+  });
+}
 
 const RenderComponent = (props: CustomAppProps) => {
   const { Component, pageProps } = props;
@@ -43,6 +55,17 @@ const RenderComponent = (props: CustomAppProps) => {
 
 const MyApp = (props: CustomAppProps) => {
   const { pageProps } = props;
+  const router = useRouter();
+
+  useEffect(() => {
+    // Track page views
+    const handleRouteChange = () => posthog?.capture("$pageview");
+    router.events.on("routeChangeComplete", handleRouteChange);
+
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, []);
 
   const theme = extendTheme({
     colors: {
@@ -74,11 +97,13 @@ const MyApp = (props: CustomAppProps) => {
   });
 
   return (
-    <ChakraProvider theme={theme}>
-      <SessionProvider session={pageProps.session}>
-        <RenderComponent {...props} />
-      </SessionProvider>
-    </ChakraProvider>
+    <PostHogProvider client={posthog}>
+      <ChakraProvider theme={theme}>
+        <SessionProvider session={pageProps.session}>
+          <RenderComponent {...props} />
+        </SessionProvider>
+      </ChakraProvider>
+    </PostHogProvider>
   );
 };
 
