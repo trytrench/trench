@@ -43,8 +43,9 @@ Trench lets marketplaces prevent buyer and seller fraud in one platform. With Tr
 ### Local development
 
 1. Clone the repository
-2. Install dependencies: `yarn`
-3. Run the development server: `yarn dev`
+2. Go to dashboard project: `cd dashboard`
+3. Install dependencies: `yarn` or `npm i`
+4. Run the development server: `yarn dev` or `npm run dev`
 
 #### Environment variables
 
