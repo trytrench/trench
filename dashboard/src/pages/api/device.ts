@@ -152,6 +152,8 @@ export default async function handler(
     },
   });
 
+  console.log("session", session);
+
   if (!session.deviceSnapshot) throw new Error("No device snapshot");
 
   const { deviceId } = session.deviceSnapshot;
