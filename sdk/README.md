@@ -2,11 +2,13 @@
 
 Source code: `src/index.ts`
 
-## Test the Trench SDK
+## Test device data collection
+
+Follow the steps to set up a simple app for testing device data collection.
 
 1. Install dependencies: `yarn ` or `npm i`
 2. `npm run dev`
 
-See `example/App.tsx` for the code.
+When you click "Initialize Session" while the dashboard is running, you should see a row inserted into the Session and DeviceSnapshot tables containing information about your device.
 
-When you click "Initialize Session" while the dashboard is running, you should see a row inserted into the Session table.
+See `example/App.tsx` for the code.
