@@ -24,10 +24,10 @@ import dayjs, { type Dayjs } from "dayjs";
 
 const { RangePicker } = AntdDatePicker;
 
-const TODAY = dayjs(new Date("08-14-2023"));
+const TODAY = dayjs(new Date());
 
 const DEFAULT_DATE_RANGE = {
-  from: TODAY.add(-7, "day").toDate(),
+  from: TODAY.add(-1, "year").toDate(),
   to: TODAY.toDate(),
 };
 

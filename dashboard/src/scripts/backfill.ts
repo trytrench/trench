@@ -3,42 +3,12 @@ import { createSqrlInstance } from "~/lib/createSqrlInstance";
 import { batchUpsert, runEvent } from "~/lib/sqrlExecution";
 import { prisma } from "~/server/db";
 import data from "./loadData";
-
-class Queue {
-  tasks: (() => Promise<void>)[];
-  running: boolean;
-
-  constructor() {
-    this.tasks = [];
-    this.running = false;
-  }
-
-  enqueue(task: () => Promise<void>) {
-    this.tasks.push(task);
-  }
-
-  async process() {
-    if (this.running) return;
-    this.running = true;
-    while (this.tasks.length > 0) {
-      const task = this.tasks.shift();
-      try {
-        await task?.();
-        // console.log("Processed task. Tasks remaining:", this.tasks.length);
-      } catch (e) {
-        console.error("An error occurred while processing the task:", e);
-      }
-    }
-
-    this.running = false;
-  }
-}
-
-const queue = new Queue();
+import { AsyncQueue } from "~/lib/Queue";
 
 const msgs = data;
 
 async function main() {
+  const queue = new AsyncQueue();
   const instance = await createSqrlInstance({
     config: {
       "state.allow-in-memory": true,
@@ -104,7 +74,6 @@ async function main() {
         ),
       })
     );
-    queue.process().catch(console.error);
   }
 
   process.on("SIGINT", () => {

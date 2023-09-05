@@ -11,3 +11,22 @@ LET DatasetId := 1;
 LET Type := jsonValue(EventData, '$.type');
 LET Timestamp := jsonValue(EventData, '$.timestamp');
 LET Version := '1';
+
+LET Actor := entity('User', jsonValue(EventData, '$.data.actor.id'), 'Actor');
+addEntityFeature(Actor, 'Name', jsonValue(EventData, '$.data.actor.login'));
+addEntityFeature(Actor, 'Login', jsonValue(EventData, '$.data.actor.login'));
+addEntityFeature(Actor, 'Display Login', jsonValue(EventData, '$.data.actor.display_login'));
+addEntityFeature(Actor, 'Avatar URL', jsonValue(EventData, '$.data.actor.avatar_url'));
+
+LET NumStarsOnRepoByUser := count(BY Actor, Repo TOTAL);
+CREATE RULE HighNumStarsOnRepoByUser WHERE NumStarsOnRepoByUser > 5;
+WHEN HighNumStarsOnRepoByUser THEN addEventLabel('BLOCK', 'high_num_stars_on_repo_by_user');
+
+
+LET Org := entity('Org', jsonValue(EventData, '$.data.org.id'), 'Target');
+addEntityFeature(Org, 'Name', jsonValue(EventData, '$.data.org.login'));
+addEntityFeature(Org, 'Login', jsonValue(EventData, '$.data.org.login'));
+addEntityFeature(Org, 'Avatar URL', jsonValue(EventData, '$.data.org.avatar_url'));
+
+LET Repo := entity('Repo', jsonValue(EventData, '$.data.repo.id'), 'Target');
+addEntityFeature(Repo, 'Name', jsonValue(EventData, '$.data.repo.name'));
