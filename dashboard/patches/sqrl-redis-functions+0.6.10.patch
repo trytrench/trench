@@ -1,0 +1,151 @@
+diff --git a/node_modules/sqrl-redis-functions/lib/CountFunctions.js b/node_modules/sqrl-redis-functions/lib/CountFunctions.js
+index 2b17989..f14aefd 100644
+--- a/node_modules/sqrl-redis-functions/lib/CountFunctions.js
++++ b/node_modules/sqrl-redis-functions/lib/CountFunctions.js
+@@ -150,7 +150,7 @@ function registerCountFunctions(instance, service) {
+     }, {
+         allowNull: true,
+         allowSqrlObjects: true,
+-        args: [sqrl_1.AT.state, sqrl_1.AT.any.array, sqrl_1.AT.any, sqrl_1.AT.any],
++        args: [sqrl_1.AT.state, sqrl_1.AT.any, sqrl_1.AT.any, sqrl_1.AT.any],
+     });
+     instance.register(function _fetchCountsFromDb(state, keys, windowMs) {
+         if (keys === null) {
+diff --git a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js b/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
+index 0060dcd..25c2243 100644
+--- a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
++++ b/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
+@@ -2,25 +2,29 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.registerEntityFunctions = void 0;
+ const sqrl_1 = require("sqrl");
+-async function toEntity(service, state, type, value, options = {}) {
++async function toEntity(service, state, type, value, relation = "__default__", options = {}) {
+     if (type === null || value === null) {
+         return null;
+     }
+     if (typeof value === "number") {
+         value = value.toString();
+     }
+-    const uniqueId = await service.fetch(state.ctx, type, value);
+-    return new sqrl_1.SqrlEntity(new sqrl_1.SqrlUniqueId(uniqueId), type, value);
++    const sqrlEntityType = `${type}::${relation}`;
++
++    const uniqueId = await service.fetch(state.ctx, sqrlEntityType, value);
++    const entity = new sqrl_1.SqrlEntity(new sqrl_1.SqrlUniqueId(uniqueId), sqrlEntityType, value);
++    state.manipulator.trackEntity(entity);
++    return entity;
+ }
+ function registerEntityFunctions(instance, service) {
+-    instance.register(async function _entity(state, type, value) {
++    instance.register(async function _entity(state, type, value, relation) {
+         if (value === null || typeof value === "undefined" || value === "") {
+             return null;
+         }
+-        return toEntity(service, state, type, value);
++        return toEntity(service, state, type, value, relation);
+     }, {
+         allowNull: true,
+-        args: [sqrl_1.AT.state, sqrl_1.AT.constant.string, sqrl_1.AT.any],
++        args: [sqrl_1.AT.state, sqrl_1.AT.constant.string, sqrl_1.AT.any, sqrl_1.AT.any.optional],
+     });
+     instance.register(async function _entityList(state, type, arr) {
+         if (type === null || arr === null || !Array.isArray(arr)) {
+@@ -35,8 +39,8 @@ function registerEntityFunctions(instance, service) {
+     instance.registerTransform(function entity(state, ast) {
+         return sqrl_1.AstBuilder.call("_entity", ast.args);
+     }, {
+-        args: [sqrl_1.AT.constant.string, sqrl_1.AT.any],
+-        argstring: "type, key",
++        args: [sqrl_1.AT.constant.string, sqrl_1.AT.any, sqrl_1.AT.any.optional],
++        argstring: "type, key, relation",
+         docstring: "Create an entity of the given type",
+     });
+     instance.registerTransform(function entityList(state, ast) {
+diff --git a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
+index 80541e6..7d529fb 100644
+--- a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
++++ b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
+@@ -4,10 +4,10 @@ exports.registerLabelFunctions = void 0;
+ const sqrl_common_1 = require("sqrl-common");
+ const sqrl_1 = require("sqrl");
+ function registerLabelFunctions(instance, service) {
+-    instance.registerStatement("SqrlLabelStatements", async function addLabel(state, cause, entities, label) {
++    instance.registerStatement("SqrlLabelStatements", async function addEntityLabel(state, cause, entities, type, label) {
+         (0, sqrl_common_1.ensureArray)(entities).forEach((entity) => {
+             if (entity !== null) {
+-                service.addLabel(state.manipulator, entity, label, cause);
++                service.addEntityLabel(state.manipulator, entity, type, label, cause);
+             }
+         });
+     }, {
+@@ -16,16 +16,17 @@ function registerLabelFunctions(instance, service) {
+             sqrl_1.AT.whenCause,
+             sqrl_1.AT.any.sqrlEntityOrEntities,
+             sqrl_1.AT.constant.string,
++            sqrl_1.AT.constant.string,
+         ],
+         allowNull: true,
+         allowSqrlObjects: true,
+         argstring: "entity | entity list, label",
+         docstring: "Adds the provided label to the specified entities",
+     });
+-    instance.registerStatement("SqrlLabelStatements", async function removeLabel(state, cause, entities, label) {
++    instance.registerStatement("SqrlLabelStatements", async function removeEntityLabel(state, cause, entities, type, label) {
+         (0, sqrl_common_1.ensureArray)(entities).forEach((entity) => {
+             if (entity !== null) {
+-                service.removeLabel(state.manipulator, entity, label, cause);
++                service.removeEntityLabel(state.manipulator, entity, type, label, cause);
+             }
+         });
+     }, {
+@@ -34,14 +35,15 @@ function registerLabelFunctions(instance, service) {
+             sqrl_1.AT.whenCause,
+             sqrl_1.AT.any.sqrlEntityOrEntities,
+             sqrl_1.AT.constant.string,
++            sqrl_1.AT.constant.string,
+         ],
+         allowNull: true,
+         allowSqrlObjects: true,
+         argstring: "entity | entity list, label",
+         docstring: "Removes the provided label to the specified entities",
+     });
+-    instance.register(async function hasLabel(state, entity, label) {
+-        return service.hasLabel(state.ctx, entity, label);
++    instance.register(async function hasEntityLabel(state, entity, label) {
++        return service.hasEntityLabel(state.ctx, entity, label);
+     }, {
+         args: [sqrl_1.AT.state, sqrl_1.AT.any.sqrlEntity, sqrl_1.AT.constant.string],
+         allowSqrlObjects: true,
+diff --git a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
+index 626d8d5..6001fc3 100644
+--- a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
++++ b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
+@@ -8,20 +8,22 @@ class RedisLabelService {
+         this.redis = redis;
+         this.prefix = prefix;
+     }
+-    addLabel(manipulator, entity, label, cause) {
++    addEntityLabel(manipulator, entity, type, label, cause) {
++        manipulator.addEntityLabel(cause, entity, type, label);
+         manipulator.addCallback(async (ctx) => {
+-            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label);
++            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), type, label);
+             await this.redis.set(ctx, key, "1");
+             await this.redis.expire(ctx, key, EXPIRY);
+         });
+     }
+-    removeLabel(manipulator, entity, label, cause) {
++    removeEntityLabel(manipulator, entity, type, label, cause) {
++        manipulator.removeEntityLabel(cause, entity, type, label);
+         manipulator.addCallback(async (ctx) => {
+-            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label);
++            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), type, label);
+             await this.redis.del(ctx, key);
+         });
+     }
+-    async hasLabel(ctx, entity, label) {
++    async hasEntityLabel(ctx, entity, label) {
+         const rv = await this.redis.get(ctx, (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label));
+         return !!rv;
+     }

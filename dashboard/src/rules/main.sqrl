@@ -1,0 +1,13 @@
+# Basic event set up. Read in EventData, and set the current clock time
+# [NOTE] Features do not need to be defined in order (Timestamp is set lower down)
+LET EventData := input();
+LET SqrlClock := Timestamp;
+
+# In production we used data sets to seperate counters and other variables
+# from seperate runs. By changing the dataset number it automatically resets
+# all counters to zero. Can be used for reprocessing and backtesting.
+LET DatasetId := 1;
+
+LET Type := jsonValue(EventData, '$.type');
+LET Timestamp := jsonValue(EventData, '$.timestamp');
+LET Version := '1';
