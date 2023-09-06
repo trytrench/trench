@@ -33,6 +33,7 @@ import { EventTimeChart } from "../components/EventTimeChart";
 import { EventLabelDistribution } from "../components/EventLabelDistribution";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
 import { useEffect } from "react";
+import { Metric } from "@tremor/react";
 
 function EntitiesPage() {
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
@@ -43,18 +44,13 @@ function EntitiesPage() {
 
   return (
     <div className="p-4 bg-gray-50">
-      <div className="flex gap-4">
-        <div className="bg-white">
-          <EntityTypeFilter />
-        </div>
-        <div className="bg-white">
+      <div className="flex gap-4 items-baseline">
+        <div className="bg-white shadow-md rounded-md">
           <EventTypeFilter />
-        </div>{" "}
-        <div className="bg-white">
-          <EventLabelFilter />
         </div>
-        <div className="bg-white">
-          <EntityLabelFilter />
+        <span>related to</span>
+        <div className="bg-white shadow-md rounded-md">
+          <EntityTypeFilter />
         </div>
       </div>
       <div className="h-4"></div>
@@ -178,25 +174,27 @@ export default function Dashboard() {
     <div>
       <Navbar />
       <div className="p-4 gap-8 flex justify-start items-end">
-        <Heading fontWeight="normal">
+        <Metric>
           <b>
             {startDateString} - {endDateString},{" "}
           </b>
-          {eventType ? `\`${eventType}\` events` : "all events"}
-          {eventLabels?.length
-            ? ` with labels: ${eventLabels
-                .map((label) => `\`${label}\``)
-                .join(", ")}`
-            : ""}
-          {entityType || entityLabels?.length
-            ? `, related to ${entityType ? `\`${entityType}\`` : "entities"}`
-            : ""}
-          {entityLabels?.length
-            ? ` with labels: ${entityLabels
-                .map((label) => `\`${label}\``)
-                .join(", ")}`
-            : ""}
-        </Heading>
+          <span className="font-normal">
+            {eventType ? `\`${eventType}\` events` : "all events"}
+            {eventLabels?.length
+              ? ` with labels: ${eventLabels
+                  .map((label) => `\`${label}\``)
+                  .join(", ")}`
+              : ""}
+            {entityType || entityLabels?.length
+              ? `, related to ${entityType ? `\`${entityType}\`` : "entities"}`
+              : ""}
+            {entityLabels?.length
+              ? ` with labels: ${entityLabels
+                  .map((label) => `\`${label}\``)
+                  .join(", ")}`
+              : ""}
+          </span>
+        </Metric>
       </div>
       <div className="px-4 pb-4 flex gap-4">
         <DateRangePicker />

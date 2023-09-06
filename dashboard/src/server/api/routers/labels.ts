@@ -13,12 +13,34 @@ export const labelsRouter = createTRPCRouter({
       entityLabels,
     };
   }),
-  getEventLabels: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.eventLabel.findMany();
-  }),
-  getEntityLabels: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.entityLabel.findMany();
-  }),
+  getEventLabels: publicProcedure
+    .input(
+      z.object({
+        eventType: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { eventType } = input;
+      return ctx.prisma.eventLabel.findMany({
+        where: {
+          eventType,
+        },
+      });
+    }),
+  getEntityLabels: publicProcedure
+    .input(
+      z.object({
+        entityType: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { entityType } = input;
+      return ctx.prisma.entityLabel.findMany({
+        where: {
+          entityType,
+        },
+      });
+    }),
   getEventTypes: publicProcedure.query(async ({ ctx }) => {
     return ctx.prisma.eventType.findMany();
   }),

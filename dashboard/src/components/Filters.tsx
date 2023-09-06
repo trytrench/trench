@@ -120,20 +120,58 @@ export function EventTypeFilter() {
     [eventType]
   );
 
+  const { data: eventLabelsData } = api.labels.getEventLabels.useQuery({
+    eventType: eventType ?? undefined,
+  });
+  const eventLabelOptions = useMemo(
+    () =>
+      eventLabelsData?.map((eventLabel) => ({
+        label: eventLabel.id,
+        value: eventLabel.id,
+      })) ?? [],
+    [eventLabelsData]
+  );
+
+  const [eventLabels, setEventLabels] = useQueryParam("eventLabel", ArrayParam);
+  const selectedEventLabels = useMemo(
+    () =>
+      eventLabels
+        ? eventLabels.map((eventLabel) => ({
+            label: eventLabel,
+            value: eventLabel,
+          }))
+        : [],
+    [eventLabels]
+  );
+
   return (
-    <Select
-      isClearable
-      value={selectedEventType}
-      onChange={(option) => {
-        if (option?.value) {
-          setEventType(option?.value);
-        } else {
-          setEventType(undefined);
-        }
-      }}
-      placeholder="Filter by Event Type"
-      options={eventTypeOptions}
-    />
+    <div className="flex items-center gap-4 font-bold">
+      <Select
+        isClearable
+        value={selectedEventType}
+        onChange={(option) => {
+          if (option?.value) {
+            setEventType(option?.value);
+          } else {
+            setEventType(undefined);
+          }
+        }}
+        placeholder="All events"
+        options={eventTypeOptions}
+      />
+      {eventType && (
+        <>
+          <span className="font-normal">with label</span>
+          <Select
+            isMulti
+            value={selectedEventLabels}
+            onChange={createHandleLabelChange(setEventLabels)}
+            placeholder="any"
+            options={eventLabelOptions}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -161,20 +199,62 @@ export function EntityTypeFilter() {
     [entityType]
   );
 
+  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
+    entityType: entityType ?? undefined,
+  });
+  const entityLabelOptions = useMemo(
+    () =>
+      entityLabelsData?.map((entityLabel) => ({
+        label: entityLabel.id,
+        value: entityLabel.id,
+      })) ?? [],
+    [entityLabelsData]
+  );
+
+  const [entityLabels, setEntityLabels] = useQueryParam(
+    "entityLabel",
+    ArrayParam
+  );
+
+  const selectedEntityLabels = useMemo(
+    () =>
+      entityLabels
+        ? entityLabels.map((entityLabel) => ({
+            label: entityLabel,
+            value: entityLabel,
+          }))
+        : [],
+    [entityLabels]
+  );
+
   return (
-    <Select
-      isClearable
-      value={selectedEntityType}
-      onChange={(option) => {
-        if (option?.value) {
-          setEntityType(option?.value);
-        } else {
-          setEntityType(undefined);
-        }
-      }}
-      placeholder="Filter by Entity Type"
-      options={entityTypeOptions}
-    />
+    <div className="flex gap-4 items-center font-bold">
+      <Select
+        isClearable
+        value={selectedEntityType}
+        onChange={(option) => {
+          if (option?.value) {
+            setEntityType(option?.value);
+          } else {
+            setEntityType(undefined);
+          }
+        }}
+        placeholder="All entities"
+        options={entityTypeOptions}
+      />
+      {entityType && (
+        <>
+          <span className="font-normal">with label</span>
+          <Select
+            isMulti
+            value={selectedEntityLabels}
+            onChange={createHandleLabelChange(setEntityLabels)}
+            placeholder="any"
+            options={entityLabelOptions}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -197,7 +277,10 @@ const createHandleLabelChange = (
 
 export function EventLabelFilter() {
   // Options
-  const { data: eventLabelsData } = api.labels.getEventLabels.useQuery();
+  const [eventType] = useQueryParam("eventType", StringParam);
+  const { data: eventLabelsData } = api.labels.getEventLabels.useQuery({
+    eventType: eventType ?? undefined,
+  });
   const eventLabelOptions = useMemo(
     () =>
       eventLabelsData?.map((eventLabel) => ({
@@ -232,7 +315,10 @@ export function EventLabelFilter() {
 
 export function EntityLabelFilter() {
   // Options
-  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery();
+  const [entityType] = useQueryParam("entityType", StringParam);
+  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
+    entityType: entityType ?? undefined,
+  });
   const entityLabelOptions = useMemo(
     () =>
       entityLabelsData?.map((entityLabel) => ({
