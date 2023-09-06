@@ -69,9 +69,9 @@ export const eventsRouter = createTRPCRouter({
           ON
           events."timestamp" >= tb.bucket AND
           events."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
-      JOIN "_EventToEventLabel"
+      LEFT JOIN "_EventToEventLabel"
           ON "_EventToEventLabel"."A" = events."id"
-      JOIN "EventLabel"
+      LEFT JOIN "EventLabel"
           ON "EventLabel"."id" = "_EventToEventLabel"."B"
       GROUP BY
           tb.bucket, "EventLabel"."name", "EventLabel"."color"
@@ -89,7 +89,7 @@ export const eventsRouter = createTRPCRouter({
 
       const allLabels = new Set<string>();
       for (const row of bucketsFromDB) {
-        allLabels.add(row.label);
+        if (row.label) allLabels.add(row.label);
       }
 
       for (const row of bucketsFromDB) {
@@ -126,6 +126,7 @@ export const eventsRouter = createTRPCRouter({
           "gray",
       }));
 
+      console.log(labels);
       return {
         data: results.map((bucket) => ({
           ...bucket,
@@ -152,10 +153,14 @@ export const eventsRouter = createTRPCRouter({
       >(
         `
           SELECT
-            "_EventToEventLabel"."B" as label, 
+            "EventLabel"."name" as label, 
             COUNT(*) as count
           FROM
             "_EventToEventLabel"
+          JOIN
+            "EventLabel"
+          ON
+            "_EventToEventLabel"."B" = "EventLabel"."id"
           WHERE
             ${buildEventExistsQuery(
               input.eventFilters,
@@ -171,7 +176,7 @@ export const eventsRouter = createTRPCRouter({
                 )}
             )
           GROUP BY
-            "_EventToEventLabel"."B"
+            "EventLabel"."name"
           ORDER BY
             count DESC
           `

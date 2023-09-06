@@ -33,7 +33,7 @@ import { EventTimeChart } from "../components/EventTimeChart";
 import { EventLabelDistribution } from "../components/EventLabelDistribution";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
 import { useEffect } from "react";
-import { Metric } from "@tremor/react";
+import { Metric, Title } from "@tremor/react";
 
 function EntitiesPage() {
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
@@ -112,25 +112,38 @@ function EntitiesPage() {
 function EventsPage() {
   const filters = useEventFilters();
 
-  const { data: eventLabels } = api.labels.getEventLabels.useQuery();
+  const { data: eventTypes } = api.labels.getEventTypes.useQuery();
 
   return (
     <>
-      <div className="bg-gray-50 p-4">
-        <div className="flex">
-          <div className="bg-white">
-            <EventTypeFilter />
-          </div>
-        </div>
-        <div className="h-4"></div>
-        <div className="grid grid-cols-3 gap-4">
-          <VStack>
-            <EventLabelDistribution title="All Events" />
-          </VStack>
-          <div className="col-span-2">
-            <EventTimeChart title="All Events" color="neutral" />
-          </div>
-        </div>
+      <div className="bg-gray-50 p-8 flex flex-col gap-8">
+        {eventTypes?.map((eventType, idx) => {
+          return (
+            <div key={idx}>
+              <Metric>Event: {eventType.name}</Metric>
+              <div className="h-4"></div>
+              <div className="grid grid-cols-3 gap-4">
+                <VStack>
+                  <EventLabelDistribution
+                    title="Event Labels"
+                    eventFilters={{
+                      eventType: eventType.id,
+                    }}
+                  />
+                </VStack>
+                <div className="col-span-2">
+                  <EventTimeChart
+                    title="All Events"
+                    color="neutral"
+                    eventFilters={{
+                      eventType: eventType.id,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </>
   );
