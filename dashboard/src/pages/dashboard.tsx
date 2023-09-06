@@ -127,18 +127,8 @@ function EventsPage() {
           <VStack>
             <EventLabelDistribution title="All Events" />
           </VStack>
-          <div className="col-span-2 grid grid-cols-2 gap-4">
+          <div className="col-span-2">
             <EventTimeChart title="All Events" color="neutral" />
-            {eventLabels?.map((label) => (
-              <EventTimeChart
-                key={label.id}
-                title={`Events with label: \`${label.name}\``}
-                eventFilters={{
-                  eventLabels: [label.id],
-                }}
-                color={label.color === "orange" ? "amber" : label.color}
-              />
-            ))}
           </div>
         </div>
       </div>
@@ -178,7 +168,7 @@ export default function Dashboard() {
           <b>
             {startDateString} - {endDateString},{" "}
           </b>
-          <span className="font-normal">
+          <span className="">
             {eventType ? `\`${eventType}\` events` : "all events"}
             {eventLabels?.length
               ? ` with labels: ${eventLabels

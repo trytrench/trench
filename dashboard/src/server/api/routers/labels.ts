@@ -15,12 +15,15 @@ export const labelsRouter = createTRPCRouter({
   }),
   getEventLabels: publicProcedure
     .input(
-      z.object({
-        eventType: z.string().optional(),
-      })
+      z
+        .object({
+          eventType: z.string().optional(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
-      const { eventType } = input;
+      const eventType = input?.eventType;
+
       return ctx.prisma.eventLabel.findMany({
         where: {
           eventType,
@@ -29,12 +32,15 @@ export const labelsRouter = createTRPCRouter({
     }),
   getEntityLabels: publicProcedure
     .input(
-      z.object({
-        entityType: z.string().optional(),
-      })
+      z
+        .object({
+          entityType: z.string().optional(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
-      const { entityType } = input;
+      const entityType = input?.entityType;
+
       return ctx.prisma.entityLabel.findMany({
         where: {
           entityType,
