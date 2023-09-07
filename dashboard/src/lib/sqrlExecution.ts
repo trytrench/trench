@@ -25,6 +25,7 @@ export async function runEvent(event: Event, executable: Executable) {
     inputs: {
       EventData: event,
     },
+    featureTimeoutMs: 10000,
   });
 
   const completePromise = execution.fetchFeature("SqrlExecutionComplete");

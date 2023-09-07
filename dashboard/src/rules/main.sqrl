@@ -13,20 +13,48 @@ LET Timestamp := jsonValue(EventData, '$.timestamp');
 LET Version := '1';
 
 LET Actor := entity('User', jsonValue(EventData, '$.data.actor.id'), 'Actor');
-addEntityFeature(Actor, 'Name', jsonValue(EventData, '$.data.actor.login'));
-addEntityFeature(Actor, 'Login', jsonValue(EventData, '$.data.actor.login'));
+LET Username := jsonValue(EventData, '$.data.actor.login');
+addEntityFeature(Actor, 'Name', Username);
 addEntityFeature(Actor, 'Display Login', jsonValue(EventData, '$.data.actor.display_login'));
 addEntityFeature(Actor, 'Avatar URL', jsonValue(EventData, '$.data.actor.avatar_url'));
 
-LET NumStarsOnRepoByUser := count(BY Actor, Repo TOTAL);
-CREATE RULE HighNumStarsOnRepoByUser WHERE NumStarsOnRepoByUser > 5;
-WHEN HighNumStarsOnRepoByUser THEN addEventLabel('BLOCK', 'high_num_stars_on_repo_by_user');
-
-
 LET Org := entity('Org', jsonValue(EventData, '$.data.org.id'), 'Target');
 addEntityFeature(Org, 'Name', jsonValue(EventData, '$.data.org.login'));
-addEntityFeature(Org, 'Login', jsonValue(EventData, '$.data.org.login'));
 addEntityFeature(Org, 'Avatar URL', jsonValue(EventData, '$.data.org.avatar_url'));
 
 LET Repo := entity('Repo', jsonValue(EventData, '$.data.repo.id'), 'Target');
 addEntityFeature(Repo, 'Name', jsonValue(EventData, '$.data.repo.name'));
+
+LET UserData := getUserData(Username);
+LET ContribsPastYear := jsonValue(UserData, '$.contributionsPastYear');
+LET CreatedDate := jsonValue(UserData, '$.createdDate');
+LET BioSimhash := simhash(jsonValue(UserData, '$.bio'));
+LET ReadmeSimhash := simhash(jsonValue(UserData, '$.readmeContent'));
+
+# Good labels
+CREATE RULE HasGithubPro WHERE jsonValue(UserData, '$.isPro');
+CREATE RULE HasOldAccount WHERE jsonValue(UserData, '$.createdYear') < 2020;
+CREATE RULE HasManyAchievements WHERE length(jsonValue(UserData, '$.achievements')) >= 3;
+CREATE RULE HasSponsors WHERE length(jsonValue(UserData, '$.sponsors')) > 0;
+CREATE RULE HasSponsorees WHERE jsonValue(UserData, '$.sponsoring') > 0;
+CREATE RULE HasManyContributions WHERE ContribsPastYear > 100;
+
+WHEN HasGithubPro THEN addEntityLabel(Actor, 'GOOD', 'github_pro'), addEventLabel('GOOD', 'good_user');
+WHEN HasOldAccount THEN addEntityLabel(Actor, 'GOOD', 'old_account'), addEventLabel('GOOD', 'good_user');
+WHEN HasManyAchievements THEN addEntityLabel(Actor, 'GOOD', 'many_achievements'), addEventLabel('GOOD', 'good_user');
+WHEN HasSponsors THEN addEntityLabel(Actor, 'GOOD', 'sponsored'), addEventLabel('GOOD', 'good_user');
+WHEN HasSponsorees THEN addEntityLabel(Actor, 'GOOD', 'sponsoring'), addEventLabel('GOOD', 'good_user');
+WHEN HasManyContributions THEN addEntityLabel(Actor, 'GOOD', 'many_contribs'), addEventLabel('GOOD', 'good_user');
+
+
+# Bad labels
+CREATE RULE NewAccount WHERE CreatedDate > '2023-07-01';
+CREATE RULE YoungAccountWithLowContribs WHERE jsonValue(UserData, '$.createdYear') > 2021 
+    AND ContribsPastYear < 20;
+
+WHEN NewAccount THEN addEntityLabel(Actor, 'BAD', 'new_account'), addEventLabel('BAD', 'bad_user');
+WHEN YoungAccountWithLowContribs THEN addEntityLabel(Actor, 'BAD', 'young_account_low_contribs'), addEventLabel('BAD', 'bad_user');
+
+LET NumNonStarEventsByUser := count(BY Actor WHERE Type != 'WatchEvent' TOTAL);
+LET NumForksByUser := count(BY Actor WHERE Type = 'ForkEvent' TOTAL);
+LET UserHasLowNumEvents := NumNonStarEventsByUser < 5;

@@ -12,6 +12,9 @@ import { type RedisInterface } from "sqrl-redis-functions/lib/Services/RedisInte
 import { MockRedisService } from "sqrl-redis-functions/lib/mocks/MockRedisService";
 import * as sqrlTextFunctions from "sqrl-text-functions";
 import { SqrlManipulator } from "./SqrlManipulator";
+import { fetchUserData } from "~/utils/fetchGithubData";
+import pLimit from "p-limit";
+import { AxiosError } from "axios";
 
 let RedisService;
 
@@ -136,6 +139,45 @@ export async function createSqrlInstance(
     "SqrlRedisStatements",
     async function get(state: Execution, key: string) {
       return redisService.get(state.ctx, Buffer.from(key));
+    },
+    {
+      args: [AT.state, AT.any.string],
+    }
+  );
+
+  let counter = 0;
+  const limit = pLimit(6);
+
+  instance.register(
+    async function getUserData(state: Execution, username: string) {
+      const cached = await redisService.get(
+        state.ctx,
+        Buffer.from(`user:${username}`)
+      );
+      if (cached) {
+        return JSON.parse(cached.toString()) as ReturnType<
+          typeof fetchUserData
+        >;
+      }
+
+      if (counter++ % 100 === 0) console.log("Counter:", counter);
+
+      try {
+        const userData = await limit(() => fetchUserData(username));
+
+        await redisService.set(
+          state.ctx,
+          Buffer.from(`user:${username}`),
+          JSON.stringify(userData)
+        );
+        return userData;
+      } catch (error) {
+        if (error instanceof AxiosError) {
+          console.error("Error fetching user data:", error.message);
+          console.log(username);
+        }
+        return null;
+      }
     },
     {
       args: [AT.state, AT.any.string],
