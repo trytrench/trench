@@ -126,7 +126,6 @@ export const eventsRouter = createTRPCRouter({
           "gray",
       }));
 
-      console.log(labels);
       return {
         data: results.map((bucket) => ({
           ...bucket,
@@ -244,10 +243,14 @@ export const eventsRouter = createTRPCRouter({
       >(
         `
       SELECT
-        "_EntityToEntityLabel"."B" as label,
+        "EntityLabel"."name" as label,
         COUNT(*) as count
       FROM
         "_EntityToEntityLabel"
+      JOIN
+        "EntityLabel"
+      ON
+        "_EntityToEntityLabel"."B" = "EntityLabel"."id"
       WHERE EXISTS (
         SELECT FROM "EventToEntityLink"
         WHERE 
@@ -262,7 +265,7 @@ export const eventsRouter = createTRPCRouter({
           )}
       )
       GROUP BY
-        "_EntityToEntityLabel"."B"
+        "EntityLabel"."name"
       ORDER BY
         count DESC
       `

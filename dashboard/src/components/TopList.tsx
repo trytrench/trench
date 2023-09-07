@@ -31,7 +31,6 @@ export function TopList(props: {
     return null;
   }
 
-  console.log(data);
   return (
     <Card className="">
       <Title className="shrink-0">{title}</Title>

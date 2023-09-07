@@ -37,74 +37,64 @@ import { Metric, Title } from "@tremor/react";
 
 function EntitiesPage() {
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
 
   const [entityType] = useQueryParam("entityType", StringParam);
   const eventFilters = useEventFilters();
   const [paramEntityLabels] = useQueryParam("entityLabel", ArrayParam);
 
   return (
-    <div className="p-4 bg-gray-50">
-      <div className="flex gap-4 items-baseline">
-        <div className="bg-white shadow-md rounded-md">
-          <EventTypeFilter />
-        </div>
-        <span>related to</span>
-        <div className="bg-white shadow-md rounded-md">
-          <EntityTypeFilter />
-        </div>
-      </div>
-      <div className="h-4"></div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="flex flex-col gap-4">
-          <TopList
-            title={`${
-              entityType ? `\`${entityType}\`` : "Entities"
-            } with most ${
-              eventFilters.eventType ? `\`${eventFilters.eventType}\` ` : ""
-            }events`}
-            entityTitle={entityType ?? ""}
-            countTitle={"Events"}
-            args={{
-              limit: 10,
-            }}
-          />
-          <EntityLabelDistribution
-            title={`Labels of ${entityType ? `\`${entityType}\`` : "entities"}`}
-            entityFilters={{
-              entityType: entityType ?? "",
-            }}
-          />
-        </div>
-        <div className="col-span-2 grid grid-cols-2 gap-4">
-          {!paramEntityLabels?.length && (
-            <EntityTimeChart
-              title={`Unique ${entityType ? `\`${entityType}\`` : "entities"}`}
-              color="neutral"
-            />
-          )}
-
-          {entityLabels?.map((label) => {
-            if (
-              paramEntityLabels?.length > 0 &&
-              !paramEntityLabels?.includes(label.id)
-            ) {
-              return null;
-            }
-            return (
-              <EntityTimeChart
-                key={label.id}
-                title={`Unique ${
-                  entityType ? `\`${entityType}\`` : "entities"
-                } with label: \`${label.name}\``}
-                entityFilters={{
-                  entityLabels: [label.id],
-                }}
-                color={label.color === "orange" ? "amber" : label.color}
-              />
-            );
-          })}
-        </div>
-      </div>
+    <div className="p-8 bg-gray-50 flex flex-col gap-8">
+      {entityTypes?.map((entityType, idx) => {
+        return (
+          <div key={idx}>
+            <Metric>Entity: {entityType.name}</Metric>
+            <div className="h-4"></div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-4">
+                <EntityLabelDistribution
+                  title={`Labels of ${
+                    entityType ? `\`${entityType.name}\`` : "entities"
+                  }`}
+                  entityFilters={{
+                    entityType: entityType.id,
+                  }}
+                />
+                <TopList
+                  title={`${
+                    entityType ? `\`${entityType.name}\`` : "Entities"
+                  } with most ${
+                    eventFilters.eventType
+                      ? `\`${eventFilters.eventType}\` `
+                      : ""
+                  }events`}
+                  entityTitle={entityType.name ?? ""}
+                  countTitle={"Events"}
+                  args={{
+                    limit: 5,
+                    entityFilters: {
+                      entityType: entityType.id,
+                    },
+                  }}
+                />
+              </div>
+              <div className="col-span-2">
+                {!paramEntityLabels?.length && (
+                  <EntityTimeChart
+                    title={`Unique ${
+                      entityType ? `\`${entityType.name}\`` : "entities"
+                    }`}
+                    color="neutral"
+                    entityFilters={{
+                      entityType: entityType.id,
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

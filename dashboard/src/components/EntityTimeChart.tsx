@@ -19,7 +19,7 @@ export function EntityTimeChart({
   const actualEventFilters = useEventFilters(eventFilters);
   const actualEntityFilters = useEntityFilters(entityFilters);
 
-  const { data: timeBuckets } = api.entities.getTimeBuckets.useQuery(
+  const { data } = api.entities.getTimeBuckets.useQuery(
     {
       interval: 1000 * 60 * 60 * 24,
       start: actualEventFilters.dateRange?.start ?? 0,
@@ -32,14 +32,8 @@ export function EntityTimeChart({
     }
   );
 
-  const totalCount = timeBuckets?.reduce(
-    (acc, bucket) => acc + bucket.count,
-    0
-  );
-
-  if (totalCount === 0) {
-    return null;
-  }
+  const timeBuckets = data?.data;
+  const labels = data?.labels;
 
   return (
     <Card className="">
@@ -49,12 +43,12 @@ export function EntityTimeChart({
         data={
           timeBuckets?.map((bucket) => ({
             date: format(addDays(new Date(bucket.bucket), 1), "MMM d"),
-            [title]: Number(bucket.count),
+            ...bucket.counts,
           })) ?? []
         }
         index="date"
-        categories={[title]}
-        colors={[color || "gray"]}
+        categories={labels?.map((label) => label.label) ?? []}
+        colors={labels?.map((label) => label.color) ?? []}
       />
     </Card>
   );

@@ -86,7 +86,9 @@ export const entitiesRouter = createTRPCRouter({
 
       const bucketsFromDB = await ctx.prisma.$queryRawUnsafe<
         Array<{
-          bucket: number;
+          bucket: Date;
+          label: string;
+          labelColor: string;
           count: number;
         }>
       >(`
@@ -119,6 +121,8 @@ export const entitiesRouter = createTRPCRouter({
       )
       SELECT
           tb.bucket AS bucket,
+          "EntityLabel"."name" AS "label",
+          "EntityLabel"."color" AS "labelColor",
           COUNT(DISTINCT entities."entityId") AS count
       FROM
           TimeBucketTable AS tb
@@ -126,18 +130,68 @@ export const entitiesRouter = createTRPCRouter({
           ON
           entities."timestamp" >= tb.bucket AND
           entities."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
+      LEFT JOIN "_EntityToEntityLabel"
+          ON "_EntityToEntityLabel"."A" = entities."entityId"
+      LEFT JOIN "EntityLabel"
+          ON "EntityLabel"."id" = "_EntityToEntityLabel"."B"
       GROUP BY
-          tb.bucket
+          tb.bucket, "EntityLabel"."name", "EntityLabel"."color"
       ORDER BY
           tb.bucket;
       `);
 
-      return bucketsFromDB
-        .map((bucket) => ({
-          bucket: bucket.bucket,
-          count: Number(bucket.count),
-        }))
-        .slice(0, -1);
+      type Result = {
+        bucket: number;
+        counts: Record<string, number>;
+      };
+      const results: Array<Result> = [];
+
+      const allLabels = new Set<string>();
+      for (const row of bucketsFromDB) {
+        if (row.label) allLabels.add(row.label);
+      }
+
+      for (const row of bucketsFromDB) {
+        const bucket = row.bucket;
+        const label = row.label;
+        const count = Number(row.count);
+
+        const bucketResult = results.find((r) => r.bucket === bucket.getTime());
+
+        if (bucketResult) {
+          bucketResult.counts[label] = count;
+          bucketResult.counts.Total += count;
+        } else {
+          const newObj: Result = {
+            bucket: bucket.getTime(),
+            counts: {},
+          };
+
+          for (const label of allLabels) {
+            newObj.counts[label] = 0;
+          }
+
+          newObj.counts.Total = count;
+          newObj.counts[label] = count;
+
+          results.push(newObj);
+        }
+      }
+
+      const labels = Array.from(allLabels).map((label) => ({
+        label,
+        color:
+          bucketsFromDB.find((row) => row.label === label)?.labelColor ||
+          "gray",
+      }));
+
+      return {
+        data: results.map((bucket) => ({
+          ...bucket,
+          bucket: new Date(bucket.bucket),
+        })),
+        labels: [{ label: "Total", color: "blue" }, ...labels],
+      };
     }),
 
   findTop: publicProcedure
