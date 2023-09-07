@@ -186,10 +186,12 @@ export const entitiesRouter = createTRPCRouter({
       }));
 
       return {
-        data: results.map((bucket) => ({
-          ...bucket,
-          bucket: new Date(bucket.bucket),
-        })),
+        data: results
+          .map((bucket) => ({
+            ...bucket,
+            bucket: new Date(bucket.bucket),
+          }))
+          .slice(0, -1),
         labels: [{ label: "Total", color: "blue" }, ...labels],
       };
     }),
@@ -203,6 +205,10 @@ export const entitiesRouter = createTRPCRouter({
           type: string;
           name: string;
           count: number;
+          entityLabels: Array<{
+            name: string;
+            color: string;
+          }>;
         }>
       >(`
         WITH links AS (
@@ -240,17 +246,26 @@ export const entitiesRouter = createTRPCRouter({
           "Entity"."id",
           "Entity"."type",
           "Entity"."name",
-          "entities"."count"
+          "entities"."count",
+          ARRAY_AGG(
+            json_build_object('name', "EntityLabel"."name", 'color', "EntityLabel"."color")
+          ) AS "entityLabels"
         FROM "entities"
         JOIN "Entity" ON "Entity"."id" = "entities"."id"
+        LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
+        LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
+        GROUP BY "Entity"."id", "Entity"."type", "Entity"."name", "entities"."count"
         ORDER BY "entities"."count" DESC
         LIMIT ${input.limit ?? 5}
       `);
 
-      return topEntities.map((entity) => ({
+      const ret = topEntities.map((entity) => ({
         ...entity,
         count: Number(entity.count),
+        entityLabels: entity.entityLabels.filter((label) => !!label.name),
       }));
+
+      return ret;
     }),
   findMany: publicProcedure
     .input(

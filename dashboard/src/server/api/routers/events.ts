@@ -127,10 +127,12 @@ export const eventsRouter = createTRPCRouter({
       }));
 
       return {
-        data: results.map((bucket) => ({
-          ...bucket,
-          bucket: new Date(bucket.bucket),
-        })),
+        data: results
+          .map((bucket) => ({
+            ...bucket,
+            bucket: new Date(bucket.bucket),
+          }))
+          .slice(0, -1),
         labels: [{ label: "Total", color: "blue" }, ...labels],
       };
     }),

@@ -45,6 +45,10 @@ function EntitiesPage() {
 
   return (
     <div className="p-8 bg-gray-50 flex flex-col gap-8">
+      <div className="flex items-center gap-4">
+        <span>Search across</span>
+        <EventTypeFilter />
+      </div>
       {entityTypes?.map((entityType, idx) => {
         return (
           <div key={idx}>

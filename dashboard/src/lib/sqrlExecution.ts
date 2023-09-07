@@ -104,6 +104,7 @@ export async function runEvent(event: Event, executable: Executable) {
     type: entity.relation,
     eventId: EVENT_ID,
     entityId: entity.id,
+    entityType: entity.type,
   }));
 
   return {
@@ -191,7 +192,7 @@ export async function batchUpsert({
   await Promise.all([
     prisma.entity.createMany({
       data: entities.map((entity) => ({
-        id: entity.id,
+        id: `${entity.type}-${entity.id}`,
         type: entity.type,
         name: (entity.features.Name as string) || entity.id,
         features: entity.features as Prisma.JsonObject,
@@ -232,7 +233,7 @@ export async function batchUpsert({
     prisma.eventToEntityLink.createMany({
       data: entityToEventLinks.map((link) => ({
         eventId: link.eventId,
-        entityId: link.entityId,
+        entityId: `${link.entityType}-${link.entityId}`,
         type: link.type,
         createdAt: link.timestamp,
       })),
@@ -244,11 +245,12 @@ export async function batchUpsert({
           INSERT INTO "_EntityToEntityLabel" ("A", "B")
           VALUES ${uniqBy(
             entityLabelsToAdd,
-            (entityLabel) => `${entityLabel.entityId}-${entityLabel.label}`
+            (entityLabel) =>
+              `${entityLabel.entityType}-${entityLabel.entityId}-${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}`
           )
             .map(
               (entityLabel) =>
-                `('${entityLabel.entityId}', '${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}')`
+                `('${entityLabel.entityType}-${entityLabel.entityId}', '${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}')`
             )
             .join(",")}
           ON CONFLICT ("A", "B") DO NOTHING;

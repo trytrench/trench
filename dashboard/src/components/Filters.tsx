@@ -103,7 +103,7 @@ export function EventTypeFilter() {
     () =>
       eventTypesData?.map((eventType) => ({
         label: eventType.id,
-        value: eventType.id,
+        value: eventType.name,
       })) ?? [],
     [eventTypesData]
   );
@@ -126,7 +126,7 @@ export function EventTypeFilter() {
   const eventLabelOptions = useMemo(
     () =>
       eventLabelsData?.map((eventLabel) => ({
-        label: eventLabel.id,
+        label: eventLabel.name,
         value: eventLabel.id,
       })) ?? [],
     [eventLabelsData]
@@ -136,12 +136,17 @@ export function EventTypeFilter() {
   const selectedEventLabels = useMemo(
     () =>
       eventLabels
-        ? eventLabels.map((eventLabel) => ({
-            label: eventLabel,
-            value: eventLabel,
-          }))
+        ? eventLabels.map((eventLabel) => {
+            const label = eventLabelsData?.find(
+              (label) => label.id === eventLabel
+            );
+            return {
+              label: label?.name ?? eventLabel,
+              value: label?.id ?? eventLabel,
+            };
+          })
         : [],
-    [eventLabels]
+    [eventLabels, eventLabelsData]
   );
 
   return (
