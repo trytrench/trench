@@ -240,12 +240,14 @@ export const eventsRouter = createTRPCRouter({
       const entityLabelDistros = await ctx.prisma.$queryRawUnsafe<
         Array<{
           label: string;
+          color: string;
           count: number;
         }>
       >(
         `
       SELECT
         "EntityLabel"."name" as label,
+        "EntityLabel"."color" as color,
         COUNT(*) as count
       FROM
         "_EntityToEntityLabel"
@@ -267,14 +269,14 @@ export const eventsRouter = createTRPCRouter({
           )}
       )
       GROUP BY
-        "EntityLabel"."name"
+        "EntityLabel"."name", "EntityLabel"."color"
       ORDER BY
         count DESC
       `
       );
 
       return entityLabelDistros.map((dbEntityLabelDistro) => ({
-        label: dbEntityLabelDistro.label,
+        ...dbEntityLabelDistro,
         count: Number(dbEntityLabelDistro.count),
       }));
     }),

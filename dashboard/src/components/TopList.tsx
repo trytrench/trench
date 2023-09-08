@@ -1,5 +1,13 @@
 import { api } from "../utils/api";
-import { Badge, BarList, Card, List, ListItem, Title } from "@tremor/react";
+import {
+  Badge,
+  BarChart,
+  BarList,
+  Card,
+  List,
+  ListItem,
+  Title,
+} from "@tremor/react";
 import { useEntityFilters, useEventFilters } from "./Filters";
 import { type FindTopEntitiesArgs } from "../shared/validation";
 import { RenderName } from "./RenderEntityName";
@@ -35,6 +43,7 @@ export function TopList(props: {
     <Card className="">
       <Title className="shrink-0">{title}</Title>
       <div className="h-4"></div>
+
       <BarList
         data={data.map((row, idx) => ({
           key: idx.toString(),

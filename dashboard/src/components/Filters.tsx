@@ -11,7 +11,11 @@ import {
 import { type EntityFilters, type EventFilters } from "../shared/validation";
 import { useMemo, useState } from "react";
 import { api } from "../utils/api";
-import { type OptionBase, Select, type SingleValue } from "chakra-react-select";
+import {
+  type OptionBase,
+  Select as ChakraReactSelect,
+  type SingleValue,
+} from "chakra-react-select";
 import { Checkbox, HStack, Input, SelectField } from "@chakra-ui/react";
 import { ArrowRightIcon } from "lucide-react";
 import { isArray } from "lodash";
@@ -21,6 +25,13 @@ import {
   type TimeRangePickerProps,
 } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
+import {
+  MultiSelect,
+  MultiSelectItem,
+  Select,
+  SelectItem,
+  Text,
+} from "@tremor/react";
 
 const { RangePicker } = AntdDatePicker;
 
@@ -109,16 +120,6 @@ export function EventTypeFilter() {
   );
 
   const [eventType, setEventType] = useQueryParam("eventType", StringParam);
-  const selectedEventType = useMemo(
-    () =>
-      eventType
-        ? {
-            label: eventType,
-            value: eventType,
-          }
-        : null,
-    [eventType]
-  );
 
   const { data: eventLabelsData } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
@@ -133,47 +134,40 @@ export function EventTypeFilter() {
   );
 
   const [eventLabels, setEventLabels] = useQueryParam("eventLabel", ArrayParam);
-  const selectedEventLabels = useMemo(
-    () =>
-      eventLabels
-        ? eventLabels.map((eventLabel) => {
-            const label = eventLabelsData?.find(
-              (label) => label.id === eventLabel
-            );
-            return {
-              label: label?.name ?? eventLabel,
-              value: label?.id ?? eventLabel,
-            };
-          })
-        : [],
-    [eventLabels, eventLabelsData]
-  );
 
   return (
-    <div className="flex items-center gap-4 font-bold">
+    <div className="flex items-center gap-4 font-bold shrink-0">
       <Select
-        isClearable
-        value={selectedEventType}
-        onChange={(option) => {
-          if (option?.value) {
-            setEventType(option?.value);
-          } else {
-            setEventType(undefined);
-          }
-        }}
+        className="w-48"
+        value={eventType ?? undefined}
+        onValueChange={setEventType}
         placeholder="All events"
-        options={eventTypeOptions}
-      />
+        enableClear
+      >
+        {eventTypeOptions.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </Select>
       {eventType && (
         <>
-          <span className="font-normal">with label</span>
-          <Select
-            isMulti
-            value={selectedEventLabels}
-            onChange={createHandleLabelChange(setEventLabels)}
-            placeholder="any"
-            options={eventLabelOptions}
-          />
+          <Text className="font-normal whitespace-nowrap">with label</Text>
+          <div className="shrink-0">
+            <MultiSelect
+              value={processArray(eventLabels) ?? []}
+              onValueChange={(newValue) => {
+                setEventLabels(newValue, "pushIn");
+              }}
+              placeholder="any"
+            >
+              {eventLabelOptions.map((option) => (
+                <MultiSelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </MultiSelectItem>
+              ))}
+            </MultiSelect>
+          </div>
         </>
       )}
     </div>
@@ -234,7 +228,7 @@ export function EntityTypeFilter() {
 
   return (
     <div className="flex gap-4 items-center font-bold">
-      <Select
+      <ChakraReactSelect
         isClearable
         value={selectedEntityType}
         onChange={(option) => {
@@ -250,7 +244,7 @@ export function EntityTypeFilter() {
       {entityType && (
         <>
           <span className="font-normal">with label</span>
-          <Select
+          <ChakraReactSelect
             isMulti
             value={selectedEntityLabels}
             onChange={createHandleLabelChange(setEntityLabels)}
@@ -308,7 +302,7 @@ export function EventLabelFilter() {
   );
 
   return (
-    <Select
+    <ChakraReactSelect
       isMulti
       value={selectedEventLabels}
       onChange={createHandleLabelChange(setEventLabels)}
@@ -350,7 +344,7 @@ export function EntityLabelFilter() {
   );
 
   return (
-    <Select
+    <ChakraReactSelect
       isMulti
       value={selectedEntityLabels}
       onChange={createHandleLabelChange(setEntityLabels)}

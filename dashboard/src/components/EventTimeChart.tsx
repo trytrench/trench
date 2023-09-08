@@ -49,6 +49,7 @@ export function EventTimeChart({
         index="date"
         categories={labels.map((label) => label.label)}
         colors={labels.map((label) => label.color)}
+        tooltipOrder="byValue"
       />
     </Card>
   );

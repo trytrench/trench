@@ -8,18 +8,7 @@ import {
   EventTypeFilter,
   useEventFilters,
 } from "../components/Filters";
-import {
-  Box,
-  HStack,
-  Heading,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, HStack, Heading, Tabs, VStack } from "@chakra-ui/react";
 import { Navbar } from "../components/Navbar";
 import { TopList } from "../components/TopList";
 import {
@@ -32,8 +21,17 @@ import { EntityTimeChart } from "../components/EntityTimeChart";
 import { EventTimeChart } from "../components/EventTimeChart";
 import { EventLabelDistribution } from "../components/EventLabelDistribution";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
-import { useEffect } from "react";
-import { Metric, Title } from "@tremor/react";
+import { useEffect, useMemo } from "react";
+import {
+  Metric,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Text,
+  Title,
+} from "@tremor/react";
 
 function EntitiesPage() {
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
@@ -43,35 +41,51 @@ function EntitiesPage() {
   const eventFilters = useEventFilters();
   const [paramEntityLabels] = useQueryParam("entityLabel", ArrayParam);
 
+  const sortedEntityTypes = useMemo(() => {
+    if (!entityTypes) {
+      return [];
+    }
+    return entityTypes.sort((a, b) => {
+      // make sure User is first
+      if (a.name === "User") {
+        return -1;
+      }
+      if (b.name === "User") {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [entityTypes]);
+
   return (
-    <div className="p-8 bg-gray-50 flex flex-col gap-8">
+    <div className="p-8 flex flex-col gap-8">
       <div className="flex items-center gap-4">
-        <span>Search across</span>
+        <Text>Search across</Text>
         <EventTypeFilter />
       </div>
-      {entityTypes?.map((entityType, idx) => {
+      {sortedEntityTypes?.map((entityType, idx) => {
         return (
           <div key={idx}>
-            <Metric>Entity: {entityType.name}</Metric>
+            <Title>Entity: {entityType.name}</Title>
             <div className="h-4"></div>
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col gap-4">
                 <EntityLabelDistribution
                   title={`Labels of ${
-                    entityType ? `\`${entityType.name}\`` : "entities"
-                  }`}
+                    entityType ? `${entityType.name} ` : ""
+                  }Entities`}
                   entityFilters={{
                     entityType: entityType.id,
                   }}
                 />
                 <TopList
                   title={`${
-                    entityType ? `\`${entityType.name}\`` : "Entities"
-                  } with most ${
+                    entityType ? `${entityType.name} ` : ""
+                  } Entities with the most ${
                     eventFilters.eventType
                       ? `\`${eventFilters.eventType}\` `
                       : ""
-                  }events`}
+                  }Events`}
                   entityTitle={entityType.name ?? ""}
                   countTitle={"Events"}
                   args={{
@@ -86,8 +100,8 @@ function EntitiesPage() {
                 {!paramEntityLabels?.length && (
                   <EntityTimeChart
                     title={`Unique ${
-                      entityType ? `\`${entityType.name}\`` : "entities"
-                    }`}
+                      entityType ? `${entityType.name} ` : ""
+                    }Entities Seen`}
                     color="neutral"
                     entityFilters={{
                       entityType: entityType.id,
@@ -110,7 +124,7 @@ function EventsPage() {
 
   return (
     <>
-      <div className="bg-gray-50 p-8 flex flex-col gap-8">
+      <div className="p-8 flex flex-col gap-8">
         {eventTypes?.map((eventType, idx) => {
           return (
             <div key={idx}>
@@ -197,8 +211,8 @@ export default function Dashboard() {
         <DateRangePicker />
       </div>
 
-      <Tabs isLazy index={tab ?? 0} onChange={setTab}>
-        <TabList px={4}>
+      <TabGroup isLazy index={tab ?? 0} onChange={setTab}>
+        <TabList className="px-8">
           <Tab>Events</Tab>
           <Tab>Entities</Tab>
         </TabList>
@@ -210,7 +224,7 @@ export default function Dashboard() {
             <EntitiesPage />
           </TabPanel>
         </TabPanels>
-      </Tabs>
+      </TabGroup>
     </div>
   );
 }
