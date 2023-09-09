@@ -1681,7 +1681,7 @@
 
 "@tremor/custom-react@git+https://github.com/trytrench/tremor.git#dist":
   version "0.0.0-development"
-  resolved "git+https://github.com/trytrench/tremor.git#27c95d19505fca35e56edcb6328333dd880e761c"
+  resolved "git+https://github.com/trytrench/tremor.git#83bdd1d6c7920c1c3eee4285f9ac5ab9b80f85c9"
   dependencies:
     "@floating-ui/react" "^0.19.1"
     "@headlessui/react" "^1.7.14"
@@ -5755,7 +5755,7 @@ recharts-scale@^0.4.4:
   dependencies:
     decimal.js-light "^2.4.1"
 
-recharts@^2.7.1:
+recharts@^2.7.1, recharts@^2.8.0:
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/recharts/-/recharts-2.8.0.tgz#90c95136e2cb6930224c94a51adce607701284fc"
   integrity sha512-nciXqQDh3aW8abhwUlA4EBOBusRHLNiKHfpRZiG/yjups1x+auHb2zWPuEcTn/IMiN47vVMMuF8Sr+vcQJtsmw==
