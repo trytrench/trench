@@ -42,7 +42,7 @@ export async function runEvent(event: Event, executable: Executable) {
   await completePromise;
   await manipulator.mutate(ctx);
 
-  const TIMESTAMP = new Date(event.timestamp);
+  const TIMESTAMP = event.timestamp ? new Date(event.timestamp) : new Date();
   const EVENT_ID = nanoid();
 
   const eventFeatures: Record<string, unknown> = {};

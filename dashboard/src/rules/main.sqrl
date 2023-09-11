@@ -28,8 +28,14 @@ addEntityFeature(Repo, 'Name', jsonValue(EventData, '$.data.repo.name'));
 LET UserData := getUserData(Username);
 LET ContribsPastYear := jsonValue(UserData, '$.contributionsPastYear');
 LET CreatedDate := jsonValue(UserData, '$.createdDate');
-LET BioSimhash := simhash(jsonValue(UserData, '$.bio'));
-LET ReadmeSimhash := simhash(jsonValue(UserData, '$.readmeContent'));
+LET Bio := jsonValue(UserData, '$.bio');
+LET Readme := jsonValue(UserData, '$.readmeContent');
+LET PinnedRepos := jsonValue(UserData, '$.pinnedRepos');
+
+LET BioSimhash := simhash(Bio);
+LET ReadmeSimhash := simhash(Readme);
+LET ReposSimhash := simhash(PinnedRepos);
+LET CreatedDateSimhash := if (CreatedDate, simhash(CreatedDate));
 
 # Good labels
 CREATE RULE HasGithubPro WHERE jsonValue(UserData, '$.isPro');
@@ -37,24 +43,59 @@ CREATE RULE HasOldAccount WHERE jsonValue(UserData, '$.createdYear') < 2020;
 CREATE RULE HasManyAchievements WHERE length(jsonValue(UserData, '$.achievements')) >= 3;
 CREATE RULE HasSponsors WHERE length(jsonValue(UserData, '$.sponsors')) > 0;
 CREATE RULE HasSponsorees WHERE jsonValue(UserData, '$.sponsoring') > 0;
-CREATE RULE HasManyContributions WHERE ContribsPastYear > 100;
+CREATE RULE HasManyContributions WHERE ContribsPastYear >= 100;
 
-WHEN HasGithubPro THEN addEntityLabel(Actor, 'GOOD', 'github_pro'), addEventLabel('GOOD', 'good_user');
-WHEN HasOldAccount THEN addEntityLabel(Actor, 'GOOD', 'old_account'), addEventLabel('GOOD', 'good_user');
-WHEN HasManyAchievements THEN addEntityLabel(Actor, 'GOOD', 'many_achievements'), addEventLabel('GOOD', 'good_user');
-WHEN HasSponsors THEN addEntityLabel(Actor, 'GOOD', 'sponsored'), addEventLabel('GOOD', 'good_user');
-WHEN HasSponsorees THEN addEntityLabel(Actor, 'GOOD', 'sponsoring'), addEventLabel('GOOD', 'good_user');
-WHEN HasManyContributions THEN addEntityLabel(Actor, 'GOOD', 'many_contribs'), addEventLabel('GOOD', 'good_user');
+WHEN HasGithubPro THEN addEntityLabel(Actor, 'GOOD', 'github_pro');
+WHEN HasOldAccount THEN addEntityLabel(Actor, 'GOOD', 'old_account');
+WHEN HasManyAchievements THEN addEntityLabel(Actor, 'GOOD', 'many_achievements');
+WHEN HasSponsors THEN addEntityLabel(Actor, 'GOOD', 'sponsored');
+WHEN HasSponsorees THEN addEntityLabel(Actor, 'GOOD', 'sponsoring');
+WHEN HasManyContributions THEN addEntityLabel(Actor, 'GOOD', 'many_contribs');
 
+CREATE RULE IsGoodUser WHERE HasGithubPro OR HasOldAccount OR HasManyAchievements OR HasSponsors OR HasSponsorees OR HasManyContributions;
 
 # Bad labels
-CREATE RULE NewAccount WHERE CreatedDate > '2023-07-01';
-CREATE RULE YoungAccountWithLowContribs WHERE jsonValue(UserData, '$.createdYear') > 2021 
-    AND ContribsPastYear < 20;
+LET DaysSinceUserCreated := if (CreatedDate, dateDiff('DAY', date(CreatedDate)));
+CREATE RULE NewAccount WHERE DaysSinceUserCreated < 60;
 
-WHEN NewAccount THEN addEntityLabel(Actor, 'BAD', 'new_account'), addEventLabel('BAD', 'bad_user');
-WHEN YoungAccountWithLowContribs THEN addEntityLabel(Actor, 'BAD', 'young_account_low_contribs'), addEventLabel('BAD', 'bad_user');
+LET ProfileFields := [
+  jsonValue(UserData, '$.repositories'),
+  length(jsonValue(UserData, '$.achievements')),
+  length(jsonValue(UserData, '$.organizations')),
+  Readme,
+  jsonValue(UserData, '$.websiteUrl'),
+  Bio,
+  jsonValue(UserData, '$.company'),
+  jsonValue(UserData, '$.location'),
+  length(jsonValue(UserData, '$.socialLinks')),
+];
 
-LET NumNonStarEventsByUser := count(BY Actor WHERE Type != 'WatchEvent' TOTAL);
-LET NumForksByUser := count(BY Actor WHERE Type = 'ForkEvent' TOTAL);
-LET UserHasLowNumEvents := NumNonStarEventsByUser < 5;
+CREATE RULE HasEmptyProfile WHERE length(filter(ProfileFields)) = 0;
+CREATE RULE HasMostlyEmptyProfile WHERE NOT HasEmptyProfile AND length(filter(ProfileFields)) <= 2 AND ContribsPastYear < 10;
+
+CREATE RULE ManyUsersWithSameBioPastWeek WHERE length(split(Bio, ' ')) >= 3 AND countUnique(Actor By BioSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameReadmePastWeek WHERE length(split(Readme, ' ') >= 4) AND countUnique(Actor By ReadmeSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameReposPastWeek WHERE length(PinnedRepos) > 0 AND countUnique(Actor By ReposSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameCreatedDatePastWeek WHERE CreatedDate AND countUnique(Actor By CreatedDateSimhash LAST WEEK) > 5;
+
+WHEN NewAccount THEN addEntityLabel(Actor, 'BAD', 'new_account');
+WHEN HasEmptyProfile THEN addEntityLabel(Actor, 'BAD', 'empty_profile');
+WHEN HasMostlyEmptyProfile THEN addEntityLabel(Actor, 'BAD', 'mostly_empty_profile');
+WHEN ManyUsersWithSameBioPastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_bio');
+WHEN ManyUsersWithSameReadmePastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_readme'); 
+WHEN ManyUsersWithSameReposPastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_repos');
+WHEN ManyUsersWithSameCreatedDatePastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_created_date');
+
+CREATE RULE IsBadUser WHERE NOT IsGoodUser AND (NewAccount OR HasEmptyProfile OR HasMostlyEmptyProfile OR ManyUsersWithSameBioPastWeek OR ManyUsersWithSameCreatedDatePastWeek
+  OR ManyUsersWithSameReadmePastWeek OR ManyUsersWithSameReposPastWeek);
+
+WHEN IsGoodUser THEN addEventLabel('GOOD', 'good_user');
+WHEN IsBadUser THEN addEventLabel('BAD', 'bad_user');
+
+LET NumActorsByRepo := countUnique(Actor BY Repo LAST 6 DAYS);
+LET NumBadUsersByRepo := countUnique(Actor BY Repo WHERE IsBadUser LAST 6 DAYS);
+
+LET RepoName := jsonValue(EventData, '$.data.repo.name');
+CREATE RULE RepoHasManyBadUsersPastWeek WHERE NumBadUsersByRepo > 10 AND NumBadUsersByRepo / NumActorsByRepo > 0.8 
+  WITH REASON 'Repo ${RepoName} has ${NumBadUsersByRepo} bad users out of ${NumActorsByRepo} users';
+WHEN RepoHasManyBadUsersPastWeek THEN addEntityLabel(Repo, 'BAD', 'bad_users');
