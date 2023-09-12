@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { api } from "../utils/api";
+import { type RouterOutputs, api } from "../utils/api";
 import {
   DateRangePicker,
   EventTypeFilter,
@@ -15,8 +15,21 @@ import {
 } from "use-query-params";
 import { EntityTimeChart } from "../components/EntityTimeChart";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  MouseEventHandler,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Button,
+  Card,
+  Icon,
+  List,
+  ListItem,
+  Metric,
   Tab,
   TabGroup,
   TabList,
@@ -26,8 +39,19 @@ import {
   Title,
 } from "@tremor/react";
 import { AreaChart } from "@tremor/custom-react";
-import { ReferenceArea, ReferenceLine } from "recharts";
-import { CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { Line, ReferenceArea, ReferenceLine } from "recharts";
+import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { AppRouter } from "../server/api/root";
+import { twMerge } from "tailwind-merge";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuTrigger,
+} from "../components/base/ContextMenu";
+import { Modal, ModalContent, ModalOverlay } from "@chakra-ui/react";
+import { Calendar, Clock } from "lucide-react";
 
 function formatPercentage(value: number, maxValue: number) {
   if (maxValue < 10) {
@@ -120,26 +144,57 @@ function EntitiesPage() {
   );
 }
 
-function EventsPage() {
-  const filters = useEventFilters();
+type Chart =
+  RouterOutputs["dashboard"]["getTimeBuckets"]["anomalyCharts"][number];
 
-  const { data } = api.dashboard.getTimeBuckets.useQuery({
-    interval: 1000 * 60 * 60 * 24,
-    start: filters.dateRange?.start ?? 0,
-    end: filters.dateRange?.end ?? 0,
-  });
-  // const { data: eventTypes } = api.labels.getEventTypes.useQuery();
+function AnomalyChart(props: {
+  chart: Chart;
+  selectedTimeRange: [number, number] | undefined;
+  onSelectedTimeRangeChange: (dateRange: [number, number] | undefined) => void;
+  onOpenTimeRangeContextMenu?: MouseEventHandler;
+  onSelectingChange?: (selecting: boolean) => void;
+}) {
+  const {
+    chart,
+    selectedTimeRange,
+    onSelectedTimeRangeChange,
+    onOpenTimeRangeContextMenu,
+    onSelectingChange,
+  } = props;
 
-  const [dragging, setDragging] = useState<boolean>(false);
+  const [dragging, _setDragging] = useState<boolean>(false);
   const [firstX, setFirstX] = useState<string | undefined>(undefined);
+  const [firstTime, setFirstTime] = useState<number | undefined>(undefined);
   const [secondX, setSecondX] = useState<string | undefined>(undefined);
 
-  const handleMouseDown = useCallback((e: CategoricalChartState) => {
-    if (!e) return;
-    setFirstX(e.activeLabel);
-    setSecondX(undefined);
-    setDragging(true);
-  }, []);
+  const setDragging = useCallback(
+    (dragging: boolean) => {
+      if (onSelectingChange) {
+        onSelectingChange(dragging);
+      }
+      _setDragging(dragging);
+    },
+    [onSelectingChange, _setDragging]
+  );
+
+  useEffect(() => {
+    if (!dragging) {
+      setFirstX(undefined);
+      setSecondX(undefined);
+    }
+  }, [dragging, setFirstX, setSecondX]);
+  const handleMouseDown = useCallback(
+    (e: CategoricalChartState) => {
+      if (!e) return;
+      setFirstX(e.activeLabel);
+      const firstTime = e.activePayload?.[0]?.payload.time;
+      setFirstTime(firstTime);
+      setSecondX(undefined);
+      onSelectedTimeRangeChange(undefined);
+      setDragging(true);
+    },
+    [onSelectedTimeRangeChange, setDragging]
+  );
 
   const handleMouseMove = useCallback(
     (e: CategoricalChartState) => {
@@ -156,86 +211,428 @@ function EventsPage() {
       if (!dragging) return;
       setSecondX(e.activeLabel);
       setDragging(false);
+      const secondTime = e.activePayload?.[0]?.payload.time;
+
+      if (firstTime && secondTime) {
+        if (firstTime > secondTime) {
+          onSelectedTimeRangeChange([secondTime, firstTime]);
+        } else if (firstTime < secondTime) {
+          onSelectedTimeRangeChange([firstTime, secondTime]);
+        }
+      }
     },
-    [dragging]
+    [dragging, firstTime, onSelectedTimeRangeChange, setDragging]
+  );
+
+  let refLineY: number | undefined = undefined;
+  if (chart.lines.length === 1) {
+    const avg = chart.lines[0]!.avg;
+    const stdDev = chart.lines[0]!.stdDev;
+    refLineY = avg + 3 * stdDev;
+  }
+  const hideRefLine =
+    chart.lines.length !== 1 ||
+    !refLineY ||
+    (chart.type === "percent" && refLineY > 1);
+  const maxValue = Math.max(
+    ...chart.lines.flatMap((line) => line.data.map((item) => item.value))
+  );
+  const maxY = Math.max(hideRefLine ? 0 : refLineY ?? 0, maxValue);
+
+  const areaChartData = useMemo(() => {
+    if (chart.lines.length === 0) {
+      return [];
+    }
+    const result: any[] = [];
+    const line = chart.lines[0]!;
+    for (let i = 0; i < line.data.length; i++) {
+      const item = line.data[i]!;
+      const resultItem: any = {
+        date: format(new Date(item.bucket), "MMM d"),
+        time: item.bucket,
+      };
+
+      for (const otherLine of chart.lines) {
+        resultItem[otherLine.label] = otherLine.data[i]!.value;
+      }
+
+      result.push(resultItem);
+    }
+
+    return result;
+  }, [chart.lines]);
+
+  return (
+    <AreaChart
+      startEndOnly
+      yAxisWidth={40}
+      onMouseDownChart={handleMouseDown}
+      onMouseMoveChart={handleMouseMove}
+      onMouseUpChart={handleMouseUp}
+      onMouseDownCapture={(e) => {
+        if (e.button === 2) {
+          e.stopPropagation();
+        }
+      }}
+      onMouseUpCapture={(e) => {
+        if (e.button === 2) {
+          e.stopPropagation();
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpenTimeRangeContextMenu?.(e);
+      }}
+      valueFormatter={(value) => {
+        return chart.type === "count"
+          ? value.toString()
+          : formatPercentage(value, maxY);
+      }}
+      showGridLines={false}
+      maxValue={maxY}
+      className="h-full select-none"
+      data={areaChartData}
+      index="date"
+      categories={chart.lines.map((line) => line.label)}
+      colors={chart.lines.map((line) => line.color)}
+      tooltipOrder="byValue"
+    >
+      <ReferenceLine y={refLineY} stroke="black" strokeDasharray="3 3" />
+      <ReferenceArea
+        visibility={firstX && secondX ? "visible" : "hidden"}
+        x1={firstX}
+        x2={secondX}
+        fill="gray"
+        fillOpacity={0.4}
+      />
+
+      <ReferenceArea
+        z={10}
+        visibility={!!selectedTimeRange ? "visible" : "hidden"}
+        x1={
+          selectedTimeRange
+            ? format(new Date(selectedTimeRange[0]!), "MMM d")
+            : undefined
+        }
+        x2={
+          selectedTimeRange
+            ? format(new Date(selectedTimeRange[1]!), "MMM d")
+            : undefined
+        }
+        fill="gray"
+        fillOpacity={0.2}
+      ></ReferenceArea>
+
+      {/* {chart.lines.length === 1 &&
+        chart.lines[0]!.anomalyRanges.map((anomalyRange, idx) => {
+          return (
+            <ReferenceArea
+              key={idx}
+              x1={format(new Date(anomalyRange.startTime), "MMM d")}
+              x2={format(new Date(anomalyRange.endTime), "MMM d")}
+              fill="red"
+              fillOpacity={0.5}
+            />
+          );
+        })} */}
+    </AreaChart>
+  );
+}
+
+interface InvestigateDateRangeModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  timeRange: [number, number];
+}
+function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
+  const { timeRange, open, onOpenChange } = props;
+
+  const { data } = api.dashboard.getTopEntities.useQuery(
+    {
+      startTime: timeRange[0],
+      endTime: timeRange[1],
+      limit: 5,
+    },
+    {
+      enabled: !!timeRange && open,
+    }
   );
 
   return (
-    <>
-      <div className="p-4 grid grid-cols-3 gap-4">
-        {data?.map((chart, idx) => {
-          const refLineY = chart.avg + 3 * chart.stdDev;
-          const maxValue = Math.max(
-            ...chart.data.map((chartItem) => chartItem.value)
-          );
-          const maxY = Math.max(refLineY, maxValue);
-          return (
-            <AreaChart
-              onMouseDownChart={handleMouseDown}
-              onMouseMoveChart={handleMouseMove}
-              onMouseUpChart={handleMouseUp}
-              valueFormatter={(value) => {
-                return chart.type === "count"
-                  ? value.toFixed(2)
-                  : formatPercentage(value, maxY);
-              }}
-              showGridLines={false}
-              maxValue={maxY}
-              key={idx}
-              className="h-40 mt-4 select-none"
-              data={chart.data.map((chartItem) => ({
-                date: format(new Date(chartItem.bucket), "MMM d"),
-                [chart.title]: chartItem.value,
-              }))}
-              index="date"
-              categories={[chart.title]}
-              colors={[chart.lineColor]}
-              tooltipOrder="byValue"
-            >
-              <ReferenceLine
-                y={refLineY}
-                stroke="black"
-                strokeDasharray="3 3"
-              />
-              <ReferenceArea
-                visibility={firstX && secondX ? "visible" : "hidden"}
-                x1={firstX}
-                x2={secondX}
-                fill="gray"
-                fillOpacity={0.1}
-              />
-            </AreaChart>
-          );
-        })}
-        {/* {eventTypes?.map((eventType, idx) => {
-          return (
-            <div key={idx}>
-              <Metric>Event: {eventType.name}</Metric>
+    <Modal
+      isOpen={open}
+      onClose={() => {
+        onOpenChange(false);
+      }}
+    >
+      <ModalOverlay />
+      <ModalContent>
+        {data?.map((topList, idx) => (
+          <Card key={idx}>
+            <Title>{topList.type}</Title>
+            <List>
+              {topList.entities.map((item, idx) => (
+                <ListItem key={idx}>
+                  <span>{item.name}</span>
+                  <span>{item.count}</span>
+                </ListItem>
+              ))}
+            </List>
+          </Card>
+        ))}
+      </ModalContent>
+    </Modal>
+  );
+}
+
+function EventsPage() {
+  const eventFilters = useEventFilters();
+
+  const { data } = api.dashboard.getTimeBuckets.useQuery({
+    interval: 1000 * 60 * 60 * 24,
+    start: eventFilters.dateRange?.start ?? 0,
+    end: eventFilters.dateRange?.end ?? 0,
+    eventFilters,
+  });
+  // const { data: eventTypes } = api.labels.getEventTypes.useQuery();
+
+  const [timeRange, setTimeRange] = useState<[number, number] | undefined>(
+    undefined
+  );
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const handleContextMenu: MouseEventHandler = useCallback((e) => {
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: e.clientX,
+      clientY: e.clientY,
+    });
+
+    triggerRef.current?.dispatchEvent(event);
+  }, []);
+
+  const [selecting, setSelecting] = useState<boolean>(false);
+
+  const eventCountsInTimeRange = useMemo(() => {
+    if (!data?.eventChart || !timeRange) {
+      return undefined;
+    }
+    const lineData = data.eventChart.lines[0]?.data ?? [];
+    const startIdx = lineData.findIndex((item) => item.bucket === timeRange[0]);
+    const endIdx = lineData.findIndex((item) => item.bucket === timeRange[1]);
+    if (startIdx === -1 || endIdx === -1) {
+      return undefined;
+    }
+
+    const totalLine = data.eventChart.lines.find(
+      (line) => line.metadata?.isTotal
+    );
+
+    if (!totalLine) {
+      return undefined;
+    }
+    const timeRangeTotalCount = totalLine.data
+      .slice(startIdx, endIdx + 1)
+      .reduce((acc, item) => acc + item.value, 0);
+    const totalCount = totalLine.data.reduce(
+      (acc, item) => acc + item.value,
+      0
+    );
+
+    const percentages = data?.eventChart.lines
+      .filter((line) => !line.metadata?.isTotal)
+      .map((line) => {
+        const timeRange = line.data.slice(startIdx, endIdx + 1);
+        const timeRangeLabelCount = timeRange.reduce(
+          (acc, item) => acc + item.value,
+          0
+        );
+        const labelCount = line.data.reduce((acc, item) => acc + item.value, 0);
+
+        const timeRangePercentage =
+          labelCount === 0
+            ? 0
+            : (timeRangeLabelCount / timeRangeTotalCount) * 100;
+        const allTimePercentage =
+          labelCount === 0 ? 0 : (labelCount / totalCount) * 100;
+
+        const ratio = timeRangePercentage / allTimePercentage;
+
+        return {
+          label: `\`${line.label}\` rate`,
+          value: timeRangePercentage,
+          color: line.color,
+          metric: formatPercentage(timeRangePercentage, timeRangePercentage),
+          ratio: ratio,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+
+    return [
+      {
+        label: `${
+          eventFilters.eventType ? `\`${eventFilters.eventType}\` ` : "#"
+        } events`,
+        value: timeRangeTotalCount,
+        color: totalLine?.color,
+        metric: timeRangeTotalCount?.toString(),
+        ratio: null,
+      },
+      ...percentages,
+    ];
+  }, [data.eventChart, eventFilters.eventType, timeRange]);
+  return (
+    <div>
+      <div className="px-8 flex items-center gap-4">
+        <Title>Viewing</Title>
+        <EventTypeFilter />
+        <Title>events from</Title>
+        <div style={{ width: 1000 }}>
+          <DateRangePicker />
+        </div>
+      </div>
+      <div className="h-4"></div>
+      <div className="p-8 grid grid-cols-2 gap-12 bg-gray-50">
+        {data?.eventChart && (
+          <div className="h-56">
+            <div className="items-center flex">
+              <Title>
+                {`${
+                  eventFilters.eventType
+                    ? `\`${eventFilters.eventType}\` events`
+                    : "Events"
+                } over time`}
+              </Title>
+            </div>
+            <div className="h-4"></div>
+            <AnomalyChart
+              chart={data.eventChart}
+              selectedTimeRange={timeRange}
+              onSelectedTimeRangeChange={setTimeRange}
+              onOpenTimeRangeContextMenu={handleContextMenu}
+              onSelectingChange={setSelecting}
+            />
+          </div>
+        )}
+        <div>
+          <div className="items-center flex">
+            <Icon
+              variant="shadow"
+              icon={Clock}
+              size="sm"
+              className="mb-0 mr-3 text-gray-500"
+            />
+            <Title>
+              Selected Time Range:{" "}
+              <span>
+                {timeRange ? (
+                  <b>
+                    {format(new Date(timeRange[0]), "MMMM d")} -{" "}
+                    {format(new Date(timeRange[1]), "MMMM d")}
+                  </b>
+                ) : selecting ? (
+                  <b>...</b>
+                ) : (
+                  <b>None</b>
+                )}
+              </span>
+            </Title>
+          </div>
+          <div className="h-4"></div>
+          {timeRange ? (
+            <div>
+              <div className="flex justify-start gap-4">
+                {eventCountsInTimeRange?.map((item, idx) => (
+                  <Card
+                    key={idx}
+                    decorationColor={item.color}
+                    decoration="top"
+                    // className="p-4"
+                  >
+                    <Text>{item.label}</Text>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <Metric>{item.metric}</Metric>
+                      {item.ratio && (item.ratio > 1.5 || item.ratio < 0.6) ? (
+                        <Text className="mt-2 font-medium">
+                          {item.ratio > 1
+                            ? `${formatPercentage(
+                                100 * (item.ratio - 1),
+                                100 * (item.ratio - 1)
+                              )} above average`
+                            : `${formatPercentage(
+                                100 * (1 - item.ratio),
+                                100 * (1 - item.ratio)
+                              )} below average`}
+                        </Text>
+                      ) : (
+                        <></>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
               <div className="h-4"></div>
-              <div className="grid grid-cols-3 gap-4">
-                <VStack>
-                  <EventLabelDistribution
-                    title="Event Labels"
-                    eventFilters={{
-                      eventType: eventType.id,
-                    }}
-                  />
-                </VStack>
-                <div className="col-span-2">
-                  <EventTimeChart
-                    title="All Events"
-                    color="neutral"
-                    eventFilters={{
-                      eventType: eventType.id,
-                    }}
-                  />
-                </div>
+              <div className="flex gap-4 items-center">
+                <Button variant="light">View Event List</Button>
+                <Button variant="light">View Top Entities</Button>
               </div>
             </div>
-          );
-        })} */}
+          ) : (
+            <Text>Click and drag on any chart to select a time range.</Text>
+          )}
+        </div>
       </div>
-    </>
+      <div className="p-8 grid grid-cols-3 gap-8">
+        {data?.anomalyCharts?.map((chart, idx) => {
+          return (
+            <div className="h-40" key={idx}>
+              <AnomalyChart
+                chart={chart}
+                selectedTimeRange={timeRange}
+                onSelectedTimeRangeChange={setTimeRange}
+                onOpenTimeRangeContextMenu={handleContextMenu}
+                onSelectingChange={setSelecting}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <ContextMenu>
+        <ContextMenuTrigger ref={triggerRef} />
+        <ContextMenuContent>
+          <ContextMenuLabel>
+            {timeRange
+              ? `Selected: ${format(
+                  new Date(timeRange[0]),
+                  "MMM d"
+                )} – ${format(new Date(timeRange[1]), "MMM d")}`
+              : "Click and drag to select a time range"}
+          </ContextMenuLabel>
+          {timeRange && (
+            <>
+              <ContextMenuItem
+                onClick={() => {
+                  setModalOpen(true);
+                }}
+              >
+                See events
+              </ContextMenuItem>
+              <ContextMenuItem>See entities</ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+      {timeRange && (
+        <InvestigateDateRangeModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          timeRange={timeRange}
+        />
+      )}
+    </div>
   );
 }
 export default function Dashboard() {
@@ -290,24 +687,8 @@ export default function Dashboard() {
         </Metric>
       </div> */}
       <div className="h-4"></div>
-      <div className="px-4 pb-4 flex gap-4">
-        <DateRangePicker />
-      </div>
 
-      <TabGroup isLazy index={tab ?? 0} onChange={setTab}>
-        <TabList className="px-8">
-          <Tab>Events</Tab>
-          <Tab>Entities</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel p={0}>
-            <EventsPage />
-          </TabPanel>
-          <TabPanel p={0}>
-            <EntitiesPage />
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+      <EventsPage />
     </div>
   );
 }
