@@ -58,7 +58,7 @@ export const Navbar = () => {
       py={4}
       justify="start"
       align={"center"}
-      borderBottom="1px"
+      borderBottom="2px"
       borderColor="gray.200"
       as="nav"
     >

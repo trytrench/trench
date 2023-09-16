@@ -17,6 +17,7 @@ import { EntityTimeChart } from "../components/EntityTimeChart";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
 import {
   MouseEventHandler,
+  forwardRef,
   useCallback,
   useEffect,
   useMemo,
@@ -24,7 +25,9 @@ import {
   useState,
 } from "react";
 import {
+  BarList,
   Button,
+  Callout,
   Card,
   Icon,
   List,
@@ -51,15 +54,32 @@ import {
   ContextMenuTrigger,
 } from "../components/base/ContextMenu";
 import { Modal, ModalContent, ModalOverlay } from "@chakra-ui/react";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, TrendingUp } from "lucide-react";
+
+function formatTimeRange([start, end]: [number, number]) {
+  return `${format(new Date(start), "MMM d, h:mm a")} – ${format(
+    new Date(end),
+    "MMM d, h:mm a"
+  )}`;
+}
 
 function formatPercentage(value: number, maxValue: number) {
+  if (maxValue < 0.01) {
+    return `${value.toFixed(4)}%`;
+  }
+  if (maxValue < 0.1) {
+    return `${value.toFixed(3)}%`;
+  }
+  if (maxValue < 1) {
+    return `${value.toFixed(2)}%`;
+  }
   if (maxValue < 10) {
     return `${value.toFixed(1)}%`;
   }
   return `${value.toFixed(0)}%`;
 }
 
+const DATE_FORMAT_X_AXIS = "MMM d, h:mm a";
 function EntitiesPage() {
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
   const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
@@ -225,10 +245,12 @@ function AnomalyChart(props: {
   );
 
   let refLineY: number | undefined = undefined;
+  let singleLine: Chart["lines"][number] | null = null;
   if (chart.lines.length === 1) {
     const avg = chart.lines[0]!.avg;
     const stdDev = chart.lines[0]!.stdDev;
     refLineY = avg + 3 * stdDev;
+    singleLine = chart.lines[0]!;
   }
   const hideRefLine =
     chart.lines.length !== 1 ||
@@ -248,7 +270,7 @@ function AnomalyChart(props: {
     for (let i = 0; i < line.data.length; i++) {
       const item = line.data[i]!;
       const resultItem: any = {
-        date: format(new Date(item.bucket), "MMM d"),
+        date: format(new Date(item.bucket), DATE_FORMAT_X_AXIS),
         time: item.bucket,
       };
 
@@ -262,69 +284,85 @@ function AnomalyChart(props: {
     return result;
   }, [chart.lines]);
 
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const handleContextMenu: MouseEventHandler = useCallback((e) => {
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: e.clientX,
+      clientY: e.clientY,
+    });
+
+    triggerRef.current?.dispatchEvent(event);
+  }, []);
+
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+
   return (
-    <AreaChart
-      startEndOnly
-      yAxisWidth={40}
-      onMouseDownChart={handleMouseDown}
-      onMouseMoveChart={handleMouseMove}
-      onMouseUpChart={handleMouseUp}
-      onMouseDownCapture={(e) => {
-        if (e.button === 2) {
+    <>
+      <AreaChart
+        startEndOnly
+        yAxisWidth={40}
+        onMouseDownChart={handleMouseDown}
+        onMouseMoveChart={handleMouseMove}
+        onMouseUpChart={handleMouseUp}
+        onMouseDownCapture={(e) => {
+          if (e.button === 2) {
+            e.stopPropagation();
+          }
+        }}
+        onMouseUpCapture={(e) => {
+          if (e.button === 2) {
+            e.stopPropagation();
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
           e.stopPropagation();
-        }
-      }}
-      onMouseUpCapture={(e) => {
-        if (e.button === 2) {
-          e.stopPropagation();
-        }
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onOpenTimeRangeContextMenu?.(e);
-      }}
-      valueFormatter={(value) => {
-        return chart.type === "count"
-          ? value.toString()
-          : formatPercentage(value, maxY);
-      }}
-      showGridLines={false}
-      maxValue={maxY}
-      className="h-full select-none"
-      data={areaChartData}
-      index="date"
-      categories={chart.lines.map((line) => line.label)}
-      colors={chart.lines.map((line) => line.color)}
-      tooltipOrder="byValue"
-    >
-      <ReferenceLine y={refLineY} stroke="black" strokeDasharray="3 3" />
-      <ReferenceArea
-        visibility={firstX && secondX ? "visible" : "hidden"}
-        x1={firstX}
-        x2={secondX}
-        fill="gray"
-        fillOpacity={0.4}
-      />
+          handleContextMenu(e);
+          onOpenTimeRangeContextMenu?.(e);
+        }}
+        valueFormatter={(value) => {
+          return chart.type === "count"
+            ? value.toString()
+            : formatPercentage(value, maxY);
+        }}
+        showGridLines={false}
+        maxValue={maxY}
+        className="h-full select-none"
+        data={areaChartData}
+        index="date"
+        categories={chart.lines.map((line) => line.label)}
+        colors={chart.lines.map((line) => line.color || "gray")}
+        tooltipOrder="byValue"
+      >
+        <ReferenceLine y={refLineY} stroke="black" strokeDasharray="3 3" />
+        <ReferenceArea
+          visibility={firstX && secondX ? "visible" : "hidden"}
+          x1={firstX}
+          x2={secondX}
+          fill="gray"
+          fillOpacity={0.4}
+        />
 
-      <ReferenceArea
-        z={10}
-        visibility={!!selectedTimeRange ? "visible" : "hidden"}
-        x1={
-          selectedTimeRange
-            ? format(new Date(selectedTimeRange[0]!), "MMM d")
-            : undefined
-        }
-        x2={
-          selectedTimeRange
-            ? format(new Date(selectedTimeRange[1]!), "MMM d")
-            : undefined
-        }
-        fill="gray"
-        fillOpacity={0.2}
-      ></ReferenceArea>
+        <ReferenceArea
+          z={10}
+          visibility={!!selectedTimeRange ? "visible" : "hidden"}
+          x1={
+            selectedTimeRange
+              ? format(new Date(selectedTimeRange[0]!), DATE_FORMAT_X_AXIS)
+              : undefined
+          }
+          x2={
+            selectedTimeRange
+              ? format(new Date(selectedTimeRange[1]!), DATE_FORMAT_X_AXIS)
+              : undefined
+          }
+          fill="gray"
+          fillOpacity={0.2}
+        ></ReferenceArea>
 
-      {/* {chart.lines.length === 1 &&
+        {/* {chart.lines.length === 1 &&
         chart.lines[0]!.anomalyRanges.map((anomalyRange, idx) => {
           return (
             <ReferenceArea
@@ -336,8 +374,167 @@ function AnomalyChart(props: {
             />
           );
         })} */}
-    </AreaChart>
+      </AreaChart>
+      {selectedTimeRange &&
+        singleLine &&
+        singleLine.metadata?.entityType &&
+        singleLine.metadata?.entityLabel && (
+          <EntitiesWithLabelModal
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            entityType={singleLine.metadata.entityType as string}
+            entityLabel={singleLine.metadata.entityLabel as string}
+            timeRange={selectedTimeRange ?? [0, 0]}
+          />
+        )}
+      <ContextMenu>
+        <ContextMenuTrigger ref={triggerRef} />
+        <ContextMenuContent>
+          <ContextMenuLabel>Hey.</ContextMenuLabel>
+          <ContextMenuItem
+            onClick={() => {
+              setModalOpen(true);
+            }}
+          >
+            See events
+          </ContextMenuItem>
+          <ContextMenuItem>See entities</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </>
   );
+}
+
+interface EntitiesWithLabelModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  entityType: string;
+  entityLabel?: string;
+  timeRange: [number, number];
+}
+function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
+  const { open, onOpenChange, entityType, entityLabel, timeRange } = props;
+
+  const eventFilters = useEventFilters();
+  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery();
+  const entityLabelData = useMemo(() => {
+    if (!entityLabel || !entityLabelsData) {
+      return undefined;
+    }
+    return entityLabelsData.find((item) => item.id === entityLabel);
+  }, [entityLabel, entityLabelsData]);
+
+  const { data } = api.dashboard.getTopEntitiesOfTypeAndLabel.useQuery(
+    {
+      type: entityType,
+      label: entityLabel,
+      eventFilters,
+      startTime: timeRange[0],
+      endTime: timeRange[1],
+      limit: 5,
+    },
+    {
+      enabled: open,
+    }
+  );
+
+  return (
+    <div>
+      <Modal
+        isOpen={open}
+        onClose={() => {
+          onOpenChange(false);
+        }}
+      >
+        <ModalOverlay />
+        <ModalContent maxW="56rem">
+          <div className="p-8">
+            <Title>
+              {entityType} with label {entityLabelData?.name},{" "}
+              {formatTimeRange(timeRange)}
+            </Title>
+            <div className="h-8"></div>
+            <div className="grid gap-4 grid-cols-2">
+              <Card>
+                <Title>{entityType} with most events</Title>
+                <div className="h-4"></div>
+                <BarList
+                  data={
+                    data?.topEntities.map((item) => {
+                      // const threeSigmas = item.average + 3 * item.stdDev;
+                      const isAnomaly = false;
+                      return {
+                        name: isAnomaly ? (
+                          <b>{item.entityName}</b>
+                        ) : (
+                          item.entityName
+                        ),
+                        value: item.count,
+                        color: isAnomaly ? "red" : "blue",
+                      };
+                    }) ?? []
+                  }
+                />
+              </Card>
+              <Card>
+                <Title>Most common features of {entityType}</Title>
+                <div className="h-4"></div>
+                <BarList
+                  data={
+                    data?.topFeatures.map((item) => {
+                      // const threeSigmas = item.average + 3 * item.stdDev;
+                      const isAnomaly = false;
+                      const displayName = `${item.featureName}: ${item.featureValue}`;
+                      return {
+                        name: isAnomaly ? <b>{displayName}</b> : displayName,
+                        value: item.count,
+                        color: isAnomaly ? "red" : "blue",
+                      };
+                    }) ?? []
+                  }
+                />
+              </Card>
+
+              <Card className="col-span-2">
+                <Title>Most frequent involvements</Title>
+                <div className="h-4"></div>
+                <BarList
+                  data={
+                    data?.topRelatedEntities.map((item) => {
+                      // const threeSigmas = item.average + 3 * item.stdDev;
+                      const isAnomaly = false;
+                      const displayName = `${item.entityType}: \`${item.entityName}\` as \`${item.linkType}\` via \`${item.eventType}\``;
+                      return {
+                        name: isAnomaly ? <b>{displayName}</b> : displayName,
+                        value: item.count,
+                        color: isAnomaly ? "red" : "blue",
+                      };
+                    }) ?? []
+                  }
+                />
+              </Card>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
+    </div>
+  );
+}
+
+function renderEventName(eventType: string | null, capitalize = false) {
+  if (capitalize) {
+    if (!eventType) {
+      return "Events";
+    } else {
+      return `\`${eventType}\` Events`;
+    }
+  } else {
+    if (!eventType) {
+      return "events";
+    } else {
+      return `\`${eventType}\` events`;
+    }
+  }
 }
 
 interface InvestigateDateRangeModalProps {
@@ -348,11 +545,13 @@ interface InvestigateDateRangeModalProps {
 function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
   const { timeRange, open, onOpenChange } = props;
 
+  const eventFilters = useEventFilters();
   const { data } = api.dashboard.getTopEntities.useQuery(
     {
       startTime: timeRange[0],
       endTime: timeRange[1],
-      limit: 5,
+      limit: 20,
+      eventFilters,
     },
     {
       enabled: !!timeRange && open,
@@ -367,20 +566,37 @@ function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
       }}
     >
       <ModalOverlay />
-      <ModalContent>
-        {data?.map((topList, idx) => (
-          <Card key={idx}>
-            <Title>{topList.type}</Title>
-            <List>
-              {topList.entities.map((item, idx) => (
-                <ListItem key={idx}>
-                  <span>{item.name}</span>
-                  <span>{item.count}</span>
-                </ListItem>
-              ))}
-            </List>
-          </Card>
-        ))}
+      <ModalContent maxW="60rem">
+        <div className="p-8">
+          <Title>
+            Entities with most {renderEventName(eventFilters.eventType)} (
+            {format(new Date(timeRange[0]), "MMMM d")} –{" "}
+            {format(new Date(timeRange[1]), "MMMM d")})
+          </Title>
+          <div className="h-8"></div>
+          <div className="grid gap-4 grid-cols-2">
+            {data?.map((topList, idx) => (
+              <Card key={idx}>
+                <Title>{topList.typeName}</Title>
+                <div className="h-2"></div>
+                <BarList
+                  data={topList.entities
+                    .map((item) => {
+                      const threeSigmas = topList.average + 3 * topList.stdDev;
+                      const isAnomaly = item.count > threeSigmas;
+                      return {
+                        name: isAnomaly ? <b>{item.name}</b> : item.name,
+                        value: item.count,
+                        color: isAnomaly ? "red" : "blue",
+                      };
+                    })
+                    .slice(0, 3)}
+                  valueFormatter={(value) => value.toString()}
+                />
+              </Card>
+            ))}
+          </div>
+        </div>
       </ModalContent>
     </Modal>
   );
@@ -389,30 +605,23 @@ function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
 function EventsPage() {
   const eventFilters = useEventFilters();
 
-  const { data } = api.dashboard.getTimeBuckets.useQuery({
-    interval: 1000 * 60 * 60 * 24,
-    start: eventFilters.dateRange?.start ?? 0,
-    end: eventFilters.dateRange?.end ?? 0,
-    eventFilters,
-  });
+  const { data } = api.dashboard.getTimeBuckets.useQuery(
+    {
+      interval: 1000 * 60 * 60,
+      start: eventFilters.dateRange?.start ?? 0,
+      end: eventFilters.dateRange?.end ?? 0,
+      eventFilters,
+    },
+    {
+      enabled: !!eventFilters.dateRange && !!eventFilters.eventType,
+    }
+  );
   // const { data: eventTypes } = api.labels.getEventTypes.useQuery();
 
   const [timeRange, setTimeRange] = useState<[number, number] | undefined>(
     undefined
   );
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const handleContextMenu: MouseEventHandler = useCallback((e) => {
-    const event = new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX: e.clientX,
-      clientY: e.clientY,
-    });
-
-    triggerRef.current?.dispatchEvent(event);
-  }, []);
 
   const [selecting, setSelecting] = useState<boolean>(false);
 
@@ -483,68 +692,62 @@ function EventsPage() {
       },
       ...percentages,
     ];
-  }, [data.eventChart, eventFilters.eventType, timeRange]);
+  }, [data?.eventChart, eventFilters.eventType, timeRange]);
   return (
     <div>
-      <div className="px-8 flex items-center gap-4">
+      <div className="px-8 flex items-center gap-4 py-4 border-b-2">
         <Title>Viewing</Title>
         <EventTypeFilter />
-        <Title>events from</Title>
+        <Title className="whitespace-nowrap">events from</Title>
         <div style={{ width: 1000 }}>
           <DateRangePicker />
         </div>
       </div>
       <div className="h-4"></div>
-      <div className="p-8 grid grid-cols-2 gap-12 bg-gray-50">
+      <div className="p-8 grid grid-cols-2 gap-8">
         {data?.eventChart && (
-          <div className="h-56">
-            <div className="items-center flex">
-              <Title>
-                {`${
-                  eventFilters.eventType
-                    ? `\`${eventFilters.eventType}\` events`
-                    : "Events"
-                } over time`}
-              </Title>
+          <div className="flex flex-col justify-between">
+            <Metric>
+              {`${
+                eventFilters.eventType
+                  ? `\`${eventFilters.eventType}\` events`
+                  : "Events"
+              }`}
+            </Metric>
+
+            <div className="h-8"></div>
+            <div className="h-72">
+              <AnomalyChart
+                chart={data.eventChart}
+                selectedTimeRange={timeRange}
+                onSelectedTimeRangeChange={setTimeRange}
+                onSelectingChange={setSelecting}
+              />
             </div>
-            <div className="h-4"></div>
-            <AnomalyChart
-              chart={data.eventChart}
-              selectedTimeRange={timeRange}
-              onSelectedTimeRangeChange={setTimeRange}
-              onOpenTimeRangeContextMenu={handleContextMenu}
-              onSelectingChange={setSelecting}
-            />
           </div>
         )}
         <div>
-          <div className="items-center flex">
-            <Icon
-              variant="shadow"
-              icon={Clock}
-              size="sm"
-              className="mb-0 mr-3 text-gray-500"
-            />
-            <Title>
-              Selected Time Range:{" "}
-              <span>
-                {timeRange ? (
-                  <b>
-                    {format(new Date(timeRange[0]), "MMMM d")} -{" "}
-                    {format(new Date(timeRange[1]), "MMMM d")}
-                  </b>
-                ) : selecting ? (
-                  <b>...</b>
-                ) : (
-                  <b>None</b>
-                )}
-              </span>
-            </Title>
-          </div>
-          <div className="h-4"></div>
+          <Metric>
+            <span className="">Highlighted: </span>
+            <span>
+              {timeRange ? (
+                <b>
+                  {format(new Date(timeRange[0]), DATE_FORMAT_X_AXIS)} -{" "}
+                  {format(new Date(timeRange[1]), DATE_FORMAT_X_AXIS)}
+                </b>
+              ) : selecting ? (
+                <b>...</b>
+              ) : (
+                <b>None</b>
+              )}
+            </span>
+          </Metric>
+
+          <div className="h-8"></div>
+
           {timeRange ? (
             <div>
-              <div className="flex justify-start gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {eventCountsInTimeRange?.map((item, idx) => (
                   <Card
                     key={idx}
@@ -577,54 +780,48 @@ function EventsPage() {
               <div className="h-4"></div>
               <div className="flex gap-4 items-center">
                 <Button variant="light">View Event List</Button>
-                <Button variant="light">View Top Entities</Button>
+                <Button
+                  variant="light"
+                  onClick={() => {
+                    setModalOpen(true);
+                  }}
+                >
+                  View Top Entities
+                </Button>
               </div>
             </div>
           ) : (
-            <Text>Click and drag on any chart to select a time range.</Text>
+            <div className="flex justify-start">
+              <Callout title="Highlight a time range" color="yellow">
+                Click and drag on any chart to highlight a time range.
+              </Callout>
+            </div>
           )}
         </div>
       </div>
-      <div className="p-8 grid grid-cols-3 gap-8">
+      <div className="p-8 grid grid-cols-2 gap-8 border-t">
         {data?.anomalyCharts?.map((chart, idx) => {
+          const maxY = Math.max(
+            ...chart.lines.flatMap((line) =>
+              line.data.map((item) => item.value)
+            )
+          );
+          if (maxY < 0.1) {
+            return null;
+          }
           return (
-            <div className="h-40" key={idx}>
+            <div className="h-40 -my-2" key={idx}>
               <AnomalyChart
                 chart={chart}
                 selectedTimeRange={timeRange}
                 onSelectedTimeRangeChange={setTimeRange}
-                onOpenTimeRangeContextMenu={handleContextMenu}
                 onSelectingChange={setSelecting}
               />
             </div>
           );
         })}
       </div>
-      <ContextMenu>
-        <ContextMenuTrigger ref={triggerRef} />
-        <ContextMenuContent>
-          <ContextMenuLabel>
-            {timeRange
-              ? `Selected: ${format(
-                  new Date(timeRange[0]),
-                  "MMM d"
-                )} – ${format(new Date(timeRange[1]), "MMM d")}`
-              : "Click and drag to select a time range"}
-          </ContextMenuLabel>
-          {timeRange && (
-            <>
-              <ContextMenuItem
-                onClick={() => {
-                  setModalOpen(true);
-                }}
-              >
-                See events
-              </ContextMenuItem>
-              <ContextMenuItem>See entities</ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
+
       {timeRange && (
         <InvestigateDateRangeModal
           open={modalOpen}
@@ -686,7 +883,6 @@ export default function Dashboard() {
           </span>
         </Metric>
       </div> */}
-      <div className="h-4"></div>
 
       <EventsPage />
     </div>

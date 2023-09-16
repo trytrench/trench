@@ -37,7 +37,8 @@ import {
 
 const { RangePicker } = AntdDatePicker;
 
-const TODAY = dayjs(new Date("08-14-2023"));
+// const TODAY = dayjs(new Date("08-14-2023"));
+const TODAY = dayjs(new Date("09-10-2023"));
 
 const DEFAULT_DATE_RANGE = {
   from: TODAY.add(-7, "day").toDate(),
@@ -363,18 +364,14 @@ export function EntityLabelFilter() {
 
 function useDateRange() {
   const [dateRangeQuery, setDateRangeQuery] = useQueryParams({
-    start: NumberParam,
-    end: NumberParam,
+    from: NumberParam,
+    to: NumberParam,
   });
 
   const dateRangeValue = useMemo(() => {
     return {
-      from: dateRangeQuery.start
-        ? dayjs(new Date(dateRangeQuery.start)).toDate()
-        : undefined,
-      to: dateRangeQuery.end
-        ? dayjs(new Date(dateRangeQuery.end)).toDate()
-        : undefined,
+      from: dateRangeQuery.from ? new Date(dateRangeQuery.from) : undefined,
+      to: dateRangeQuery.to ? new Date(dateRangeQuery.to) : undefined,
     };
   }, [dateRangeQuery]);
 
@@ -382,13 +379,13 @@ function useDateRange() {
     (val: { from?: Date; to?: Date }) => {
       if (val.from && val.to) {
         setDateRangeQuery({
-          start: val.from.getTime(),
-          end: val.to.getTime(),
+          from: val.from.getTime(),
+          to: val.to.getTime(),
         });
       } else {
         setDateRangeQuery({
-          start: undefined,
-          end: undefined,
+          from: undefined,
+          to: undefined,
         });
       }
     },
@@ -407,6 +404,14 @@ export function DateRangePicker() {
       onValueChange={setDateRangeValue}
       className="max-w-md"
     >
+      <DateRangePickerItem
+        key="last3Days"
+        value="last3Days"
+        from={TODAY.add(-3, "day").startOf("day").toDate()}
+        to={TODAY.endOf("day").toDate()}
+      >
+        Last 3 Days
+      </DateRangePickerItem>
       <DateRangePickerItem
         key="lastWeek"
         value="lastWeek"
