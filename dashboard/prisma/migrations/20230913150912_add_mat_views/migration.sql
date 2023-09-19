@@ -58,6 +58,8 @@ SELECT
 FROM "EventToEntityLink"
 JOIN "Event" ON "Event"."id" = "EventToEntityLink"."eventId"
 JOIN "Entity" ON "Entity"."id" = "EventToEntityLink"."entityId"
-JOIN "_EntityToEntityLabel" ON "EventToEntityLink"."entityId" = "_EntityToEntityLabel"."A";
+LEFT JOIN "_EntityToEntityLabel" ON "EventToEntityLink"."entityId" = "_EntityToEntityLabel"."A";
 
 CREATE INDEX "EntityAppearancesMatView_timestamp_idx" ON "EntityAppearancesMatView" ("timestamp");
+CREATE INDEX "EntityAppearancesMatView_eventId_idx" ON "EntityAppearancesMatView" ("eventId");
+CREATE INDEX "EntityAppearancesMatView_entityId_idx" ON "EntityAppearancesMatView" ("entityId");

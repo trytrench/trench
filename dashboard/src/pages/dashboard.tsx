@@ -1,9 +1,12 @@
 import { format } from "date-fns";
 import { type RouterOutputs, api } from "../utils/api";
 import {
+  DEFAULT_DATE_RANGE,
   DateRangePicker,
   EventTypeFilter,
+  IntervalPicker,
   useEventFilters,
+  useTimeInterval,
 } from "../components/Filters";
 import { Navbar } from "../components/Navbar";
 import { TopList } from "../components/TopList";
@@ -17,7 +20,6 @@ import { EntityTimeChart } from "../components/EntityTimeChart";
 import { EntityLabelDistribution } from "../components/EntityLabelDistribution";
 import {
   MouseEventHandler,
-  forwardRef,
   useCallback,
   useEffect,
   useMemo,
@@ -29,23 +31,13 @@ import {
   Button,
   Callout,
   Card,
-  Icon,
-  List,
-  ListItem,
   Metric,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
   Text,
   Title,
 } from "@tremor/react";
 import { AreaChart } from "@tremor/custom-react";
-import { Line, ReferenceArea, ReferenceLine } from "recharts";
+import { ReferenceArea, ReferenceLine } from "recharts";
 import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
-import { AppRouter } from "../server/api/root";
-import { twMerge } from "tailwind-merge";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -54,13 +46,19 @@ import {
   ContextMenuTrigger,
 } from "../components/base/ContextMenu";
 import { Modal, ModalContent, ModalOverlay } from "@chakra-ui/react";
-import { Calendar, Clock, TrendingUp } from "lucide-react";
 
-function formatTimeRange([start, end]: [number, number]) {
-  return `${format(new Date(start), "MMM d, h:mm a")} – ${format(
-    new Date(end),
-    "MMM d, h:mm a"
-  )}`;
+function formatTimeRange([start, end]: [number, number], interval: number) {
+  if (interval >= 1000 * 60 * 60 * 24) {
+    return `${format(new Date(start), "MMM d")} – ${format(
+      new Date(end),
+      "MMM d"
+    )}`;
+  } else {
+    return `${format(new Date(start), "MMM d, h:mm a")} – ${format(
+      new Date(end),
+      "MMM d, h:mm a"
+    )}`;
+  }
 }
 
 function formatPercentage(value: number, maxValue: number) {
@@ -415,6 +413,7 @@ interface EntitiesWithLabelModalProps {
 function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
   const { open, onOpenChange, entityType, entityLabel, timeRange } = props;
 
+  const timeInterval = useTimeInterval();
   const eventFilters = useEventFilters();
   const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery();
   const entityLabelData = useMemo(() => {
@@ -431,7 +430,7 @@ function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
       eventFilters,
       startTime: timeRange[0],
       endTime: timeRange[1],
-      limit: 5,
+      limit: 20,
     },
     {
       enabled: open,
@@ -450,19 +449,20 @@ function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
         <ModalContent maxW="56rem">
           <div className="p-8">
             <Title>
-              {entityType} with label {entityLabelData?.name},{" "}
-              {formatTimeRange(timeRange)}
+              <b>{formatTimeRange(timeRange, timeInterval)}: </b>`{entityType}`
+              with label `{entityLabelData?.name}`
             </Title>
             <div className="h-8"></div>
             <div className="grid gap-4 grid-cols-2">
               <Card>
-                <Title>{entityType} with most events</Title>
+                <Title>Most frequent `{entityType}`</Title>
+                <Text>with label `{entityLabelData?.name}`</Text>
                 <div className="h-4"></div>
                 <BarList
                   data={
-                    data?.topEntities.map((item) => {
-                      // const threeSigmas = item.average + 3 * item.stdDev;
-                      const isAnomaly = false;
+                    data?.topEntities.data.slice(0, 5).map((item) => {
+                      const { average, stdDev } = data.topEntities;
+                      const isAnomaly = item.count > average + 3 * stdDev;
                       return {
                         name: isAnomaly ? (
                           <b>{item.entityName}</b>
@@ -471,24 +471,29 @@ function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
                         ),
                         value: item.count,
                         color: isAnomaly ? "red" : "blue",
+                        href: `/entity/${item.entityId}`,
                       };
                     }) ?? []
                   }
                 />
               </Card>
               <Card>
-                <Title>Most common features of {entityType}</Title>
+                <Title>Most common features</Title>
+                <Text>
+                  among `{entityType}` with label `{entityLabelData?.name}`
+                </Text>
                 <div className="h-4"></div>
                 <BarList
                   data={
-                    data?.topFeatures.map((item) => {
-                      // const threeSigmas = item.average + 3 * item.stdDev;
-                      const isAnomaly = false;
+                    data?.topFeatures.data.slice(0, 5).map((item) => {
+                      const { average, stdDev } = data.topFeatures;
+                      const isAnomaly = item.count > average + 3 * stdDev;
                       const displayName = `${item.featureName}: ${item.featureValue}`;
                       return {
                         name: isAnomaly ? <b>{displayName}</b> : displayName,
                         value: item.count,
                         color: isAnomaly ? "red" : "blue",
+                        href: `/search`,
                       };
                     }) ?? []
                   }
@@ -496,18 +501,23 @@ function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
               </Card>
 
               <Card className="col-span-2">
-                <Title>Most frequent involvements</Title>
+                <Title>Top related entities</Title>
+                <Text>
+                  seen most with `{entityType}` with label `
+                  {entityLabelData?.name}`
+                </Text>
                 <div className="h-4"></div>
                 <BarList
                   data={
-                    data?.topRelatedEntities.map((item) => {
-                      // const threeSigmas = item.average + 3 * item.stdDev;
-                      const isAnomaly = false;
+                    data?.topRelatedEntities.data.slice(0, 5).map((item) => {
+                      const { average, stdDev } = data.topRelatedEntities;
+                      const isAnomaly = item.count > average + 3 * stdDev;
                       const displayName = `${item.entityType}: \`${item.entityName}\` as \`${item.linkType}\` via \`${item.eventType}\``;
                       return {
                         name: isAnomaly ? <b>{displayName}</b> : displayName,
                         value: item.count,
                         color: isAnomaly ? "red" : "blue",
+                        href: `/entity/${item.entityId}`,
                       };
                     }) ?? []
                   }
@@ -605,15 +615,17 @@ function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
 function EventsPage() {
   const eventFilters = useEventFilters();
 
+  const timeInterval = useTimeInterval();
+
   const { data } = api.dashboard.getTimeBuckets.useQuery(
     {
-      interval: 1000 * 60 * 60,
-      start: eventFilters.dateRange?.start ?? 0,
-      end: eventFilters.dateRange?.end ?? 0,
+      interval: timeInterval,
+      start: eventFilters?.dateRange?.from ?? DEFAULT_DATE_RANGE.from.getTime(),
+      end: eventFilters?.dateRange?.to ?? DEFAULT_DATE_RANGE.to.getTime(),
       eventFilters,
     },
     {
-      enabled: !!eventFilters.dateRange && !!eventFilters.eventType,
+      enabled: !!eventFilters?.dateRange,
     }
   );
   // const { data: eventTypes } = api.labels.getEventTypes.useQuery();
@@ -678,7 +690,8 @@ function EventsPage() {
           ratio: ratio,
         };
       })
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 3);
 
     return [
       {
@@ -698,10 +711,10 @@ function EventsPage() {
       <div className="px-8 flex items-center gap-4 py-4 border-b-2">
         <Title>Viewing</Title>
         <EventTypeFilter />
-        <Title className="whitespace-nowrap">events from</Title>
-        <div style={{ width: 1000 }}>
-          <DateRangePicker />
-        </div>
+        <Title className="whitespace-nowrap">from</Title>
+        <DateRangePicker />
+        <Title className="whitespace-nowrap">in intervals of</Title>
+        <IntervalPicker />
       </div>
       <div className="h-4"></div>
       <div className="p-8 grid grid-cols-2 gap-8">
@@ -835,54 +848,9 @@ function EventsPage() {
 export default function Dashboard() {
   const filters = useEventFilters();
 
-  const startDateString = filters.dateRange?.start
-    ? format(new Date(filters.dateRange.start), "M/d")
-    : undefined;
-  const endDateString = filters.dateRange?.end
-    ? format(new Date(filters.dateRange.end), "M/d")
-    : undefined;
-
-  const [tab, setTab] = useQueryParam("tab", NumberParam);
-  const [entityType, setEntityType] = useQueryParam("entityType", StringParam);
-  const [eventType, setEventType] = useQueryParam("eventType", StringParam);
-  const [eventLabels, setEventLabels] = useQueryParam("eventLabel", ArrayParam);
-  const [entityLabels, setEntityLabels] = useQueryParam(
-    "entityLabel",
-    ArrayParam
-  );
-  useEffect(() => {
-    if (tab === 0) {
-      setEntityType(undefined);
-      setEntityLabels(undefined);
-    }
-  }, [setEntityType, setEntityLabels, tab]);
-
   return (
     <div>
       <Navbar />
-      {/* <div className="p-4 gap-8 flex justify-start items-end">
-        <Metric>
-          <b>
-            {startDateString} - {endDateString},{" "}
-          </b>
-          <span className="">
-            {eventType ? `\`${eventType}\` events` : "all events"}
-            {eventLabels?.length
-              ? ` with labels: ${eventLabels
-                  .map((label) => `\`${label}\``)
-                  .join(", ")}`
-              : ""}
-            {entityType || entityLabels?.length
-              ? `, related to ${entityType ? `\`${entityType}\`` : "entities"}`
-              : ""}
-            {entityLabels?.length
-              ? ` with labels: ${entityLabels
-                  .map((label) => `\`${label}\``)
-                  .join(", ")}`
-              : ""}
-          </span>
-        </Metric>
-      </div> */}
 
       <EventsPage />
     </div>

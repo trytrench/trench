@@ -56,4 +56,13 @@ export const labelsRouter = createTRPCRouter({
   getLinkTypes: publicProcedure.query(async ({ ctx }) => {
     return ctx.prisma.linkType.findMany();
   }),
+  getEntityFeatures: publicProcedure
+    .input(z.object({ entityType: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.entityFeature.findMany({
+        where: {
+          entityType: input.entityType,
+        },
+      });
+    }),
 });

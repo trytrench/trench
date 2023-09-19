@@ -19,11 +19,6 @@ import {
 import { Checkbox, HStack, Input, SelectField } from "@chakra-ui/react";
 import { ArrowRightIcon } from "lucide-react";
 import { isArray } from "lodash";
-import {
-  DatePicker as AntdDatePicker,
-  Space,
-  type TimeRangePickerProps,
-} from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import {
   DateRangePickerItem,
@@ -35,39 +30,37 @@ import {
   DateRangePicker as TremorDateRangePicker,
 } from "@tremor/react";
 
-const { RangePicker } = AntdDatePicker;
-
 // const TODAY = dayjs(new Date("08-14-2023"));
-const TODAY = dayjs(new Date("09-10-2023"));
+const TODAY = dayjs(new Date("08-13-2023"));
 
-const DEFAULT_DATE_RANGE = {
+export const DEFAULT_DATE_RANGE = {
   from: TODAY.add(-7, "day").toDate(),
   to: TODAY.toDate(),
 };
 
 function processArray(
   prev: (string | null)[] | null | undefined
-): string[] | null {
+): string[] | undefined {
   if (!prev) {
-    return null;
+    return undefined;
   }
   return prev.filter((v) => v !== null) as string[];
 }
 
 export function useEventFilters(override?: Partial<EventFilters>) {
-  const [startDate] = useQueryParam("start", NumberParam);
-  const [endDate] = useQueryParam("end", NumberParam);
+  const [startDate] = useQueryParam("from", NumberParam);
+  const [endDate] = useQueryParam("to", NumberParam);
   const [eventLabels] = useQueryParam("eventLabel", ArrayParam);
   const [eventType] = useQueryParam("eventType", StringParam);
 
   const allFilters: EventFilters = useMemo(() => {
     return {
       dateRange: {
-        start: startDate ?? DEFAULT_DATE_RANGE.from.getTime(),
-        end: endDate ?? DEFAULT_DATE_RANGE.to.getTime(),
+        from: startDate ?? DEFAULT_DATE_RANGE.from.getTime(),
+        to: endDate ?? DEFAULT_DATE_RANGE.to.getTime(),
       },
       eventLabels: processArray(eventLabels),
-      eventType: eventType ?? null,
+      eventType: eventType ?? undefined,
       ...override,
     };
   }, [endDate, eventLabels, eventType, override, startDate]);
@@ -90,25 +83,6 @@ export function useEntityFilters(override?: Partial<EntityFilters>) {
 
   return allFilters;
 }
-
-const rangePresets: TimeRangePickerProps["presets"] = [
-  {
-    label: "Last 7 Days",
-    value: [TODAY.add(-7, "d").startOf("day"), TODAY.endOf("day")],
-  },
-  {
-    label: "Last 14 Days",
-    value: [TODAY.add(-14, "d").startOf("day"), TODAY.endOf("day")],
-  },
-  {
-    label: "Last 30 Days",
-    value: [TODAY.add(-30, "d").startOf("day"), TODAY.endOf("day")],
-  },
-  {
-    label: "Last 90 Days",
-    value: [TODAY.add(-90, "d").startOf("day"), TODAY.endOf("day")],
-  },
-];
 
 interface EventTypeFilterProps {
   showLabelFilter?: boolean;
@@ -395,6 +369,48 @@ function useDateRange() {
   return [dateRangeValue, setDateRangeValue] as const;
 }
 
+const HOUR_TIME = 1000 * 60 * 60;
+const intervalOptions = [
+  { label: "1 hour", value: HOUR_TIME },
+  { label: "3 hours", value: HOUR_TIME * 3 },
+  { label: "12 hours", value: HOUR_TIME * 12 },
+  { label: "24 hours", value: HOUR_TIME * 24 },
+] as const;
+const DEFAULT_INTERVAL = HOUR_TIME * 24;
+
+export function useTimeInterval() {
+  const [interval, setInterval] = useQueryParam("interval", NumberParam);
+  return interval ?? DEFAULT_INTERVAL;
+}
+export function IntervalPicker() {
+  const [interval, setInterval] = useQueryParam("interval", NumberParam);
+
+  const selectedInterval = useMemo(() => {
+    const intvl = interval ?? DEFAULT_INTERVAL;
+    return intervalOptions.find((option) => option.value === intvl);
+  }, [interval]);
+
+  return (
+    <Select
+      className="w-48"
+      value={selectedInterval?.label}
+      onValueChange={(val) =>
+        setInterval(
+          intervalOptions.find((option) => option.label === val)?.value
+        )
+      }
+      placeholder="24 hours"
+      enableClear
+    >
+      {intervalOptions.map((option) => (
+        <SelectItem key={option.value} value={option.label}>
+          {option.label}
+        </SelectItem>
+      ))}
+    </Select>
+  );
+}
+
 export function DateRangePicker() {
   const [dateRangeValue, setDateRangeValue] = useDateRange();
 
@@ -445,64 +461,5 @@ export function DateRangePicker() {
         Last 90 Days
       </DateRangePickerItem>
     </TremorDateRangePicker>
-  );
-}
-
-export function DateRangePickerOld() {
-  const [showTime, setShowTime] = useQueryParam("showTime", BooleanParam);
-
-  const [dateRangeQuery, setDateRangeQuery] = useQueryParams({
-    start: NumberParam,
-    end: NumberParam,
-  });
-
-  type RangeValue = [Dayjs | null, Dayjs | null] | null;
-  const dateRangeValue: RangeValue = useMemo(() => {
-    return [
-      dateRangeQuery.start ? dayjs(new Date(dateRangeQuery.start)) : null,
-      dateRangeQuery.end ? dayjs(new Date(dateRangeQuery.end)) : null,
-    ];
-  }, [dateRangeQuery]);
-
-  return (
-    <div className="flex col-span-2 gap-4">
-      <RangePicker
-        size="large"
-        allowClear
-        presets={rangePresets}
-        showNow
-        showTime={showTime ? { format: "h:mm a" } : undefined}
-        format={showTime ? "MMM DD, h:mm a" : "MMM Do"}
-        value={dateRangeValue}
-        onChange={(val) => {
-          if (isArray(val)) {
-            if (showTime) {
-              setDateRangeQuery({
-                start: val[0]?.toDate().getTime(),
-                end: val[1]?.toDate().getTime(),
-              });
-            } else {
-              setDateRangeQuery({
-                start: val[0]?.startOf("day").toDate().getTime(),
-                end: val[1]?.endOf("day").toDate().getTime(),
-              });
-            }
-          } else if (!val) {
-            setDateRangeQuery({
-              start: undefined,
-              end: undefined,
-            });
-          }
-        }}
-      />
-      <Checkbox
-        checked={!!showTime}
-        onChange={(e) => {
-          setShowTime(e.target.checked);
-        }}
-      >
-        Filter by exact times
-      </Checkbox>
-    </div>
   );
 }

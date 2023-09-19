@@ -237,7 +237,7 @@ export const dashboardRouter = createTRPCRouter({
         WHERE "EntityAppearancesMatView"."entityType" != '${input.type}'
         ${
           input.label
-            ? `AND "EntityAppearancesMatView"."entityLabel" != '${input.label}'`
+            ? `OR "EntityAppearancesMatView"."entityLabel" != '${input.label}'`
             : ""
         }
         GROUP BY
@@ -251,19 +251,33 @@ export const dashboardRouter = createTRPCRouter({
         LIMIT ${input.limit}
       `);
 
+      function processCountList<TItem extends { count: bigint }>(
+        list: TItem[]
+      ) {
+        const data = list.map((item) => ({
+          ...item,
+          count: Number(item.count),
+        }));
+
+        // Calculate average and std dev
+        const average =
+          data.reduce((acc, val) => acc + val.count, 0) / data.length;
+        const stdDev = Math.sqrt(
+          data.reduce((acc, val) => acc + Math.pow(val.count - average, 2), 0) /
+            data.length
+        );
+
+        return {
+          data,
+          average,
+          stdDev,
+        };
+      }
+
       return {
-        topEntities: topEntities.map((entity) => ({
-          ...entity,
-          count: Number(entity.count),
-        })),
-        topFeatures: topFeatures.map((feature) => ({
-          ...feature,
-          count: Number(feature.count),
-        })),
-        topRelatedEntities: topRelatedEntities.map((entity) => ({
-          ...entity,
-          count: Number(entity.count),
-        })),
+        topEntities: processCountList(topEntities),
+        topFeatures: processCountList(topFeatures),
+        topRelatedEntities: processCountList(topRelatedEntities),
       };
     }),
   getEventsOfTypeAndLabel: publicProcedure
@@ -318,7 +332,7 @@ export const dashboardRouter = createTRPCRouter({
       const endInSeconds = Math.ceil(input.end / 1000);
       const intervalInSeconds = Math.ceil(input.interval / 1000);
 
-      const { pad } = await getTimeBuckets(ctx.prisma, {
+      const { pad, timeBuckets } = await getTimeBuckets(ctx.prisma, {
         startInSeconds,
         endInSeconds,
         intervalInSeconds,
@@ -346,9 +360,17 @@ export const dashboardRouter = createTRPCRouter({
         count: bigint;
       } & BucketProperties;
 
-      const eventBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
+      const eventBucketRows = await ctx.prisma.$queryRawUnsafe<
+        Array<BucketRow>
+      >(`
         SELECT * FROM "EventTimeBucketsMatView"
-      `;
+        WHERE TRUE
+          ${
+            input.eventFilters?.eventType
+              ? `AND "eventType" = '${input.eventFilters.eventType}'`
+              : ""
+          }
+      `);
 
       const entityBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
         SELECT * FROM "EntityTimeBucketsMatView"
@@ -389,68 +411,68 @@ export const dashboardRouter = createTRPCRouter({
         });
         const totalLine = getLine(eventTypeRows);
 
-        // For each label, get the percentage of events that have that label
-        for (const eventLabel of eventLabels) {
-          if (eventLabel.eventType !== eventType.id) {
-            continue;
-          }
+        // // For each label, get the percentage of events that have that label
+        // for (const eventLabel of eventLabels) {
+        //   if (eventLabel.eventType !== eventType.id) {
+        //     continue;
+        //   }
 
-          const eventLabelRows = filter(eventTypeRows, {
-            eventType: eventType.id,
-            eventLabel: eventLabel.id,
-          });
+        //   const eventLabelRows = filter(eventTypeRows, {
+        //     eventType: eventType.id,
+        //     eventLabel: eventLabel.id,
+        //   });
 
-          if (eventLabelRows.length === 0) continue;
+        //   if (eventLabelRows.length === 0) continue;
 
-          const labelLine = getLine(eventLabelRows);
-          const percentageLine = divideLines(labelLine, totalLine);
-          const title = `% of ${eventType.name} with label ${eventLabel.name}`;
-          anomalyCharts.push({
-            title: title,
-            type: "percent",
-            lines: [
-              {
-                color: eventLabel.color || "gray",
-                label: title,
-                data: percentageLine,
-                ...getStats(percentageLine),
-                metadata: {
-                  eventType: eventType.id,
-                  eventLabel: eventLabel.id,
-                },
-              },
-            ],
-          });
-        }
+        //   const labelLine = getLine(eventLabelRows);
+        //   const percentageLine = divideLines(labelLine, totalLine);
+        //   const title = `% of ${eventType.name} with label ${eventLabel.name}`;
+        //   anomalyCharts.push({
+        //     title: title,
+        //     type: "percent",
+        //     lines: [
+        //       {
+        //         color: eventLabel.color || "gray",
+        //         label: title,
+        //         data: percentageLine,
+        //         ...getStats(percentageLine),
+        //         metadata: {
+        //           eventType: eventType.id,
+        //           eventLabel: eventLabel.id,
+        //         },
+        //       },
+        //     ],
+        //   });
+        // }
 
-        for (const entityLabel of entityLabels) {
-          const entityLabelRows = filter(eventBucketRows, {
-            eventType: eventType.id,
-            entityLabel: entityLabel.id,
-          });
+        // for (const entityLabel of entityLabels) {
+        //   const entityLabelRows = filter(eventBucketRows, {
+        //     eventType: eventType.id,
+        //     entityLabel: entityLabel.id,
+        //   });
 
-          if (entityLabelRows.length === 0) continue;
+        //   if (entityLabelRows.length === 0) continue;
 
-          const entityLabelLine = getLine(entityLabelRows);
-          const percentageLine = divideLines(entityLabelLine, totalLine);
-          const title = `% of ${eventType.name} related to entity label ${entityLabel.name}`;
-          anomalyCharts.push({
-            title: title,
-            type: "percent",
-            lines: [
-              {
-                color: entityLabel.color || "gray",
-                label: title,
-                data: percentageLine,
-                ...getStats(percentageLine),
-                metadata: {
-                  eventType: eventType.id,
-                  entityLabel: entityLabel.id,
-                },
-              },
-            ],
-          });
-        }
+        //   const entityLabelLine = getLine(entityLabelRows);
+        //   const percentageLine = divideLines(entityLabelLine, totalLine);
+        //   const title = `% of ${eventType.name} related to entity label ${entityLabel.name}`;
+        //   anomalyCharts.push({
+        //     title: title,
+        //     type: "percent",
+        //     lines: [
+        //       {
+        //         color: entityLabel.color || "gray",
+        //         label: title,
+        //         data: percentageLine,
+        //         ...getStats(percentageLine),
+        //         metadata: {
+        //           eventType: eventType.id,
+        //           entityLabel: entityLabel.id,
+        //         },
+        //       },
+        //     ],
+        //   });
+        // }
       }
 
       for (const entityType of entityTypes) {
@@ -474,7 +496,7 @@ export const dashboardRouter = createTRPCRouter({
 
           const labelLine = getLine(entityLabelRows);
           const percentageLine = divideLines(labelLine, totalLine);
-          const title = `% of ${entityType.name} with label ${entityLabel.name}`;
+          const title = `% of \`${entityType.name}\` with label \`${entityLabel.name}\``;
           anomalyCharts.push({
             title: title,
             type: "percent",
@@ -494,18 +516,20 @@ export const dashboardRouter = createTRPCRouter({
         }
       }
 
-      const eventLabelLines: Line[] = eventLabels.map((eventLabel) => {
-        const eventLabelRows = filter(eventBucketRows, {
-          eventLabel: eventLabel.id,
-        });
-        const line = getLine(eventLabelRows);
-        return {
-          color: eventLabel.color || "gray",
-          label: eventLabel.name,
-          data: line,
-          ...getStats(line),
-        };
-      });
+      const eventLabelLines: Line[] = eventLabels
+        .map((eventLabel) => {
+          const eventLabelRows = filter(eventBucketRows, {
+            eventLabel: eventLabel.id,
+          });
+          const line = getLine(eventLabelRows);
+          return {
+            color: eventLabel.color || "gray",
+            label: eventLabel.name,
+            data: line,
+            ...getStats(line),
+          };
+        })
+        .filter((line) => line.avg > 0);
 
       return {
         anomalyCharts: anomalyCharts.sort((a, b) => {
@@ -666,7 +690,11 @@ async function getTimeBuckets(
   function pad(lineItems: LineItem[]) {
     const filledChart = timeBuckets
       .map((bucket) => {
-        const tbItems = lineItems.filter((chart) => chart.bucket === bucket);
+        const tbItems = lineItems.filter(
+          (chart) =>
+            chart.bucket >= bucket &&
+            chart.bucket < bucket + intervalInSeconds * 1000
+        );
         const total = tbItems.reduce((acc, val) => acc + val.value, 0);
         return {
           bucket,
