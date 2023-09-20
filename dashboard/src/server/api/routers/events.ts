@@ -26,7 +26,9 @@ export const eventsRouter = createTRPCRouter({
 
       const bucketsFromDB = await ctx.prisma.$queryRawUnsafe<
         Array<{
-          bucket: number;
+          bucket: Date;
+          label: string;
+          labelColor: string;
           count: number;
         }>
       >(`
@@ -38,7 +40,7 @@ export const eventsRouter = createTRPCRouter({
           WHERE bucket < to_timestamp(${endInSeconds})
       ),
       events AS (
-        SELECT "Event"."timestamp" FROM "Event"
+        SELECT "Event"."id", "Event"."timestamp" FROM "Event"
 
         WHERE (
             "Event"."timestamp" >= to_timestamp(${startInSeconds})
@@ -58,6 +60,8 @@ export const eventsRouter = createTRPCRouter({
       )
       SELECT
           tb.bucket AS bucket,
+          "EventLabel"."name" AS label,
+          "EventLabel"."color" AS "labelColor",
           COUNT(events."timestamp") AS count
       FROM
           TimeBucketTable AS tb
@@ -65,18 +69,72 @@ export const eventsRouter = createTRPCRouter({
           ON
           events."timestamp" >= tb.bucket AND
           events."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
+      LEFT JOIN "_EventToEventLabel"
+          ON "_EventToEventLabel"."A" = events."id"
+      LEFT JOIN "EventLabel"
+          ON "EventLabel"."id" = "_EventToEventLabel"."B"
       GROUP BY
-          tb.bucket
+          tb.bucket, "EventLabel"."name", "EventLabel"."color"
       ORDER BY
           tb.bucket;
       `);
 
-      return bucketsFromDB
-        .map((bucket) => ({
-          bucket: bucket.bucket,
-          count: Number(bucket.count),
-        }))
-        .slice(0, -1);
+      // turn row into array of bucket, map of counts (EventLabel -> count)
+
+      type Result = {
+        bucket: number;
+        counts: Record<string, number>;
+      };
+      const results: Array<Result> = [];
+
+      const allLabels = new Set<string>();
+      for (const row of bucketsFromDB) {
+        if (row.label) allLabels.add(row.label);
+      }
+
+      for (const row of bucketsFromDB) {
+        const bucket = row.bucket;
+        const label = row.label;
+        const count = Number(row.count);
+
+        const bucketResult = results.find((r) => r.bucket === bucket.getTime());
+
+        if (bucketResult) {
+          bucketResult.counts[label] = count;
+          bucketResult.counts.Total += count;
+        } else {
+          const newObj: Result = {
+            bucket: bucket.getTime(),
+            counts: {},
+          };
+
+          for (const label of allLabels) {
+            newObj.counts[label] = 0;
+          }
+
+          newObj.counts.Total = count;
+          newObj.counts[label] = count;
+
+          results.push(newObj);
+        }
+      }
+
+      const labels = Array.from(allLabels).map((label) => ({
+        label,
+        color:
+          bucketsFromDB.find((row) => row.label === label)?.labelColor ||
+          "gray",
+      }));
+
+      return {
+        data: results
+          .map((bucket) => ({
+            ...bucket,
+            bucket: new Date(bucket.bucket),
+          }))
+          .slice(0, -1),
+        labels: [{ label: "Total", color: "blue" }, ...labels],
+      };
     }),
 
   getEventLabelDistributions: publicProcedure
@@ -96,10 +154,14 @@ export const eventsRouter = createTRPCRouter({
       >(
         `
           SELECT
-            "_EventToEventLabel"."B" as label, 
+            "EventLabel"."name" as label, 
             COUNT(*) as count
           FROM
             "_EventToEventLabel"
+          JOIN
+            "EventLabel"
+          ON
+            "_EventToEventLabel"."B" = "EventLabel"."id"
           WHERE
             ${buildEventExistsQuery(
               input.eventFilters,
@@ -115,7 +177,7 @@ export const eventsRouter = createTRPCRouter({
                 )}
             )
           GROUP BY
-            "_EventToEventLabel"."B"
+            "EventLabel"."name"
           ORDER BY
             count DESC
           `
@@ -178,15 +240,21 @@ export const eventsRouter = createTRPCRouter({
       const entityLabelDistros = await ctx.prisma.$queryRawUnsafe<
         Array<{
           label: string;
+          color: string;
           count: number;
         }>
       >(
         `
       SELECT
-        "_EntityToEntityLabel"."B" as label,
+        "EntityLabel"."name" as label,
+        "EntityLabel"."color" as color,
         COUNT(*) as count
       FROM
         "_EntityToEntityLabel"
+      JOIN
+        "EntityLabel"
+      ON
+        "_EntityToEntityLabel"."B" = "EntityLabel"."id"
       WHERE EXISTS (
         SELECT FROM "EventToEntityLink"
         WHERE 
@@ -201,14 +269,14 @@ export const eventsRouter = createTRPCRouter({
           )}
       )
       GROUP BY
-        "_EntityToEntityLabel"."B"
+        "EntityLabel"."name", "EntityLabel"."color"
       ORDER BY
         count DESC
       `
       );
 
       return entityLabelDistros.map((dbEntityLabelDistro) => ({
-        label: dbEntityLabelDistro.label,
+        ...dbEntityLabelDistro,
         count: Number(dbEntityLabelDistro.count),
       }));
     }),

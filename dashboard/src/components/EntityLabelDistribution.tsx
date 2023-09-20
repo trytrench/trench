@@ -1,6 +1,6 @@
 import { api } from "../utils/api";
 import { useMemo } from "react";
-import { BarList, type BarListProps, Card, Title } from "@tremor/react";
+import { type BarListProps, Card, Title, BarList } from "@tremor/react";
 import { useEntityFilters, useEventFilters } from "./Filters";
 import { type EntityFilters, type EventFilters } from "../shared/validation";
 import { useRouter } from "next/router";
@@ -26,6 +26,7 @@ export function EntityLabelDistribution({
       ...(labelDists?.map((label) => ({
         name: label.label,
         value: label.count,
+        color: label.color,
       })) ?? []),
     ];
   }, [labelDists]);

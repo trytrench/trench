@@ -15,7 +15,9 @@ const MyApp: AppType<{ session: Session | null }> = ({
     <QueryParamProvider adapter={NextAdapter}>
       <ChakraProvider>
         <SessionProvider session={session}>
-          <Component {...pageProps} />
+          <div className="min-h-screen h-0 flex flex-col">
+            <Component {...pageProps} />
+          </div>
         </SessionProvider>
       </ChakraProvider>
     </QueryParamProvider>

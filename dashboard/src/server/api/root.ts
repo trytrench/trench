@@ -4,6 +4,7 @@ import { entitiesRouter } from "./routers/entities";
 import { labelsRouter } from "./routers/labels";
 import { filesRouter } from "./routers/files";
 import { listsRouter } from "./routers/lists";
+import { dashboardRouter } from "./routers/dashboard";
 
 /**
  * This is the primary router for your server.
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   labels: labelsRouter,
   files: filesRouter,
   lists: listsRouter,
+  dashboard: dashboardRouter,
 });
 
 // export type definition of API

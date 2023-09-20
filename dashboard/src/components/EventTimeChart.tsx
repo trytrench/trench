@@ -9,19 +9,17 @@ export function EventTimeChart({
   eventFilters,
   entityFilters,
   title,
-  legend = title,
   color = "gray",
 }: {
   color?: Color;
   title: string;
-  legend?: string;
   eventFilters?: Partial<EventFilters>;
   entityFilters?: Partial<EntityFilters>;
 }) {
   const actualEventFilters = useEventFilters(eventFilters);
   const actualEntityFilters = useEntityFilters(entityFilters);
 
-  const { data: timeBuckets } = api.events.getTimeBuckets.useQuery(
+  const { data } = api.events.getTimeBuckets.useQuery(
     {
       interval: 1000 * 60 * 60 * 24,
       start: actualEventFilters.dateRange?.start ?? 0,
@@ -34,6 +32,9 @@ export function EventTimeChart({
     }
   );
 
+  const timeBuckets = data?.data ?? [];
+  const labels = data?.labels ?? [];
+
   return (
     <Card>
       <Title>{title}</Title>
@@ -42,12 +43,13 @@ export function EventTimeChart({
         data={
           timeBuckets?.map((bucket) => ({
             date: format(addDays(new Date(bucket.bucket), 1), "MMM d"),
-            [legend]: Number(bucket.count),
+            ...bucket.counts,
           })) ?? []
         }
         index="date"
-        categories={[legend]}
-        colors={[color || "gray"]}
+        categories={labels.map((label) => label.label)}
+        colors={labels.map((label) => label.color)}
+        tooltipOrder="byValue"
       />
     </Card>
   );

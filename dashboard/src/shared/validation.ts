@@ -1,15 +1,16 @@
 import { z } from "zod";
+import { jsonFilterZod } from "./jsonFilter";
 
 export const eventFiltersZod = z
   .object({
     dateRange: z
       .object({
-        start: z.number(),
-        end: z.number(),
+        from: z.number(),
+        to: z.number(),
       })
       .nullable(),
-    eventType: z.string().nullable(),
-    eventLabels: z.array(z.string()).nullable(),
+    eventType: z.string().optional(),
+    eventLabels: z.array(z.string()).optional(),
   })
   .optional();
 
@@ -17,9 +18,10 @@ export type EventFilters = z.infer<typeof eventFiltersZod>;
 
 export const entityFiltersZod = z
   .object({
-    entityType: z.string().nullable(),
-    entityId: z.string().nullable(),
-    entityLabels: z.array(z.string()).nullable(),
+    entityType: z.string().optional(),
+    entityId: z.string().optional(),
+    entityLabels: z.array(z.string()).optional(),
+    entityFeatures: z.array(jsonFilterZod).optional(),
   })
   .optional();
 

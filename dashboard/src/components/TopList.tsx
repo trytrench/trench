@@ -1,5 +1,13 @@
 import { api } from "../utils/api";
-import { BarList, Card, List, ListItem, Title } from "@tremor/react";
+import {
+  Badge,
+  BarChart,
+  BarList,
+  Card,
+  List,
+  ListItem,
+  Title,
+} from "@tremor/react";
 import { useEntityFilters, useEventFilters } from "./Filters";
 import { type FindTopEntitiesArgs } from "../shared/validation";
 import { RenderName } from "./RenderEntityName";
@@ -31,14 +39,14 @@ export function TopList(props: {
     return null;
   }
 
-  console.log(data);
   return (
     <Card className="">
       <Title className="shrink-0">{title}</Title>
       <div className="h-4"></div>
+
       <BarList
         data={data.map((row, idx) => ({
-          key: idx,
+          key: idx.toString(),
           name: row.name,
           value: row.count,
           href: `/entity/${row.id}`,

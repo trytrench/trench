@@ -58,9 +58,11 @@ export const Navbar = () => {
       py={4}
       justify="start"
       align={"center"}
-      borderBottom="1px"
+      borderBottom="2px"
       borderColor="gray.200"
       as="nav"
+      shrink={0}
+      flexShrink={0}
     >
       <Box display="flex" alignItems="center" gap={4}>
         {!isDesktop && (
@@ -77,7 +79,8 @@ export const Navbar = () => {
       {isDesktop ? (
         <Box flex={1} flexDirection="row" display="flex">
           <HStack spacing={6}>
-            <NavItem href="/dashboard">Dashboard</NavItem>
+            <NavItem href="/dashboard">Data Explorer</NavItem>
+            <NavItem href="/find">Finder</NavItem>
             <NavItem href="/lists">Lists</NavItem>
             <NavItem href="/rules">Rules</NavItem>
           </HStack>
