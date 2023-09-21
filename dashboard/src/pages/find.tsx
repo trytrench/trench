@@ -1,4 +1,4 @@
-import { Button } from "@chakra-ui/react";
+import { Box, Button, HStack, SimpleGrid } from "@chakra-ui/react";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navbar } from "~/components/Navbar";
@@ -23,23 +23,7 @@ import clsx from "clsx";
 import { Select as ChakraReactSelect } from "chakra-react-select";
 import { ChevronDown } from "lucide-react";
 import { format } from "date-fns";
-
-// Determines if the passed element is overflowing its bounds,
-// either vertically or horizontally.
-// Will temporarily modify the "overflow" style to detect this
-// if necessary.
-function checkOverflow(el: HTMLElement) {
-  var curOverflow = el.style.overflow;
-
-  if (!curOverflow || curOverflow === "visible") el.style.overflow = "hidden";
-
-  var isOverflowing =
-    el.clientWidth < el.scrollWidth || el.clientHeight < el.scrollHeight;
-
-  el.style.overflow = curOverflow;
-
-  return isOverflowing;
-}
+import Link from "next/link";
 
 function processArray(array: (string | null)[] | null | undefined) {
   if (!array) return [];
@@ -51,28 +35,14 @@ function EntityCard({
 }: {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  useEffect(() => {
-    if (ref.current) {
-      setIsOverflowing(checkOverflow(ref.current));
-    }
-  }, [ref.current, expanded]);
-
   return (
-    <Card
-      className={clsx({
-        "relative flex-1 min-w-[16rem] max-w-[24rem]": true,
-        "h-40 overflow-y-hidden": !expanded,
-      })}
-      ref={ref}
-    >
+    <Card>
       <div className="">
-        <Title className="">
-          {entity.type}: {entity.name}
-        </Title>
+        <Link href={`/entity/${entity.id}`}>
+          <Title className="">
+            {entity.type}: {entity.name}
+          </Title>
+        </Link>
         <Text>
           Last seen: {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
         </Text>
@@ -91,43 +61,21 @@ function EntityCard({
           )}
         </div>
         <div className="h-4"></div>
-        <List>
+        <SimpleGrid columns={5} spacing={2}>
           {Object.entries(entity.features).map(([key, value], idx) => (
-            <ListItem key={idx}>
+            <Box key={key}>
               <Text className="font-semibold">{key}</Text>
-              <Text className="ml-4 truncate">{value}</Text>
-            </ListItem>
+              <Text className="truncate">
+                {value === true
+                  ? "True"
+                  : value === false
+                  ? "False"
+                  : value || "-"}
+              </Text>
+            </Box>
           ))}
-        </List>
+        </SimpleGrid>
       </div>
-
-      {isOverflowing ? (
-        <>
-          <div className="absolute pointer-events-none w-full bottom-0 left-0 bg-gradient-to-t from-white opacity-80 h-12 flex items-end">
-            <button
-              className="transition w-full h-8 pointer-events-auto hover:bg-gradient-to-t hover:from-tremor-background-subtle flex justify-center items-center gap-1"
-              onClick={() => setExpanded(true)}
-            >
-              {/* <Text className="text-xs">more</Text> */}
-              {/* <ChevronDown className="h-3 w-3 mt-0.5" /> */}
-            </button>
-          </div>
-
-          {/* <div className="absolute bottom-0 left-0 right-0 w-full flex justify-center">
-            <Button
-              variant="unstyled"
-              leftIcon={
-                <ChevronDown className="h-6 w-6 text-tremor-content-subtle" />
-              }
-            ></Button>
-          </div> */}
-        </>
-      ) : expanded ? (
-        <button
-          className="absolute transition bottom-0 w-full h-8 left-0 hover:bg-gradient-to-t hover:from-tremor-background-subtle flex justify-center items-center gap-1"
-          onClick={() => setExpanded(false)}
-        ></button>
-      ) : null}
     </Card>
   );
 }
