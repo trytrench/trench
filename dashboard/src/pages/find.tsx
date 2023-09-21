@@ -8,6 +8,11 @@ import {
   Card,
   List,
   ListItem,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
   Text,
   TextInput,
   Title,
@@ -127,7 +132,7 @@ function EntityCard({
   );
 }
 
-const Page = () => {
+function EntitiesPage() {
   const [entityType, setEntityType] = useQueryParam("entityType", StringParam);
 
   const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
@@ -176,8 +181,6 @@ const Page = () => {
 
   return (
     <>
-      <Navbar />
-
       <div className="flex-1 overflow-hidden flex items-stretch">
         <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
           <Title>Entities</Title>
@@ -260,6 +263,15 @@ const Page = () => {
       </div>
     </>
   );
-};
+}
+
+function Page() {
+  return (
+    <>
+      <Navbar />
+      <EntitiesPage />
+    </>
+  );
+}
 
 export default Page;

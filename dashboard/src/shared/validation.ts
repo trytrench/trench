@@ -8,7 +8,7 @@ export const eventFiltersZod = z
         from: z.number(),
         to: z.number(),
       })
-      .nullable(),
+      .optional(),
     eventType: z.string().optional(),
     eventLabels: z.array(z.string()).optional(),
   })

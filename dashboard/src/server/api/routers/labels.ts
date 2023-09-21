@@ -65,4 +65,13 @@ export const labelsRouter = createTRPCRouter({
         },
       });
     }),
+  getEventFeatures: publicProcedure
+    .input(z.object({ eventType: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.eventFeature.findMany({
+        where: {
+          eventType: input.eventType,
+        },
+      });
+    }),
 });

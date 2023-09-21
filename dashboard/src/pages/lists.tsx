@@ -131,7 +131,7 @@ const Page = () => {
   //     offset: pagination.pageIndex * pagination.pageSize,
   //   });
 
-  const { data: eventTypesData } = api.lists.getAllEventTypes.useQuery();
+  const { data: eventTypesData } = api.labels.getEventTypes.useQuery();
   useEffect(() => {
     setList(eventTypesData?.[0]?.id ?? "");
   }, [eventTypesData]);

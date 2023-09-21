@@ -56,7 +56,7 @@ export const dashboardRouter = createTRPCRouter({
             "Entity"."name",
             "Entity"."type"
         )
-        SELECT "RankedEntities"."id", "type", "EntityType"."name" as "typeName", "RankedEntities"."name", "count"
+        SELECT "RankedEntities"."id", "type", "EntityTcype"."name" as "typeName", "RankedEntities"."name", "count"
         FROM "RankedEntities"
         JOIN "EntityType" ON "EntityType"."id" = "RankedEntities"."type"
         WHERE rn <= ${input.limit}

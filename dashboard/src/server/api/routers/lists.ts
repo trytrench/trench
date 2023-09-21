@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { entityFiltersZod } from "../../../shared/validation";
+import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import {
   JsonFilter,
   JsonFilterOp,
@@ -8,7 +8,9 @@ import {
 } from "../../../shared/jsonFilter";
 import {
   buildEntityExistsQuery,
+  buildEventExistsQuery,
   getEntityExistsSubqueries,
+  getFiltersWhereQuery,
 } from "../../lib/filters";
 import { Entity, PrismaClient } from "@prisma/client";
 
@@ -46,9 +48,73 @@ export const listsRouter = createTRPCRouter({
       };
     }),
 
-  getAllEventTypes: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.eventType.findMany();
-  }),
+  getEventsList: publicProcedure
+    .input(
+      z.object({
+        eventFilters: eventFiltersZod,
+        cursor: z.string().optional(),
+        limit: z.number().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const filters = input.eventFilters;
+
+      const cursor = input.cursor;
+
+      const [count, rows] = await Promise.all([
+        ctx.prisma.event.count({
+          where: getFiltersWhereQuery(input.eventFilters),
+        }),
+        ctx.prisma.$queryRawUnsafe<
+          Array<{
+            id: string;
+            type: string;
+            data: string;
+            timestamp: Date;
+            labels: Array<{
+              id: string;
+              name: string;
+              color: string;
+            }>;
+          }>
+        >(`
+          SELECT
+            "Event"."id" as "id",
+            "Event"."type" as "type",
+            "Event"."data" as "data",
+            "Event"."timestamp" as "timestamp",
+            JSON_AGG(
+              json_build_object(
+                'id', "_EventToEventLabel"."B",
+                'name', "EventLabel"."name",
+                'color', "EventLabel"."color"
+              )
+            ) as "labels"
+          FROM "Event"
+          LEFT JOIN "_EventToEventLabel" ON "Event"."id" = "_EventToEventLabel"."A"
+          LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
+          WHERE ${buildEventExistsQuery(input.eventFilters)}
+          ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
+          GROUP BY
+            "Event"."id",
+            "Event"."type",
+            "Event"."data",
+            "Event"."timestamp"
+          ORDER BY "Event"."timestamp" DESC
+          LIMIT ${input.limit ?? 10}
+        `),
+      ]);
+
+      return {
+        count,
+        rows: rows.map((row) => {
+          return {
+            ...row,
+            labels: row.labels.filter((label) => label.id !== null),
+          };
+        }),
+      };
+    }),
 
   // prob doesnt work
   getFeatureColumnsForEventType: publicProcedure
@@ -64,6 +130,34 @@ export const listsRouter = createTRPCRouter({
         },
       });
       return vals;
+    }),
+
+  getEvent: publicProcedure
+    .input(
+      z.object({
+        eventId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const event = await ctx.prisma.event.findUnique({
+        where: {
+          id: input.eventId,
+        },
+        include: {
+          eventLabels: true,
+          eventType: true,
+          entityLinks: {
+            include: {
+              entity: {
+                include: {
+                  entityLabels: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      return event;
     }),
 
   getEventsOfType: publicProcedure

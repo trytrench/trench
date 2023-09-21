@@ -91,17 +91,12 @@ export function getFiltersWhereQuery(
 ): Prisma.EventWhereInput {
   return {
     AND: [
-      {
-        timestamp: {
-          lt: new Date(),
-        },
-      },
       ...(filters?.dateRange
         ? [
             {
               timestamp: {
-                gte: new Date(filters.dateRange.start),
-                lte: new Date(filters.dateRange.end),
+                gte: new Date(filters.dateRange.from),
+                lte: new Date(filters.dateRange.to),
               },
             },
           ]

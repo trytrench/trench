@@ -80,7 +80,8 @@ export const Navbar = () => {
         <Box flex={1} flexDirection="row" display="flex">
           <HStack spacing={6}>
             <NavItem href="/dashboard">Data Explorer</NavItem>
-            <NavItem href="/find">Finder</NavItem>
+            <NavItem href="/events">Events</NavItem>
+            <NavItem href="/find">Entity Finder</NavItem>
             <NavItem href="/lists">Lists</NavItem>
             <NavItem href="/rules">Rules</NavItem>
           </HStack>
