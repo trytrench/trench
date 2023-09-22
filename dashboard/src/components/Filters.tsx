@@ -31,7 +31,7 @@ import {
 } from "@tremor/react";
 
 // const TODAY = dayjs(new Date("08-14-2023"));
-const TODAY = dayjs(new Date("08-13-2023"));
+const TODAY = dayjs(new Date());
 
 export const DEFAULT_DATE_RANGE = {
   from: TODAY.add(-7, "day").toDate(),

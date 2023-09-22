@@ -17,6 +17,12 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         entityFilters: entityFiltersZod,
+        sortBy: z
+          .object({
+            feature: z.string().optional(),
+            direction: z.enum(["asc", "desc"]).optional(),
+          })
+          .optional(),
         limit: z.number().optional(),
         offset: z.number().optional(),
       })
@@ -37,7 +43,8 @@ export const listsRouter = createTRPCRouter({
           input.entityFilters?.entityLabels,
           input.entityFilters?.entityFeatures,
           input.limit,
-          input.offset
+          input.offset,
+          input.sortBy
         ),
       ]);
       return {
@@ -113,7 +120,8 @@ async function getFilteredEntities(
   entityLabels?: string[],
   entityFeatures?: JsonFilter[],
   limit?: number,
-  offset?: number
+  offset?: number,
+  sortBy?: { feature: string; direction: "asc" | "desc" }
 ) {
   const features =
     entityFeatures
@@ -131,6 +139,10 @@ async function getFilteredEntities(
       .join(" ") ?? "";
   const showFeatures = entityFeatures?.length ? true : false;
 
+  const orderByFeature = sortBy?.feature
+    ? `"Entity"."features"->>'${sortBy.feature}' ${sortBy.direction}`
+    : `matViewSubquery."timestamp" DESC`;
+
   const rawResults = await prisma.$queryRawUnsafe<
     Array<{
       id: string;
@@ -145,33 +157,6 @@ async function getFilteredEntities(
       lastSeenAt: Date;
     }>
   >(`
-    WITH "ResultEntityIds" AS (
-      SELECT
-        "entityId",
-        MAX("timestamp") as "lastSeenAt"
-      FROM "EntityAppearancesMatView"
-      WHERE TRUE
-        ${entityType ? `AND "entityType" = '${entityType}'` : ""}
-        ${
-          entityLabels?.length
-            ? entityLabels
-                .map((label) => {
-                  return `AND EXISTS (
-                SELECT FROM "_EntityToEntityLabel"
-                WHERE "_EntityToEntityLabel"."A" = "entityId"
-                AND "_EntityToEntityLabel"."B" = '${label}'
-              )`;
-                })
-                .join("\n")
-            : ""
-        }
-        ${showFeatures ? `${features}` : ""}
-      GROUP BY 
-        "entityId"
-      ORDER BY "lastSeenAt" DESC
-      LIMIT ${limit ?? 10}
-      OFFSET ${offset ?? 0}
-    )
     SELECT
       "Entity"."id" as "id",
       "Entity"."name" as "name",
@@ -184,17 +169,39 @@ async function getFilteredEntities(
           'color', "EntityLabel"."color"
         )
       ) as "labels",
-      "ResultEntityIds"."lastSeenAt" as "lastSeenAt"
-    FROM "ResultEntityIds"
-    JOIN "Entity" ON "Entity"."id" = "ResultEntityIds"."entityId"
+      matViewSubquery."timestamp" as "lastSeenAt"
+    FROM "Entity"
+    LEFT JOIN (
+      SELECT "entityId", MAX("timestamp") as "timestamp"
+      FROM "EntityAppearancesMatView"
+      GROUP BY "entityId"
+    ) as matViewSubquery ON "Entity"."id" = matViewSubquery."entityId"
     LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
     LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
+    WHERE TRUE
+      ${entityType ? `AND "Entity"."type" = '${entityType}'` : ""}
+      ${
+        entityLabels?.length
+          ? entityLabels
+              .map((label) => {
+                return `AND EXISTS (
+              SELECT FROM "EntityAppearancesMatView"
+              WHERE "EntityAppearancesMatView"."entityId" = "Entity"."id"
+              AND "EntityAppearancesMatView"."entityLabel" = '${label}'
+            )`;
+              })
+              .join("\n")
+          : ""
+      }
+      ${showFeatures ? `${features}` : ""}
     GROUP BY
       "Entity"."id",
       "Entity"."type",
       "Entity"."features",
-      "ResultEntityIds"."lastSeenAt"
-    ORDER BY "ResultEntityIds"."lastSeenAt" DESC;
+      matViewSubquery."timestamp"
+    ORDER BY ${orderByFeature}
+    LIMIT ${limit ?? 10}
+    OFFSET ${offset ?? 0}
   `);
 
   // Do some additional client-side processing here if needed
@@ -202,7 +209,7 @@ async function getFilteredEntities(
   return rawResults.map((row) => {
     return {
       ...row,
-      labels: row.labels.filter((label) => label.id !== null),
+      labels: row.labels,
     };
   });
 }
