@@ -360,36 +360,69 @@ export const dashboardRouter = createTRPCRouter({
         count: bigint;
       } & BucketProperties;
 
+      const eventType = input.eventFilters?.eventType;
+
       const eventBucketRows = await ctx.prisma.$queryRawUnsafe<
         Array<BucketRow>
-      >(`
-        SELECT * FROM "EventTimeBucketsMatView"
+      >(` 
+        SELECT
+          date_trunc('hour', "Event"."timestamp") AS "bucket",
+          "Event"."type" AS "eventType",
+          COUNT(DISTINCT "Event"."id") AS "count"
+        FROM "EventToEntityLink"
+        JOIN "Event" ON "Event"."id" = "EventToEntityLink"."eventId"
         WHERE TRUE
-          ${
-            input.eventFilters?.eventType
-              ? `AND "eventType" = '${input.eventFilters.eventType}'`
-              : ""
-          }
+          ${eventType ? `AND "Event"."type" = '${eventType}'` : ""}
+          AND "Event"."timestamp" >= to_timestamp(${startInSeconds})
+          AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
+        GROUP BY 
+          "bucket", 
+          "Event"."type";
+      `);
+
+      const eventLabelBucketRows = await ctx.prisma.$queryRawUnsafe<
+        Array<BucketRow>
+      >(`
+        SELECT
+            date_trunc('hour', "Event"."timestamp") AS "bucket",
+            "Event"."type" AS "eventType",
+            "_EventToEventLabel"."B" AS "eventLabel",
+            COUNT(DISTINCT "Event"."id") AS "count"
+        FROM "Event"
+        JOIN "_EventToEventLabel" ON "_EventToEventLabel"."A" = "Event"."id"
+        WHERE TRUE
+            ${eventType ? `AND "Event"."type" = '${eventType}'` : ""}
+            AND "Event"."timestamp" >= to_timestamp(${startInSeconds})
+            AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
+        GROUP BY
+            "bucket",
+            "Event"."type",
+            "eventLabel";
       `);
 
       const entityBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
         SELECT * FROM "EntityTimeBucketsMatView"
       `;
 
+      const entityLabelBucketRows = await ctx.prisma.$queryRaw<
+        Array<BucketRow>
+      >`
+        SELECT * FROM "EntityLabelsTimeBucketsMatView"
+      `;
+
       function filter(rows: BucketRow[], filters: Partial<BucketProperties>) {
         return rows.filter((row) => {
-          return (
-            (filters.eventType === undefined ||
-              row.eventType === filters.eventType) &&
-            (filters.linkType === undefined ||
-              row.linkType === filters.linkType) &&
-            (filters.entityType === undefined ||
-              row.entityType === filters.entityType) &&
-            (filters.eventLabel === undefined ||
-              row.eventLabel === filters.eventLabel) &&
-            (filters.entityLabel === undefined ||
-              row.entityLabel === filters.entityLabel)
-          );
+          if (filters.eventType && row.eventType !== filters.eventType)
+            return false;
+          if (filters.linkType && row.linkType !== filters.linkType)
+            return false;
+          if (filters.entityType && row.entityType !== filters.entityType)
+            return false;
+          if (filters.eventLabel && row.eventLabel !== filters.eventLabel)
+            return false;
+          if (filters.entityLabel && row.entityLabel !== filters.entityLabel)
+            return false;
+          return true;
         });
       }
 
@@ -487,7 +520,7 @@ export const dashboardRouter = createTRPCRouter({
             continue;
           }
 
-          const entityLabelRows = filter(entityTypeRows, {
+          const entityLabelRows = filter(entityLabelBucketRows, {
             entityType: entityType.id,
             entityLabel: entityLabel.id,
           });
@@ -518,8 +551,9 @@ export const dashboardRouter = createTRPCRouter({
 
       const eventLabelLines: Line[] = eventLabels
         .map((eventLabel) => {
-          const eventLabelRows = filter(eventBucketRows, {
+          const eventLabelRows = filter(eventLabelBucketRows, {
             eventLabel: eventLabel.id,
+            eventType: eventType,
           });
           const line = getLine(eventLabelRows);
           return {
@@ -531,6 +565,11 @@ export const dashboardRouter = createTRPCRouter({
         })
         .filter((line) => line.avg > 0);
 
+      const totalEventsLine = getLine(
+        filter(eventBucketRows, {
+          eventType: eventType,
+        })
+      );
       return {
         anomalyCharts: anomalyCharts.sort((a, b) => {
           return b.lines[0]!.anomalyCount - a.lines[0]!.anomalyCount;
@@ -542,8 +581,8 @@ export const dashboardRouter = createTRPCRouter({
             {
               color: "blue",
               label: "Events",
-              data: getLine(eventBucketRows),
-              ...getStats(getLine(eventBucketRows)),
+              data: totalEventsLine,
+              ...getStats(totalEventsLine),
               metadata: {
                 isTotal: true,
               },
