@@ -11,6 +11,28 @@ index 2b17989..f14aefd 100644
      });
      instance.register(function _fetchCountsFromDb(state, keys, windowMs) {
          if (keys === null) {
+diff --git a/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js b/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
+index 8ca1488..c3538b3 100644
+--- a/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
++++ b/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
+@@ -31,7 +31,7 @@ const tupleToString = (tuple) => stringify(tuple.map(sqrl_1.SqrlObject.ensureBas
+ function registerCountUniqueFunctions(instance, service) {
+     instance.registerStatement("SqrlCountUniqueStatements", async function _bumpCountUnique(state, keys, uniques, windowMs) {
+         uniques = sqrl_1.SqrlObject.ensureBasic(uniques);
+-        if (!keys.length || !isCountable(uniques)) {
++        if (!keys || !keys.length || !isCountable(uniques)) {
+             return;
+         }
+         for (const features of (0, sqrl_common_1.sqrlCartesianProduct)(uniques)) {
+@@ -52,7 +52,7 @@ function registerCountUniqueFunctions(instance, service) {
+     }, {
+         allowNull: true,
+         allowSqrlObjects: true,
+-        args: [sqrl_1.AT.state, sqrl_1.AT.any.array, sqrl_1.AT.any.array, sqrl_1.AT.any],
++        args: [sqrl_1.AT.state, sqrl_1.AT.any, sqrl_1.AT.any.array, sqrl_1.AT.any],
+     });
+     instance.registerSync(function _unionCountUnique(left, right) {
+         (0, sqrl_common_1.invariant)(left instanceof Set && right instanceof Set, "expected left and right to be Sets");
 diff --git a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js b/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
 index 0060dcd..25c2243 100644
 --- a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
@@ -63,7 +85,7 @@ index 0060dcd..25c2243 100644
      });
      instance.registerTransform(function entityList(state, ast) {
 diff --git a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
-index 80541e6..7d529fb 100644
+index 80541e6..f8ea3f1 100644
 --- a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
 +++ b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
 @@ -4,10 +4,10 @@ exports.registerLabelFunctions = void 0;
@@ -99,7 +121,7 @@ index 80541e6..7d529fb 100644
              }
          });
      }, {
-@@ -34,14 +35,15 @@ function registerLabelFunctions(instance, service) {
+@@ -34,16 +35,17 @@ function registerLabelFunctions(instance, service) {
              sqrl_1.AT.whenCause,
              sqrl_1.AT.any.sqrlEntityOrEntities,
              sqrl_1.AT.constant.string,
@@ -112,16 +134,19 @@ index 80541e6..7d529fb 100644
      });
 -    instance.register(async function hasLabel(state, entity, label) {
 -        return service.hasLabel(state.ctx, entity, label);
-+    instance.register(async function hasEntityLabel(state, entity, label) {
-+        return service.hasEntityLabel(state.ctx, entity, label);
++    instance.register(async function hasEntityLabel(state, entity, type, label) {
++        return service.hasEntityLabel(state.ctx, entity, type, label);
      }, {
-         args: [sqrl_1.AT.state, sqrl_1.AT.any.sqrlEntity, sqrl_1.AT.constant.string],
+-        args: [sqrl_1.AT.state, sqrl_1.AT.any.sqrlEntity, sqrl_1.AT.constant.string],
++        args: [sqrl_1.AT.state, sqrl_1.AT.any.sqrlEntity, sqrl_1.AT.constant.string, sqrl_1.AT.constant.string],
          allowSqrlObjects: true,
+         argstring: "entity, label",
+         docstring: "Returns true if the provided entity has the given label",
 diff --git a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
-index 626d8d5..6001fc3 100644
+index 626d8d5..feae89b 100644
 --- a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
 +++ b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
-@@ -8,20 +8,22 @@ class RedisLabelService {
+@@ -8,21 +8,23 @@ class RedisLabelService {
          this.redis = redis;
          this.prefix = prefix;
      }
@@ -145,7 +170,9 @@ index 626d8d5..6001fc3 100644
          });
      }
 -    async hasLabel(ctx, entity, label) {
-+    async hasEntityLabel(ctx, entity, label) {
-         const rv = await this.redis.get(ctx, (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label));
+-        const rv = await this.redis.get(ctx, (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label));
++    async hasEntityLabel(ctx, entity, type, label) {
++        const rv = await this.redis.get(ctx, (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), type, label));
          return !!rv;
      }
+ }

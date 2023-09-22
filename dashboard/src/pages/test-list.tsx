@@ -1,29 +1,35 @@
-import { Box, Button, HStack, SimpleGrid } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  SimpleGrid,
+} from "@chakra-ui/react";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Navbar } from "~/components/Navbar";
-import { RouterOutputs, api } from "~/utils/api";
 import {
   Badge,
   Card,
-  List,
-  ListItem,
+  MultiSelect,
+  Select,
+  SelectItem,
   Text,
-  TextInput,
   Title,
 } from "@tremor/react";
-import { SelectOptionFlat } from "../components/SelectOptionFlat";
-import { ArrayParam, StringParam, useQueryParam } from "use-query-params";
-import clsx from "clsx";
-import { Select as ChakraReactSelect } from "chakra-react-select";
-import { ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useState } from "react";
+import {
+  ArrayParam,
+  StringParam,
+  useQueryParam,
+  withDefault,
+} from "use-query-params";
+import { Navbar } from "~/components/Navbar";
+import { RouterOutputs, api } from "~/utils/api";
 
-function processArray(array: (string | null)[] | null | undefined) {
-  if (!array) return [];
-  return array.filter((item) => item !== null) as string[];
-}
+import { JsonFilterOp } from "~/shared/jsonFilter";
 
 function EntityCard({
   entity,
@@ -61,7 +67,9 @@ function EntityCard({
             <Box key={key}>
               <Text className="font-semibold">{key}</Text>
               <Text className="truncate">
-                {value === true
+                {value === 0
+                  ? 0
+                  : value === true
                   ? "True"
                   : value === false
                   ? "False"
@@ -77,37 +85,25 @@ function EntityCard({
 
 const Page = () => {
   const [entityType, setEntityType] = useQueryParam("entityType", StringParam);
+  const [sortBy, setSortBy] = useQueryParam("sortBy", StringParam);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState([]);
+  const [selectedEntityLabels, setSelectedEntityLabels] = useQueryParam<
+    string[]
+  >("entityLabels", withDefault(ArrayParam, []));
+  const [selectedFilterFeature, setSelectedFilterFeature] = useState<
+    string | null
+  >(null);
+  // const [filters, setFilters] = useQueryParam(
+  //   "filters",
+  //   withDefault(ArrayParam, [])
+  // );
 
   const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
-  const entityTypeOptions =
-    entityTypes?.map((entityType) => ({
-      label: entityType.name,
-      value: entityType.id,
-    })) ?? [];
 
-  const [entityLabelsQuery, setEntityLabels] = useQueryParam(
-    "entityLabel",
-    ArrayParam,
-    { enableBatching: true }
-  );
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery({
     entityType: entityType ?? undefined,
   });
-  const entityLabelOptions = useMemo(() => {
-    return (
-      entityLabels?.map((entityLabel) => ({
-        label: entityLabel.name,
-        value: entityLabel.id,
-        colorScheme: entityLabel.color,
-      })) ?? []
-    );
-  }, [entityLabels]);
-
-  const selectedEntityLabelOptions = useMemo(() => {
-    return entityLabelOptions.filter((option) => {
-      return entityLabelsQuery?.includes(option.value) ?? false;
-    });
-  }, [entityLabelsQuery, entityLabelOptions]);
 
   const { data: entityFeatures } = api.labels.getEntityFeatures.useQuery({
     entityType: entityType ?? undefined,
@@ -116,11 +112,34 @@ const Page = () => {
   const { data: entitiesList } = api.lists.getEntitiesList.useQuery({
     entityFilters: {
       entityType: entityType ?? undefined,
-      entityLabels: processArray(entityLabelsQuery),
-      entityFeatures: [],
+      entityLabels: selectedEntityLabels,
+      entityFeatures: filters,
+    },
+    sortBy: {
+      feature: sortBy,
+      direction: "desc",
     },
     limit: 100,
   });
+
+  const filterOptions = [
+    {
+      label: "Is empty",
+      value: {
+        path: selectedFilterFeature,
+        op: JsonFilterOp.Equal,
+        value: "NULL",
+      },
+    },
+    {
+      label: "Not empty",
+      value: {
+        path: selectedFilterFeature,
+        op: JsonFilterOp.NotEqual,
+        value: "NULL",
+      },
+    },
+  ];
 
   return (
     <>
@@ -131,68 +150,102 @@ const Page = () => {
           <Title>Entities</Title>
 
           <Text className="font-semibold text-lg mb-2 mt-6">Type</Text>
-          <div className="bg-tremor-background-subtle p-1 flex flex-wrap items-center gap-1 rounded-md">
-            <SelectOptionFlat
-              onSelect={(value) => {
-                // Clear entityLabel query param when entityType changes
-                setEntityLabels(undefined);
-              }}
-              queryParamKey="entityType"
-              options={entityTypeOptions}
-              renderOption={(option, { handleClick, selected }) => {
-                return (
-                  <button
-                    onClick={() => handleClick(option.value)}
-                    className={clsx({
-                      "transition border rounded-md text-base font-semibold":
-                        true,
-                      "text-tremor-content hover:text-tremor-content-emphasis border-transparent":
-                        !selected,
-                      "text-tremor-brand bg-white border-gray shadow-sm":
-                        selected,
-                      "px-2 py-0.5": true,
-                    })}
-                  >
-                    {option.label}
-                  </button>
-                );
-              }}
-            />
-          </div>
+          <Select
+            value={entityType}
+            onChange={(value) => {
+              setEntityType(value);
+            }}
+          >
+            {entityTypes?.map((type) => (
+              <SelectItem value={type.id} key={type.id}>
+                {type.name}
+              </SelectItem>
+            ))}
+          </Select>
 
           {entityType && (
             <>
-              <Text className="font-semibold text-lg mb-2 mt-6">
-                {`\`${entityType}\` `}
-                Labels
-              </Text>
+              <Text className="font-semibold text-lg mb-2 mt-6">Labels</Text>
 
-              <ChakraReactSelect
-                className="w-full flex flex-wrap"
-                isMulti
-                isClearable={false}
-                value={selectedEntityLabelOptions}
-                onChange={(value) => {
-                  setEntityLabels(value?.map((option) => option.value));
-                }}
-                options={entityLabelOptions}
-              ></ChakraReactSelect>
+              <MultiSelect
+                value={entityLabels ? selectedEntityLabels : []}
+                onValueChange={setSelectedEntityLabels}
+              >
+                {entityLabels?.map((label) => (
+                  <SelectItem key={label.id} value={label.id}>
+                    {label.name}
+                  </SelectItem>
+                ))}
+              </MultiSelect>
 
-              <Text className="font-semibold text-lg mb-2 mt-6">
-                {`\`${entityType}\` `}
-                Features
-              </Text>
+              <Text className="font-semibold text-lg mb-2 mt-6">Filter</Text>
               <div className="flex flex-col gap-2">
-                {entityFeatures?.map((feature, idx) => {
-                  return (
-                    <div className="w-full" key={idx}>
-                      <Text className="whitespace-no-wrap text-xs">
-                        {feature.name}
-                      </Text>
-                      <TextInput placeholder="Filter..." className="w-full" />
-                    </div>
-                  );
-                })}
+                <Menu
+                  isOpen={filterOpen || !!selectedFilterFeature}
+                  onClose={() => {
+                    if (selectedFilterFeature) setSelectedFilterFeature(null);
+                    setFilterOpen(false);
+                  }}
+                >
+                  <MenuButton
+                    as={Button}
+                    size="sm"
+                    onClick={() => setFilterOpen(true)}
+                  >
+                    Add filter
+                  </MenuButton>
+                  <MenuList>
+                    {selectedFilterFeature ? (
+                      <>
+                        {filterOptions.map((option) => (
+                          <MenuItem
+                            key={option.label}
+                            onClick={() => {
+                              setFilters([...filters, option.value]);
+                            }}
+                          >
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </>
+                    ) : (
+                      entityFeatures?.map((feature) => (
+                        <MenuItem
+                          key={feature.name}
+                          onClick={() => setSelectedFilterFeature(feature.name)}
+                        >
+                          {feature.name}
+                        </MenuItem>
+                      ))
+                    )}
+                  </MenuList>
+                </Menu>
+                {filters.map((filter, index) => (
+                  <Badge
+                    key={index}
+                    onClick={() =>
+                      setFilters(filters.filter((f) => filter !== f))
+                    }
+                  >
+                    {filter.path} {filter.op} {filter.value}
+                  </Badge>
+                ))}
+              </div>
+
+              <Text className="font-semibold text-lg mb-2 mt-6">Sort by</Text>
+              <div className="flex flex-col gap-2">
+                <Select
+                  value={sortBy}
+                  onChange={(value) => {
+                    setSortBy(value);
+                  }}
+                >
+                  {entityFeatures?.map((feature) => (
+                    <SelectItem value={feature.name} key={feature.name}>
+                      {feature.name}
+                    </SelectItem>
+                  ))}
+                </Select>
               </div>
             </>
           )}
