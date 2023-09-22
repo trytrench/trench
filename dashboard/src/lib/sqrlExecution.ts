@@ -25,6 +25,7 @@ export async function runEvent(event: Event, executable: Executable) {
     inputs: {
       EventData: event,
     },
+    featureTimeoutMs: 10000,
   });
 
   const completePromise = execution.fetchFeature("SqrlExecutionComplete");
@@ -41,7 +42,7 @@ export async function runEvent(event: Event, executable: Executable) {
   await completePromise;
   await manipulator.mutate(ctx);
 
-  const TIMESTAMP = new Date(event.timestamp);
+  const TIMESTAMP = event.timestamp ? new Date(event.timestamp) : new Date();
   const EVENT_ID = nanoid();
 
   const eventFeatures: Record<string, unknown> = {};
@@ -186,19 +187,37 @@ export async function batchUpsert({
       ),
       skipDuplicates: true,
     }),
+    prisma.entityFeature.createMany({
+      data: entities.flatMap((entity) =>
+        Object.entries(entity.features).map(([name, value]) => ({
+          name,
+          entityType: entity.type,
+        }))
+      ),
+      skipDuplicates: true,
+    }),
   ]);
 
   //   console.timeLog("Batch upserts", "Upserted label types");
   await Promise.all([
-    prisma.entity.createMany({
-      data: entities.map((entity) => ({
-        id: `${entity.type}-${entity.id}`,
-        type: entity.type,
-        name: (entity.features.Name as string) || entity.id,
-        features: entity.features as Prisma.JsonObject,
-      })),
-      skipDuplicates: true,
-    }),
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Entity" ("id", "type", "name", "features") VALUES ${uniqBy(
+        entities,
+        (entity) => entity.id
+      )
+        .map(
+          (entity) =>
+            `('${entity.type}-${entity.id}', '${entity.type}', '${
+              (entity.features.Name as string) || entity.id
+            }', '${JSON.stringify(entity.features).replace(
+              /'/g,
+              "''"
+            )}'::jsonb)`
+        )
+        .join(
+          ", "
+        )} ON CONFLICT (id) DO UPDATE SET "features" = EXCLUDED."features";`
+    ),
     // Upsert all event labels
     prisma.eventLabel.createMany({
       data: eventLabels.map((eventLabel) => ({
