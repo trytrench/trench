@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   ArrayParam,
+  JsonParam,
   StringParam,
   useQueryParam,
   withDefault,
@@ -85,9 +86,23 @@ function EntityCard({
 
 function EntitiesPage() {
   const [entityType, setEntityType] = useQueryParam("entityType", StringParam);
-  const [sortBy, setSortBy] = useQueryParam("sortBy", StringParam);
+  const [sortBy, setSortBy] = useQueryParam<{
+    feature: string;
+    direction: string;
+    dataType: string;
+  }>(
+    "sortBy",
+    withDefault(JsonParam, {
+      feature: "lastSeenAt",
+      direction: "desc",
+      dataType: "string",
+    })
+  );
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState([]);
+  const [filters, setFilters] = useQueryParam(
+    "filters",
+    withDefault(JsonParam, [])
+  );
   const [selectedEntityLabels, setSelectedEntityLabels] = useQueryParam<
     string[]
   >("entityLabels", withDefault(ArrayParam, []));
@@ -115,10 +130,7 @@ function EntitiesPage() {
       entityLabels: selectedEntityLabels,
       entityFeatures: filters,
     },
-    sortBy: {
-      feature: sortBy,
-      direction: "desc",
-    },
+    sortBy,
     limit: 100,
   });
 
@@ -233,9 +245,16 @@ function EntitiesPage() {
               <Text className="font-semibold text-lg mb-2 mt-6">Sort by</Text>
               <div className="flex flex-col gap-2">
                 <Select
-                  value={sortBy}
-                  onChange={(value) => {
-                    setSortBy(value);
+                  value={sortBy.feature}
+                  onValueChange={(value) => {
+                    setSortBy({
+                      ...sortBy,
+                      feature: value,
+                      dataType:
+                        entityFeatures?.find(
+                          (feature) => feature.name === value
+                        )?.dataType || "string",
+                    });
                   }}
                 >
                   {entityFeatures?.map((feature) => (
