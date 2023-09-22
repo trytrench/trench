@@ -92,10 +92,32 @@ CREATE RULE IsBadUser WHERE NOT IsGoodUser AND (NewAccount OR HasEmptyProfile OR
 WHEN IsGoodUser THEN addEventLabel('GOOD', 'good_user');
 WHEN IsBadUser THEN addEventLabel('BAD', 'bad_user');
 
-LET NumActorsByRepo := countUnique(Actor BY Repo LAST 6 DAYS);
-LET NumBadUsersByRepo := countUnique(Actor BY Repo WHERE IsBadUser LAST 6 DAYS);
+LET NumActorsByRepo := countUnique(Actor BY Repo LAST WEEK);
+LET NumBadUsersByRepo := countUnique(Actor BY Repo WHERE IsBadUser LAST WEEK);
 
 LET RepoName := jsonValue(EventData, '$.data.repo.name');
 CREATE RULE RepoHasManyBadUsersPastWeek WHERE NumBadUsersByRepo > 10 AND NumBadUsersByRepo / NumActorsByRepo > 0.8 
   WITH REASON 'Repo ${RepoName} has ${NumBadUsersByRepo} bad users out of ${NumActorsByRepo} users';
 WHEN RepoHasManyBadUsersPastWeek THEN addEntityLabel(Repo, 'BAD', 'bad_users');
+
+addEntityFeature(Actor, 'Github Pro', HasGithubPro);
+addEntityFeature(Actor, 'Created Date', CreatedDate);
+addEntityFeature(Actor, 'Created Year', jsonValue(UserData, '$.createdYear'));
+addEntityFeature(Actor, 'Achievements', length(jsonValue(UserData, '$.achievements')));
+addEntityFeature(Actor, 'Sponsors', length(jsonValue(UserData, '$.sponsors')));
+addEntityFeature(Actor, 'Sponsors', length(jsonValue(UserData, '$.sponsorees')));
+addEntityFeature(Actor, 'Contributions', ContribsPastYear);
+addEntityFeature(Actor, 'Repositories', jsonValue(UserData, '$.repositories'));
+addEntityFeature(Actor, 'Organizations', length(jsonValue(UserData, '$.organizations')));
+addEntityFeature(Actor, 'Pinned Repos', length(PinnedRepos));
+addEntityFeature(Actor, 'Bio', Bio);
+addEntityFeature(Actor, 'Readme', Readme);
+addEntityFeature(Actor, 'Website', jsonValue(UserData, '$.websiteUrl'));
+addEntityFeature(Actor, 'Company', jsonValue(UserData, '$.company'));
+addEntityFeature(Actor, 'Location', jsonValue(UserData, '$.location'));
+addEntityFeature(Actor, 'Socials', length(jsonValue(UserData, '$.socialLinks')));
+addEntityFeature(Actor, 'Repos Starred', countUnique(Repo BY Actor));
+addEntityFeature(Repo, 'Stargazers', countUnique(Actor BY Repo));
+addEntityFeature(Repo, 'Bad Stargazers', countUnique(Actor BY Repo WHERE IsBadUser));
+addEntityFeature(Org, 'Stargazers', countUnique(Actor BY Org));
+addEntityFeature(Org, 'Bad Stargazers', countUnique(Actor BY Org WHERE IsBadUser));
