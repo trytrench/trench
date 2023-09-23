@@ -222,16 +222,29 @@ async function getFilteredEntities(
 ) {
   const features =
     entityFeatures
-      ?.map(({ path, op, value }) => {
-        const parsedValue = parseValue(value);
+      ?.map(({ path, op, value, dataType }) => {
+        // const parsedValue = parseValue(value);
         const sqlOperator = {
           [JsonFilterOp.Equal]: "=",
           [JsonFilterOp.NotEqual]: "!=",
-          [JsonFilterOp.GreaterThanOrEqual]: ">=",
-          [JsonFilterOp.LessThanOrEqual]: "<=",
+          [JsonFilterOp.GreaterThan]: ">",
+          [JsonFilterOp.LessThan]: "<",
         }[op];
 
-        return `AND "Entity"."features"->>'${path}' ${sqlOperator} '${parsedValue}'`;
+        if (sqlOperator)
+          return `AND ("Entity"."features"->>'${path}')${
+            dataType === "number" ? "::NUMERIC" : ""
+          } ${sqlOperator} ${value}`;
+
+        const sqlOperator2 = {
+          [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
+          [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
+          [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
+          [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
+        }[op];
+
+        if (sqlOperator2)
+          return `AND "Entity"."features"->>'${path}' ${sqlOperator2}`;
       })
       .join(" ") ?? "";
   const showFeatures = entityFeatures?.length ? true : false;

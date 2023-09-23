@@ -118,7 +118,7 @@ export function EventTypeFilter(props: EventTypeFilterProps) {
   const [eventLabels, setEventLabels] = useQueryParam("eventLabel", ArrayParam);
 
   return (
-    <div className="flex items-center gap-4 font-bold shrink-0">
+    <div className="flex items-center gap-4 shrink-0">
       <Select
         className="w-48"
         value={eventType ?? undefined}
@@ -351,10 +351,10 @@ function useDateRange() {
 
   const setDateRangeValue = useCallback(
     (val: { from?: Date; to?: Date }) => {
-      if (val.from && val.to) {
+      if (val.from || val.to) {
         setDateRangeQuery({
-          from: val.from.getTime(),
-          to: val.to.getTime(),
+          from: val.from?.getTime() ?? undefined,
+          to: val.to?.getTime() ?? undefined,
         });
       } else {
         setDateRangeQuery({

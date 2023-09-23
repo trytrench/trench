@@ -3,8 +3,14 @@ import { z } from "zod";
 export enum JsonFilterOp {
   Equal = "equals",
   NotEqual = "not",
-  GreaterThanOrEqual = "gte",
-  LessThanOrEqual = "lte",
+  GreaterThan = "greater than",
+  LessThan = "less than",
+  GreaterThanOrEqual = "greater than or equal to",
+  LessThanOrEqual = "less than or equal to",
+  Contains = "contains",
+  DoesNotContain = "does not contain",
+  StartsWith = "starts with",
+  EndsWith = "ends with",
 }
 
 export const JSON_FILTER_OPS: { label: string; value: JsonFilterOp }[] = [
@@ -17,7 +23,8 @@ export const JSON_FILTER_OPS: { label: string; value: JsonFilterOp }[] = [
 export const jsonFilterZod = z.object({
   path: z.string(),
   op: z.nativeEnum(JsonFilterOp),
-  value: z.string(),
+  value: z.any(),
+  dataType: z.string(),
 });
 
 export type JsonFilter = z.infer<typeof jsonFilterZod>;

@@ -11,7 +11,10 @@ import {
 import {
   Badge,
   Card,
+  Flex,
+  Icon,
   MultiSelect,
+  NumberInput,
   Select,
   SelectItem,
   Text,
@@ -31,6 +34,8 @@ import { Navbar } from "~/components/Navbar";
 import { RouterOutputs, api } from "~/utils/api";
 
 import { JsonFilterOp } from "~/shared/jsonFilter";
+import { ChevronLeft } from "lucide-react";
+import FeatureFilter, { Filter } from "~/components/FeatureFilter";
 
 function EntityCard({
   entity,
@@ -98,17 +103,13 @@ function EntitiesPage() {
       dataType: "string",
     })
   );
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useQueryParam(
+  const [filters, setFilters] = useQueryParam<Filter[]>(
     "filters",
     withDefault(JsonParam, [])
   );
   const [selectedEntityLabels, setSelectedEntityLabels] = useQueryParam<
     string[]
   >("entityLabels", withDefault(ArrayParam, []));
-  const [selectedFilterFeature, setSelectedFilterFeature] = useState<
-    string | null
-  >(null);
   // const [filters, setFilters] = useQueryParam(
   //   "filters",
   //   withDefault(ArrayParam, [])
@@ -133,25 +134,6 @@ function EntitiesPage() {
     sortBy,
     limit: 100,
   });
-
-  const filterOptions = [
-    {
-      label: "Is empty",
-      value: {
-        path: selectedFilterFeature,
-        op: JsonFilterOp.Equal,
-        value: "NULL",
-      },
-    },
-    {
-      label: "Not empty",
-      value: {
-        path: selectedFilterFeature,
-        op: JsonFilterOp.NotEqual,
-        value: "NULL",
-      },
-    },
-  ];
 
   return (
     <>
@@ -190,46 +172,10 @@ function EntitiesPage() {
 
               <Text className="font-semibold text-lg mb-2 mt-6">Filter</Text>
               <div className="flex flex-col gap-2">
-                <Menu
-                  isOpen={filterOpen || !!selectedFilterFeature}
-                  onClose={() => {
-                    if (selectedFilterFeature) setSelectedFilterFeature(null);
-                    setFilterOpen(false);
-                  }}
-                >
-                  <MenuButton
-                    as={Button}
-                    size="sm"
-                    onClick={() => setFilterOpen(true)}
-                  >
-                    Add filter
-                  </MenuButton>
-                  <MenuList>
-                    {selectedFilterFeature ? (
-                      <>
-                        {filterOptions.map((option) => (
-                          <MenuItem
-                            key={option.label}
-                            onClick={() => {
-                              setFilters([...filters, option.value]);
-                            }}
-                          >
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </>
-                    ) : (
-                      entityFeatures?.map((feature) => (
-                        <MenuItem
-                          key={feature.name}
-                          onClick={() => setSelectedFilterFeature(feature.name)}
-                        >
-                          {feature.name}
-                        </MenuItem>
-                      ))
-                    )}
-                  </MenuList>
-                </Menu>
+                <FeatureFilter
+                  features={entityFeatures || []}
+                  onAddFilter={(filter) => setFilters([...filters, filter])}
+                />
                 {filters.map((filter, index) => (
                   <Badge
                     key={index}
