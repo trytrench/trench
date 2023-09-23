@@ -16,6 +16,7 @@ export const eventsRouter = createTRPCRouter({
         end: z.number(),
         eventFilters: eventFiltersZod,
         entityFilters: entityFiltersZod,
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -43,13 +44,15 @@ export const eventsRouter = createTRPCRouter({
         SELECT "Event"."id", "Event"."timestamp" FROM "Event"
 
         WHERE (
-            "Event"."timestamp" >= to_timestamp(${startInSeconds})
+            "Event"."datasetId" = ${input.datasetId}
+            AND "Event"."timestamp" >= to_timestamp(${startInSeconds})
             AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
             AND ${buildEventExistsQuery(input.eventFilters)}
             AND EXISTS (
               SELECT FROM "EventToEntityLink"
               WHERE
-                "EventToEntityLink"."eventId" = "Event"."id"
+                "EventToEntityLink"."datasetId" = ${input.datasetId}
+                AND "EventToEntityLink"."eventId" = "Event"."id"
                 AND ${buildEntityExistsQuery(
                   input.entityFilters,
                   '"EventToEntityLink"."entityId"'
@@ -69,15 +72,21 @@ export const eventsRouter = createTRPCRouter({
           ON
           events."timestamp" >= tb.bucket AND
           events."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
-      LEFT JOIN "_EventToEventLabel"
-          ON "_EventToEventLabel"."A" = events."id"
+      LEFT JOIN "EventLabelToEvent"
+          ON "EventLabelToEvent"."eventId" = events."id" AND "EventLabelToEvent"."datasetId" = ${
+            input.datasetId
+          }
       LEFT JOIN "EventLabel"
-          ON "EventLabel"."id" = "_EventToEventLabel"."B"
+          ON "EventLabel"."id" = "EventLabelToEvent"."eventLabelId" AND "EventLabel"."datasetId" = ${
+            input.datasetId
+          }
       GROUP BY
           tb.bucket, "EventLabel"."name", "EventLabel"."color"
       ORDER BY
           tb.bucket;
       `);
+
+      // console.log("bucketsFromDB", bucketsFromDB);
 
       // turn row into array of bucket, map of counts (EventLabel -> count)
 
@@ -142,6 +151,7 @@ export const eventsRouter = createTRPCRouter({
       z.object({
         eventFilters: eventFiltersZod,
         entityFilters: entityFiltersZod,
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -157,20 +167,23 @@ export const eventsRouter = createTRPCRouter({
             "EventLabel"."name" as label, 
             COUNT(*) as count
           FROM
-            "_EventToEventLabel"
+            "EventLabelToEvent"
           JOIN
-            "EventLabel"
+            "EventLabel" 
           ON
-            "_EventToEventLabel"."B" = "EventLabel"."id"
+            "EventLabelToEvent"."eventLabelId" = "EventLabel"."id"
+            AND "EventLabel"."datasetId" = ${input.datasetId}
           WHERE
             ${buildEventExistsQuery(
               input.eventFilters,
-              '"_EventToEventLabel"."A"'
+              '"EventLabelToEvent"."eventId"'
             )}
+            AND "EventLabelToEvent"."datasetId" = ${input.datasetId}
             AND EXISTS (
               SELECT FROM "EventToEntityLink"
               WHERE
-                "EventToEntityLink"."eventId" = "_EventToEventLabel"."A"
+                "EventToEntityLink"."eventId" = "EventLabelToEvent"."eventId"
+                AND "EventToEntityLink"."datasetId" = ${input.datasetId}
                 AND ${buildEntityExistsQuery(
                   input.entityFilters,
                   '"EventToEntityLink"."entityId"'
@@ -250,15 +263,15 @@ export const eventsRouter = createTRPCRouter({
         "EntityLabel"."color" as color,
         COUNT(*) as count
       FROM
-        "_EntityToEntityLabel"
+        "EntityLabelToEntity"
       JOIN
         "EntityLabel"
       ON
-        "_EntityToEntityLabel"."B" = "EntityLabel"."id"
+        "EntityLabelToEntity"."entityLabelId" = "EntityLabel"."id"
       WHERE EXISTS (
         SELECT FROM "EventToEntityLink"
         WHERE 
-          "EventToEntityLink"."entityId" = "_EntityToEntityLabel"."A"
+          "EventToEntityLink"."entityId" = "EntityLabelToEntity"."entityId"
           AND ${buildEntityExistsQuery(
             input.entityFilters,
             '"EventToEntityLink"."entityId"'
@@ -323,6 +336,31 @@ export const eventsRouter = createTRPCRouter({
 
       return {
         count,
+        rows,
+      };
+    }),
+
+  findManyFrom: publicProcedure
+    .input(
+      z.object({
+        startTimestamp: z.number(),
+        endTimestamp: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.prisma.event.findMany({
+        where: {
+          timestamp: {
+            gte: new Date(input.startTimestamp),
+            lte: new Date(input.endTimestamp),
+          },
+        },
+        orderBy: {
+          timestamp: "asc",
+        },
+      });
+
+      return {
         rows,
       };
     }),

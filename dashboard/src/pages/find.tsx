@@ -30,6 +30,7 @@ import { Navbar } from "~/components/Navbar";
 import { RouterOutputs, api } from "~/utils/api";
 
 import { JsonFilterOp } from "~/shared/jsonFilter";
+import { useDatasetSelectionStore } from "~/lib/datasetSelectionState";
 
 function EntityCard({
   entity,
@@ -99,14 +100,20 @@ function EntitiesPage() {
   //   withDefault(ArrayParam, [])
   // );
 
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery({
+    datasetId,
+  });
 
   const { data: entityLabels } = api.labels.getEntityLabels.useQuery({
     entityType: entityType ?? undefined,
+    datasetId,
   });
 
   const { data: entityFeatures } = api.labels.getEntityFeatures.useQuery({
     entityType: entityType ?? undefined,
+    datasetId,
   });
 
   const { data: entitiesList } = api.lists.getEntitiesList.useQuery({
@@ -120,6 +127,7 @@ function EntitiesPage() {
       direction: "desc",
     },
     limit: 100,
+    datasetId,
   });
 
   const filterOptions = [

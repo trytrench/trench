@@ -40,6 +40,7 @@ import { EventLabelDistribution } from "../../components/EventLabelDistribution"
 import { EventTimeChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
 import { RenderEntity } from "../../components/RenderEntity";
+import { useDatasetSelectionStore } from "~/lib/datasetSelectionState";
 
 type EntityType = RouterOutputs["entities"]["get"];
 
@@ -228,9 +229,12 @@ function shouldAddToBatch(batch: BatchType, event: EventType) {
 }
 
 function RenderEvents({ entityId }: { entityId?: string }) {
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { data } = api.entities.findEvents.useQuery({
     entityId: entityId ?? "",
     limit: 100,
+    datasetId,
   });
 
   return (
@@ -245,9 +249,12 @@ function RenderEvents({ entityId }: { entityId?: string }) {
 function RelatedEntities({ entityId }: { entityId?: string }) {
   const [entityType] = useQueryParam("entityType", StringParam);
 
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { data } = api.entities.findRelatedEntities.useQuery({
     id: entityId ?? "",
     entityType,
+    datasetId,
   });
 
   return (
@@ -327,10 +334,13 @@ export default function Home() {
   const router = useRouter();
   const entityId = router.query.entityId as string | undefined;
 
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   // Entity Data
   // TODO: handle when entityId is a string[], + other cases
   const { data: entityData } = api.entities.get.useQuery({
     id: entityId ?? "",
+    datasetId,
   });
 
   const entityInfo = useMemo(
@@ -349,7 +359,7 @@ export default function Home() {
 
   return (
     <>
-      <Navbar />
+      <Navbar datasetSelectDisabled />
 
       <div className="p-6 border-b">
         <Metric className="shrink-0 font-normal">
@@ -417,16 +427,19 @@ export default function Home() {
               {entityData?.entityLabels &&
               entityData?.entityLabels.length > 0 ? (
                 <div className="flex flex-row flex-wrap">
-                  {entityData?.entityLabels.map((label) => (
-                    <Tag
-                      key={label.name}
-                      colorScheme={
-                        label && label.color !== "" ? label.color : "gray"
-                      }
-                    >
-                      {label.name}
-                    </Tag>
-                  ))}
+                  {entityData?.entityLabels.map((entityToLabel) => {
+                    const label = entityToLabel.entityLabel;
+                    return (
+                      <Tag
+                        key={label.name}
+                        colorScheme={
+                          label && label.color !== "" ? label.color : "gray"
+                        }
+                      >
+                        {label.name}
+                      </Tag>
+                    );
+                  })}
                 </div>
               ) : (
                 <Text>None</Text>

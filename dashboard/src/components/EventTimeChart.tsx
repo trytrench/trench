@@ -22,8 +22,8 @@ export function EventTimeChart({
   const { data } = api.events.getTimeBuckets.useQuery(
     {
       interval: 1000 * 60 * 60 * 24,
-      start: actualEventFilters.dateRange?.start ?? 0,
-      end: actualEventFilters.dateRange?.end ?? 0,
+      start: actualEventFilters.dateRange?.from ?? 0,
+      end: actualEventFilters.dateRange?.to ?? 0,
       eventFilters: actualEventFilters,
       entityFilters: actualEntityFilters,
     },

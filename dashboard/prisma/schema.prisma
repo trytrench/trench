@@ -11,14 +11,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Dataset {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  name        String
+  description String    @default("")
+  start       DateTime?
+  end         DateTime?
+  eventCount  Int?
+
+  eventTypes          EventType[]
+  eventFeatures       EventFeature[]
+  entityFeatures      EntityFeature[]
+  entityTypes         EntityType[]
+  entities            Entity[]
+  events              Event[]
+  linkTypes           LinkType[]
+  eventToEntityLinks  EventToEntityLink[]
+  entityLabelTypes    EntityLabelType[]
+  entityLabels        EntityLabel[]
+  eventLabelTypes     EventLabelType[]
+  eventLabels         EventLabel[]
+  eventLabelToEvents  EventLabelToEvent[]
+  EntityLabelToEntity EntityLabelToEntity[]
+}
+
 model EventType {
-  id   String @id
+  id   String
   name String
 
-  events Event[]
+  events      Event[]
   eventLabels EventLabel[]
 
   features EventFeature[]
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([id, datasetId])
+}
+
+model RawEvent {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  timestamp DateTime
+  data      Json     @default("{}")
+  type      String
 }
 
 model Event {
@@ -26,15 +64,16 @@ model Event {
   timestamp DateTime
   data      Json     @default("{}")
 
-  eventType EventType @relation(fields: [type], references: [id])
+  eventType EventType @relation(fields: [type, datasetId], references: [id, datasetId])
   type      String
 
   entityLinks EventToEntityLink[]
-  eventLabels EventLabel[]
+  eventLabels EventLabelToEvent[]
 
   features Json @default("{}")
 
-
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
 
   @@index([data(ops: JsonbPathOps)], type: Gin)
   @@index([type, id])
@@ -44,72 +83,94 @@ model Event {
 }
 
 model EventFeature {
-  eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType      String
+  eventTypeObj EventType @relation(fields: [eventType, datasetId], references: [id, datasetId])
+  eventType    String
 
-  name String
+  name        String
   description String?
 
-  @@id([eventType, name])
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([eventType, name, datasetId])
 }
 
 model EntityFeature {
-  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType      String
+  entityTypeObj EntityType @relation(fields: [entityType, datasetId], references: [id, datasetId])
+  entityType    String
 
-  name String
+  name        String
   description String?
 
-  @@id([entityType, name])
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([entityType, name, datasetId])
 }
 
 model EntityType {
-  id   String @id
+  id   String
   name String
 
   entityLabels EntityLabel[]
-  entities Entity[]
+  entities     Entity[]
 
   entityFeatures EntityFeature[]
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([id, datasetId])
 }
 
 model Entity {
-  id   String @id @default(dbgenerated("nanoid()"))
-  name String
+  id       String @id @default(dbgenerated("nanoid()"))
+  name     String
   features Json   @default("{}")
 
-  entityType EntityType @relation(fields: [type], references: [id])
+  entityType EntityType @relation(fields: [type, datasetId], references: [id, datasetId])
   type       String
 
-  eventLinks   EventToEntityLink[]
-  entityLabels EntityLabel[]
+  eventLinks EventToEntityLink[]
+
+  entityLabels EntityLabelToEntity[]
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
 
   @@index([features(ops: JsonbPathOps)], type: Gin)
   @@index([type, id])
 }
 
 model LinkType {
-  id   String @id
+  id   String
   name String
 
   entitySnapshot Json @default("{}")
 
   eventToEntityLink EventToEntityLink[]
+  dataset           Dataset?            @relation(fields: [datasetId], references: [id])
+  datasetId         Int                 @default(0)
+
+  @@id([id, datasetId])
 }
 
 model EventToEntityLink {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  linkType LinkType @relation(fields: [type], references: [id])
-  type String
-  data Json   @default("{}")
+  linkType LinkType @relation(fields: [type, datasetId], references: [id, datasetId])
+  type     String
+  data     Json     @default("{}")
 
   event   Event  @relation(fields: [eventId], references: [id])
   eventId String
 
   entity   Entity @relation(fields: [entityId], references: [id])
   entityId String
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
 
   @@index([eventId])
   @@index([entityId])
@@ -148,12 +209,16 @@ model File {
 }
 
 model EntityLabelType {
-  id          String   @id @default(dbgenerated("nanoid()"))
+  id          String   @default(dbgenerated("nanoid()"))
   name        String
   createdAt   DateTime @default(now())
   description String
 
   entityLabels EntityLabel[]
+  dataset      Dataset?      @relation(fields: [datasetId], references: [id])
+  datasetId    Int           @default(0)
+
+  @@id([id, datasetId])
 }
 
 model EntityLabel {
@@ -163,24 +228,59 @@ model EntityLabel {
   color       String
   description String
 
-  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType     String
+  entityTypeObj EntityType @relation(fields: [entityType, datasetId], references: [id, datasetId])
+  entityType    String
 
-  labelTypeObj   EntityLabelType @relation(fields: [labelType], references: [id])
-  labelType String
+  labelTypeObj EntityLabelType @relation(fields: [labelType, datasetId], references: [id, datasetId])
+  labelType    String
 
-  entities Entity[]
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
 
-  @@unique([name, entityType, labelType])
+  entities EntityLabelToEntity[]
+
+  @@unique([name, entityType, labelType, datasetId])
 }
 
 model EventLabelType {
-  id          String   @id @default(dbgenerated("nanoid()"))
+  id          String   @default(dbgenerated("nanoid()"))
   name        String
   createdAt   DateTime @default(now())
   description String
 
   eventLabels EventLabel[]
+  dataset     Dataset?     @relation(fields: [datasetId], references: [id])
+  datasetId   Int          @default(0)
+
+  @@id([id, datasetId])
+}
+
+model EventLabelToEvent {
+  id String @default(dbgenerated("nanoid()"))
+
+  eventLabel   EventLabel @relation(fields: [eventLabelId], references: [id])
+  eventLabelId String
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([eventLabelId, eventId, datasetId])
+}
+
+model EntityLabelToEntity {
+  entityLabel   EntityLabel @relation(fields: [entityLabelId], references: [id])
+  entityLabelId String
+
+  entity   Entity @relation(fields: [entityId], references: [id])
+  entityId String
+
+  dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId Int      @default(0)
+
+  @@id([entityLabelId, entityId, datasetId])
 }
 
 model EventLabel {
@@ -190,15 +290,18 @@ model EventLabel {
   color       String
   description String
 
-  eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType     String
+  eventTypeObj EventType @relation(fields: [eventType, datasetId], references: [id, datasetId])
+  eventType    String
 
-  labelTypeObj   EventLabelType @relation(fields: [labelType], references: [id])
-  labelType String
+  labelTypeObj EventLabelType @relation(fields: [labelType, datasetId], references: [id, datasetId])
+  labelType    String
 
-  events Event[]
+  dataset   Dataset @relation(fields: [datasetId], references: [id])
+  datasetId Int     @default(0)
 
-  @@unique([name, eventType, labelType])
+  events EventLabelToEvent[]
+
+  @@unique([name, eventType, labelType, datasetId])
 }
 
 // Necessary for Next auth

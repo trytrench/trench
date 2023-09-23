@@ -22,6 +22,13 @@ async function main() {
       },
     });
   }
+
+  await prisma.dataset.create({
+    data: {
+      name: "Production",
+      id: 0,
+    },
+  });
 }
 
 main()

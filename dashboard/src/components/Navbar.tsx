@@ -16,11 +16,14 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from "@chakra-ui/react";
+import { Select, SelectItem } from "@tremor/react";
 import { Menu } from "lucide-react";
 import { signOut } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
+import { useDatasetSelectionStore } from "~/lib/datasetSelectionState";
+import { api } from "~/utils/api";
 
 interface Props {
   href: string;
@@ -46,10 +49,18 @@ const NavItem = ({ href, children, ...props }: Props) => {
   );
 };
 
-export const Navbar = () => {
+interface NavbarProps {
+  datasetSelectDisabled?: boolean;
+}
+
+export const Navbar = ({ datasetSelectDisabled }: NavbarProps) => {
   const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const btnRef = useRef(null);
+
+  const { data: datasets, isLoading } = api.datasets.getAll.useQuery();
+
+  const datasetSelection = useDatasetSelectionStore((state) => state.selection);
 
   return (
     <Flex
@@ -85,6 +96,21 @@ export const Navbar = () => {
             <NavItem href="/rules">Rules</NavItem>
           </HStack>
           <Box flex={1} />
+          <Box marginRight={6} width={60}>
+            <Select
+              value={`${datasetSelection}`}
+              onValueChange={(val) => {
+                useDatasetSelectionStore.setState({ selection: parseInt(val) });
+              }}
+              disabled={datasetSelectDisabled}
+            >
+              {datasets?.map((dataset) => (
+                <SelectItem value={`${dataset.id}`}>
+                  {dataset.name} ({dataset.id})
+                </SelectItem>
+              )) ?? []}
+            </Select>
+          </Box>
           <HStack spacing={4} fontSize="sm">
             <NavItem href="/changelog">Changelog</NavItem>
             <NavItem href="/help">Help</NavItem>

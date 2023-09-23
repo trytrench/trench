@@ -1,4 +1,4 @@
-import { type Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { type EntityFilters, type EventFilters } from "../../shared/validation";
 
 export function getEntityExistsSubqueries(filters: EntityFilters) {
@@ -9,9 +9,9 @@ export function getEntityExistsSubqueries(filters: EntityFilters) {
     entityId: filters?.entityId ? `"Entity"."id" = '${filters.entityId}'` : "",
     entityLabels: filters?.entityLabels?.map((entityLabel) => {
       return `EXISTS (  
-        SELECT FROM "_EntityToEntityLabel"
-        WHERE "_EntityToEntityLabel"."A" = "Entity"."id"
-        AND "_EntityToEntityLabel"."B" = '${entityLabel}'
+        SELECT FROM "EntityLabelToEntity"
+        WHERE "EntityLabelToEntity"."entityId" = "Entity"."id"
+        AND "EntityLabelToEntity"."entityLabelId" = '${entityLabel}'
       )`;
     }),
   };
@@ -44,9 +44,9 @@ export function getEventExistsSubqueries(filters: EventFilters) {
   return {
     eventLabels: filters?.eventLabels?.map((eventLabel) => {
       return `EXISTS (  
-        SELECT FROM "_EventToEventLabel"
-        WHERE "_EventToEventLabel"."A" = "Event"."id"
-        AND "_EventToEventLabel"."B" = '${eventLabel}'
+        SELECT FROM "EventLabelToEvent"
+        WHERE "EventLabelToEvent"."eventId" = "Event"."id"
+        AND "EventLabelToEvent"."eventLabelId" = '${eventLabel}'
       )`;
     }),
     eventType: filters?.eventType
@@ -54,9 +54,9 @@ export function getEventExistsSubqueries(filters: EventFilters) {
       : "",
     dateRange: filters?.dateRange
       ? `"Event"."timestamp" >= to_timestamp(${
-          filters.dateRange.start / 1000
+          filters.dateRange.from / 1000
         }) AND
-        "Event"."timestamp" <= to_timestamp(${filters.dateRange.end / 1000})`
+        "Event"."timestamp" <= to_timestamp(${filters.dateRange.to / 1000})`
       : "",
   };
 }
@@ -71,18 +71,20 @@ export function buildEventExistsQuery(
   // const queryEventToEntityLink = filterByEntityId || filterByEntityLabel;
 
   if (!eventIdComparison) {
-    return `1 = 1
+    const ret = `1 = 1
       ${eventLabels?.length ? `AND (${eventLabels.join(" AND ")})` : ""}
       ${eventType ? `AND ${eventType}` : ""}
       ${dateRange ? `AND ${dateRange}` : ""}`;
+    return ret;
   } else {
-    return `EXISTS (
+    const ret = `EXISTS (
       SELECT from "Event"
       WHERE "Event"."id" = ${eventIdComparison}
       ${eventLabels?.length ? `AND (${eventLabels.join(" AND ")})` : ""}
       ${eventType ? `AND ${eventType}` : ""}
       ${dateRange ? `AND ${dateRange}` : ""}
     )`;
+    return ret;
   }
 }
 

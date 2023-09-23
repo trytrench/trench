@@ -26,6 +26,7 @@ import { Select as ChakraReactSelect } from "chakra-react-select";
 import { format } from "date-fns";
 import { uniqBy } from "lodash";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { useDatasetSelectionStore } from "~/lib/datasetSelectionState";
 
 function processArray(array: (string | null)[] | null | undefined) {
   if (!array) return [];
@@ -39,8 +40,12 @@ type EventCardProps = {
 
 function EventCard({ event, selected, ...rest }: EventCardProps) {
   const [eventType] = useQueryParam("eventType", StringParam);
+
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { data: eventLabels } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
+    datasetId,
   });
   return (
     <button
@@ -83,6 +88,8 @@ function EventCard({ event, selected, ...rest }: EventCardProps) {
 function EventsPage() {
   const [eventType, setEventType] = useQueryParam("eventType", StringParam);
 
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { data: eventTypes } = api.labels.getEventTypes.useQuery();
   const eventTypeOptions =
     eventTypes?.map((eventType) => ({
@@ -97,6 +104,7 @@ function EventsPage() {
   );
   const { data: eventLabels } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
+    datasetId,
   });
   const eventLabelOptions = useMemo(() => {
     return (
@@ -116,6 +124,7 @@ function EventsPage() {
 
   const { data: eventFeatures } = api.labels.getEventFeatures.useQuery({
     eventType: eventType ?? undefined,
+    datasetId,
   });
 
   const [limit, setLimit] = useState(100);
@@ -128,6 +137,7 @@ function EventsPage() {
           eventLabels: processArray(eventLabelsQuery),
         },
         limit: limit,
+        datasetId,
       },
       {
         keepPreviousData: true,
@@ -281,9 +291,11 @@ function EventDrawer(props: {
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { isOpen, selectedEventId, onClose } = props;
   const { data: selectedEventData } = api.lists.getEvent.useQuery(
-    { eventId: selectedEventId ?? "" },
+    { eventId: selectedEventId ?? "", datasetId },
     { enabled: !!selectedEventId }
   );
 

@@ -9,7 +9,7 @@ export const eventFiltersZod = z
         to: z.number(),
       })
       .optional(),
-    eventType: z.string().optional(),
+    eventType: z.string().optional().nullable(),
     eventLabels: z.array(z.string()).optional(),
   })
   .optional();
@@ -18,7 +18,7 @@ export type EventFilters = z.infer<typeof eventFiltersZod>;
 
 export const entityFiltersZod = z
   .object({
-    entityType: z.string().optional(),
+    entityType: z.string().optional().nullable(),
     entityId: z.string().optional(),
     entityLabels: z.array(z.string()).optional(),
     entityFeatures: z.array(jsonFilterZod).optional(),

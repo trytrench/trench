@@ -46,6 +46,7 @@ import {
   ContextMenuTrigger,
 } from "../components/base/ContextMenu";
 import { Modal, ModalContent, ModalOverlay } from "@chakra-ui/react";
+import { useDatasetSelectionStore } from "~/lib/datasetSelectionState";
 
 function formatTimeRange([start, end]: [number, number], interval: number) {
   if (interval >= 1000 * 60 * 60 * 24) {
@@ -79,8 +80,14 @@ function formatPercentage(value: number, maxValue: number) {
 
 const DATE_FORMAT_X_AXIS = "MMM d, h:mm a";
 function EntitiesPage() {
-  const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
+  const { data: entityLabels } = api.labels.getEntityLabels.useQuery({
+    datasetId,
+  });
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery({
+    datasetId,
+  });
 
   const [entityType] = useQueryParam("entityType", StringParam);
   const eventFilters = useEventFilters();
@@ -412,10 +419,13 @@ interface EntitiesWithLabelModalProps {
 }
 function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
   const { open, onOpenChange, entityType, entityLabel, timeRange } = props;
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
 
   const timeInterval = useTimeInterval();
   const eventFilters = useEventFilters();
-  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery();
+  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
+    datasetId,
+  });
   const entityLabelData = useMemo(() => {
     if (!entityLabel || !entityLabelsData) {
       return undefined;
@@ -431,6 +441,7 @@ function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
       startTime: timeRange[0],
       endTime: timeRange[1],
       limit: 20,
+      datasetId,
     },
     {
       enabled: open,
@@ -555,6 +566,8 @@ interface InvestigateDateRangeModalProps {
 function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
   const { timeRange, open, onOpenChange } = props;
 
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const eventFilters = useEventFilters();
   const { data } = api.dashboard.getTopEntities.useQuery(
     {
@@ -562,6 +575,7 @@ function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
       endTime: timeRange[1],
       limit: 20,
       eventFilters,
+      datasetId,
     },
     {
       enabled: !!timeRange && open,
@@ -617,12 +631,15 @@ function EventsPage() {
 
   const timeInterval = useTimeInterval();
 
+  const datasetId = useDatasetSelectionStore((state) => state.selection);
+
   const { data } = api.dashboard.getTimeBuckets.useQuery(
     {
       interval: timeInterval,
       start: eventFilters?.dateRange?.from ?? DEFAULT_DATE_RANGE.from.getTime(),
       end: eventFilters?.dateRange?.to ?? DEFAULT_DATE_RANGE.to.getTime(),
       eventFilters,
+      datasetId,
     },
     {
       enabled: !!eventFilters?.dateRange,

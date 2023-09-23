@@ -16,6 +16,7 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         ids: z.array(z.string()),
+        datasetId: z.number().default(0),
       })
     )
     .query(({ ctx, input }) => {
@@ -24,6 +25,7 @@ export const entitiesRouter = createTRPCRouter({
           id: {
             in: input.ids,
           },
+          datasetId: input.datasetId,
         },
       });
     }),
@@ -35,6 +37,7 @@ export const entitiesRouter = createTRPCRouter({
         offset: z.number().optional(),
         limit: z.number().optional(),
         filters: eventFiltersZod.optional(),
+        datasetId: z.number().default(0),
       })
     )
     .query(({ ctx, input }) => {
@@ -58,6 +61,7 @@ export const entitiesRouter = createTRPCRouter({
               entityId: input.entityId,
             },
           },
+          datasetId: input.datasetId,
           ...getFiltersWhereQuery(input.filters),
         },
         skip: input.offset,
@@ -76,6 +80,7 @@ export const entitiesRouter = createTRPCRouter({
         end: z.number(),
         eventFilters: eventFiltersZod,
         entityFilters: entityFiltersZod,
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -97,7 +102,7 @@ export const entitiesRouter = createTRPCRouter({
           UNION ALL
           SELECT bucket + INTERVAL '1 second' * ${intervalInSeconds}
           FROM TimeBucketTable
-          WHERE bucket < to_timestamp(${endInSeconds})
+          WHERE bucket < to_timestamp(${endInSeconds}) AND
       ),
       entities AS (
         SELECT 
@@ -110,6 +115,7 @@ export const entitiesRouter = createTRPCRouter({
             input.entityFilters,
             '"EventToEntityLink"."entityId"'
           )}
+          AND "Event"."datasetId" = ${input.datasetId}
           AND EXISTS (
             SELECT FROM "Event" 
             WHERE 
@@ -130,10 +136,10 @@ export const entitiesRouter = createTRPCRouter({
           ON
           entities."timestamp" >= tb.bucket AND
           entities."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
-      LEFT JOIN "_EntityToEntityLabel"
-          ON "_EntityToEntityLabel"."A" = entities."entityId"
+      LEFT JOIN "EntityLabelToEntity"
+          ON "EntityLabelToEntity"."entityId" = entities."entityId"
       LEFT JOIN "EntityLabel"
-          ON "EntityLabel"."id" = "_EntityToEntityLabel"."B"
+          ON "EntityLabel"."id" = "EntityLabelToEntity"."entityLabelId"
       GROUP BY
           tb.bucket, "EntityLabel"."name", "EntityLabel"."color"
       ORDER BY
@@ -252,8 +258,8 @@ export const entitiesRouter = createTRPCRouter({
           ) AS "entityLabels"
         FROM "entities"
         JOIN "Entity" ON "Entity"."id" = "entities"."id"
-        LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
-        LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
+        LEFT JOIN "EntityLabelToEntity" ON "Entity"."id" = "EntityLabelToEntity"."entityId"
+        LEFT JOIN "EntityLabel" ON "EntityLabelToEntity"."entityLabelId" = "EntityLabel"."id"
         GROUP BY "Entity"."id", "Entity"."type", "Entity"."name", "entities"."count"
         ORDER BY "entities"."count" DESC
         LIMIT ${input.limit ?? 5}
@@ -282,6 +288,7 @@ export const entitiesRouter = createTRPCRouter({
             eventsCount: z.enum(["asc", "desc"]).optional(),
           })
           .optional(),
+        datasetId: z.number().default(0),
       })
     )
     .query(({ ctx, input }) => {
@@ -291,6 +298,7 @@ export const entitiesRouter = createTRPCRouter({
         },
         where: {
           type: input.filters?.type,
+          datasetId: input.datasetId,
         },
         skip: input.offset,
         take: input.limit,
@@ -306,15 +314,21 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        datasetId: z.number().default(0),
       })
     )
     .query(({ ctx, input }) => {
       return ctx.prisma.entity.findUnique({
         where: {
           id: input.id,
+          datasetId: input.datasetId,
         },
         include: {
-          entityLabels: true,
+          entityLabels: {
+            include: {
+              entityLabel: true,
+            },
+          },
         },
       });
     }),
@@ -323,7 +337,8 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        entityType: z.string().optional(),
+        entityType: z.string().optional().nullable(),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -346,19 +361,20 @@ export const entitiesRouter = createTRPCRouter({
         FROM
             "Entity"
         JOIN
-            "EntityType" ON "Entity"."type" = "EntityType"."id"
+            "EntityType" ON "Entity"."type" = "EntityType"."id" AND "EntityType"."datasetId" = ${input.datasetId}
         JOIN
-            "EventToEntityLink" ON "EventToEntityLink"."entityId" = "Entity"."id"
+            "EventToEntityLink" ON "EventToEntityLink"."entityId" = "Entity"."id" AND "EventToEntityLink"."datasetId" = ${input.datasetId}
         JOIN
-            "Event" ON "Event"."id" = "EventToEntityLink"."eventId"
+            "Event" ON "Event"."id" = "EventToEntityLink"."eventId" AND "Event"."datasetId" = ${input.datasetId}
         LEFT JOIN
             "EventToEntityLink" AS "LinkToInput" ON "LinkToInput"."eventId" = "Event"."id" AND "LinkToInput"."entityId" = '${input.id}'
         LEFT JOIN
-            "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
+            "EntityLabelToEntity" ON "Entity"."id" = "EntityLabelToEntity"."entityId" AND "EntityLabelToEntity"."datasetId" = ${input.datasetId}
         LEFT JOIN
-            "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
+            "EntityLabel" ON "EntityLabelToEntity"."entityLabelId" = "EntityLabel"."id" AND "EntityLabel"."datasetId" = ${input.datasetId}
         WHERE
             "Entity"."id" != '${input.id}'
+            AND "Entity"."datasetId" = ${input.datasetId}
             AND "EntityType"."name" = '${input.entityType}'
             AND EXISTS (
                 SELECT 1

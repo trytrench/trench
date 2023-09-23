@@ -3,10 +3,9 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   buildEntityExistsQuery,
   buildEventExistsQuery,
-  getFiltersWhereQuery,
 } from "../../lib/filters";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 export const dashboardRouter = createTRPCRouter({
   getTopEntities: publicProcedure
@@ -17,6 +16,7 @@ export const dashboardRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         entityFilters: entityFiltersZod,
         limit: z.number().default(10),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -37,10 +37,15 @@ export const dashboardRouter = createTRPCRouter({
             COUNT(*) AS "count",
             ROW_NUMBER() OVER (PARTITION BY "Entity"."type" ORDER BY COUNT(*) DESC) AS rn
           FROM "EventToEntityLink"
-          JOIN "Event" ON "EventToEntityLink"."eventId" = "Event"."id"
-          JOIN "Entity" ON "EventToEntityLink"."entityId" = "Entity"."id"
+          JOIN "Event" 
+            ON "EventToEntityLink"."eventId" = "Event"."id" 
+            AND "Event"."datasetId" = ${input.datasetId}
+          JOIN "Entity" 
+            ON "EventToEntityLink"."entityId" = "Entity"."id" 
+            AND "Entity"."datasetId" = ${input.datasetId}
           WHERE
-            "Event"."timestamp" >= to_timestamp(${Math.ceil(
+            "EventToEntityLink"."datasetId" = ${input.datasetId}
+            AND "Event"."timestamp" >= to_timestamp(${Math.ceil(
               input.startTime / 1000
             )})
             AND "Event"."timestamp" <= to_timestamp(${Math.ceil(
@@ -54,11 +59,14 @@ export const dashboardRouter = createTRPCRouter({
           GROUP BY
             "EventToEntityLink"."entityId",
             "Entity"."name",
-            "Entity"."type"
+            "Entity"."type",
+            "EventToEntityLink"."datasetId"
         )
         SELECT "RankedEntities"."id", "type", "EntityTcype"."name" as "typeName", "RankedEntities"."name", "count"
         FROM "RankedEntities"
-        JOIN "EntityType" ON "EntityType"."id" = "RankedEntities"."type"
+        JOIN "EntityType"
+          ON "EntityType"."id" = "RankedEntities"."type"
+          AND "EntityType"."datasetId" = ${input.datasetId}
         WHERE rn <= ${input.limit}
         ORDER BY "type", "typeName", "count" DESC;      
       `);
@@ -135,6 +143,7 @@ export const dashboardRouter = createTRPCRouter({
         label: z.string().optional(),
         eventFilters: eventFiltersZod,
         limit: z.number().default(10),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -156,7 +165,8 @@ export const dashboardRouter = createTRPCRouter({
                 COUNT(*) as "count"
             FROM "EntityAppearancesMatView"
             WHERE
-                "timestamp" >= to_timestamp(${startTimeInSeconds})
+                "datasetId" = ${input.datasetId}
+                AND "timestamp" >= to_timestamp(${startTimeInSeconds})
                 AND "timestamp" <= to_timestamp(${endTimeInSeconds})
                 AND "entityType" = '${input.type}'
                 ${input.label ? `AND "entityLabel" = '${input.label}'` : ""}
@@ -186,7 +196,8 @@ export const dashboardRouter = createTRPCRouter({
             SELECT DISTINCT("entityId")
             FROM "EntityAppearancesMatView"
             WHERE
-                "timestamp" >= to_timestamp(${startTimeInSeconds})
+                "datasetId" = ${input.datasetId}
+                AND "timestamp" >= to_timestamp(${startTimeInSeconds})
                 AND "timestamp" <= to_timestamp(${endTimeInSeconds})
                 AND "entityType" = '${input.type}'
                 ${input.label ? `AND "entityLabel" = '${input.label}'` : ""}
@@ -196,8 +207,10 @@ export const dashboardRouter = createTRPCRouter({
             feature.value AS "featureValue",
             COUNT(*) AS "count"
         FROM "UniqueEntities"
-        JOIN "Entity" ON "UniqueEntities"."entityId" = "Entity"."id",
-        jsonb_each_text("Entity"."features") AS feature
+        JOIN "Entity" 
+          ON "UniqueEntities"."entityId" = "Entity"."id" 
+            AND "Entity"."datasetId" = ${input.datasetId}, 
+            jsonb_each_text("Entity"."features") AS feature
         GROUP BY
             feature.key, feature.value
         ORDER BY
@@ -219,10 +232,12 @@ export const dashboardRouter = createTRPCRouter({
             SELECT DISTINCT
                 "eventId"
             FROM "EntityAppearancesMatView"
-            WHERE "timestamp" >= to_timestamp(${startTimeInSeconds})
-            AND "timestamp" <= to_timestamp(${endTimeInSeconds})
-            AND "entityType" = '${input.type}'
-            ${input.label ? `AND "entityLabel" = '${input.label}'` : ""}
+            WHERE 
+              "datasetId" = ${input.datasetId}
+              AND "timestamp" >= to_timestamp(${startTimeInSeconds})
+              AND "timestamp" <= to_timestamp(${endTimeInSeconds})
+              AND "entityType" = '${input.type}'
+              ${input.label ? `AND "entityLabel" = '${input.label}'` : ""}
         )
         SELECT
             "entityId",
@@ -232,8 +247,12 @@ export const dashboardRouter = createTRPCRouter({
             "eventType",
             COUNT(*) as "count"
         FROM "RelatedEvents"
-        JOIN "EntityAppearancesMatView" ON "RelatedEvents"."eventId" = "EntityAppearancesMatView"."eventId"
-        JOIN "Entity" ON "Entity"."id" = "EntityAppearancesMatView"."entityId"
+        JOIN "EntityAppearancesMatView" 
+          ON "RelatedEvents"."eventId" = "EntityAppearancesMatView"."eventId"
+          AND "EntityAppearancesMatView"."datasetId" = ${input.datasetId}
+        JOIN "Entity" 
+          ON "Entity"."id" = "EntityAppearancesMatView"."entityId"
+          AND "Entity"."datasetId" = ${input.datasetId}
         WHERE "EntityAppearancesMatView"."entityType" != '${input.type}'
         ${
           input.label
@@ -289,6 +308,7 @@ export const dashboardRouter = createTRPCRouter({
         label: z.string().optional(),
         eventFilters: eventFiltersZod,
         limit: z.number().default(10),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -306,6 +326,7 @@ export const dashboardRouter = createTRPCRouter({
               id: input.label,
             },
           },
+          datasetId: input.datasetId,
         },
         orderBy: {
           _count: {
@@ -324,6 +345,7 @@ export const dashboardRouter = createTRPCRouter({
         end: z.number(),
         eventFilters: eventFiltersZod,
         entityFilters: entityFiltersZod,
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -338,13 +360,19 @@ export const dashboardRouter = createTRPCRouter({
         intervalInSeconds,
       });
 
+      const whereDatasetIdMatches = {
+        where: {
+          datasetId: input.datasetId,
+        },
+      };
+
       // Get event and entity types
       const [eventLabels, entityLabels, eventTypes, entityTypes] =
         await ctx.prisma.$transaction([
-          ctx.prisma.eventLabel.findMany(),
-          ctx.prisma.entityLabel.findMany(),
-          ctx.prisma.eventType.findMany(),
-          ctx.prisma.entityType.findMany(),
+          ctx.prisma.eventLabel.findMany(whereDatasetIdMatches),
+          ctx.prisma.entityLabel.findMany(whereDatasetIdMatches),
+          ctx.prisma.eventType.findMany(whereDatasetIdMatches),
+          ctx.prisma.entityType.findMany(whereDatasetIdMatches),
         ]);
 
       type BucketProperties = {
@@ -362,52 +390,57 @@ export const dashboardRouter = createTRPCRouter({
 
       const eventType = input.eventFilters?.eventType;
 
-      const eventBucketRows = await ctx.prisma.$queryRawUnsafe<
-        Array<BucketRow>
-      >(` 
+      const eventBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>` 
         SELECT
           date_trunc('hour', "Event"."timestamp") AS "bucket",
           "Event"."type" AS "eventType",
           COUNT(DISTINCT "Event"."id") AS "count"
         FROM "EventToEntityLink"
         JOIN "Event" ON "Event"."id" = "EventToEntityLink"."eventId"
-        WHERE TRUE
-          ${eventType ? `AND "Event"."type" = '${eventType}'` : ""}
+        WHERE 
+          "Event"."datasetId" = ${input.datasetId}
+          ${
+            eventType
+              ? Prisma.sql`AND "Event"."type" = ${eventType}`
+              : Prisma.empty
+          }
           AND "Event"."timestamp" >= to_timestamp(${startInSeconds})
           AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
         GROUP BY 
           "bucket", 
           "Event"."type";
-      `);
+      `;
 
-      const eventLabelBucketRows = await ctx.prisma.$queryRawUnsafe<
-        Array<BucketRow>
-      >(`
+      const eventLabelBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
         SELECT
             date_trunc('hour', "Event"."timestamp") AS "bucket",
             "Event"."type" AS "eventType",
-            "_EventToEventLabel"."B" AS "eventLabel",
+            "EventLabelToEvent"."eventLabelId" AS "eventLabel",
             COUNT(DISTINCT "Event"."id") AS "count"
         FROM "Event"
-        JOIN "_EventToEventLabel" ON "_EventToEventLabel"."A" = "Event"."id"
-        WHERE TRUE
-            ${eventType ? `AND "Event"."type" = '${eventType}'` : ""}
+        JOIN "EventLabelToEvent" ON "EventLabelToEvent"."eventId" = "Event"."id"
+        WHERE 
+            "Event"."datasetId" = ${input.datasetId}
+            ${
+              eventType
+                ? Prisma.sql`AND "Event"."type" = ${eventType}`
+                : Prisma.empty
+            }
             AND "Event"."timestamp" >= to_timestamp(${startInSeconds})
             AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
         GROUP BY
             "bucket",
             "Event"."type",
             "eventLabel";
-      `);
-
-      const entityBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
-        SELECT * FROM "EntityTimeBucketsMatView"
       `;
 
-      const entityLabelBucketRows = await ctx.prisma.$queryRaw<
-        Array<BucketRow>
-      >`
-        SELECT * FROM "EntityLabelsTimeBucketsMatView"
+      const entityBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
+        SELECT * FROM "EntityTimeBucketsMatView" WHERE "datasetId" = ${input.datasetId}
+      `;
+
+      let entityLabelBucketRows;
+      entityLabelBucketRows = await ctx.prisma.$queryRaw<Array<BucketRow>>`
+        SELECT * FROM "EntityLabelsTimeBucketsMatView" WHERE "datasetId" = ${input.datasetId}
       `;
 
       function filter(rows: BucketRow[], filters: Partial<BucketProperties>) {
@@ -709,20 +742,17 @@ async function getTimeBuckets(
 ) {
   const { startInSeconds, endInSeconds, intervalInSeconds } = options;
 
-  const timeBucketsRaw = await prisma.$queryRawUnsafe<
-    Array<{
-      bucket: Date;
-    }>
-  >(`
-  WITH TimeBucketTable AS (
-    SELECT generate_series(
-        to_timestamp(${startInSeconds}), 
-        to_timestamp(${endInSeconds}), 
-        interval '1 second' * ${intervalInSeconds}
-    ) AS bucket   
-  )
-  SELECT * FROM TimeBucketTable;
-`);
+  const timeBucketsRaw = await prisma.$queryRaw<Array<{ bucket: Date }>>`
+    WITH TimeBucketTable AS (
+      SELECT generate_series(
+          to_timestamp(${startInSeconds}), 
+          to_timestamp(${endInSeconds}), 
+          interval '1 second' * ${intervalInSeconds}
+      ) AS bucket   
+    )
+    SELECT * FROM TimeBucketTable;
+  `;
+
   // Get line data.
   const timeBuckets = timeBucketsRaw.map((bucket) => bucket.bucket.getTime());
   // Pad empty buckets with 0

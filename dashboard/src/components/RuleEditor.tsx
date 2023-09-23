@@ -24,6 +24,7 @@ import {
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
+import { Subtitle, Title, Flex as TremorFlex } from "@tremor/react";
 import { ClassNames } from "@emotion/react";
 import { type File, type FileSnapshot } from "@prisma/client";
 import { subDays } from "date-fns";
@@ -41,6 +42,7 @@ import { RuleEditorSidebar } from "./RuleEditorSidebar";
 import { useRouter } from "next/router";
 import { useBeforeUnload } from "react-use";
 import { sortBy } from "lodash";
+import { Card } from "@tremor/react";
 
 interface Props {
   files: (File & { currentFileSnapshot: FileSnapshot })[];
@@ -200,6 +202,11 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
     }
   }, [debouncedSource, currentFile, recompile]);
 
+  //
+
+  const { mutateAsync: runTest } = api.datasets.backtest.useMutation();
+  const { data: datasets } = api.datasets.getAll.useQuery();
+
   return (
     <>
       <Flex h="95vh" gap={6} p={4}>
@@ -243,7 +250,8 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                 colorScheme="blue"
                 mr={1}
                 onClick={() => {
-                  let startDate = new Date("2023-07-01T00:00:00.000Z");
+                  let startDate = new Date();
+                  startDate = subDays(startDate, 100);
                   if (value === "3days") {
                     startDate = subDays(startDate, 3);
                   } else if (value === "1week") {
@@ -252,7 +260,8 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                     startDate = subDays(startDate, 30);
                   }
 
-                  init(startDate);
+                  runTest({ from: startDate, to: subDays(startDate, -0) });
+                  // init(startDate);
                   onModalClose();
                 }}
                 size="sm"
@@ -419,7 +428,21 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                   )}
                 </ClassNames>
               </TabPanel>
-              <TabPanel></TabPanel>
+              <TabPanel>(logs)</TabPanel>
+              <TabPanel>
+                <div className="flex flex-col gap-4 mt-4 max-w-4xl">
+                  {datasets
+                    ?.filter((dataset) => dataset.id !== 0)
+                    .map((dataset) => (
+                      <Card>
+                        <Title>{dataset.name}</Title>
+                        <Subtitle>
+                          Created: {dataset.createdAt.toLocaleString()}
+                        </Subtitle>
+                      </Card>
+                    ))}
+                </div>
+              </TabPanel>
             </TabPanels>
           </Tabs>
         </Box>

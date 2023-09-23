@@ -1,6 +1,11 @@
 import { compileSqrl } from "~/lib/compileSqrl";
 import { createSqrlInstance } from "~/lib/createSqrlInstance";
-import { batchUpsert, runEvent } from "~/lib/sqrlExecution";
+import {
+  Event,
+  batchUpsert,
+  batchUpsertRawEvents,
+  runEvent,
+} from "~/lib/sqrlExecution";
 import { prisma } from "~/server/db";
 import data from "./loadData";
 
@@ -36,9 +41,36 @@ class Queue {
 
 const queue = new Queue();
 
-const msgs = data;
+const msgs = data as Event[];
+
+async function seedRaw() {
+  // upsert raw events from JSON file into RawEvent table of db
+  const BATCH_SIZE = 3000;
+
+  for (let i = 0; i < msgs.length; i += BATCH_SIZE) {
+    const batch = msgs.slice(i, i + BATCH_SIZE);
+    const start = i;
+    const end = Math.min(i + BATCH_SIZE, msgs.length);
+    console.time(
+      `Queued raw events ${start} to ${end} of ${msgs.length} (${Math.round(
+        (end / msgs.length) * 100
+      )}%)`
+    );
+
+    queue.enqueue(() => batchUpsertRawEvents(batch));
+    queue.process().catch(console.error);
+
+    console.timeEnd(
+      `Queued raw events ${start} to ${end} of ${msgs.length} (${Math.round(
+        (end / msgs.length) * 100
+      )}%)`
+    );
+  }
+}
 
 async function main() {
+  await seedRaw();
+
   const instance = await createSqrlInstance({
     config: {
       "state.allow-in-memory": true,

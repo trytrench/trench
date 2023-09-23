@@ -69,7 +69,8 @@
     "superjson": "^1.13.1",
     "use-query-params": "^2.2.1",
     "yarn": "^1.22.19",
-    "zod": "^3.21.4"
+    "zod": "^3.21.4",
+    "zustand": "^4.4.1"
   },
   "devDependencies": {
     "@types/eslint": "^8.37.0",

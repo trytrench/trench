@@ -8,11 +8,11 @@ import {
 } from "../../../shared/jsonFilter";
 import {
   buildEntityExistsQuery,
-  buildEventExistsQuery,
   getEntityExistsSubqueries,
   getFiltersWhereQuery,
 } from "../../lib/filters";
-import { Entity, PrismaClient } from "@prisma/client";
+import { Entity, Prisma, PrismaClient } from "@prisma/client";
+import { AND_EVENT_MATCHES_FILTERS } from "~/server/lib/rawSQLHelpers";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -27,6 +27,7 @@ export const listsRouter = createTRPCRouter({
           .optional(),
         limit: z.number().optional(),
         offset: z.number().optional(),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -41,6 +42,7 @@ export const listsRouter = createTRPCRouter({
         }),
         getFilteredEntities(
           ctx.prisma,
+          input.datasetId,
           input.entityFilters?.entityType,
           input.entityFilters?.entityLabels,
           input.entityFilters?.entityFeatures,
@@ -61,6 +63,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.string().optional(),
         limit: z.number().optional(),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -70,9 +73,12 @@ export const listsRouter = createTRPCRouter({
 
       const [count, rows] = await Promise.all([
         ctx.prisma.event.count({
-          where: getFiltersWhereQuery(input.eventFilters),
+          where: {
+            ...getFiltersWhereQuery(input.eventFilters),
+            datasetId: input.datasetId,
+          },
         }),
-        ctx.prisma.$queryRawUnsafe<
+        ctx.prisma.$queryRaw<
           Array<{
             id: string;
             type: string;
@@ -84,7 +90,7 @@ export const listsRouter = createTRPCRouter({
               color: string;
             }>;
           }>
-        >(`
+        >`
           SELECT
             "Event"."id" as "id",
             "Event"."type" as "type",
@@ -92,16 +98,21 @@ export const listsRouter = createTRPCRouter({
             "Event"."timestamp" as "timestamp",
             JSON_AGG(
               json_build_object(
-                'id', "_EventToEventLabel"."B",
+                'id', "EventLabelToEvent"."eventLabelId",
                 'name', "EventLabel"."name",
                 'color', "EventLabel"."color"
               )
             ) as "labels"
           FROM "Event"
-          LEFT JOIN "_EventToEventLabel" ON "Event"."id" = "_EventToEventLabel"."A"
-          LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
-          WHERE ${buildEventExistsQuery(input.eventFilters)}
-          ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
+          LEFT JOIN "EventLabelToEvent" ON "Event"."id" = "EventLabelToEvent"."eventId"
+          LEFT JOIN "EventLabel" ON "EventLabelToEvent"."eventLabelId" = "EventLabel"."id"
+          WHERE 
+            "Event"."datasetId" = ${input.datasetId}
+            ${AND_EVENT_MATCHES_FILTERS(input.datasetId, input.eventFilters)} ${
+          cursor
+            ? Prisma.sql`AND "Event"."timestamp" <= ${Prisma.raw(cursor)}`
+            : Prisma.empty
+        }
           GROUP BY
             "Event"."id",
             "Event"."type",
@@ -109,7 +120,7 @@ export const listsRouter = createTRPCRouter({
             "Event"."timestamp"
           ORDER BY "Event"."timestamp" DESC
           LIMIT ${input.limit ?? 10}
-        `),
+        `,
       ]);
 
       return {
@@ -123,32 +134,18 @@ export const listsRouter = createTRPCRouter({
       };
     }),
 
-  // prob doesnt work
-  getFeatureColumnsForEventType: publicProcedure
-    .input(
-      z.object({
-        eventType: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const vals = await ctx.prisma.eventFeature.findMany({
-        where: {
-          eventType: input.eventType,
-        },
-      });
-      return vals;
-    }),
-
   getEvent: publicProcedure
     .input(
       z.object({
         eventId: z.string(),
+        datasetId: z.number().default(0),
       })
     )
     .query(async ({ ctx, input }) => {
       const event = await ctx.prisma.event.findUnique({
         where: {
           id: input.eventId,
+          datasetId: input.datasetId,
         },
         include: {
           eventLabels: true,
@@ -166,50 +163,11 @@ export const listsRouter = createTRPCRouter({
       });
       return event;
     }),
-
-  getEventsOfType: publicProcedure
-    .input(
-      z.object({
-        eventTypeId: z.string(),
-        limit: z.number().optional(),
-        offset: z.number().optional(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const [count, rows] = await Promise.all([
-        ctx.prisma.event.count({
-          where: {
-            eventType: {
-              id: input.eventTypeId,
-            },
-          },
-        }),
-        ctx.prisma.event.findMany({
-          where: {
-            eventType: {
-              id: input.eventTypeId,
-            },
-          },
-          include: {
-            eventLabels: true,
-            eventType: true,
-          },
-          orderBy: {
-            timestamp: "desc",
-          },
-          take: input.limit,
-          skip: input.offset,
-        }),
-      ]);
-      return {
-        count,
-        rows,
-      };
-    }),
 });
 
 async function getFilteredEntities(
   prisma: PrismaClient,
+  datasetId: number,
   entityType?: string,
   entityLabels?: string[],
   entityFeatures?: JsonFilter[],
@@ -258,7 +216,7 @@ async function getFilteredEntities(
       "Entity"."features" as "features",
       JSON_AGG(
         json_build_object(
-          'id', "_EntityToEntityLabel"."B",
+          'id', "EntityLabelToEntity"."entityLabelId",
           'name', "EntityLabel"."name",
           'color', "EntityLabel"."color"
         )
@@ -270,9 +228,9 @@ async function getFilteredEntities(
       FROM "EntityAppearancesMatView"
       GROUP BY "entityId"
     ) as matViewSubquery ON "Entity"."id" = matViewSubquery."entityId"
-    LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
-    LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
-    WHERE TRUE
+    LEFT JOIN "EntityLabelToEntity" ON "Entity"."id" = "EntityLabelToEntity"."entityId"
+    LEFT JOIN "EntityLabel" ON "EntityLabelToEntity"."entityLabelId" = "EntityLabel"."id"
+    WHERE "Entity"."datasetId" = ${datasetId}
       ${entityType ? `AND "Entity"."type" = '${entityType}'` : ""}
       ${
         entityLabels?.length
