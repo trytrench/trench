@@ -12,7 +12,7 @@ import { useMemo, useState } from "react";
 
 import { Popover } from "@headlessui/react";
 import { Select } from "@trytrench/tremor";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Hash, Type } from "lucide-react";
 import { JsonFilterOp } from "~/shared/jsonFilter";
 
 export type Filter = {
@@ -184,18 +184,32 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
                   </Button>
                 </Card>
               ) : (
-                <Select
-                  listOnly
-                  onValueChange={(value) => {
-                    setSelectedFeature(value);
-                  }}
-                >
-                  {features.map((feature) => (
-                    <SelectItem value={feature.name} key={feature.name}>
-                      {feature.name}
-                    </SelectItem>
-                  ))}
-                </Select>
+                <>
+                  <Select
+                    listOnly
+                    onValueChange={(value) => {
+                      setSelectedFeature(value);
+                    }}
+                  >
+                    {features.map((feature) => (
+                      <SelectItem
+                        key={feature.name}
+                        value={feature.name}
+                        icon={feature.dataType === "number" ? Hash : Type}
+                      >
+                        {feature.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                  <style global jsx>
+                    {`
+                      .tremor-SelectItem-icon {
+                        height: 1rem;
+                        width: 1rem;
+                      }
+                    `}
+                  </style>
+                </>
               )}
             </Popover.Panel>
           </>

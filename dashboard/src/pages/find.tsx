@@ -34,7 +34,7 @@ import { Navbar } from "~/components/Navbar";
 import { RouterOutputs, api } from "~/utils/api";
 
 import { JsonFilterOp } from "~/shared/jsonFilter";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Hash, Type } from "lucide-react";
 import FeatureFilter, { Filter } from "~/components/FeatureFilter";
 
 function EntityCard({
@@ -204,11 +204,23 @@ function EntitiesPage() {
                   }}
                 >
                   {entityFeatures?.map((feature) => (
-                    <SelectItem value={feature.name} key={feature.name}>
+                    <SelectItem
+                      value={feature.name}
+                      key={feature.name}
+                      icon={feature.dataType === "number" ? Hash : Type}
+                    >
                       {feature.name}
                     </SelectItem>
                   ))}
                 </Select>
+                <style global jsx>
+                  {`
+                    .tremor-SelectItem-icon {
+                      height: 1rem;
+                      width: 1rem;
+                    }
+                  `}
+                </style>
               </div>
             </>
           )}
