@@ -79,10 +79,10 @@ export const Navbar = () => {
       {isDesktop ? (
         <Box flex={1} flexDirection="row" display="flex">
           <HStack spacing={6}>
-            <NavItem href="/dashboard">Data Explorer</NavItem>
             <NavItem href="/events">Events</NavItem>
             <NavItem href="/find">Finder</NavItem>
             <NavItem href="/rules">Rules</NavItem>
+            <NavItem href="/dashboard">Data Explorer</NavItem>
           </HStack>
           <Box flex={1} />
           <HStack spacing={4} fontSize="sm">
