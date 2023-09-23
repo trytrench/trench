@@ -35,7 +35,7 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { AreaChart } from "@tremor/custom-react";
+import { AreaChart } from "@trytrench/tremor";
 import { ReferenceArea, ReferenceLine } from "recharts";
 import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
 import {
