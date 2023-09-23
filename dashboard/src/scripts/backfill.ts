@@ -44,7 +44,7 @@ async function main() {
       "state.allow-in-memory": true,
     },
     // config: {
-    //   "redis.address": process.env.SQRL_REDIS,
+    //   "redis.address": process.env.SQRL_REDIS_URL,
     // },
   });
 

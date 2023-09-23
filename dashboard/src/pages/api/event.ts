@@ -29,7 +29,7 @@ export default async function handler(
 
   const instance = await createSqrlInstance({
     config: {
-      "redis.address": env.SQRL_REDIS,
+      "redis.address": env.SQRL_REDIS_URL,
     },
   });
 
