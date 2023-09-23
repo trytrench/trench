@@ -19,12 +19,11 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         entityFilters: entityFiltersZod,
-        sortBy: z
-          .object({
-            feature: z.string().optional(),
-            direction: z.enum(["asc", "desc"]).optional(),
-          })
-          .optional(),
+        sortBy: z.object({
+          feature: z.string(),
+          direction: z.enum(["asc", "desc"]),
+          dataType: z.enum(["string", "number", "boolean"]).optional(),
+        }),
         limit: z.number().optional(),
         offset: z.number().optional(),
       })
@@ -215,7 +214,11 @@ async function getFilteredEntities(
   entityFeatures?: JsonFilter[],
   limit?: number,
   offset?: number,
-  sortBy?: { feature: string; direction: "asc" | "desc" }
+  sortBy?: {
+    feature: string;
+    direction: "asc" | "desc";
+    dataType?: "string" | "number";
+  }
 ) {
   const features =
     entityFeatures
@@ -234,7 +237,9 @@ async function getFilteredEntities(
   const showFeatures = entityFeatures?.length ? true : false;
 
   const orderByFeature = sortBy?.feature
-    ? `"Entity"."features"->>'${sortBy.feature}' ${sortBy.direction}`
+    ? `("Entity"."features"->>'${sortBy.feature}')${
+        sortBy.dataType === "number" ? "::NUMERIC" : ""
+      } ${sortBy.direction}`
     : `matViewSubquery."timestamp" DESC`;
 
   const rawResults = await prisma.$queryRawUnsafe<

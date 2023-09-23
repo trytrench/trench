@@ -15,7 +15,7 @@ model EventType {
   id   String @id
   name String
 
-  events Event[]
+  events      Event[]
   eventLabels EventLabel[]
 
   features EventFeature[]
@@ -34,8 +34,6 @@ model Event {
 
   features Json @default("{}")
 
-
-
   @@index([data(ops: JsonbPathOps)], type: Gin)
   @@index([type, id])
   @@index([timestamp])
@@ -45,9 +43,11 @@ model Event {
 
 model EventFeature {
   eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType      String
+  eventType    String
 
-  name String
+  dataType String @default("string")
+
+  name        String
   description String?
 
   @@id([eventType, name])
@@ -55,10 +55,12 @@ model EventFeature {
 
 model EntityFeature {
   entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType      String
+  entityType    String
 
-  name String
+  name        String
   description String?
+
+  dataType String @default("string")
 
   @@id([entityType, name])
 }
@@ -68,14 +70,14 @@ model EntityType {
   name String
 
   entityLabels EntityLabel[]
-  entities Entity[]
+  entities     Entity[]
 
   entityFeatures EntityFeature[]
 }
 
 model Entity {
-  id   String @id @default(dbgenerated("nanoid()"))
-  name String
+  id       String @id @default(dbgenerated("nanoid()"))
+  name     String
   features Json   @default("{}")
 
   entityType EntityType @relation(fields: [type], references: [id])
@@ -102,8 +104,8 @@ model EventToEntityLink {
   createdAt DateTime @default(now())
 
   linkType LinkType @relation(fields: [type], references: [id])
-  type String
-  data Json   @default("{}")
+  type     String
+  data     Json     @default("{}")
 
   event   Event  @relation(fields: [eventId], references: [id])
   eventId String
@@ -164,10 +166,10 @@ model EntityLabel {
   description String
 
   entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType     String
+  entityType    String
 
-  labelTypeObj   EntityLabelType @relation(fields: [labelType], references: [id])
-  labelType String
+  labelTypeObj EntityLabelType @relation(fields: [labelType], references: [id])
+  labelType    String
 
   entities Entity[]
 
@@ -191,10 +193,10 @@ model EventLabel {
   description String
 
   eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType     String
+  eventType    String
 
-  labelTypeObj   EventLabelType @relation(fields: [labelType], references: [id])
-  labelType String
+  labelTypeObj EventLabelType @relation(fields: [labelType], references: [id])
+  labelType    String
 
   events Event[]
 
