@@ -29,7 +29,7 @@ interface Props {
 export default function FeatureFilter({ features, onAddFilter }: Props) {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [filterValue, setFilterValue] = useState("");
-  const [filterOp, setFilterOp] = useState("Equal to");
+  const [filterOp, setFilterOp] = useState("");
 
   const selectedFeatureDataType = useMemo(
     () =>
@@ -107,17 +107,19 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
     [selectedFeatureDataType]
   );
 
+  const showInput = filterOp !== "Is empty" && filterOp !== "Not empty";
+
   return (
     <>
       <Popover>
         {({ open, close }) => (
           <>
-            <Popover.Button size="xs" as={Button}>
+            <Popover.Button size="xs" as={Button} variant="secondary">
               Add filter
             </Popover.Button>
             <Popover.Panel>
               {selectedFeature ? (
-                <Card className="mt-1 absolute z-10 max-w-sm shadow-tremor-dropdown">
+                <Card className="mt-1 absolute z-10 max-w-xs shadow-tremor-dropdown p-4">
                   <Flex className="justify-start">
                     <Icon
                       size="sm"
@@ -125,7 +127,9 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
                       onClick={() => setSelectedFeature(null)}
                       className="pl-0"
                     />
-                    <Text className="truncate">{selectedFeature}</Text>
+                    <Text className="truncate font-semibold">
+                      {selectedFeature}
+                    </Text>
                     <Select
                       className="w-4 ml-auto"
                       value={filterOp}
@@ -139,16 +143,15 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
                     </Select>
                   </Flex>
 
-                  {selectedFeatureDataType === "string" ? (
+                  {!showInput ? undefined : selectedFeatureDataType ===
+                    "string" ? (
                     <TextInput
                       value={filterValue}
                       className="mt-4"
                       onChange={(event) => setFilterValue(event.target.value)}
                     />
                   ) : (
-                    selectedFeatureDataType === "number" &&
-                    filterOp !== "Is empty" &&
-                    filterOp !== "Not empty" && (
+                    selectedFeatureDataType === "number" && (
                       <NumberInput
                         className="mt-4"
                         value={filterValue}
@@ -159,6 +162,7 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
                   <Button
                     size="xs"
                     className="mt-4"
+                    disabled={showInput && !filterValue}
                     onClick={() => {
                       close();
                       const option = filterOptions.find(
