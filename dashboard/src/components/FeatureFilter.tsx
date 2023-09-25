@@ -39,13 +39,13 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
   const commonFilterOptions = [
     {
       label: "Is empty",
-      op: JsonFilterOp.Equal,
-      value: "NULL",
+      op: JsonFilterOp.IsEmpty,
+      value: "",
     },
     {
       label: "Not empty",
-      op: JsonFilterOp.NotEqual,
-      value: "NULL",
+      op: JsonFilterOp.NotEmpty,
+      value: "",
     },
   ];
 

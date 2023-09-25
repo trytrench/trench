@@ -223,7 +223,11 @@ async function getFilteredEntities(
   const features =
     entityFeatures
       ?.map(({ path, op, value, dataType }) => {
-        // const parsedValue = parseValue(value);
+        if (op === JsonFilterOp.IsEmpty)
+          return `AND "Entity"."features"->>'${path}' IS NULL OR "Entity"."features"->>'${path}' = ''`;
+        if (op === JsonFilterOp.NotEmpty)
+          return `AND "Entity"."features"->>'${path}' IS NOT NULL AND "Entity"."features"->>'${path}' != ''`;
+
         const sqlOperator = {
           [JsonFilterOp.Equal]: "=",
           [JsonFilterOp.NotEqual]: "!=",

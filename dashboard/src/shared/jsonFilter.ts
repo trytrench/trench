@@ -11,6 +11,8 @@ export enum JsonFilterOp {
   DoesNotContain = "does not contain",
   StartsWith = "starts with",
   EndsWith = "ends with",
+  IsEmpty = "is empty",
+  NotEmpty = "not empty",
 }
 
 export const JSON_FILTER_OPS: { label: string; value: JsonFilterOp }[] = [
