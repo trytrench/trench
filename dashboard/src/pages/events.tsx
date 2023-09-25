@@ -8,31 +8,17 @@ import {
   Skeleton,
 } from "@chakra-ui/react";
 
-import { useMemo, useState } from "react";
-import { Navbar } from "~/components/Navbar";
-import { RouterOutputs, api } from "~/utils/api";
-import {
-  Badge,
-  Card,
-  List,
-  ListItem,
-  Text,
-  TextInput,
-  Title,
-} from "@tremor/react";
-import { SelectOptionFlat } from "../components/SelectOptionFlat";
-import { ArrayParam, StringParam, useQueryParam } from "use-query-params";
+import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { Badge, Card, List, ListItem, Text, Title } from "@tremor/react";
 import clsx from "clsx";
-import { Select as ChakraReactSelect } from "chakra-react-select";
 import { format } from "date-fns";
 import { uniqBy } from "lodash";
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { useMemo, useState } from "react";
+import { StringParam, useQueryParam } from "use-query-params";
+import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
-
-function processArray(array: (string | null)[] | null | undefined) {
-  if (!array) return [];
-  return array.filter((item) => item !== null) as string[];
-}
+import { Navbar } from "~/components/Navbar";
+import { RouterOutputs, api } from "~/utils/api";
 
 type EventCardProps = {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
@@ -220,9 +206,9 @@ function EventDrawer(props: {
                 <Badge
                   key={label.id}
                   color={label.color}
-                  className="py-0 cursor-pointer"
+                  className="cursor-pointer"
                 >
-                  <span className="text-xs">{label.name}</span>
+                  {label.name}
                 </Badge>
               );
             })}
@@ -266,30 +252,11 @@ function EventDrawer(props: {
             {selectedEventData?.entityLinks.map((link) => {
               const entity = link.entity;
               return (
-                <Card key={entity.id} className="p-2">
-                  <Text>
-                    {link.type}: {entity.type}: {entity.name}
-                  </Text>
-                  <div className="h-2"></div>
-                  <div className="flex flex-wrap gap-1">
-                    {entity.entityLabels.length === 0 && (
-                      <Badge color="gray" className="py-0 cursor-pointer">
-                        <span className="text-xs">No labels</span>
-                      </Badge>
-                    )}
-                    {entity.entityLabels.map((label) => {
-                      return (
-                        <Badge
-                          key={label.id}
-                          color={label.color}
-                          className="py-0 cursor-pointer"
-                        >
-                          <span className="text-xs">{label.name}</span>
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </Card>
+                <EntityCard
+                  key={link.id}
+                  entity={{ ...entity, labels: entity.entityLabels }}
+                  relation={link.type}
+                />
               );
             })}
           </div>
