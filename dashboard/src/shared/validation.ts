@@ -11,6 +11,7 @@ export const eventFiltersZod = z
       .optional(),
     eventType: z.string().optional(),
     eventLabels: z.array(z.string()).optional(),
+    eventFeatures: z.array(jsonFilterZod).optional(),
   })
   .optional();
 

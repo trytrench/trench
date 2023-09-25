@@ -15,7 +15,7 @@ import { Select } from "@trytrench/tremor";
 import { ChevronLeft, Hash, Type } from "lucide-react";
 import { JsonFilterOp } from "~/shared/jsonFilter";
 
-export type Filter = {
+export type FeatureFilterType = {
   path: string;
   op: JsonFilterOp;
   value: number;
@@ -23,7 +23,7 @@ export type Filter = {
 
 interface Props {
   features: { name: string; dataType: string }[];
-  onAddFilter: (filter: Filter) => void;
+  onAddFilter: (filter: FeatureFilterType) => void;
 }
 
 export default function FeatureFilter({ features, onAddFilter }: Props) {

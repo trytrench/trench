@@ -5,6 +5,7 @@ import {
   DrawerCloseButton,
   DrawerContent,
   DrawerHeader,
+  Skeleton,
 } from "@chakra-ui/react";
 
 import { useMemo, useState } from "react";
@@ -26,6 +27,7 @@ import { Select as ChakraReactSelect } from "chakra-react-select";
 import { format } from "date-fns";
 import { uniqBy } from "lodash";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { Filter, useFilters } from "~/components/Filter";
 
 function processArray(array: (string | null)[] | null | undefined) {
   if (!array) return [];
@@ -82,41 +84,20 @@ function EventCard({ event, selected, ...rest }: EventCardProps) {
 
 function EventsPage() {
   const [eventType, setEventType] = useQueryParam("eventType", StringParam);
+  const { type, features, labels, sortBy } = useFilters();
 
-  const { data: eventTypes } = api.labels.getEventTypes.useQuery();
-  const eventTypeOptions =
-    eventTypes?.map((eventType) => ({
-      label: eventType.name,
-      value: eventType.id,
-    })) ?? [];
+  const { data: eventTypes, isLoading: eventTypesLoading } =
+    api.labels.getEventTypes.useQuery();
 
-  const [eventLabelsQuery, setEventLabels] = useQueryParam(
-    "eventLabel",
-    ArrayParam,
-    { enableBatching: true }
-  );
-  const { data: eventLabels } = api.labels.getEventLabels.useQuery({
-    eventType: eventType ?? undefined,
-  });
-  const eventLabelOptions = useMemo(() => {
-    return (
-      eventLabels?.map((eventLabel) => ({
-        label: eventLabel.name,
-        value: eventLabel.id,
-        colorScheme: eventLabel.color,
-      })) ?? []
-    );
-  }, [eventLabels]);
-
-  const selectedEventLabelOptions = useMemo(() => {
-    return eventLabelOptions.filter((option) => {
-      return eventLabelsQuery?.includes(option.value) ?? false;
+  const { data: eventLabels, isLoading: eventLabelsLoading } =
+    api.labels.getEventLabels.useQuery({
+      eventType: type,
     });
-  }, [eventLabelsQuery, eventLabelOptions]);
 
-  const { data: eventFeatures } = api.labels.getEventFeatures.useQuery({
-    eventType: eventType ?? undefined,
-  });
+  const { data: eventFeatures, isLoading: eventFeaturesLoading } =
+    api.labels.getEventFeatures.useQuery({
+      eventType: type,
+    });
 
   const [limit, setLimit] = useState(100);
 
@@ -124,8 +105,9 @@ function EventsPage() {
     api.lists.getEventsList.useInfiniteQuery(
       {
         eventFilters: {
-          eventType: eventType ?? undefined,
-          eventLabels: processArray(eventLabelsQuery),
+          eventType: type,
+          eventLabels: labels,
+          eventFeatures: features,
         },
         limit: limit,
       },
@@ -154,79 +136,14 @@ function EventsPage() {
       <div className="flex-1 w-full flex items-stretch">
         <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
           <Title>Events</Title>
-
-          <Text className="font-semibold text-lg mb-2 mt-6">Type</Text>
-          <div className="bg-tremor-background-subtle p-1 flex flex-wrap items-center gap-1 rounded-md">
-            <SelectOptionFlat
-              onSelect={(value) => {
-                // Clear eventLabel query param when eventType changes
-                setEventLabels(undefined);
-              }}
-              queryParamKey="eventType"
-              options={eventTypeOptions}
-              renderOption={(option, { handleClick, selected }) => {
-                return (
-                  <button
-                    onClick={() => handleClick(option.value)}
-                    className={clsx({
-                      "transition border rounded-md text-base font-semibold":
-                        true,
-                      "text-tremor-content hover:text-tremor-content-emphasis border-transparent":
-                        !selected,
-                      "text-tremor-brand bg-white border-gray shadow-sm":
-                        selected,
-                      "px-2 py-0.5": true,
-                    })}
-                  >
-                    {option.label}
-                  </button>
-                );
-              }}
+          {eventFeaturesLoading || eventLabelsLoading || eventTypesLoading ? (
+            <Skeleton />
+          ) : (
+            <Filter
+              types={eventTypes}
+              labels={eventLabels}
+              features={eventFeatures}
             />
-          </div>
-
-          {eventType && (
-            <>
-              <Text className="font-semibold text-lg mb-2 mt-6">
-                {`\`${eventType}\` `}
-                Labels
-              </Text>
-              {eventLabelOptions.length > 0 ? (
-                <ChakraReactSelect
-                  className="w-full flex flex-wrap"
-                  isMulti
-                  isClearable={false}
-                  value={selectedEventLabelOptions}
-                  onChange={(value) => {
-                    setEventLabels(value?.map((option) => option.value));
-                  }}
-                  options={eventLabelOptions}
-                ></ChakraReactSelect>
-              ) : (
-                <div className="w-full py-1 flex justify-center items-center bg-tremor-background-subtle">
-                  <Text className="text-sm text-tremor-content-subtle">
-                    No labels to filter by
-                  </Text>
-                </div>
-              )}
-
-              <Text className="font-semibold text-lg mb-2 mt-6">
-                {`\`${eventType}\` `}
-                Features
-              </Text>
-              <div className="flex flex-col gap-2">
-                {eventFeatures?.map((feature, idx) => {
-                  return (
-                    <div className="w-full" key={idx}>
-                      <Text className="whitespace-no-wrap text-xs">
-                        {feature.name}
-                      </Text>
-                      <TextInput placeholder="Filter..." className="w-full" />
-                    </div>
-                  );
-                })}
-              </div>
-            </>
           )}
         </div>
         <div className="relative flex-1">

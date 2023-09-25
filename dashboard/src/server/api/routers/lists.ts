@@ -64,6 +64,9 @@ export const listsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
+      const features = filters?.eventFeatures
+        ? getFeaturesFilter(filters.eventFeatures, `"Event"."features"`)
+        : "";
 
       const cursor = input.cursor;
 
@@ -101,6 +104,7 @@ export const listsRouter = createTRPCRouter({
           LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
           WHERE ${buildEventExistsQuery(input.eventFilters)}
           ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
+          ${features}
           GROUP BY
             "Event"."id",
             "Event"."type",
@@ -207,6 +211,38 @@ export const listsRouter = createTRPCRouter({
     }),
 });
 
+const getFeaturesFilter = (filters: JsonFilter[], jsonPath: string) => {
+  return filters
+    .map(({ path, op, value, dataType }) => {
+      if (op === JsonFilterOp.IsEmpty)
+        return `AND ${jsonPath}->>'${path}' IS NULL OR ${jsonPath}->>'${path}' = ''`;
+      if (op === JsonFilterOp.NotEmpty)
+        return `AND ${jsonPath}->>'${path}' IS NOT NULL AND ${jsonPath}->>'${path}' != ''`;
+
+      const sqlOperator = {
+        [JsonFilterOp.Equal]: "=",
+        [JsonFilterOp.NotEqual]: "!=",
+        [JsonFilterOp.GreaterThan]: ">",
+        [JsonFilterOp.LessThan]: "<",
+      }[op];
+
+      if (sqlOperator)
+        return `AND (${jsonPath}->>'${path}')${
+          dataType === "number" ? "::NUMERIC" : ""
+        } ${sqlOperator} ${dataType === "number" ? value : `'${value}'`}`;
+
+      const sqlOperator2 = {
+        [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
+        [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
+        [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
+        [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
+      }[op];
+
+      if (sqlOperator2) return `AND ${jsonPath}->>'${path}' ${sqlOperator2}`;
+    })
+    .join(" ");
+};
+
 async function getFilteredEntities(
   prisma: PrismaClient,
   entityType?: string,
@@ -220,38 +256,9 @@ async function getFilteredEntities(
     dataType?: "string" | "number";
   }
 ) {
-  const features =
-    entityFeatures
-      ?.map(({ path, op, value, dataType }) => {
-        if (op === JsonFilterOp.IsEmpty)
-          return `AND "Entity"."features"->>'${path}' IS NULL OR "Entity"."features"->>'${path}' = ''`;
-        if (op === JsonFilterOp.NotEmpty)
-          return `AND "Entity"."features"->>'${path}' IS NOT NULL AND "Entity"."features"->>'${path}' != ''`;
-
-        const sqlOperator = {
-          [JsonFilterOp.Equal]: "=",
-          [JsonFilterOp.NotEqual]: "!=",
-          [JsonFilterOp.GreaterThan]: ">",
-          [JsonFilterOp.LessThan]: "<",
-        }[op];
-
-        if (sqlOperator)
-          return `AND ("Entity"."features"->>'${path}')${
-            dataType === "number" ? "::NUMERIC" : ""
-          } ${sqlOperator} ${dataType === "number" ? value : `'${value}'`}`;
-
-        const sqlOperator2 = {
-          [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
-          [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
-          [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
-          [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
-        }[op];
-
-        if (sqlOperator2)
-          return `AND "Entity"."features"->>'${path}' ${sqlOperator2}`;
-      })
-      .join(" ") ?? "";
-  const showFeatures = entityFeatures?.length ? true : false;
+  const features = entityFeatures
+    ? getFeaturesFilter(entityFeatures, `"Entity"."features"`)
+    : "";
 
   const orderByFeature = sortBy?.feature
     ? `("Entity"."features"->>'${sortBy.feature}')${
@@ -309,7 +316,7 @@ async function getFilteredEntities(
               .join("\n")
           : ""
       }
-      ${showFeatures ? `${features}` : ""}
+      ${features}
     GROUP BY
       "Entity"."id",
       "Entity"."type",
