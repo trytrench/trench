@@ -238,7 +238,7 @@ async function getFilteredEntities(
         if (sqlOperator)
           return `AND ("Entity"."features"->>'${path}')${
             dataType === "number" ? "::NUMERIC" : ""
-          } ${sqlOperator} ${value}`;
+          } ${sqlOperator} ${dataType === "number" ? value : `'${value}'`}`;
 
         const sqlOperator2 = {
           [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
