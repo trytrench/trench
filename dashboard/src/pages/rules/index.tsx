@@ -10,12 +10,12 @@ const Page = () => {
   } = api.files.list.useQuery();
 
   return (
-    <>
+    <div className="h-screen max-h-screen flex flex-col">
       <Navbar />
       {isLoading ? null : (
         <RuleEditor files={files} refetchFiles={refetchFiles} />
       )}
-    </>
+    </div>
   );
 };
 
