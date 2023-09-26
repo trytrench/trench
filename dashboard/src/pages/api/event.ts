@@ -7,7 +7,7 @@ import { batchUpsert, runEvent } from "~/lib/sqrlExecution";
 import { prisma } from "~/server/db";
 
 const eventSchema = z.object({
-  timestamp: z.string(),
+  timestamp: z.string().optional(),
   type: z.string(),
   data: z.record(z.unknown()),
 });
