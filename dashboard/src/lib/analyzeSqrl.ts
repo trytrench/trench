@@ -39,8 +39,6 @@ export async function analyze(instance: Params[0], fileData: Params[1]) {
 
   //
 
-  // TODO: this is wrong.
-  // very condition-y handling of Ast types - surely there's a better way.
   const traverse = (node: Ast, letCtx: string | null = null) => {
     if (node.type === "call") {
       const args = constantArgs(node.args);
@@ -60,8 +58,6 @@ export async function analyze(instance: Params[0], fileData: Params[1]) {
         entity.labels.add(`${args[1]}:${args[2]}`);
       }
     }
-
-    // bogus traversal case handling
 
     if (node.type === "include") {
       if (!alreadyIncludedFiles.has(node.filename)) {
