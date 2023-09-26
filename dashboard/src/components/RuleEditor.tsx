@@ -27,7 +27,15 @@ import {
 import { ClassNames } from "@emotion/react";
 import { type File, type FileSnapshot } from "@prisma/client";
 import { subDays } from "date-fns";
-import { Check, History, MoreHorizontal, PlusCircle, X } from "lucide-react";
+import {
+  Check,
+  History,
+  MoreHorizontal,
+  PlusCircle,
+  TextIcon,
+  TypeIcon,
+  X,
+} from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileListItem } from "~/components/FileListItem";
@@ -41,6 +49,18 @@ import { RuleEditorSidebar } from "./RuleEditorSidebar";
 import { useRouter } from "next/router";
 import { useBeforeUnload } from "react-use";
 import { sortBy } from "lodash";
+import { analyze } from "~/lib/analyzeSqrl";
+import {
+  Accordion,
+  AccordionList,
+  AccordionHeader,
+  AccordionBody,
+  Badge,
+  Card,
+  Text,
+  Title,
+} from "@tremor/react";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface Props {
   files: (File & { currentFileSnapshot: FileSnapshot })[];
@@ -133,6 +153,9 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
 
   const [sqrlFunctions, setFunctions] = useState<FunctionInfoMap | null>(null);
 
+  type AnalysisType = Awaited<ReturnType<typeof analyze>>;
+  const [analysis, setAnalysis] = useState<AnalysisType | null>(null);
+
   const recompile = useCallback(async () => {
     setCompileStatus({ status: "pending", message: "Recompiling…" });
 
@@ -154,6 +177,9 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
         status: "success",
         message: "Compiled successfully",
       });
+
+      const analysis = await analyze(instance, fileData);
+      setAnalysis(analysis);
     } catch (error) {
       setCompileStatus({
         status: "error",
@@ -201,229 +227,296 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
   }, [debouncedSource, currentFile, recompile]);
 
   return (
-    <>
-      <Flex h="95vh" gap={6} p={4}>
-        <PublishModal
-          isOpen={isPublishModalOpen}
-          onClose={onPublishModalClose}
-          onPublish={(version, description) => {
-            publishFile({
-              id: currentFileId,
-              version,
-              description,
-              code: source,
-            })
-              .then(() => refetchFiles())
-              .catch((error) =>
-                toast({ title: error.message, status: "error" })
-              );
-            onPublishModalClose();
-          }}
-          initialVersion={currentFile?.currentFileSnapshot.version || "0.0.0"}
-        />
+    <Flex flexGrow={1} gap={6} p={4}>
+      <PublishModal
+        isOpen={isPublishModalOpen}
+        onClose={onPublishModalClose}
+        onPublish={(version, description) => {
+          publishFile({
+            id: currentFileId,
+            version,
+            description,
+            code: source,
+          })
+            .then(() => refetchFiles())
+            .catch((error) => toast({ title: error.message, status: "error" }));
+          onPublishModalClose();
+        }}
+        initialVersion={currentFile?.currentFileSnapshot.version || "0.0.0"}
+      />
 
-        <Modal isOpen={isModalOpen} onClose={onModalClose}>
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Test rules</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              <Select
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-              >
-                <option value="3days">3 days</option>
-                <option value="1week">1 week</option>
-                <option value="1month">1 month</option>
-              </Select>
-            </ModalBody>
+      <Modal isOpen={isModalOpen} onClose={onModalClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Test rules</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Select
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+            >
+              <option value="3days">3 days</option>
+              <option value="1week">1 week</option>
+              <option value="1month">1 month</option>
+            </Select>
+          </ModalBody>
 
-            <ModalFooter>
+          <ModalFooter>
+            <Button
+              colorScheme="blue"
+              mr={1}
+              onClick={() => {
+                let startDate = new Date("2023-07-01T00:00:00.000Z");
+                if (value === "3days") {
+                  startDate = subDays(startDate, 3);
+                } else if (value === "1week") {
+                  startDate = subDays(startDate, 7);
+                } else if (value === "1month") {
+                  startDate = subDays(startDate, 30);
+                }
+
+                init(startDate);
+                onModalClose();
+              }}
+              size="sm"
+            >
+              Run test
+            </Button>
+            <Button variant="ghost" size="sm">
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <RuleEditorSidebar
+        fileSnapshots={currentFile?.fileSnapshots ?? []}
+        isOpen={isDrawerOpen}
+        onClose={onDrawerClose}
+        finalFocusRef={btnRef}
+      />
+
+      <Box w={200}>
+        <VStack
+          spacing={2}
+          divider={<Box height={"1px"} w={"100%"} bg="gray.200" />}
+          borderColor="gray.200"
+        >
+          <HStack>
+            <Input placeholder="Search" size="sm" />
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Save"
+              icon={<Icon as={PlusCircle} fontSize="sm" />}
+              onClick={() => {
+                createFile({ name: "Untitled" })
+                  .then(() => refetchFiles())
+                  .catch((error) =>
+                    toast({ title: error.message, status: "error" })
+                  );
+              }}
+            />
+          </HStack>
+          {sortBy(files, (file) => file.createdAt).map((file) => (
+            <FileListItem
+              key={file.id}
+              active={currentFileId === file.id}
+              onClick={() => {
+                setCurrentFileId(file.id);
+              }}
+              onRename={(name) => {
+                renameFile({ id: file.id, name })
+                  .then(() => refetchFiles())
+                  .catch((error) =>
+                    toast({ title: error.message, status: "error" })
+                  );
+              }}
+              name={file.name}
+              onDelete={() => {
+                const newSources = { ...sources };
+                delete newSources[file.id];
+                setSources(newSources);
+
+                deleteFile({ id: file.id })
+                  .then(() => refetchFiles())
+                  .catch((error) =>
+                    toast({ title: error.message, status: "error" })
+                  );
+              }}
+              hasError={compileStatus.errorMarker?.fileName === file.name}
+              hasUnsavedChanges={
+                file.currentFileSnapshot.code !== sources[file.id]
+              }
+            />
+          ))}
+        </VStack>
+      </Box>
+
+      <Box flex={2} overflow={"hidden"}>
+        <Tabs size="sm" display="flex" flexDir="column" height="100%">
+          <TabList>
+            <Tab>Code</Tab>
+            <Tab>Logs</Tab>
+            <Tab>Results</Tab>
+            <HStack ml="auto" spacing={1} mb={1}>
+              {shouldCompile(currentFile) ? (
+                <Box mr="2">
+                  {compileStatus.status === "pending" ? (
+                    <Spinner size="sm" speed="0.8s" />
+                  ) : compileStatus.status === "error" ? (
+                    <Icon fontSize="18" as={X} color="red.500" />
+                  ) : compileStatus.status === "success" ? (
+                    <Icon fontSize="18" as={Check} color="green.500" />
+                  ) : null}
+                </Box>
+              ) : null}
+
               <Button
-                colorScheme="blue"
-                mr={1}
-                onClick={() => {
-                  let startDate = new Date("2023-07-01T00:00:00.000Z");
-                  if (value === "3days") {
-                    startDate = subDays(startDate, 3);
-                  } else if (value === "1week") {
-                    startDate = subDays(startDate, 7);
-                  } else if (value === "1month") {
-                    startDate = subDays(startDate, 30);
-                  }
-
-                  init(startDate);
-                  onModalClose();
-                }}
+                onClick={onModalOpen}
                 size="sm"
+                isDisabled={compileStatus.status !== "success"}
               >
-                Run test
+                Test
               </Button>
-              <Button variant="ghost" size="sm">
-                Cancel
+              <Button
+                onClick={onPublishModalOpen}
+                size="sm"
+                colorScheme="blue"
+                isDisabled={
+                  (compileStatus.status !== "success" &&
+                    shouldCompile(currentFile)) ||
+                  currentFile?.currentFileSnapshot.code === source
+                }
+              >
+                Publish
               </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-
-        <RuleEditorSidebar
-          fileSnapshots={currentFile?.fileSnapshots ?? []}
-          isOpen={isDrawerOpen}
-          onClose={onDrawerClose}
-          finalFocusRef={btnRef}
-        />
-
-        <Box w={200}>
-          <VStack
-            spacing={2}
-            divider={<Box height={"1px"} w={"100%"} bg="gray.200" />}
-            borderColor="gray.200"
-          >
-            <HStack>
-              <Input placeholder="Search" size="sm" />
               <IconButton
-                size="xs"
+                size="sm"
                 variant="ghost"
                 aria-label="Save"
-                icon={<Icon as={PlusCircle} fontSize="sm" />}
-                onClick={() => {
-                  createFile({ name: "Untitled" })
-                    .then(() => refetchFiles())
-                    .catch((error) =>
-                      toast({ title: error.message, status: "error" })
-                    );
-                }}
+                icon={<Icon as={History} fontSize="lg" />}
+                onClick={onDrawerOpen}
+                ref={btnRef}
+              />
+              <IconButton
+                size="sm"
+                variant="ghost"
+                aria-label="Save"
+                icon={<Icon as={MoreHorizontal} fontSize="lg" />}
               />
             </HStack>
-            {sortBy(files, (file) => file.createdAt).map((file) => (
-              <FileListItem
-                key={file.id}
-                active={currentFileId === file.id}
-                onClick={() => {
-                  setCurrentFileId(file.id);
-                }}
-                onRename={(name) => {
-                  renameFile({ id: file.id, name })
-                    .then(() => refetchFiles())
-                    .catch((error) =>
-                      toast({ title: error.message, status: "error" })
-                    );
-                }}
-                name={file.name}
-                onDelete={() => {
-                  const newSources = { ...sources };
-                  delete newSources[file.id];
-                  setSources(newSources);
+          </TabList>
 
-                  deleteFile({ id: file.id })
-                    .then(() => refetchFiles())
-                    .catch((error) =>
-                      toast({ title: error.message, status: "error" })
-                    );
-                }}
-                hasError={compileStatus.errorMarker?.fileName === file.name}
-                hasUnsavedChanges={
-                  file.currentFileSnapshot.code !== sources[file.id]
-                }
-              />
-            ))}
-          </VStack>
-        </Box>
+          <TabPanels flexGrow={1} display="flex">
+            <TabPanel
+              display="flex"
+              flexGrow={1}
+              position="relative"
+              minH={0}
+              padding={0}
+            >
+              <ClassNames>
+                {({ css }) => (
+                  <MonacoEditor
+                    className={css({
+                      width: "70%",
+                      height: "100%",
+                    })}
+                    key={currentFileId}
+                    value={source || ""}
+                    markers={
+                      compileStatus.errorMarker
+                        ? [compileStatus.errorMarker]
+                        : undefined
+                    }
+                    sqrlFunctions={sqrlFunctions}
+                    onChange={(newSource) => {
+                      setSources((prev) => ({
+                        ...prev,
+                        [currentFileId]: newSource,
+                      }));
+                    }}
+                    options={{
+                      automaticLayout: true,
+                      padding: { top: 16 },
+                      fontSize: 14,
+                      // scrollbar: { alwaysConsumeMouseWheel: false },
+                    }}
+                    // isDarkMode={isDarkMode}
+                  />
+                )}
+              </ClassNames>
+              <div className="pl-4 p-1 flex flex-col gap-4 overflow-y-auto h-full relative grow">
+                {analysis ? (
+                  <div className=" absolute top-0 left-0 bottom-0 right-0 p-4">
+                    <Title className="text-2xl">Outline</Title>
+                    <Text className="font-semibold pt-4 pb-1">
+                      Event Features
+                    </Text>
+                    <div className="flex flex-col pl-4">
+                      {analysis.eventFeatures.map((feature) => (
+                        <Text className="flex">
+                          <span className="my-auto mr-1">
+                            <TypeIcon size={16} />
+                          </span>
+                          {feature as string}
+                        </Text>
+                      ))}
+                    </div>
 
-        <Box flex={2} overflow={"hidden"}>
-          <Tabs h="100%" size="sm">
-            <TabList>
-              <Tab>Code</Tab>
-              <Tab>Logs</Tab>
-              <Tab>Results</Tab>
-              <HStack ml="auto" spacing={1} mb={1}>
-                {shouldCompile(currentFile) ? (
-                  <Box mr="2">
-                    {compileStatus.status === "pending" ? (
-                      <Spinner size="sm" speed="0.8s" />
-                    ) : compileStatus.status === "error" ? (
-                      <Icon fontSize="18" as={X} color="red.500" />
-                    ) : compileStatus.status === "success" ? (
-                      <Icon fontSize="18" as={Check} color="green.500" />
-                    ) : null}
-                  </Box>
+                    <Text className="font-semibold pt-4 pb-2">
+                      Event Labels
+                    </Text>
+                    <div className="flex gap-2 flex-wrap pl-4">
+                      {analysis.eventLabels.map((label) => (
+                        <Badge>{label}</Badge>
+                      ))}
+                    </div>
+
+                    <Text className="font-semibold pt-4 pb-2">Entities</Text>
+
+                    <AccordionList>
+                      {Object.entries(analysis.entities).map(
+                        ([entityName, entityData]) => (
+                          <Accordion>
+                            <AccordionHeader>{entityName}</AccordionHeader>
+                            <AccordionBody>
+                              <Text className="font-semibold pb-1">
+                                Event Features
+                              </Text>
+                              <div className="flex flex-col pl-4">
+                                {entityData.features.map((feature) => (
+                                  <Text className="flex">
+                                    <span className="my-auto mr-1">
+                                      <TypeIcon size={16} />
+                                    </span>
+                                    {feature as string}
+                                  </Text>
+                                ))}
+                              </div>
+
+                              <Text className="font-semibold pt-4 pb-2">
+                                Event Labels
+                              </Text>
+                              <div className="flex gap-2 flex-wrap pl-4 mb-4">
+                                {entityData.labels.map((label) => (
+                                  <Badge>{label}</Badge>
+                                ))}
+                              </div>
+                            </AccordionBody>
+                          </Accordion>
+                        )
+                      )}
+                    </AccordionList>
+                  </div>
                 ) : null}
-
-                <Button
-                  onClick={onModalOpen}
-                  size="sm"
-                  isDisabled={compileStatus.status !== "success"}
-                >
-                  Test
-                </Button>
-                <Button
-                  onClick={onPublishModalOpen}
-                  size="sm"
-                  colorScheme="blue"
-                  isDisabled={
-                    (compileStatus.status !== "success" &&
-                      shouldCompile(currentFile)) ||
-                    currentFile?.currentFileSnapshot.code === source
-                  }
-                >
-                  Publish
-                </Button>
-                <IconButton
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Save"
-                  icon={<Icon as={History} fontSize="lg" />}
-                  onClick={onDrawerOpen}
-                  ref={btnRef}
-                />
-                <IconButton
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Save"
-                  icon={<Icon as={MoreHorizontal} fontSize="lg" />}
-                />
-              </HStack>
-            </TabList>
-
-            <TabPanels h="100%">
-              <TabPanel h="100%">
-                <ClassNames>
-                  {({ css }) => (
-                    <MonacoEditor
-                      className={css({
-                        height: "100%",
-                        width: "100%",
-                      })}
-                      key={currentFileId}
-                      value={source || ""}
-                      markers={
-                        compileStatus.errorMarker
-                          ? [compileStatus.errorMarker]
-                          : undefined
-                      }
-                      sqrlFunctions={sqrlFunctions}
-                      onChange={(newSource) => {
-                        setSources((prev) => ({
-                          ...prev,
-                          [currentFileId]: newSource,
-                        }));
-                      }}
-                      options={{
-                        automaticLayout: true,
-                        padding: { top: 16 },
-                        fontSize: 14,
-                        // scrollbar: { alwaysConsumeMouseWheel: false },
-                      }}
-                      // isDarkMode={isDarkMode}
-                    />
-                  )}
-                </ClassNames>
-              </TabPanel>
-              <TabPanel></TabPanel>
-            </TabPanels>
-          </Tabs>
-        </Box>
-      </Flex>
-    </>
+              </div>
+            </TabPanel>
+            <TabPanel></TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+    </Flex>
   );
 };
