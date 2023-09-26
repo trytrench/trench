@@ -80,11 +80,18 @@ export const listsRouter = createTRPCRouter({
             type: string;
             data: string;
             timestamp: Date;
+            features: Record<string, any>;
             labels: Array<{
               id: string;
               name: string;
               color: string;
             }>;
+            entities: {
+              id: string;
+              name: string;
+              type: string;
+              features: Record<string, any>;
+            }[];
           }>
         >(`
           SELECT
@@ -92,16 +99,27 @@ export const listsRouter = createTRPCRouter({
             "Event"."type" as "type",
             "Event"."data" as "data",
             "Event"."timestamp" as "timestamp",
+            "Event"."features" as "features",
             JSON_AGG(
               json_build_object(
                 'id', "_EventToEventLabel"."B",
                 'name', "EventLabel"."name",
                 'color', "EventLabel"."color"
               )
-            ) as "labels"
+            ) as "labels",
+            JSON_AGG(
+              json_build_object(
+                'id', "EventToEntityLink"."entityId",
+                'name', "Entity"."name",
+                'type', "Entity"."type",
+                'features', "Entity"."features"
+              )
+            ) as "entities"
           FROM "Event"
           LEFT JOIN "_EventToEventLabel" ON "Event"."id" = "_EventToEventLabel"."A"
           LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
+          LEFT JOIN "EventToEntityLink" ON "Event"."id" = "EventToEntityLink"."eventId"
+          LEFT JOIN "Entity" ON "EventToEntityLink"."entityId" = "Entity"."id"
           WHERE ${buildEventExistsQuery(input.eventFilters)}
           ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
           ${features}
@@ -271,7 +289,7 @@ async function getFilteredEntities(
       id: string;
       name: string;
       type: string;
-      features: string;
+      features: Record<string, any>;
       labels: Array<{
         id: string;
         name: string;

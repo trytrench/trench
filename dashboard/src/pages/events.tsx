@@ -1,5 +1,4 @@
 import {
-  Button,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
@@ -9,15 +8,28 @@ import {
 } from "@chakra-ui/react";
 
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import { Badge, Card, List, ListItem, Text, Title } from "@tremor/react";
+import {
+  Badge,
+  Bold,
+  Button,
+  Card,
+  Icon,
+  List,
+  ListItem,
+  Text,
+  Title,
+} from "@tremor/react";
 import clsx from "clsx";
 import { format } from "date-fns";
 import { uniqBy } from "lodash";
+import { AlignJustify, LayoutGrid } from "lucide-react";
 import { useMemo, useState } from "react";
 import { StringParam, useQueryParam } from "use-query-params";
 import { EntityCard } from "~/components/EntityCard";
+import { EventCard } from "~/components/EventCard";
 import { Filter, useFilters } from "~/components/Filter";
 import { Navbar } from "~/components/Navbar";
+import { SelectOptionFlat } from "~/components/SelectOptionFlat";
 import { RouterOutputs, api } from "~/utils/api";
 
 type EventCardProps = {
@@ -25,7 +37,30 @@ type EventCardProps = {
   selected?: boolean;
 } & React.HTMLAttributes<HTMLButtonElement>;
 
-function EventCard({ event, selected, ...rest }: EventCardProps) {
+function truncateObject(obj, maxLength) {
+  let result = {};
+
+  function traverse(o) {
+    if (typeof o === "object" && o !== null) {
+      let str = JSON.stringify(o);
+      return str.length > maxLength ? str.substr(0, maxLength) + "..." : str;
+    } else if (typeof o === "string") {
+      return o; // return string value without quotes
+    } else {
+      return String(o); // for other types (number, boolean, etc.), convert to string
+    }
+  }
+
+  for (const key in obj) {
+    if (Object.hasOwnProperty.call(obj, key)) {
+      result[key] = traverse(obj[key]);
+    }
+  }
+
+  return result;
+}
+
+function EventListItem({ event, selected, ...rest }: EventCardProps) {
   const [eventType] = useQueryParam("eventType", StringParam);
   const { data: eventLabels } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
@@ -36,19 +71,19 @@ function EventCard({ event, selected, ...rest }: EventCardProps) {
         "px-8 w-full flex items-center text-xs font-mono cursor-pointer text-left":
           true,
         "hover:bg-gray-50": !selected,
-        "bg-gray-200 font-bold": selected,
+        "bg-gray-200": selected,
       })}
       {...rest}
     >
       <Text className="w-32 mr-4 whitespace-nowrap shrink-0 text-xs py-1">
-        {format(event.timestamp, "MM/dd HH:mm:ss a")}
+        {format(event.timestamp, "MMM d, HH:mm:ss")}
       </Text>
       <Text className="w-28 mr-4 whitespace-nowrap shrink-0 text-xs truncate">
         {event.type}
       </Text>
       {eventLabels?.length ? (
         <span className="w-24 mr-4 overflow-hidden flex gap-1 shrink-0">
-          {event.labels.map((label) => (
+          {uniqBy(event.labels, (label) => label.id).map((label) => (
             <Badge
               size="xs"
               key={label.id}
@@ -62,13 +97,18 @@ function EventCard({ event, selected, ...rest }: EventCardProps) {
       ) : null}
 
       <Text className="truncate flex-1 w-0 text-xs">
-        {JSON.stringify(event.data)}
+        {Object.entries(truncateObject(event.data, 100)).map(([key, value]) => (
+          <span key={key}>
+            <Bold>{key}: </Bold> {value}{" "}
+          </span>
+        ))}
       </Text>
     </button>
   );
 }
 
 function EventsPage() {
+  const [view, setView] = useState<"grid" | "list">("list");
   const [eventType, setEventType] = useQueryParam("eventType", StringParam);
   const { type, features, labels, sortBy } = useFilters();
 
@@ -133,12 +173,45 @@ function EventsPage() {
           )}
         </div>
         <div className="relative flex-1">
-          <div className="h-full flex flex-col overflow-y-auto">
-            <div className="h-8 shrink-0"></div>
+          <div className="flex justify-end py-2 px-4 border-b border-b-tremor-border">
+            <div className="flex  bg-tremor-background-subtle rounded-md p-0.5">
+              <div onClick={() => setView("grid")}>
+                {view === "grid" ? (
+                  <Card className="p-0">
+                    <Icon icon={LayoutGrid} size="xs" color="gray" />
+                  </Card>
+                ) : (
+                  <Icon
+                    icon={LayoutGrid}
+                    size="xs"
+                    color="gray"
+                    onClick={() => setView("list")}
+                  />
+                )}
+              </div>
 
-            {flattenedEvents?.map((event) => {
-              return (
-                <EventCard
+              {view === "list" ? (
+                <Card className="p-0">
+                  <Icon icon={AlignJustify} size="xs" color="gray" />
+                </Card>
+              ) : (
+                <Icon
+                  icon={AlignJustify}
+                  size="xs"
+                  color="gray"
+                  onClick={() => setView("list")}
+                />
+              )}
+            </div>
+          </div>
+          <div
+            className={clsx("h-full flex flex-col overflow-y-auto px-4 pt-2", {
+              "gap-4": view === "grid",
+            })}
+          >
+            {flattenedEvents?.map((event) =>
+              view === "list" ? (
+                <EventListItem
                   key={event.id}
                   event={event}
                   onClick={() => {
@@ -146,13 +219,14 @@ function EventsPage() {
                   }}
                   selected={selectedEventId === event.id}
                 />
-              );
-            })}
+              ) : (
+                <EventCard key={event.id} event={event} />
+              )
+            )}
 
             <div className="h-4"></div>
             <div className="w-full flex justify-center mt-2">
               <Button
-                variant="outline"
                 size="xs"
                 onClick={() => {
                   fetchNextPage().catch((err) => {
