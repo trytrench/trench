@@ -28,7 +28,7 @@ export const EntityCard = ({ entity, relation }: Props) => {
           </Text>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entity.labels.length > 0 ? (
+          {entity.labels.filter((label) => label.id).length > 0 ? (
             entity.labels.map((label, idx) => {
               return (
                 <Badge key={idx} color={label.color} size="xs">
