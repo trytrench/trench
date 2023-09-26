@@ -114,7 +114,7 @@ export function EventTimeChart({
     <Card>
       <Title>{title}</Title>
       <AreaChart
-        className="h-72 mt-4"
+        className="h-48 mt-4"
         data={
           timeBuckets?.map((bucket) => ({
             date: format(addDays(new Date(bucket.bucket), 1), "MMM d"),

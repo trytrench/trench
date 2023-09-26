@@ -36,10 +36,11 @@ import {
   TabPanels,
   Select,
   SelectItem,
+  Icon,
 } from "@tremor/react";
 import { differenceInMinutes, format, formatRelative } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { FileQuestion, LogIn } from "lucide-react";
+import { AlignJustify, FileQuestion, LayoutGrid, LogIn } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NumberParam, StringParam, useQueryParam } from "use-query-params";
@@ -54,6 +55,9 @@ import { EventTimeChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
 import { RenderEntity } from "../../components/RenderEntity";
 import clsx from "clsx";
+import { EventListItem } from "../../components/EventListItem";
+import { EventDrawer } from "../../components/EventDrawer";
+import { EventCard } from "../../components/EventCard";
 
 type EntityType = RouterOutputs["entities"]["get"];
 
@@ -241,61 +245,13 @@ function shouldAddToBatch(batch: BatchType, event: EventType) {
   );
 }
 
-type EventCardProps = {
-  event: RouterOutputs["entities"]["findEvents"][number];
-  selected?: boolean;
-} & React.HTMLAttributes<HTMLButtonElement>;
-
-function EventCard({ event, selected, ...rest }: EventCardProps) {
-  const [eventType] = useQueryParam("eventType", StringParam);
-  const router = useRouter();
-  const entityId = router.query.entityId as string | undefined;
-
-  const { data: eventLabels } = api.labels.getEventLabels.useQuery({
-    eventType: eventType ?? undefined,
-  });
-
-  const selfLink = event.entityLinks.find((link) => link.entityId === entityId);
-
-  return (
-    <button
-      className={clsx({
-        "px-6 w-full flex items-center text-xs font-mono cursor-pointer text-left":
-          true,
-        "hover:bg-gray-50": !selected,
-        "bg-gray-200 font-bold": selected,
-      })}
-      {...rest}
-    >
-      <Text className="w-32 mr-4 whitespace-nowrap shrink-0 text-xs py-1">
-        {format(event.timestamp, "MM/dd HH:mm:ss a")}
-      </Text>
-      <Text className="w-56 mr-4 whitespace-nowrap shrink-0 text-xs truncate">
-        {selfLink?.type} in {event.type}
-      </Text>
-      {eventLabels?.length ? (
-        <span className="w-40 mr-4 overflow-hidden flex gap-1 shrink-0">
-          {event.eventLabels.map((label) => (
-            <Badge
-              size="xs"
-              key={label.id}
-              color={label.color}
-              className="py-0 cursor-pointer"
-            >
-              <span className="text-xs">{label.name}</span>
-            </Badge>
-          ))}
-        </span>
-      ) : null}
-
-      <Text className="truncate flex-1 w-0 text-xs">
-        {JSON.stringify(event.data)}
-      </Text>
-    </button>
-  );
-}
-
-function RenderEvents({ entityId }: { entityId?: string }) {
+function RenderEvents({
+  entityId,
+  view,
+}: {
+  entityId?: string;
+  view: "list" | "grid";
+}) {
   const [dateRange] = useDateRange();
   const { data } = api.entities.findEvents.useQuery({
     entityId: entityId ?? "",
@@ -308,11 +264,52 @@ function RenderEvents({ entityId }: { entityId?: string }) {
     },
   });
 
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
   return (
     <Stack spacing={2}>
-      {data?.map((event) => (
-        <EventCard event={event} isTopLevel={true} />
-      ))}
+      {data?.map((event) =>
+        view === "list" ? (
+          <EventListItem
+            key={event.id}
+            event={event}
+            onClick={() => {
+              setSelectedEventId(event.id);
+            }}
+            selected={selectedEventId === event.id}
+          />
+        ) : (
+          <EventCard
+            key={event.id}
+            event={{
+              ...event,
+              labels: event.eventLabels.map((el) => ({
+                id: el.id,
+                name: el.name,
+                color: el.color,
+              })),
+              entities: event.entityLinks.map((el) => ({
+                id: el.entity.id,
+                name: el.entity.name,
+                type: el.entity.type,
+                labels: el.entity.entityLabels.map((el) => ({
+                  id: el.id,
+                  name: el.name,
+                  color: el.color,
+                })),
+                features: el.entity.features,
+              })),
+            }}
+          />
+        )
+      )}
+      <EventDrawer
+        selectedEventId={selectedEventId}
+        isOpen={!!selectedEventId}
+        onClose={() => {
+          setSelectedEventId(null);
+        }}
+      />
     </Stack>
   );
 }
@@ -457,6 +454,7 @@ export default function Home() {
   );
 
   const [tab, setTab] = useQueryParam("tab", NumberParam);
+  const [view, setView] = useState<"grid" | "list">("list");
 
   return (
     <>
@@ -554,11 +552,62 @@ export default function Home() {
                           entityId,
                         }}
                       />
-                      <Card className="p-0">
-                        <Title className="p-6 pb-0">Events</Title>
+                    </div>
+                    <div className="col-span-1">
+                      <EventLabelDistribution
+                        color={"gray"}
+                        title={"Label Distribution"}
+                        legend="Events"
+                        entityFilters={{
+                          entityId,
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Card className="p-0 pt-6">
+                        <div className="flex items-center">
+                          <Title className="px-6">Events</Title>
+                          <div className="flex  bg-tremor-background-subtle rounded-md p-0.5">
+                            <div onClick={() => setView("grid")}>
+                              {view === "grid" ? (
+                                <Card className="p-0">
+                                  <Icon
+                                    icon={LayoutGrid}
+                                    size="xs"
+                                    color="gray"
+                                  />
+                                </Card>
+                              ) : (
+                                <Icon
+                                  icon={LayoutGrid}
+                                  size="xs"
+                                  color="gray"
+                                  onClick={() => setView("list")}
+                                />
+                              )}
+                            </div>
+
+                            {view === "list" ? (
+                              <Card className="p-0">
+                                <Icon
+                                  icon={AlignJustify}
+                                  size="xs"
+                                  color="gray"
+                                />
+                              </Card>
+                            ) : (
+                              <Icon
+                                icon={AlignJustify}
+                                size="xs"
+                                color="gray"
+                                onClick={() => setView("list")}
+                              />
+                            )}
+                          </div>
+                        </div>
                         <div className="h-4"></div>
                         {/* <DonutChart /> */}
-                        <RenderEvents entityId={entityId} />
+                        <RenderEvents entityId={entityId} view={view} />
                       </Card>
                     </div>
                   </div>

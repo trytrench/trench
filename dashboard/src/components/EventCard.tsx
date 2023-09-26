@@ -55,7 +55,7 @@ export const EventCard = ({ event }: Props) => {
           </Box>
         ))}
       </SimpleGrid>
-
+      <div className="h-2"></div>
       <AccordionList>
         {event.entities.map((entity) => (
           <Accordion key={entity.id}>
