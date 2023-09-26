@@ -75,8 +75,8 @@ export function useEntityFilters(override?: Partial<EntityFilters>) {
   const allFilters: EntityFilters = useMemo(() => {
     return {
       entityLabels: processArray(entityLabels),
-      entityType: entityType ?? null,
-      entityId: null,
+      entityType: entityType ?? undefined,
+      entityId: undefined,
       ...override,
     };
   }, [entityLabels, entityType, override]);

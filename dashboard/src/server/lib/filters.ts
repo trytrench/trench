@@ -54,9 +54,9 @@ export function getEventExistsSubqueries(filters: EventFilters) {
       : "",
     dateRange: filters?.dateRange
       ? `"Event"."timestamp" >= to_timestamp(${
-          filters.dateRange.start / 1000
+          filters.dateRange.from / 1000
         }) AND
-        "Event"."timestamp" <= to_timestamp(${filters.dateRange.end / 1000})`
+        "Event"."timestamp" <= to_timestamp(${filters.dateRange.to / 1000})`
       : "",
   };
 }
