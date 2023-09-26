@@ -329,65 +329,51 @@ export const entitiesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const relatedEntities = await ctx.prisma.$queryRawUnsafe<
         Array<{
-          id: string;
-          type: string;
-          name: string;
-          linkCount: number;
-          entityLabels: Array<string>;
+          entityId: string;
+          entityType: string;
+          entityName: string;
+          linkType: string;
+          eventType: string;
+          count: number;
+          // entityLabels: Array<{
+          //   id: string;
+          //   name: string;
+          //   color: string;
+          // }>;
         }>
       >(`
-        SELECT
-            "Entity"."id",
-            "Entity"."type",
-            "Entity"."name",
-            "EntityType"."name" AS "type_name",
-            COUNT(DISTINCT "LinkToInput"."eventId") AS "linkCount",
-            ARRAY_AGG(DISTINCT "EntityLabel"."name" || '|' || "EntityLabel"."color") AS "entityLabels"
-        FROM
-            "Entity"
-        JOIN
-            "EntityType" ON "Entity"."type" = "EntityType"."id"
-        JOIN
-            "EventToEntityLink" ON "EventToEntityLink"."entityId" = "Entity"."id"
-        JOIN
-            "Event" ON "Event"."id" = "EventToEntityLink"."eventId"
-        LEFT JOIN
-            "EventToEntityLink" AS "LinkToInput" ON "LinkToInput"."eventId" = "Event"."id" AND "LinkToInput"."entityId" = '${input.id}'
-        LEFT JOIN
-            "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
-        LEFT JOIN
-            "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
-        WHERE
-            "Entity"."id" != '${input.id}'
-            AND "EntityType"."name" = '${input.entityType}'
-            AND EXISTS (
-                SELECT 1
-                FROM "EventToEntityLink" AS "SubLink"
-                WHERE
-                    "SubLink"."eventId" = "Event"."id" AND "SubLink"."entityId" = '${input.id}'
-            )
-        GROUP BY
-            "Entity"."id", "Entity"."type", "Entity"."name", "EntityType"."name"
-        ORDER BY
-            COUNT(DISTINCT "EntityLabel"."id") DESC,
-            COUNT(DISTINCT "LinkToInput"."eventId") DESC;
-
-  
+      WITH "RelatedEvents" AS (
+          SELECT DISTINCT
+              "eventId"
+          FROM "EntityAppearancesMatView"
+          WHERE "entityId" = '${input.id}'
+      )
+      SELECT
+          "entityId",
+          "entityType",
+          "Entity"."name" AS "entityName",
+          "linkType",
+          "eventType",
+          COUNT(*) as "count"
+      FROM "RelatedEvents"
+      JOIN "EntityAppearancesMatView" ON "RelatedEvents"."eventId" = "EntityAppearancesMatView"."eventId"
+      JOIN "Entity" ON "Entity"."id" = "EntityAppearancesMatView"."entityId"
+      WHERE "EntityAppearancesMatView"."entityId" != '${input.id}'
+      GROUP BY
+          "entityId",
+          "entityName",
+          "entityType",
+          "linkType",
+          "eventType"
+      ORDER BY
+          "count" DESC
+      LIMIT 10
       `);
 
       return relatedEntities.map((entity) => ({
         ...entity,
-        linkCount: Number(entity.linkCount),
-        entityLabels: entity.entityLabels.flatMap((label) => {
-          if (!label) return [];
-          const arr = label.split("|");
-          return [
-            {
-              name: arr[0] ?? "",
-              color: arr[1] ?? "",
-            },
-          ];
-        }),
+        count: Number(entity.count),
+        // entityLabels: entity.entityLabels.filter((label) => !!label.id),
       }));
     }),
 });

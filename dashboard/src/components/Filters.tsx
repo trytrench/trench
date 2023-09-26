@@ -34,7 +34,7 @@ import {
 const TODAY = dayjs(new Date());
 
 export const DEFAULT_DATE_RANGE = {
-  from: TODAY.add(-7, "day").toDate(),
+  from: TODAY.add(-90, "day").toDate(),
   to: TODAY.toDate(),
 };
 
@@ -336,7 +336,7 @@ export function EntityLabelFilter() {
   );
 }
 
-function useDateRange() {
+export function useDateRange() {
   const [dateRangeQuery, setDateRangeQuery] = useQueryParams({
     from: NumberParam,
     to: NumberParam,
@@ -344,8 +344,12 @@ function useDateRange() {
 
   const dateRangeValue = useMemo(() => {
     return {
-      from: dateRangeQuery.from ? new Date(dateRangeQuery.from) : undefined,
-      to: dateRangeQuery.to ? new Date(dateRangeQuery.to) : undefined,
+      from: dateRangeQuery.from
+        ? new Date(dateRangeQuery.from)
+        : DEFAULT_DATE_RANGE.from,
+      to: dateRangeQuery.to
+        ? new Date(dateRangeQuery.to)
+        : DEFAULT_DATE_RANGE.to,
     };
   }, [dateRangeQuery]);
 

@@ -6,7 +6,6 @@ import {
   HStack,
   Stack,
   Tag,
-  Text,
   Tooltip,
 } from "@chakra-ui/react";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
@@ -15,31 +14,44 @@ import {
   AccordionBody,
   AccordionHeader,
   AccordionList,
+  BarList,
   Card,
   List,
   ListItem,
   Metric,
   Subtitle,
   Table,
+  Text,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
   Title,
+  Badge,
+  TabList,
+  TabGroup,
+  Tab,
+  TabPanel,
+  TabPanels,
 } from "@tremor/react";
 import { differenceInMinutes, format, formatRelative } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { FileQuestion, LogIn } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useMemo } from "react";
-import { StringParam, useQueryParam } from "use-query-params";
-import { DateRangePicker, EntityTypeFilter } from "~/components/Filters";
+import { NumberParam, StringParam, useQueryParam } from "use-query-params";
+import {
+  DateRangePicker,
+  EntityTypeFilter,
+  useDateRange,
+} from "~/components/Filters";
 import { api, type RouterOutputs } from "~/utils/api";
 import { EventLabelDistribution } from "../../components/EventLabelDistribution";
 import { EventTimeChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
 import { RenderEntity } from "../../components/RenderEntity";
+import clsx from "clsx";
 
 type EntityType = RouterOutputs["entities"]["get"];
 
@@ -227,16 +239,77 @@ function shouldAddToBatch(batch: BatchType, event: EventType) {
   );
 }
 
+type EventCardProps = {
+  event: RouterOutputs["entities"]["findEvents"][number];
+  selected?: boolean;
+} & React.HTMLAttributes<HTMLButtonElement>;
+
+function EventCard({ event, selected, ...rest }: EventCardProps) {
+  const [eventType] = useQueryParam("eventType", StringParam);
+  const router = useRouter();
+  const entityId = router.query.entityId as string | undefined;
+
+  const { data: eventLabels } = api.labels.getEventLabels.useQuery({
+    eventType: eventType ?? undefined,
+  });
+
+  const selfLink = event.entityLinks.find((link) => link.entityId === entityId);
+
+  return (
+    <button
+      className={clsx({
+        "px-6 w-full flex items-center text-xs font-mono cursor-pointer text-left":
+          true,
+        "hover:bg-gray-50": !selected,
+        "bg-gray-200 font-bold": selected,
+      })}
+      {...rest}
+    >
+      <Text className="w-32 mr-4 whitespace-nowrap shrink-0 text-xs py-1">
+        {format(event.timestamp, "MM/dd HH:mm:ss a")}
+      </Text>
+      <Text className="w-56 mr-4 whitespace-nowrap shrink-0 text-xs truncate">
+        {selfLink?.type} in {event.type}
+      </Text>
+      {eventLabels?.length ? (
+        <span className="w-40 mr-4 overflow-hidden flex gap-1 shrink-0">
+          {event.eventLabels.map((label) => (
+            <Badge
+              size="xs"
+              key={label.id}
+              color={label.color}
+              className="py-0 cursor-pointer"
+            >
+              <span className="text-xs">{label.name}</span>
+            </Badge>
+          ))}
+        </span>
+      ) : null}
+
+      <Text className="truncate flex-1 w-0 text-xs">
+        {JSON.stringify(event.data)}
+      </Text>
+    </button>
+  );
+}
+
 function RenderEvents({ entityId }: { entityId?: string }) {
+  const [dateRange] = useDateRange();
   const { data } = api.entities.findEvents.useQuery({
     entityId: entityId ?? "",
     limit: 100,
+    filters: {
+      dateRange: {
+        from: dateRange.from.getTime(),
+        to: dateRange.to.getTime(),
+      },
+    },
   });
 
   return (
     <Stack spacing={2}>
       {data?.map((event) => (
-        <RenderEvent event={event} isTopLevel={true} />
+        <EventCard event={event} isTopLevel={true} />
       ))}
     </Stack>
   );
@@ -247,16 +320,25 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
 
   const { data } = api.entities.findRelatedEntities.useQuery({
     id: entityId ?? "",
-    entityType,
   });
 
   return (
     <Card>
-      <Title>Related Entities</Title>
-      <Box mt={2} />
-      <EntityTypeFilter />
+      <Title>Top Related Entities</Title>
+      <Text>most frequently seen in the same event</Text>
+      <div className="h-4"></div>
+      {/* <EntityTypeFilter /> */}
       <div className="flex flex-col max-h-80">
-        <Table className="mt-2">
+        <BarList
+          data={
+            data?.map((entity) => ({
+              name: `${entity.entityType}: ${entity.entityName} as ${entity.linkType} on ${entity.eventType}`,
+              value: entity.count,
+              color: "blue",
+            })) ?? []
+          }
+        />
+        {/* <Table className="mt-2">
           <TableHead>
             <TableRow>
               <TableHeaderCell>Type</TableHeaderCell>
@@ -295,7 +377,7 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </Table> */}
       </div>
     </Card>
   );
@@ -347,62 +429,29 @@ export default function Home() {
     [entityData]
   );
 
+  const [tab, setTab] = useQueryParam("tab", NumberParam);
+
   return (
     <>
       <Navbar />
 
-      <div className="p-6 border-b">
-        <Metric className="shrink-0 font-normal">
-          {entityData?.type}: <b>{entityData?.name}</b>
-        </Metric>
-        <Subtitle>ID: {entityData?.id}</Subtitle>
-      </div>
-
-      <main>
-        <div className="grid grid-cols-4 gap-4 p-4">
-          <div className="col-span-3 flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 grid gap-4 grid-cols-2 auto-rows-min">
-                <div className="col-span-2">
-                  <DateRangePicker />
-                </div>
-                <EventTimeChart
-                  color={"gray"}
-                  title={"Event History"}
-                  legend="Events"
-                  entityFilters={{
-                    entityId,
-                  }}
-                />
-                <EventLabelDistribution
-                  title={"Event Labels"}
-                  entityFilters={{
-                    entityId,
-                  }}
-                />
-                <div className="col-span-2">
-                  <RelatedEntities entityId={entityId} />
-                </div>
-              </div>
-            </div>
-            <Card>
-              <Title>Events</Title>
-              <div className="h-4"></div>
-              {/* <DonutChart /> */}
-              <RenderEvents entityId={entityId} />
-            </Card>
-          </div>
-          <div className="flex flex-col gap-4">
+      <main className="flex-1 h-0 flex flex-col">
+        <div className="px-9 py-4 border-b-2 flex items-baseline gap-4 shrink-0">
+          <Metric>{entityData?.name}</Metric>
+          <Badge>Entity Type: {entityData?.type}</Badge>
+        </div>
+        <div className="grid grid-cols-4 flex-1 overflow-hidden">
+          <div className="flex flex-col gap-4 bg-tremor-background-subtle p-4 overflow-y-auto">
             <Card>
               <div className="flex items-center justify-between w-full">
-                <Title className="shrink-0">Information</Title>
+                <Title className="shrink-0">Entity Information</Title>
               </div>
               <div className="h-4"></div>
               <List>
                 {Object.entries(entityInfo).map(([key, value]) => (
                   <ListItem key={key}>
                     <span>{key}</span>
-                    <span>
+                    <span className="ml-4 truncate">
                       <HorzScroll>{value}</HorzScroll>
                     </span>
                   </ListItem>
@@ -432,7 +481,7 @@ export default function Home() {
                 <Text>None</Text>
               )}
             </Card>
-            <Card className="grow">
+            <Card>
               <div className="flex items-center justify-between w-full">
                 <Title className="shrink-0">Data</Title>
               </div>
@@ -450,6 +499,48 @@ export default function Home() {
                 )}
               </List>
             </Card>
+          </div>
+          <div className="flex flex-col col-span-3 p-4 pb-0 overflow-hidden h-full">
+            <TabGroup
+              className="flex flex-col h-full"
+              index={tab ?? undefined}
+              onIndexChange={setTab}
+            >
+              <TabList>
+                <Tab>Event History</Tab>
+                <Tab>Related Entities</Tab>
+              </TabList>
+              <TabPanels className="p-2 overflow-y-auto">
+                <TabPanel className="">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2">
+                      <DateRangePicker />
+                    </div>
+                    <div className="col-span-2">
+                      <EventTimeChart
+                        color={"gray"}
+                        title={"Event History"}
+                        legend="Events"
+                        entityFilters={{
+                          entityId,
+                        }}
+                      />
+                      <Card className="p-0">
+                        <Title className="p-6 pb-0">Events</Title>
+                        <div className="h-4"></div>
+                        {/* <DonutChart /> */}
+                        <RenderEvents entityId={entityId} />
+                      </Card>
+                    </div>
+                  </div>
+                </TabPanel>
+                <TabPanel>
+                  <div className="col-span-2">
+                    <RelatedEntities entityId={entityId} />
+                  </div>
+                </TabPanel>
+              </TabPanels>
+            </TabGroup>
           </div>
         </div>
       </main>

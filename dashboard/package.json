@@ -40,7 +40,6 @@
     "@trpc/react-query": "^10.34.0",
     "@trpc/server": "^10.34.0",
     "@trytrench/tremor": "^0.0.0-development",
-    "antd": "^5.8.5",
     "axios": "^1.4.0",
     "chakra-react-select": "^4.7.0",
     "clsx": "^2.0.0",
