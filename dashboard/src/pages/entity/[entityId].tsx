@@ -34,12 +34,14 @@ import {
   Tab,
   TabPanel,
   TabPanels,
+  Select,
+  SelectItem,
 } from "@tremor/react";
 import { differenceInMinutes, format, formatRelative } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { FileQuestion, LogIn } from "lucide-react";
 import { useRouter } from "next/router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NumberParam, StringParam, useQueryParam } from "use-query-params";
 import {
   DateRangePicker,
@@ -316,29 +318,53 @@ function RenderEvents({ entityId }: { entityId?: string }) {
 }
 
 function RelatedEntities({ entityId }: { entityId?: string }) {
-  const [entityType] = useQueryParam("entityType", StringParam);
+  const [entityType, setEntityType] = useState<string | undefined>(undefined);
+  const [entityLabel, setEntityLabel] = useState<string | undefined>(undefined);
 
   const { data } = api.entities.findRelatedEntities.useQuery({
     id: entityId ?? "",
+    entityType: entityType,
+    entityLabel: entityLabel,
+  });
+
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
+  const { data: entityLabels } = api.labels.getEntityLabels.useQuery({
+    entityType: entityType,
   });
 
   return (
-    <Card>
-      <Title>Top Related Entities</Title>
-      <Text>most frequently seen in the same event</Text>
-      <div className="h-4"></div>
-      {/* <EntityTypeFilter /> */}
-      <div className="flex flex-col max-h-80">
-        <BarList
-          data={
-            data?.map((entity) => ({
-              name: `${entity.entityType}: ${entity.entityName} as ${entity.linkType} on ${entity.eventType}`,
-              value: entity.count,
-              color: "blue",
-            })) ?? []
-          }
-        />
-        {/* <Table className="mt-2">
+    <>
+      <div className="flex items-center gap-4">
+        <Select
+          enableClear
+          className="w-40"
+          value={entityType}
+          onValueChange={setEntityType}
+          placeholder="All entities"
+        >
+          {entityTypes?.map((et) => (
+            <SelectItem key={et.id} value={et.id}>
+              {et.name}
+            </SelectItem>
+          )) ?? []}
+        </Select>
+        <Text className="whitespace-nowrap">with label</Text>
+        <Select
+          enableClear
+          className="w-40"
+          value={entityLabel}
+          onValueChange={setEntityLabel}
+          placeholder="All labels"
+        >
+          {entityLabels?.map((el) => (
+            <SelectItem key={el.id} value={el.id}>
+              {el.name}
+            </SelectItem>
+          )) ?? []}
+        </Select>
+      </div>
+      <div className="flex flex-col">
+        <Table className="mt-2">
           <TableHead>
             <TableRow>
               <TableHeaderCell>Type</TableHeaderCell>
@@ -350,14 +376,15 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
           <TableBody>
             {data?.length > 0 ? (
               data.map((entity) => (
-                <TableRow key={entity.id}>
-                  <TableCell>{entity.type}</TableCell>
+                <TableRow key={entity.entityId}>
+                  <TableCell>{entity.entityType}</TableCell>
                   <TableCell>
                     <b>
-                      <RenderEntity entity={entity} />
+                      {entity.entityName}
+                      {/* <RenderEntity entity={entity} /> */}
                     </b>
                   </TableCell>
-                  <TableCell>{entity.linkCount}</TableCell>
+                  <TableCell>{entity.count}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {entity.entityLabels.map((el) => (
@@ -377,9 +404,9 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
               </TableRow>
             )}
           </TableBody>
-        </Table> */}
+        </Table>
       </div>
-    </Card>
+    </>
   );
 }
 
@@ -504,7 +531,9 @@ export default function Home() {
             <TabGroup
               className="flex flex-col h-full"
               index={tab ?? undefined}
-              onIndexChange={setTab}
+              onIndexChange={(idx) => {
+                setTab(idx);
+              }}
             >
               <TabList>
                 <Tab>Event History</Tab>

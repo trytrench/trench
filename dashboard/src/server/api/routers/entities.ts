@@ -324,6 +324,7 @@ export const entitiesRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         entityType: z.string().optional(),
+        entityLabel: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -335,11 +336,11 @@ export const entitiesRouter = createTRPCRouter({
           linkType: string;
           eventType: string;
           count: number;
-          // entityLabels: Array<{
-          //   id: string;
-          //   name: string;
-          //   color: string;
-          // }>;
+          entityLabels: Array<{
+            id: string;
+            name: string;
+            color: string;
+          }>;
         }>
       >(`
       WITH "RelatedEvents" AS (
@@ -350,30 +351,52 @@ export const entitiesRouter = createTRPCRouter({
       )
       SELECT
           "entityId",
-          "entityType",
+          "Entity"."type" AS "entityType",
           "Entity"."name" AS "entityName",
           "linkType",
           "eventType",
-          COUNT(*) as "count"
+          COUNT(DISTINCT "EntityAppearancesMatView"."eventId") as "count",
+          ARRAY_AGG(
+            json_build_object('id', "EntityLabel"."id", 'name', "EntityLabel"."name", 'color', "EntityLabel"."color")
+          ) AS "entityLabels"
       FROM "RelatedEvents"
       JOIN "EntityAppearancesMatView" ON "RelatedEvents"."eventId" = "EntityAppearancesMatView"."eventId"
       JOIN "Entity" ON "Entity"."id" = "EntityAppearancesMatView"."entityId"
+      LEFT JOIN "EntityLabel" ON "EntityLabel"."id" = "EntityAppearancesMatView"."entityLabel"
       WHERE "EntityAppearancesMatView"."entityId" != '${input.id}'
+      ${
+        input.entityType
+          ? `AND "EntityAppearancesMatView"."entityType" = '${input.entityType}'`
+          : ""
+      }
       GROUP BY
           "entityId",
           "entityName",
-          "entityType",
+          "Entity"."type",
           "linkType",
           "eventType"
       ORDER BY
           "count" DESC
-      LIMIT 10
+      LIMIT 100
       `);
 
-      return relatedEntities.map((entity) => ({
-        ...entity,
-        count: Number(entity.count),
-        // entityLabels: entity.entityLabels.filter((label) => !!label.id),
-      }));
+      const ret = relatedEntities
+        .map((entity) => ({
+          ...entity,
+          count: Number(entity.count),
+          entityLabels: entity.entityLabels
+            .filter((label) => !!label.id)
+            .filter(
+              // unique on id
+              (label, index, self) =>
+                self.findIndex((l) => l.id === label.id) === index
+            ),
+        }))
+        .filter((entity) => {
+          return entity.entityLabels.some(
+            (label) => !input.entityLabel || label.id === input.entityLabel
+          );
+        });
+      return ret;
     }),
 });
