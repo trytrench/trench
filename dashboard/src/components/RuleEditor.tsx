@@ -450,13 +450,10 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
               <div className="pl-4 p-1 flex flex-col gap-4 overflow-y-auto h-full relative grow">
                 {analysis ? (
                   <div className=" absolute top-0 left-0 bottom-0 right-0 p-4">
-                    <Title className="text-2xl">Outline</Title>
-                    <Text className="font-semibold pt-4 pb-1">
-                      Event Features
-                    </Text>
-                    <div className="flex flex-col pl-4">
+                    <Text className="font-semibold pb-1">Event Features</Text>
+                    <div className="flex flex-col">
                       {analysis.eventFeatures.map((feature) => (
-                        <Text className="flex">
+                        <Text className="flex" key={feature}>
                           <span className="my-auto mr-1">
                             <TypeIcon size={16} />
                           </span>
@@ -468,9 +465,9 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                     <Text className="font-semibold pt-4 pb-2">
                       Event Labels
                     </Text>
-                    <div className="flex gap-2 flex-wrap pl-4">
+                    <div className="flex gap-2 flex-wrap">
                       {analysis.eventLabels.map((label) => (
-                        <Badge>{label}</Badge>
+                        <Badge key={label}>{label}</Badge>
                       ))}
                     </div>
 
@@ -483,11 +480,11 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                             <AccordionHeader>{entityName}</AccordionHeader>
                             <AccordionBody>
                               <Text className="font-semibold pb-1">
-                                Event Features
+                                Features
                               </Text>
-                              <div className="flex flex-col pl-4">
+                              <div className="flex flex-col">
                                 {entityData.features.map((feature) => (
-                                  <Text className="flex">
+                                  <Text key={feature} className="flex">
                                     <span className="my-auto mr-1">
                                       <TypeIcon size={16} />
                                     </span>
@@ -497,11 +494,11 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
                               </div>
 
                               <Text className="font-semibold pt-4 pb-2">
-                                Event Labels
+                                Labels
                               </Text>
-                              <div className="flex gap-2 flex-wrap pl-4 mb-4">
+                              <div className="flex gap-2 flex-wrap mb-4">
                                 {entityData.labels.map((label) => (
-                                  <Badge>{label}</Badge>
+                                  <Badge key={label}>{label}</Badge>
                                 ))}
                               </div>
                             </AccordionBody>

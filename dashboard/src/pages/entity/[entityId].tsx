@@ -272,7 +272,14 @@ function RenderEvents({
         view === "list" ? (
           <EventListItem
             key={event.id}
-            event={event}
+            event={{
+              ...event,
+              labels: event.eventLabels.map((el) => ({
+                id: el.id,
+                name: el.name,
+                color: el.color,
+              })),
+            }}
             onClick={() => {
               setSelectedEventId(event.id);
             }}

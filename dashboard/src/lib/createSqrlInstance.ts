@@ -12,13 +12,14 @@ import { type RedisInterface } from "sqrl-redis-functions/lib/Services/RedisInte
 import { MockRedisService } from "sqrl-redis-functions/lib/mocks/MockRedisService";
 import * as sqrlTextFunctions from "sqrl-text-functions";
 import { SqrlManipulator } from "./SqrlManipulator";
+import { fetchUserData } from "~/utils/fetchGithubData";
 import pLimit from "p-limit";
-import { AxiosError } from "axios";
 
 let RedisService;
 
 if (typeof window === "undefined") {
-  RedisService = require("./RedisService").RedisService;
+  RedisService =
+    require("sqrl-redis-functions/lib/Services/RedisService").RedisService;
 }
 
 export async function createSqrlInstance(
@@ -26,7 +27,17 @@ export async function createSqrlInstance(
 ) {
   const instance = createInstance(options);
 
-  let redisService = new RedisService(process.env.SQRL_REDIS_URL);
+  let redisService: RedisInterface;
+  if (options?.config?.["redis.address"]) {
+    const redis = new RedisService(options.config["redis.address"]);
+    redisService = redis;
+  } else if (options?.config?.["state.allow-in-memory"]) {
+    redisService = new MockRedisService();
+  } else {
+    throw new Error(
+      "No `redis.address` was configured and`state.allow-in-memory` is false."
+    );
+  }
 
   await instance.importFromPackage("sqrl-jsonpath", sqrlJsonPath);
   await instance.importFromPackage("sqrl-redis-functions", sqrlRedisFunctions);

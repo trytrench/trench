@@ -9,8 +9,8 @@ import { prisma } from "~/server/db";
 async function main() {
   const instance = await createSqrlInstance({
     config: {
-      // "redis.address": process.env.SQRL_REDIS,
-      "state.allow-in-memory": true,
+      "redis.address": process.env.SQRL_REDIS_URL,
+      // "state.allow-in-memory": true,
     },
   });
 
