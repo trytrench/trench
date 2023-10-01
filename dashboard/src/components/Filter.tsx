@@ -13,7 +13,7 @@ import {
   useQueryParam,
   withDefault,
 } from "use-query-params";
-import { Hash, Type } from "lucide-react";
+import { Hash, Type, XCircle } from "lucide-react";
 import FeatureFilter, {
   type FeatureFilterType,
 } from "~/components/FeatureFilter";
@@ -53,15 +53,13 @@ export const useFilters = () => {
   };
 };
 
-export const Filter = ({
-  types,
-  labels,
-  features,
-}: {
-  types: { id: string; name: string }[];
-  labels: { id: string; name: string }[];
-  features: { name: string; dataType: string }[];
-}) => {
+interface Props {
+  types: string[];
+  labels: string[];
+  features: { feature: string; dataType: string }[];
+}
+
+export const Filter = ({ types, labels, features }: Props) => {
   const {
     type,
     setType,
@@ -78,8 +76,8 @@ export const Filter = ({
       <Text className="font-semibold text-lg mb-2 mt-6">Type</Text>
       <Select value={type ?? ""} onChange={setType}>
         {types.map((type) => (
-          <SelectItem value={type.id} key={type.id}>
-            {type.name}
+          <SelectItem value={type} key={type}>
+            {type}
           </SelectItem>
         ))}
       </Select>
@@ -88,8 +86,8 @@ export const Filter = ({
 
       <MultiSelect value={selectedLabels} onValueChange={setSelectedLabels}>
         {labels.map((label) => (
-          <SelectItem key={label.id} value={label.id}>
-            {label.name}
+          <SelectItem key={label} value={label}>
+            {label}
           </SelectItem>
         ))}
       </MultiSelect>
@@ -108,7 +106,17 @@ export const Filter = ({
             onClick={() =>
               setFeatureFilters(featureFilters.filter((f) => filter !== f))
             }
+            icon={XCircle}
+            className="cursor-pointer"
           >
+            <style global jsx>
+              {`
+                .tremor-Badge-icon {
+                  height: 0.8rem;
+                  width: 0.8rem;
+                }
+              `}
+            </style>
             {filter.path} {filter.op} {filter.value}
           </Badge>
         ))}
@@ -122,19 +130,19 @@ export const Filter = ({
             setSortBy({
               feature: value,
               dataType:
-                features.find((feature) => feature.name === value)?.dataType ??
-                "string",
+                features.find((feature) => feature.feature === value)
+                  ?.dataType ?? "string",
               direction: "desc",
             });
           }}
         >
           {features.map((feature) => (
             <SelectItem
-              value={feature.name}
-              key={feature.name}
+              value={feature.feature}
+              key={feature.feature}
               icon={feature.dataType === "number" ? Hash : Type}
             >
-              {feature.name}
+              {feature.feature}
             </SelectItem>
           ))}
         </Select>

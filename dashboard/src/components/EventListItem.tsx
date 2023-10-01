@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { format } from "date-fns";
 import { uniqBy } from "lodash";
 import { StringParam, useQueryParam } from "use-query-params";
-import { api } from "~/utils/api";
+import { RouterOutputs, api } from "~/utils/api";
 
 function truncateObject(obj, maxLength) {
   let result = {};
@@ -34,10 +34,6 @@ type EventCardProps = {
 } & React.HTMLAttributes<HTMLButtonElement>;
 
 export function EventListItem({ event, selected, ...rest }: EventCardProps) {
-  const [eventType] = useQueryParam("eventType", StringParam);
-  const { data: eventLabels } = api.labels.getEventLabels.useQuery({
-    eventType: eventType ?? undefined,
-  });
   return (
     <button
       className={clsx({
@@ -54,20 +50,13 @@ export function EventListItem({ event, selected, ...rest }: EventCardProps) {
       <Text className="w-28 mr-4 whitespace-nowrap shrink-0 text-xs truncate">
         {event.type}
       </Text>
-      {eventLabels?.length ? (
-        <span className="w-24 mr-4 overflow-hidden flex gap-1 shrink-0">
-          {uniqBy(event.labels, (label) => label.id).map((label) => (
-            <Badge
-              size="xs"
-              key={label.id}
-              color={label.color}
-              className="py-0 cursor-pointer"
-            >
-              <span className="text-xs">{label.name}</span>
-            </Badge>
-          ))}
-        </span>
-      ) : null}
+      <span className="w-24 mr-4 overflow-hidden flex gap-1 shrink-0">
+        {event.labels?.map((label) => (
+          <Badge size="xs" key={label} className="py-0 cursor-pointer">
+            <span className="text-xs">{label}</span>
+          </Badge>
+        ))}
+      </span>
 
       <Text className="truncate flex-1 w-0 text-xs">
         {Object.entries(truncateObject(event.data, 100)).map(([key, value]) => (

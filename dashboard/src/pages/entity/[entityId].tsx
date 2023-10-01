@@ -311,7 +311,7 @@ function RenderEvents({
         )
       )}
       <EventDrawer
-        selectedEventId={selectedEventId}
+        selectedEvent={selectedEventId}
         isOpen={!!selectedEventId}
         onClose={() => {
           setSelectedEventId(null);

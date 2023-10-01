@@ -13,6 +13,7 @@ import {
   getFiltersWhereQuery,
 } from "../../lib/filters";
 import { Entity, PrismaClient } from "@prisma/client";
+import { db } from "~/server/db";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -30,6 +31,48 @@ export const listsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
+
+      const result = await db.query({
+        query: `
+          SELECT
+            e.entity_id as id,
+            e.entity_type as type,
+            e.entity_name as name,
+            max(e.event_timestamp) AS lastSeenAt,
+            argMax(e.entity_features, e.event_timestamp) AS features
+          FROM event_entity AS e
+          WHERE e.entity_id IN (
+              SELECT entity_id
+              FROM event_entity
+              GROUP BY entity_id
+              ORDER BY max(event_timestamp) DESC
+              LIMIT 30
+          )
+          GROUP BY
+            e.entity_id,
+            e.entity_type,
+            e.entity_name
+          ORDER BY lastSeenAt DESC
+        `,
+        format: "JSONEachRow",
+      });
+      const entities = await result.json<
+        {
+          id: string;
+          name: string;
+          type: string;
+          features: Record<string, any>[];
+        }[]
+      >();
+
+      return {
+        count: 0,
+        rows: entities.map((entity) => ({
+          ...entity,
+          labels: [],
+        })),
+      };
+
       const [count, rows] = await Promise.all([
         ctx.prisma.entity.count({
           // where: {
@@ -58,89 +101,131 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         eventFilters: eventFiltersZod,
-        cursor: z.string().optional(),
+        cursor: z.number().optional(),
         limit: z.number().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
-      const features = filters?.eventFeatures
-        ? getFeaturesFilter(filters.eventFeatures, `"Event"."features"`)
-        : "";
+      const hasLabelFilter = !!filters?.eventLabels?.length;
 
-      const cursor = input.cursor;
+      const eventIdsSubquery = `
+          SELECT event_id
+          FROM ${hasLabelFilter ? "event_labels" : "event_entity"}
+          WHERE 1=1
+          AND (event_type = '${filters?.eventType}' OR 1=1)
+          ${
+            filters?.eventLabels?.length
+              ? `AND label IN (${filters.eventLabels
+                  .map((label) => `'${label}'`)
+                  .join(", ")})`
+              : ""
+          }
+          ${filters?.eventFeatures
+            ?.map((filter) => getFeatureQuery(filter, "event_features"))
+            .join("\n")}
+          GROUP BY event_id, event_timestamp
+          ORDER BY event_timestamp DESC
+          LIMIT ${input.limit ?? 50} 
+          OFFSET ${input.cursor ?? 0}
+        `;
+      console.log(eventIdsSubquery);
 
-      const [count, rows] = await Promise.all([
-        ctx.prisma.event.count({
-          where: getFiltersWhereQuery(input.eventFilters),
-        }),
-        ctx.prisma.$queryRawUnsafe<
-          Array<{
-            id: string;
-            type: string;
-            data: string;
-            timestamp: Date;
-            features: Record<string, any>;
-            labels: Array<{
-              id: string;
-              name: string;
-              color: string;
-            }>;
-            entities: {
-              id: string;
-              name: string;
-              type: string;
-              features: Record<string, any>;
-            }[];
-          }>
-        >(`
+      const query = `
+        WITH event_ids AS (
+          ${eventIdsSubquery}
+        ),
+
+        filtered_event_labels AS (
+          SELECT event_id, 
+          groupArray(label) AS labels
+          FROM event_labels
+          WHERE event_id IN (SELECT event_id FROM event_ids)
+          GROUP BY event_id
+        ),
+
+        filtered_event_entity AS (
           SELECT
-            "Event"."id" as "id",
-            "Event"."type" as "type",
-            "Event"."data" as "data",
-            "Event"."timestamp" as "timestamp",
-            "Event"."features" as "features",
-            JSON_AGG(
-              json_build_object(
-                'id', "_EventToEventLabel"."B",
-                'name', "EventLabel"."name",
-                'color', "EventLabel"."color"
-              )
-            ) as "labels",
-            JSON_AGG(
-              json_build_object(
-                'id', "EventToEntityLink"."entityId",
-                'name', "Entity"."name",
-                'type', "Entity"."type",
-                'features', "Entity"."features"
-              )
-            ) as "entities"
-          FROM "Event"
-          LEFT JOIN "_EventToEventLabel" ON "Event"."id" = "_EventToEventLabel"."A"
-          LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
-          LEFT JOIN "EventToEntityLink" ON "Event"."id" = "EventToEntityLink"."eventId"
-          LEFT JOIN "Entity" ON "EventToEntityLink"."entityId" = "Entity"."id"
-          WHERE ${buildEventExistsQuery(input.eventFilters)}
-          ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
-          ${features}
+            event_id,
+            event_type,
+            event_data,
+            event_timestamp,
+            event_features,
+            groupArray(entity_id) AS entity_ids,
+            groupArray(entity_type) AS entity_types,
+            groupArray(entity_name) AS entity_names,
+            groupArray(entity_relation) AS entity_relations,
+            groupArray(entity_features) AS entity_features
+          FROM event_entity AS e
+          WHERE e.event_id IN (
+            SELECT event_id FROM event_ids
+          )
           GROUP BY
-            "Event"."id",
-            "Event"."type",
-            "Event"."data",
-            "Event"."timestamp"
-          ORDER BY "Event"."timestamp" DESC
-          LIMIT ${input.limit ?? 10}
-        `),
-      ]);
+            event_id,
+            event_type,
+            event_data,
+            event_timestamp,
+            event_features
+          ORDER BY event_timestamp DESC
+        )
+
+        SELECT 
+          event_id,
+          event_type,
+          event_data,
+          event_timestamp,
+          event_features,
+          entity_ids,
+          entity_types,
+          entity_names,
+          entity_relations,
+          entity_features,
+          labels AS event_labels
+        FROM filtered_event_entity
+        LEFT JOIN filtered_event_labels ON filtered_event_entity.event_id = filtered_event_labels.event_id
+        ORDER BY event_timestamp DESC;
+      `;
+
+      const result = await db.query({
+        query,
+        format: "JSONEachRow",
+      });
+      const events = await result.json<
+        {
+          event_id: string;
+          event_type: string;
+          event_data: string;
+          event_timestamp: Date;
+          event_features: Record<string, any>;
+          event_labels: string[];
+          entity_ids: string[];
+          entity_names: string[];
+          entity_types: string[];
+          entity_features: Record<string, any>[];
+          entity_relations: string[];
+        }[]
+      >();
 
       return {
-        count,
-        rows: rows.map((row) => {
-          return {
-            ...row,
-            labels: row.labels.filter((label) => label.id !== null),
-          };
-        }),
+        count: 0,
+        rows: events.map((event) => ({
+          id: event.event_id,
+          type: event.event_type,
+          data: event.event_data,
+          features: event.event_features,
+          timestamp: new Date(event.event_timestamp),
+          labels: event.event_labels,
+          entities: event.entity_ids.map((id, index) => {
+            return {
+              id: id,
+              type: event.entity_types[index],
+              name: event.entity_names[index],
+              relation: event.entity_relations[index],
+              features: event.entity_features[index],
+              labels: [],
+            };
+          }),
+        })),
       };
     }),
 
@@ -229,36 +314,33 @@ export const listsRouter = createTRPCRouter({
     }),
 });
 
-const getFeaturesFilter = (filters: JsonFilter[], jsonPath: string) => {
-  return filters
-    .map(({ path, op, value, dataType }) => {
-      if (op === JsonFilterOp.IsEmpty)
-        return `AND ${jsonPath}->>'${path}' IS NULL OR ${jsonPath}->>'${path}' = ''`;
-      if (op === JsonFilterOp.NotEmpty)
-        return `AND ${jsonPath}->>'${path}' IS NOT NULL AND ${jsonPath}->>'${path}' != ''`;
+const getFeatureQuery = (filter: JsonFilter, column: string) => {
+  const { path, op, value, dataType } = filter;
+  if (op === JsonFilterOp.IsEmpty)
+    return `AND ${column}.${path} IS NULL OR ${column}.${path} = ''`;
+  if (op === JsonFilterOp.NotEmpty)
+    return `AND ${column}.${path} IS NOT NULL AND ${column}.${path} != ''`;
 
-      const sqlOperator = {
-        [JsonFilterOp.Equal]: "=",
-        [JsonFilterOp.NotEqual]: "!=",
-        [JsonFilterOp.GreaterThan]: ">",
-        [JsonFilterOp.LessThan]: "<",
-      }[op];
+  const comparisonOps = {
+    [JsonFilterOp.Equal]: "=",
+    [JsonFilterOp.NotEqual]: "!=",
+    [JsonFilterOp.GreaterThan]: ">",
+    [JsonFilterOp.LessThan]: "<",
+  };
 
-      if (sqlOperator)
-        return `AND (${jsonPath}->>'${path}')${
-          dataType === "number" ? "::NUMERIC" : ""
-        } ${sqlOperator} ${dataType === "number" ? value : `'${value}'`}`;
+  if (comparisonOps[op])
+    return `AND (${column}.${path})${
+      dataType === "number" ? "::NUMERIC" : ""
+    } ${comparisonOps[op]} ${dataType === "number" ? value : `'${value}'`}`;
 
-      const sqlOperator2 = {
-        [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
-        [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
-        [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
-        [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
-      }[op];
+  const stringOps = {
+    [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
+    [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
+    [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
+    [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
+  };
 
-      if (sqlOperator2) return `AND ${jsonPath}->>'${path}' ${sqlOperator2}`;
-    })
-    .join(" ");
+  if (stringOps[op]) return `AND ${column}.${path} ${stringOps[op]}`;
 };
 
 async function getFilteredEntities(
@@ -275,7 +357,7 @@ async function getFilteredEntities(
   }
 ) {
   const features = entityFeatures
-    ? getFeaturesFilter(entityFeatures, `"Entity"."features"`)
+    ? getFeatureQuery(entityFeatures, `"Entity"."features"`)
     : "";
 
   const orderByFeature = sortBy?.feature

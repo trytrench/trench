@@ -1,14 +1,13 @@
-import { type Prisma } from "@prisma/client";
-import { uniqBy } from "lodash";
+import { getUnixTime } from "date-fns";
 import { customAlphabet } from "nanoid";
 import { createSimpleContext, type Executable } from "sqrl";
 import { SqrlManipulator } from "~/lib/SqrlManipulator";
-import { prisma } from "~/server/db";
+import { db } from "~/server/db";
 
 export interface Event {
   timestamp: string;
   type: string;
-  data: any;
+  data: Record<string, any>;
 }
 
 const nanoid = customAlphabet(
@@ -42,256 +41,73 @@ export async function runEvent(event: Event, executable: Executable) {
   await completePromise;
   await manipulator.mutate(ctx);
 
-  const TIMESTAMP = event.timestamp ? new Date(event.timestamp) : new Date();
-  const EVENT_ID = nanoid();
-
   const eventFeatures: Record<string, unknown> = {};
   manipulator.eventFeatures.forEach((feature) => {
     eventFeatures[feature.name] = feature.value;
   });
 
-  const events = [
-    {
-      id: EVENT_ID,
-      type: event.type,
-      timestamp: TIMESTAMP,
-      data: event.data,
-      features: eventFeatures,
-    },
-  ];
-
-  const mapEntityIdToFeatures: Record<string, Record<string, unknown>> = {};
+  const entityIdToFeatures: Record<string, Record<string, unknown>> = {};
   manipulator.entityFeatures.forEach((feature) => {
-    if (!mapEntityIdToFeatures[feature.entityId]) {
-      mapEntityIdToFeatures[feature.entityId] = {};
-    }
+    if (!entityIdToFeatures[feature.entityId])
+      entityIdToFeatures[feature.entityId] = {};
 
-    const fieldsObj = mapEntityIdToFeatures[feature.entityId];
-    if (fieldsObj) {
-      fieldsObj[feature.name] = feature.value;
-    }
+    entityIdToFeatures[feature.entityId]![feature.name] = feature.value;
   });
 
-  const entities = manipulator.entities.map((entity) => ({
-    ...entity,
-    eventId: EVENT_ID,
-    timestamp: TIMESTAMP,
-    features: mapEntityIdToFeatures[entity.id] ?? {},
-  }));
-
-  const entityLabelsToAdd = manipulator.entityLabels
-    .filter((entityLabel) => entityLabel.action === "add")
-    .map((entityLabel) => ({
-      ...entityLabel,
-      timestamp: TIMESTAMP,
-    }));
-
-  const entityLabelsToRemove = manipulator.entityLabels
-    .filter((entityLabel) => entityLabel.action === "remove")
-    .map((entityLabel) => ({
-      ...entityLabel,
-      timestamp: TIMESTAMP,
-    }));
-
-  const eventLabels = manipulator.eventLabels.map((eventLabel) => ({
-    ...eventLabel,
-    eventType: event.type,
-    timestamp: TIMESTAMP,
-    eventId: EVENT_ID,
-  }));
-
-  const entityToEventLinks = manipulator.entities.map((entity) => ({
-    timestamp: TIMESTAMP,
-    type: entity.relation,
-    eventId: EVENT_ID,
-    entityId: entity.id,
-    entityType: entity.type,
-  }));
-
   return {
-    events,
-    entities,
-    entityLabelsToAdd,
-    entityLabelsToRemove,
-    eventLabels,
-    entityToEventLinks,
+    id: nanoid(),
+    type: event.type,
+    timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
+    data: event.data,
+    features: eventFeatures,
+    labels: manipulator.eventLabels,
+    entities: manipulator.entities.map((entity) => ({
+      ...entity,
+      features: entityIdToFeatures[entity.id] ?? {},
+    })),
   };
 }
 
-export async function batchUpsert({
-  events,
-  entities,
-  entityLabelsToAdd,
-  eventLabels,
-  entityToEventLinks,
-}: Awaited<ReturnType<typeof runEvent>>) {
-  await prisma.$transaction([
-    prisma.eventType.createMany({
-      data: uniqBy(events, (event) => event.type).map((event) => ({
-        id: event.type,
-        name: event.type,
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.entityType.createMany({
-      data: uniqBy(entities, (entity) => entity.type).map((entity) => ({
-        id: entity.type,
-        name: entity.type,
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.linkType.createMany({
-      data: uniqBy(entityToEventLinks, (link) => link.type).map((link) => ({
-        id: link.type,
-        name: link.type,
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.eventLabelType.createMany({
-      data: uniqBy(eventLabels, (eventLabel) => eventLabel.type).map(
-        (eventLabel) => ({
-          id: eventLabel.type,
-          name: eventLabel.type,
-          description: "desc",
-        })
-      ),
-      skipDuplicates: true,
-    }),
-    prisma.entityLabelType.createMany({
-      data: uniqBy(
-        entityLabelsToAdd,
-        (entityLabel) => entityLabel.labelType
-      ).map((entityLabel) => ({
-        id: entityLabel.labelType,
-        name: entityLabel.labelType,
-        description: "desc",
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.event.createMany({
-      data: events.map((event) => ({
-        id: event.id,
-        type: event.type,
-        timestamp: event.timestamp,
-        data: event.data as Prisma.JsonObject,
-        features: event.features as Prisma.JsonObject,
-      })),
-      skipDuplicates: true,
-    }),
-    prisma.eventFeature.createMany({
-      data: events.flatMap((event) =>
-        Object.entries(event.features).map(([name, value]) => ({
-          name,
-          eventType: event.type,
+export async function batchUpsert(
+  events: Awaited<ReturnType<typeof runEvent>>[]
+) {
+  const values = events.flatMap((event) =>
+    event.entities.map((entity) => ({
+      event_id: event.id,
+      event_type: event.type,
+      event_timestamp: getUnixTime(event.timestamp),
+      event_data: event.data,
+      event_features: event.features,
+      entity_id: entity.id,
+      entity_name: entity.features.Name || entity.id,
+      entity_type: entity.type,
+      entity_features: entity.features,
+      relation: entity.relation,
+    }))
+  );
+
+  try {
+    await db.insert({
+      table: "event_entity",
+      values,
+      format: "JSONEachRow",
+    });
+    await db.insert({
+      table: "event_labels",
+      values: events.flatMap((event) =>
+        event.labels.map((label) => ({
+          event_id: event.id,
+          event_type: event.type,
+          event_timestamp: getUnixTime(event.timestamp),
+          event_features: event.features,
+          label: label.label,
+          type: label.type,
+          status: "ADDED",
         }))
       ),
-      skipDuplicates: true,
-    }),
-    prisma.entityFeature.createMany({
-      data: entities.flatMap((entity) =>
-        Object.entries(entity.features).map(([name, value]) => ({
-          name,
-          entityType: entity.type,
-        }))
-      ),
-      skipDuplicates: true,
-    }),
-  ]);
-
-  //   console.timeLog("Batch upserts", "Upserted label types");
-  await Promise.all([
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "Entity" ("id", "type", "name", "features") VALUES ${uniqBy(
-        entities,
-        (entity) => entity.id
-      )
-        .map(
-          (entity) =>
-            `('${entity.type}-${entity.id}', '${entity.type}', '${
-              (entity.features.Name as string) || entity.id
-            }', '${JSON.stringify(entity.features).replace(
-              /'/g,
-              "''"
-            )}'::jsonb)`
-        )
-        .join(
-          ", "
-        )} ON CONFLICT (id) DO UPDATE SET "features" = EXCLUDED."features";`
-    ),
-    // Upsert all event labels
-    prisma.eventLabel.createMany({
-      data: eventLabels.map((eventLabel) => ({
-        id: `${eventLabel.eventType}-${eventLabel.type}-${eventLabel.label}`,
-        name: eventLabel.label,
-        eventType: eventLabel.eventType,
-        createdAt: eventLabel.timestamp,
-        color: "",
-        description: "Test",
-        labelType: eventLabel.type,
-      })),
-      skipDuplicates: true,
-    }),
-    // Upsert all entity labels
-    prisma.entityLabel.createMany({
-      data: entityLabelsToAdd.map((entityLabel) => ({
-        id: `${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}`,
-        name: entityLabel.label,
-        entityType: entityLabel.entityType,
-        createdAt: entityLabel.timestamp,
-        color: "",
-        description: "Test",
-        labelType: entityLabel.labelType,
-      })),
-      skipDuplicates: true,
-    }),
-  ]);
-
-  //   console.timeLog("Batch upserts", "Upserted events, entities, labels");
-
-  await Promise.all([
-    prisma.eventToEntityLink.createMany({
-      data: entityToEventLinks.map((link) => ({
-        eventId: link.eventId,
-        entityId: `${link.entityType}-${link.entityId}`,
-        type: link.type,
-        createdAt: link.timestamp,
-      })),
-      skipDuplicates: true,
-    }),
-    ...(entityLabelsToAdd.length > 0
-      ? [
-          prisma.$executeRawUnsafe(`
-          INSERT INTO "_EntityToEntityLabel" ("A", "B")
-          VALUES ${uniqBy(
-            entityLabelsToAdd,
-            (entityLabel) =>
-              `${entityLabel.entityType}-${entityLabel.entityId}-${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}`
-          )
-            .map(
-              (entityLabel) =>
-                `('${entityLabel.entityType}-${entityLabel.entityId}', '${entityLabel.entityType}-${entityLabel.labelType}-${entityLabel.label}')`
-            )
-            .join(",")}
-          ON CONFLICT ("A", "B") DO NOTHING;
-      `),
-        ]
-      : []),
-    ...(eventLabels.length > 0
-      ? [
-          prisma.$executeRawUnsafe(`
-          INSERT INTO "_EventToEventLabel" ("A", "B")
-          VALUES ${uniqBy(
-            eventLabels,
-            (eventLabel) => `${eventLabel.eventId}-${eventLabel.label}`
-          )
-            .map(
-              (eventLabel) =>
-                `('${eventLabel.eventId}', '${eventLabel.eventType}-${eventLabel.type}-${eventLabel.label}')`
-            )
-            .join(",")}
-          ON CONFLICT ("A", "B") DO NOTHING;
-      `),
-        ]
-      : []),
-  ]);
+      format: "JSONEachRow",
+    });
+  } catch (error) {
+    console.error("Error inserting data into ClickHouse:", error);
+  }
 }

@@ -24,7 +24,7 @@ function EventsPage() {
 
   const { data: eventLabels, isLoading: eventLabelsLoading } =
     api.labels.getEventLabels.useQuery({
-      eventType: type,
+      eventType: type ?? undefined,
     });
 
   const { data: eventFeatures, isLoading: eventFeaturesLoading } =
@@ -32,7 +32,7 @@ function EventsPage() {
       eventType: type,
     });
 
-  const [limit, setLimit] = useState(100);
+  const [limit, setLimit] = useState(50);
 
   const { data: eventsList, fetchNextPage } =
     api.lists.getEventsList.useInfiniteQuery(
@@ -42,15 +42,12 @@ function EventsPage() {
           eventLabels: labels,
           eventFeatures: features,
         },
-        limit: limit,
+        limit,
       },
       {
-        keepPreviousData: true,
-        getNextPageParam: (lastPage) => {
+        getNextPageParam: (lastPage, pages) => {
           if (lastPage.rows.length < limit) return false;
-          const lastRow = lastPage.rows[lastPage.rows.length - 1];
-          if (!lastRow) return false;
-          return lastRow.timestamp.toISOString();
+          return pages.length * limit;
         },
       }
     );
@@ -62,7 +59,9 @@ function EventsPage() {
     return uniqBy(flat, (item) => item.id);
   }, [eventsList]);
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<
+    RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
+  >(null);
 
   return (
     <div className="flex-1 overflow-hidden flex items-stretch">
@@ -75,7 +74,10 @@ function EventsPage() {
             <Filter
               types={eventTypes}
               labels={eventLabels}
-              features={eventFeatures}
+              features={eventFeatures.map((feature) => ({
+                feature,
+                dataType: "string",
+              }))}
             />
           )}
         </div>
@@ -122,9 +124,9 @@ function EventsPage() {
                   key={event.id}
                   event={event}
                   onClick={() => {
-                    setSelectedEventId(event.id);
+                    setSelectedEvent(event);
                   }}
-                  selected={selectedEventId === event.id}
+                  selected={selectedEvent?.id === event.id}
                 />
               ) : (
                 <EventCard key={event.id} event={event} />
@@ -149,13 +151,15 @@ function EventsPage() {
           <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
         </div>
       </div>
-      <EventDrawer
-        selectedEventId={selectedEventId}
-        isOpen={!!selectedEventId}
-        onClose={() => {
-          setSelectedEventId(null);
-        }}
-      />
+      {selectedEvent && (
+        <EventDrawer
+          isOpen={!!selectedEvent}
+          onClose={() => {
+            setSelectedEvent(null);
+          }}
+          selectedEvent={selectedEvent}
+        />
+      )}
     </div>
   );
 }

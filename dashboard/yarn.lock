@@ -931,6 +931,18 @@
   resolved "https://registry.yarnpkg.com/@chakra-ui/visually-hidden/-/visually-hidden-2.2.0.tgz#9b0ecef8f01263ab808ba3bda7b36a0d91b4d5c1"
   integrity sha512-KmKDg01SrQ7VbTD3+cPWf/UfpF5MSwm3v7MWi0n5t8HnnadT13MF0MJCDSXbBWnzLv1ZKJ6zlyAOeARWX+DpjQ==
 
+"@clickhouse/client-common@0.2.2":
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/@clickhouse/client-common/-/client-common-0.2.2.tgz#0690046241140a51ba5b0c0b9298c3cb3cf20974"
+  integrity sha512-jlom9zLfcDzX9E3off93ZD3CPOkClyM213Y7TN1datkuRGKMvVyj1k0KXaMekhbRev+FTe85CqfoD5eq6qOnPg==
+
+"@clickhouse/client@^0.2.2":
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/@clickhouse/client/-/client-0.2.2.tgz#a6358aa2342ee3f2850cdb2f47a9e1d6fbde5757"
+  integrity sha512-2faBnDS4x7ZkcOZqi3f6H967kH+nOfJLhBTWWjz0wTSBnEJBXRtePhN/ZY0NJIKc9Ga5w41Pf67mQgm6Dm/1/w==
+  dependencies:
+    "@clickhouse/client-common" "0.2.2"
+
 "@ctrl/tinycolor@^3.4.0", "@ctrl/tinycolor@^3.6.0":
   version "3.6.1"
   resolved "https://registry.yarnpkg.com/@ctrl/tinycolor/-/tinycolor-3.6.1.tgz#b6c75a56a1947cc916ea058772d666a2c8932f31"

@@ -6,6 +6,39 @@ import { createSqrlInstance } from "~/lib/createSqrlInstance";
 import { batchUpsert, runEvent } from "~/lib/sqrlExecution";
 import { prisma } from "~/server/db";
 
+const BATCH_SIZE = 100;
+const TIMEOUT = 5000;
+
+async function consumeMessages(
+  channel: amqp.Channel
+): Promise<amqp.ConsumeMessage[]> {
+  return new Promise((resolve, reject) => {
+    const messages: amqp.ConsumeMessage[] = [];
+
+    const timeout = setTimeout(() => {
+      channel.cancel("consumer").catch(reject);
+      resolve(messages);
+    }, TIMEOUT);
+
+    channel
+      .consume(
+        "githubEvents",
+        (msg) => {
+          if (!msg) return;
+          messages.push(msg);
+
+          if (messages.length >= BATCH_SIZE) {
+            if (timeout) clearTimeout(timeout);
+            channel.cancel("consumer").catch(reject);
+            resolve(messages);
+          }
+        },
+        { consumerTag: "consumer" }
+      )
+      .catch(reject);
+  });
+}
+
 async function main() {
   const instance = await createSqrlInstance({
     config: {
@@ -30,55 +63,19 @@ async function main() {
   // Open connection and create channel
   const connection = await amqp.connect("amqp://localhost");
   const channel = await connection.createChannel();
+  await channel.prefetch(BATCH_SIZE);
 
-  const results: Awaited<ReturnType<typeof runEvent>>[] = [];
-  const BATCH_SIZE = 100;
-  const queue = new AsyncQueue();
+  const limit = pLimit(5);
 
-  // Set prefetch count
-  await channel.prefetch(10);
-
-  try {
-    await channel.consume(
-      "githubEvents",
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      async (msg) => {
-        if (!msg) return;
-
-        const event = JSON.parse(msg.content.toString());
-        try {
-          const eventData = await runEvent(event, executable);
-          channel.ack(msg);
-          results.push(eventData);
-
-          if (results.length >= BATCH_SIZE) {
-            queue.enqueue(() =>
-              batchUpsert({
-                events: results.flatMap((result) => result.events),
-                entities: results.flatMap((result) => result.entities),
-                entityLabelsToAdd: results.flatMap(
-                  (result) => result.entityLabelsToAdd
-                ),
-                entityLabelsToRemove: results.flatMap(
-                  (result) => result.entityLabelsToRemove
-                ),
-                eventLabels: results.flatMap((result) => result.eventLabels),
-                entityToEventLinks: results.flatMap(
-                  (result) => result.entityToEventLinks
-                ),
-              })
-            );
-            results.length = 0;
-          }
-        } catch (err) {
-          console.error("Error processing message:", err);
-          channel.nack(msg);
-        }
-      },
-      { noAck: false }
+  while (true) {
+    const messages = await consumeMessages(channel);
+    const events = await Promise.all(
+      messages.map((msg) =>
+        limit(() => runEvent(JSON.parse(msg.content.toString()), executable))
+      )
     );
-  } catch (error) {
-    console.error("An error occurred:", error);
+
+    await batchUpsert(events);
   }
 }
 

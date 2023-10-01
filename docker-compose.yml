@@ -20,6 +20,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  clickhouse-server:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "18123:8123"
+      - "19000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
 volumes:
   postgres_data:
   redis_data:
+  clickhouse_data:

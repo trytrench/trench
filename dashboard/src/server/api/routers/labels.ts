@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { db } from "~/server/db";
 
 export const labelsRouter = createTRPCRouter({
   getAllLabels: publicProcedure.query(async ({ ctx, input }) => {
@@ -15,20 +16,21 @@ export const labelsRouter = createTRPCRouter({
   }),
   getEventLabels: publicProcedure
     .input(
-      z
-        .object({
-          eventType: z.string().optional(),
-        })
-        .optional()
+      z.object({
+        eventType: z.string().optional(),
+      })
     )
-    .query(async ({ ctx, input }) => {
-      const eventType = input?.eventType;
-
-      return ctx.prisma.eventLabel.findMany({
-        where: {
-          eventType,
-        },
+    .query(async ({ input }) => {
+      const result = await db.query({
+        query: `
+          SELECT DISTINCT label
+          FROM event_labels
+          WHERE event_type = '${input.eventType}' OR 1=1;
+        `,
+        format: "JSONEachRow",
       });
+      const data = await result.json<{ label: string }[]>();
+      return data.map((row) => row.label);
     }),
   getEntityLabels: publicProcedure
     .input(
@@ -48,7 +50,15 @@ export const labelsRouter = createTRPCRouter({
       });
     }),
   getEventTypes: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.eventType.findMany();
+    const result = await db.query({
+      query: `
+          SELECT DISTINCT event_type
+          FROM event_entity;
+        `,
+      format: "JSONEachRow",
+    });
+    const types = await result.json<{ event_type: string }[]>();
+    return types.map((type) => type.event_type);
   }),
   getEntityTypes: publicProcedure.query(async ({ ctx }) => {
     return ctx.prisma.entityType.findMany();
@@ -68,10 +78,18 @@ export const labelsRouter = createTRPCRouter({
   getEventFeatures: publicProcedure
     .input(z.object({ eventType: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.eventFeature.findMany({
-        where: {
-          eventType: input.eventType,
-        },
+      const result = await db.query({
+        query: `
+          SELECT DISTINCT feature
+          FROM
+          (
+              SELECT JSONExtractKeys(toJSONString(event_features)) AS feature
+              FROM event_entity
+          );
+        `,
+        format: "JSONEachRow",
       });
+      const features = await result.json<{ feature: string }[]>();
+      return features.flatMap((feature) => feature.feature);
     }),
 });

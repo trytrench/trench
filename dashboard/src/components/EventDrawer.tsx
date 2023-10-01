@@ -10,19 +10,14 @@ import { Badge, List, ListItem, Text } from "@tremor/react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
-import { api } from "~/utils/api";
+import { RouterOutputs, api } from "~/utils/api";
 
 export function EventDrawer(props: {
-  selectedEventId: string | null;
+  selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { isOpen, selectedEventId, onClose } = props;
-  const { data: selectedEventData } = api.lists.getEvent.useQuery(
-    { eventId: selectedEventId ?? "" },
-    { enabled: !!selectedEventId }
-  );
-
+  const { isOpen, selectedEvent, onClose } = props;
   const [expandData, setExpandData] = useState(false);
 
   return (
@@ -34,7 +29,7 @@ export function EventDrawer(props: {
 
         <DrawerBody>
           <div>
-            {selectedEventData?.eventLabels.map((label) => {
+            {selectedEvent.labels.map((label) => {
               return (
                 <Badge
                   key={label.id}
@@ -51,13 +46,13 @@ export function EventDrawer(props: {
             <ListItem>
               <span>Time</span>
               <span>
-                {selectedEventData?.timestamp &&
-                  format(selectedEventData.timestamp, "MMM d, HH:mm:ss a")}
+                {selectedEvent?.timestamp &&
+                  format(selectedEvent.timestamp, "MMM d, HH:mm:ss a")}
               </span>
             </ListItem>
             <ListItem>
               <span>Type</span>
-              <span>{selectedEventData?.type}</span>
+              <span>{selectedEvent?.type}</span>
             </ListItem>
           </List>
           <div className="h-4"></div>
@@ -74,7 +69,7 @@ export function EventDrawer(props: {
           </div>
           {expandData && (
             <code className="text-xs whitespace-pre">
-              {JSON.stringify(selectedEventData?.data, null, 2)}
+              {JSON.stringify(selectedEvent?.data, null, 2)}
             </code>
           )}
 
@@ -82,13 +77,12 @@ export function EventDrawer(props: {
           <Text>Entities</Text>
           <div className="h-4"></div>
           <div className="flex flex-col gap-2">
-            {selectedEventData?.entityLinks.map((link) => {
-              const entity = link.entity;
+            {selectedEvent.entities.map((entity) => {
               return (
                 <EntityCard
-                  key={link.id}
-                  entity={{ ...entity, labels: entity.entityLabels }}
-                  relation={link.type}
+                  key={entity.id}
+                  entity={entity}
+                  relation={entity.relation}
                 />
               );
             })}

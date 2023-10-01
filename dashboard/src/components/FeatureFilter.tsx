@@ -15,6 +15,67 @@ import { Select } from "@trytrench/tremor";
 import { ChevronLeft, Hash, Type } from "lucide-react";
 import { JsonFilterOp } from "~/shared/jsonFilter";
 
+const commonFilterOptions = [
+  {
+    label: "Is empty",
+    op: JsonFilterOp.IsEmpty,
+    value: "",
+  },
+  {
+    label: "Not empty",
+    op: JsonFilterOp.NotEmpty,
+    value: "",
+  },
+];
+
+const numberFilterOptions = [
+  {
+    label: "Equal to",
+    op: JsonFilterOp.Equal,
+  },
+  {
+    label: "Not equal to",
+    op: JsonFilterOp.NotEqual,
+  },
+  {
+    label: "Greater than",
+    op: JsonFilterOp.GreaterThan,
+  },
+  {
+    label: "Less than",
+    op: JsonFilterOp.LessThan,
+  },
+  ...commonFilterOptions,
+];
+
+const stringFilterOptions = [
+  {
+    label: "Is",
+    op: JsonFilterOp.Equal,
+  },
+  {
+    label: "Is not",
+    op: JsonFilterOp.NotEqual,
+  },
+  {
+    label: "Contains",
+    op: JsonFilterOp.Contains,
+  },
+  {
+    label: "Does not contain",
+    op: JsonFilterOp.DoesNotContain,
+  },
+  {
+    label: "Starts with",
+    op: JsonFilterOp.StartsWith,
+  },
+  {
+    label: "Ends with",
+    op: JsonFilterOp.EndsWith,
+  },
+  ...commonFilterOptions,
+];
+
 export type FeatureFilterType = {
   path: string;
   op: JsonFilterOp;
@@ -22,7 +83,7 @@ export type FeatureFilterType = {
 };
 
 interface Props {
-  features: { name: string; dataType: string }[];
+  features: { feature: string; dataType: string }[];
   onAddFilter: (filter: FeatureFilterType) => void;
 }
 
@@ -33,69 +94,9 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
 
   const selectedFeatureDataType = useMemo(
     () =>
-      features.find((feature) => feature.name === selectedFeature)?.dataType,
+      features.find((feature) => feature.feature === selectedFeature)?.dataType,
     [features, selectedFeature]
   );
-  const commonFilterOptions = [
-    {
-      label: "Is empty",
-      op: JsonFilterOp.IsEmpty,
-      value: "",
-    },
-    {
-      label: "Not empty",
-      op: JsonFilterOp.NotEmpty,
-      value: "",
-    },
-  ];
-
-  const numberFilterOptions = [
-    {
-      label: "Equal to",
-      op: JsonFilterOp.Equal,
-    },
-    {
-      label: "Not equal to",
-      op: JsonFilterOp.NotEqual,
-    },
-    {
-      label: "Greater than",
-      op: JsonFilterOp.GreaterThan,
-    },
-    {
-      label: "Less than",
-      op: JsonFilterOp.LessThan,
-    },
-    ...commonFilterOptions,
-  ];
-
-  const stringFilterOptions = [
-    {
-      label: "Is",
-      op: JsonFilterOp.Equal,
-    },
-    {
-      label: "Is not",
-      op: JsonFilterOp.NotEqual,
-    },
-    {
-      label: "Contains",
-      op: JsonFilterOp.Contains,
-    },
-    {
-      label: "Does not contain",
-      op: JsonFilterOp.DoesNotContain,
-    },
-    {
-      label: "Starts with",
-      op: JsonFilterOp.StartsWith,
-    },
-    {
-      label: "Ends with",
-      op: JsonFilterOp.EndsWith,
-    },
-    ...commonFilterOptions,
-  ];
 
   const filterOptions = useMemo(
     () =>
@@ -193,11 +194,11 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
                   >
                     {features.map((feature) => (
                       <SelectItem
-                        key={feature.name}
-                        value={feature.name}
+                        key={feature.feature}
+                        value={feature.feature}
                         icon={feature.dataType === "number" ? Hash : Type}
                       >
-                        {feature.name}
+                        {feature.feature}
                       </SelectItem>
                     ))}
                   </Select>

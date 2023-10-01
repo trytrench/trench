@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { env } from "~/env.mjs";
 import "./lib/setup";
+import { createClient } from "@clickhouse/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -24,3 +25,7 @@ export const prisma =
 // });
 
 if (env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export const db = createClient({
+  host: "http://localhost:18123", // adjust if necessary
+});
