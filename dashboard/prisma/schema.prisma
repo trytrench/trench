@@ -11,6 +11,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model EventLog {
+  id        String   @id
+  timestamp DateTime
+  type      String
+  data      Json     @default("{}")
+
+  backfillJobs BackfillJob[] 
+
+  @@index([timestamp])
+
+}
+
+
+model BackfillJob {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+  rulesetId String
+
+  lastEvent EventLog @relation(fields: [lastEventId], references: [id])
+  lastEventId String
+}
+
+
 model EventType {
   id   String @id
   name String
@@ -120,13 +146,33 @@ model EventToEntityLink {
   @@index([type, entityId, eventId])
 }
 
+
+model ProductionRuleset {
+  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+  rulesetId String @id
+}
+
+model Ruleset {
+  rulesetId String @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name       String 
+  description String?
+
+  files FileSnapshot[]
+  backfillJobs BackfillJob[]
+  productionRuleset ProductionRuleset?
+}
+
 model FileSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
   code        String
-  version     String
+  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+rulesetId String
   description String?
 
   file   File?   @relation("fileSnapshot", fields: [fileId], references: [id])

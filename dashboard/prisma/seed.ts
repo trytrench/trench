@@ -16,7 +16,11 @@ async function main() {
         currentFileSnapshot: {
           create: {
             code: source,
-            version: "0.0.0",
+            ruleset: {
+              create: {
+                name: "Version 0.0.0",
+              },
+            },
           },
         },
       },

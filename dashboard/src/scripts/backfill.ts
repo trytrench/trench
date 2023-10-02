@@ -40,12 +40,12 @@ const msgs = data;
 
 async function main() {
   const instance = await createSqrlInstance({
-    config: {
-      "state.allow-in-memory": true,
-    },
     // config: {
-    //   "redis.address": process.env.SQRL_REDIS_URL,
+    //   "state.allow-in-memory": true,
     // },
+    config: {
+      "redis.address": process.env.SQRL_REDIS_URL,
+    },
   });
 
   const files = await prisma.file.findMany({

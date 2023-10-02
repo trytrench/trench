@@ -28,6 +28,18 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
 
+  consumer:
+    build:
+      context: ./consumer
+    depends_on:
+      - postgres
+      - clickhouse-server
+      - redis
+    environment:
+      POSTGRES_URL: postgres://postgres:postgres@postgres:5432/postgres
+      CLICKHOUSE_URL: http://clickhouse-server:8123
+      REDIS_URL: redis://redis:6379
+
 volumes:
   postgres_data:
   redis_data:

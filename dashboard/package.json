@@ -75,6 +75,7 @@
     "sqrl-redis-functions": "^0.6.10",
     "sqrl-text-functions": "^0.6.10",
     "superjson": "^1.13.1",
+    "ulid": "^2.3.0",
     "use-query-params": "^2.2.1",
     "yarn": "^1.22.19",
     "zod": "^3.21.4"
