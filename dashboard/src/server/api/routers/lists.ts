@@ -26,33 +26,74 @@ export const listsRouter = createTRPCRouter({
           dataType: z.enum(["string", "number", "boolean"]).optional(),
         }),
         limit: z.number().optional(),
-        offset: z.number().optional(),
+        cursor: z.number().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
+      const hasLabelFilter = !!filters?.entityLabels?.length;
+
+      // TODO: Implement sort by
+      const entityIdsSubquery = `
+        SELECT entity_id
+        FROM ${hasLabelFilter ? "entity_labels" : "event_entity"}
+        WHERE 1=1
+        ${
+          filters?.entityType ? `AND entity_type = '${filters.entityType}'` : ""
+        }
+        ${
+          filters?.entityLabels?.length
+            ? `AND label IN (${filters.entityLabels
+                .map((label) => `'${label}'`)
+                .join(", ")})`
+            : ""
+        }
+        ${
+          filters?.entityFeatures
+            ?.map((filter) => getFeatureQuery(filter, "entity_features"))
+            .join("\n") ?? ""
+        }
+        GROUP BY entity_id
+        LIMIT ${input.limit ?? 50}
+        OFFSET ${input.cursor ?? 0}
+      `;
 
       const result = await db.query({
         query: `
-          SELECT
-            e.entity_id as id,
-            e.entity_type as type,
-            e.entity_name as name,
-            max(e.event_timestamp) AS lastSeenAt,
-            argMax(e.entity_features, e.event_timestamp) AS features
-          FROM event_entity AS e
-          WHERE e.entity_id IN (
-              SELECT entity_id
-              FROM event_entity
-              GROUP BY entity_id
-              ORDER BY max(event_timestamp) DESC
-              LIMIT 30
+          WITH entity_ids AS (
+            ${entityIdsSubquery}
+          ),
+
+          filtered_entity_labels AS (
+            SELECT entity_id, 
+            arrayDistinct(groupArray(label)) AS labels
+            FROM entity_labels
+            WHERE entity_id IN (SELECT entity_id FROM entity_ids)
+            GROUP BY entity_id
+          ),
+
+          filtered_event_entity AS (
+            SELECT
+              entity_id,
+              entity_type,
+              entity_name,
+              max(event_timestamp) AS lastSeenAt,
+              argMax(entity_features, event_timestamp) AS features
+            FROM event_entity
+            WHERE entity_id IN (SELECT entity_id FROM entity_ids)
+            GROUP BY entity_id, entity_type, entity_name
           )
-          GROUP BY
-            e.entity_id,
-            e.entity_type,
-            e.entity_name
-          ORDER BY lastSeenAt DESC
+
+          SELECT 
+            entity_id as id,
+            entity_type as type,
+            entity_name as name,
+            lastSeenAt,
+            features,
+            labels
+          FROM filtered_event_entity
+          LEFT JOIN filtered_entity_labels ON filtered_event_entity.entity_id = filtered_entity_labels.entity_id
+          ORDER BY lastSeenAt DESC;
         `,
         format: "JSONEachRow",
       });
@@ -61,39 +102,15 @@ export const listsRouter = createTRPCRouter({
           id: string;
           name: string;
           type: string;
+          lastSeenAt: string;
           features: Record<string, any>[];
+          labels: string[];
         }[]
       >();
 
       return {
         count: 0,
-        rows: entities.map((entity) => ({
-          ...entity,
-          labels: [],
-        })),
-      };
-
-      const [count, rows] = await Promise.all([
-        ctx.prisma.entity.count({
-          // where: {
-          //   entityType: {
-          //     id: input.entityFilters?.entityType,
-          //   },
-          // },
-        }),
-        getFilteredEntities(
-          ctx.prisma,
-          input.entityFilters?.entityType,
-          input.entityFilters?.entityLabels,
-          input.entityFilters?.entityFeatures,
-          input.limit,
-          input.offset,
-          input.sortBy
-        ),
-      ]);
-      return {
-        count,
-        rows,
+        rows: entities,
       };
     }),
 
@@ -113,7 +130,7 @@ export const listsRouter = createTRPCRouter({
           SELECT event_id
           FROM ${hasLabelFilter ? "event_labels" : "event_entity"}
           WHERE 1=1
-          AND (event_type = '${filters?.eventType}' OR 1=1)
+          ${filters?.eventType ? `AND event_type = '${filters.eventType}'` : ""}
           ${
             filters?.eventLabels?.length
               ? `AND label IN (${filters.eventLabels
@@ -121,15 +138,16 @@ export const listsRouter = createTRPCRouter({
                   .join(", ")})`
               : ""
           }
-          ${filters?.eventFeatures
-            ?.map((filter) => getFeatureQuery(filter, "event_features"))
-            .join("\n")}
+          ${
+            filters?.eventFeatures
+              ?.map((filter) => getFeatureQuery(filter, "event_features"))
+              .join("\n") ?? ""
+          }
           GROUP BY event_id, event_timestamp
           ORDER BY event_timestamp DESC
           LIMIT ${input.limit ?? 50} 
           OFFSET ${input.cursor ?? 0}
         `;
-      console.log(eventIdsSubquery);
 
       const query = `
         WITH event_ids AS (
@@ -342,97 +360,3 @@ const getFeatureQuery = (filter: JsonFilter, column: string) => {
 
   if (stringOps[op]) return `AND ${column}.${path} ${stringOps[op]}`;
 };
-
-async function getFilteredEntities(
-  prisma: PrismaClient,
-  entityType?: string,
-  entityLabels?: string[],
-  entityFeatures?: JsonFilter[],
-  limit?: number,
-  offset?: number,
-  sortBy?: {
-    feature: string;
-    direction: "asc" | "desc";
-    dataType?: "string" | "number";
-  }
-) {
-  const features = entityFeatures
-    ? getFeatureQuery(entityFeatures, `"Entity"."features"`)
-    : "";
-
-  const orderByFeature = sortBy?.feature
-    ? `("Entity"."features"->>'${sortBy.feature}')${
-        sortBy.dataType === "number" ? "::NUMERIC" : ""
-      } ${sortBy.direction}`
-    : `matViewSubquery."timestamp" DESC`;
-
-  const rawResults = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      name: string;
-      type: string;
-      features: Record<string, any>;
-      labels: Array<{
-        id: string;
-        name: string;
-        color: string;
-      }>;
-      lastSeenAt: Date;
-    }>
-  >(`
-    SELECT
-      "Entity"."id" as "id",
-      "Entity"."name" as "name",
-      "Entity"."type" as "type",
-      "Entity"."features" as "features",
-      JSON_AGG(
-        json_build_object(
-          'id', "_EntityToEntityLabel"."B",
-          'name', "EntityLabel"."name",
-          'color', "EntityLabel"."color"
-        )
-      ) as "labels",
-      matViewSubquery."timestamp" as "lastSeenAt"
-    FROM "Entity"
-    LEFT JOIN (
-      SELECT "entityId", MAX("timestamp") as "timestamp"
-      FROM "EntityAppearancesMatView"
-      GROUP BY "entityId"
-    ) as matViewSubquery ON "Entity"."id" = matViewSubquery."entityId"
-    LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
-    LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
-    WHERE TRUE
-      ${entityType ? `AND "Entity"."type" = '${entityType}'` : ""}
-      ${
-        entityLabels?.length
-          ? entityLabels
-              .map((label) => {
-                return `AND EXISTS (
-              SELECT FROM "EntityAppearancesMatView"
-              WHERE "EntityAppearancesMatView"."entityId" = "Entity"."id"
-              AND "EntityAppearancesMatView"."entityLabel" = '${label}'
-            )`;
-              })
-              .join("\n")
-          : ""
-      }
-      ${features}
-    GROUP BY
-      "Entity"."id",
-      "Entity"."type",
-      "Entity"."features",
-      matViewSubquery."timestamp"
-    ORDER BY ${orderByFeature}
-    LIMIT ${limit ?? 10}
-    OFFSET ${offset ?? 0}
-  `);
-
-  // Do some additional client-side processing here if needed
-
-  return rawResults.map((row) => {
-    return {
-      ...row,
-      labels: row.labels,
-    };
-  });
-}

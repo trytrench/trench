@@ -63,6 +63,9 @@ export async function runEvent(event: Event, executable: Executable) {
     labels: manipulator.eventLabels,
     entities: manipulator.entities.map((entity) => ({
       ...entity,
+      labels: manipulator.entityLabels.filter(
+        (label) => label.entityId === entity.id
+      ),
       features: entityIdToFeatures[entity.id] ?? {},
     })),
   };
@@ -71,31 +74,32 @@ export async function runEvent(event: Event, executable: Executable) {
 export async function batchUpsert(
   events: Awaited<ReturnType<typeof runEvent>>[]
 ) {
-  const values = events.flatMap((event) =>
-    event.entities.map((entity) => ({
-      event_id: event.id,
-      event_type: event.type,
-      event_timestamp: getUnixTime(event.timestamp),
-      event_data: event.data,
-      event_features: event.features,
-      entity_id: entity.id,
-      entity_name: entity.features.Name || entity.id,
-      entity_type: entity.type,
-      entity_features: entity.features,
-      relation: entity.relation,
-    }))
-  );
-
   try {
     await db.insert({
       table: "event_entity",
-      values,
+      values: events.flatMap((event) =>
+        // TODO: case when event has no entities
+        event.entities.map((entity) => ({
+          created_at: getUnixTime(new Date()),
+          event_id: event.id,
+          event_type: event.type,
+          event_timestamp: getUnixTime(event.timestamp),
+          event_data: event.data,
+          event_features: event.features,
+          entity_id: entity.id,
+          entity_name: entity.features.Name || entity.id,
+          entity_type: entity.type,
+          entity_features: entity.features,
+          relation: entity.relation,
+        }))
+      ),
       format: "JSONEachRow",
     });
     await db.insert({
       table: "event_labels",
       values: events.flatMap((event) =>
         event.labels.map((label) => ({
+          created_at: getUnixTime(new Date()),
           event_id: event.id,
           event_type: event.type,
           event_timestamp: getUnixTime(event.timestamp),
@@ -105,6 +109,29 @@ export async function batchUpsert(
           status: "ADDED",
         }))
       ),
+      format: "JSONEachRow",
+    });
+
+    await db.insert({
+      table: "entity_labels",
+      values: events
+        .filter((event) => event.entities.length)
+        .flatMap((event) =>
+          event.entities
+            .filter((entity) => entity.labels.length)
+            .flatMap((entity) =>
+              entity.labels.map((label) => ({
+                created_at: getUnixTime(new Date()),
+                entity_id: entity.id,
+                entity_name: entity.features.Name || entity.id,
+                entity_type: entity.type,
+                entity_features: entity.features,
+                status: "ADDED",
+                type: label.labelType,
+                label: label.label,
+              }))
+            )
+        ),
       format: "JSONEachRow",
     });
   } catch (error) {

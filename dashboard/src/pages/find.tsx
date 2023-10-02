@@ -29,7 +29,7 @@ function EntitiesPage() {
       entityFeatures: features,
     },
     sortBy,
-    limit: 100,
+    limit: 10,
   });
 
   return (
@@ -45,7 +45,10 @@ function EntitiesPage() {
             <Filter
               types={entityTypes}
               labels={entityLabels}
-              features={entityFeatures}
+              features={entityFeatures.map((feature) => ({
+                feature,
+                dataType: "string",
+              }))}
             />
           )}
         </div>
