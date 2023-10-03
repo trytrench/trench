@@ -81,11 +81,8 @@ export const labelsRouter = createTRPCRouter({
       const result = await db.query({
         query: `
           SELECT DISTINCT feature
-          FROM
-          (
-              SELECT JSONExtractKeys(toJSONString(entity_features)) AS feature
-              FROM event_entity
-          );
+          FROM event_entity
+          ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
         `,
         format: "JSONEachRow",
       });
@@ -98,11 +95,8 @@ export const labelsRouter = createTRPCRouter({
       const result = await db.query({
         query: `
           SELECT DISTINCT feature
-          FROM
-          (
-              SELECT JSONExtractKeys(toJSONString(event_features)) AS feature
-              FROM event_entity
-          );
+          FROM event_entity
+          ARRAY JOIN JSONExtractKeys(event_features) AS feature;
         `,
         format: "JSONEachRow",
       });

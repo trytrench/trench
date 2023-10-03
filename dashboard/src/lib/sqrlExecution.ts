@@ -76,34 +76,11 @@ export async function batchUpsert(
 ) {
   try {
     await db.insert({
-      table: "event_entity",
-      values: events.flatMap((event) =>
-        // TODO: case when event has no entities
-        event.entities.map((entity) => ({
-          created_at: getUnixTime(new Date()),
-          event_id: event.id,
-          event_type: event.type,
-          event_timestamp: getUnixTime(event.timestamp),
-          event_data: event.data,
-          event_features: event.features,
-          entity_id: entity.id,
-          entity_name: entity.features.Name || entity.id,
-          entity_type: entity.type,
-          entity_features: entity.features,
-          relation: entity.relation,
-        }))
-      ),
-      format: "JSONEachRow",
-    });
-    await db.insert({
       table: "event_labels",
       values: events.flatMap((event) =>
         event.labels.map((label) => ({
           created_at: getUnixTime(new Date()),
           event_id: event.id,
-          event_type: event.type,
-          event_timestamp: getUnixTime(event.timestamp),
-          event_features: event.features,
           label: label.label,
           type: label.type,
           status: "ADDED",
@@ -123,15 +100,33 @@ export async function batchUpsert(
               entity.labels.map((label) => ({
                 created_at: getUnixTime(new Date()),
                 entity_id: entity.id,
-                entity_name: entity.features.Name || entity.id,
-                entity_type: entity.type,
-                entity_features: entity.features,
-                status: "ADDED",
                 type: label.labelType,
                 label: label.label,
+                status: "ADDED",
               }))
             )
         ),
+      format: "JSONEachRow",
+    });
+
+    await db.insert({
+      table: "event_entity",
+      values: events.flatMap((event) =>
+        // TODO: case when event has no entities
+        event.entities.map((entity) => ({
+          created_at: getUnixTime(new Date()),
+          event_id: event.id,
+          event_type: event.type,
+          event_timestamp: getUnixTime(event.timestamp),
+          event_data: event.data,
+          event_features: event.features,
+          entity_id: entity.id,
+          entity_name: entity.features.Name || entity.id,
+          entity_type: entity.type,
+          entity_features: entity.features,
+          relation: entity.relation,
+        }))
+      ),
       format: "JSONEachRow",
     });
   } catch (error) {
