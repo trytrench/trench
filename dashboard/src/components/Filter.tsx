@@ -24,14 +24,7 @@ export const useFilters = () => {
     feature: string;
     direction: string;
     dataType: string;
-  }>(
-    "sortBy",
-    withDefault(JsonParam, {
-      feature: "lastSeenAt",
-      direction: "desc",
-      dataType: "string",
-    })
-  );
+  }>("sortBy", JsonParam);
   const [features, setFeatures] = useQueryParam<FeatureFilterType[]>(
     "features",
     withDefault(JsonParam, [])
@@ -125,7 +118,7 @@ export const Filter = ({ types, labels, features }: Props) => {
       <Text className="font-semibold text-lg mb-2 mt-6">Sort by</Text>
       <div className="flex flex-col gap-2">
         <Select
-          value={sortBy.feature}
+          value={sortBy?.feature || ""}
           onValueChange={(value) => {
             setSortBy({
               feature: value,

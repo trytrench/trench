@@ -54,7 +54,7 @@ const Page = () => {
       featureMetadata?.reduce((acc, curr) => {
         acc[curr.id] = curr;
         return acc;
-      }, {}),
+      }, {}) ?? {},
     [featureMetadata]
   );
 

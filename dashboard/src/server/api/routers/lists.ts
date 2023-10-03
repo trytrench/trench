@@ -9,11 +9,13 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         entityFilters: entityFiltersZod,
-        sortBy: z.object({
-          feature: z.string(),
-          direction: z.enum(["asc", "desc"]),
-          dataType: z.enum(["string", "number", "boolean"]).optional(),
-        }),
+        sortBy: z
+          .object({
+            feature: z.string(),
+            direction: z.enum(["asc", "desc"]),
+            dataType: z.enum(["string", "number", "boolean"]),
+          })
+          .optional(),
         limit: z.number().optional(),
         cursor: z.number().optional(),
       })
@@ -51,7 +53,11 @@ export const listsRouter = createTRPCRouter({
               .join("\n") ?? ""
           }
           GROUP BY entity_id, entity_type, entity_name
-          ORDER BY lastSeenAt DESC
+          ORDER BY ${
+            input.sortBy
+              ? getFeatureSortKey("features", input.sortBy)
+              : "lastSeenAt DESC"
+          }
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
         `,
@@ -256,6 +262,20 @@ export const listsRouter = createTRPCRouter({
       };
     }),
 });
+
+const getFeatureSortKey = (
+  column: string,
+  sortBy: {
+    feature: string;
+    direction: "asc" | "desc";
+    dataType: "string" | "number" | "boolean";
+  }
+) => {
+  const { feature, direction, dataType } = sortBy;
+  return dataType === "number"
+    ? `toInt32OrZero(JSONExtractString(${column}, '${feature}')) ${direction}`
+    : `JSONExtractString(${column}, '${feature}') ${direction}`;
+};
 
 const getFeatureQuery = (filter: JsonFilter, column: string) => {
   const { path, op, value, dataType } = filter;
