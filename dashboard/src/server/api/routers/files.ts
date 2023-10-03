@@ -3,12 +3,21 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const filesRouter = createTRPCRouter({
   list: publicProcedure
-    // .input(z.object({}))
+    .input(
+      z.object({
+        rulesetId: z.string().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       return ctx.prisma.file.findMany({
         include: {
           currentFileSnapshot: true,
           fileSnapshots: true,
+        },
+        where: {
+          currentFileSnapshot: {
+            rulesetId: input.rulesetId,
+          },
         },
       });
     }),

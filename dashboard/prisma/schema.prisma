@@ -32,8 +32,8 @@ model BackfillJob {
   ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
   rulesetId String
 
-  lastEvent EventLog @relation(fields: [lastEventId], references: [id])
-  lastEventId String
+  lastEvent EventLog? @relation(fields: [lastEventId], references: [id])
+  lastEventId String?
 }
 
 
@@ -160,10 +160,11 @@ model Ruleset {
   name       String 
   description String?
 
-  files FileSnapshot[]
+  files File[]
   backfillJobs BackfillJob[]
   productionRuleset ProductionRuleset?
 }
+
 
 model FileSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -171,8 +172,6 @@ model FileSnapshot {
   createdAt DateTime @default(now())
 
   code        String
-  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
-rulesetId String
   description String?
 
   file   File?   @relation("fileSnapshot", fields: [fileId], references: [id])
@@ -191,6 +190,9 @@ model File {
 
   currentFileSnapshot   FileSnapshot @relation("currentFileSnapshot", fields: [currentFileSnapshotId], references: [id])
   currentFileSnapshotId String       @unique
+
+  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+  rulesetId String
 
   fileSnapshots FileSnapshot[] @relation("fileSnapshot")
 }

@@ -11,9 +11,7 @@ const client = new Client({
   connectionString: process.env.POSTGRES_URL,
 });
 
-async function processEvent(eventId: string) {
-  // Your process function implementation
-}
+async function processEvents(events: string[]) {}
 
 async function initConsumer() {
   console.log("Starting backfill job...");
@@ -30,7 +28,6 @@ async function initConsumer() {
       const res = await client.query(`
         SELECT "id", "lastEventId"
         FROM "BackfillJob"
-        WHERE "lastEventId" IS NOT NULL
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
       `);
@@ -51,6 +48,7 @@ async function initConsumer() {
         SELECT "id"
         FROM "EventLog"
         WHERE "id" > $1
+        OR $1 IS NULL
         ORDER BY "id" ASC
         LIMIT 1000;
       `,
@@ -58,22 +56,20 @@ async function initConsumer() {
       );
 
       const events = eventsRes.rows;
-      for (const event of events) {
-        await processEvent(event.id);
-      }
+      await processEvents(events);
 
-      const newLastEventId = events.length
-        ? events[events.length - 1].id
-        : lastEventId;
+      // const newLastEventId = events.length
+      //   ? events[events.length - 1].id
+      //   : lastEventId;
 
-      await client.query(
-        `
-        UPDATE "BackfillJob"
-        SET "lastEventId" = $1
-        WHERE id = $2;
-      `,
-        [newLastEventId, jobId]
-      );
+      // await client.query(
+      //   `
+      //   UPDATE "BackfillJob"
+      //   SET "lastEventId" = $1
+      //   WHERE id = $2;
+      // `,
+      //   [newLastEventId, jobId]
+      // );
 
       // Commit the transaction
       await client.query("COMMIT");
