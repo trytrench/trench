@@ -51,7 +51,7 @@ export const listsRouter = createTRPCRouter({
               .join("\n") ?? ""
           }
           GROUP BY entity_id, entity_type, entity_name
-          ORDER BY lastSeenAt DESC
+          ORDER BY lastSeenAt, entity_id DESC
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
         `,
@@ -127,7 +127,7 @@ export const listsRouter = createTRPCRouter({
             event_data,
             event_timestamp,
             event_features
-          ORDER BY event_timestamp DESC
+          ORDER BY event_timestamp, event_id DESC
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
         `,
