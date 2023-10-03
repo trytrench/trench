@@ -23,6 +23,19 @@ function EntitiesPage() {
       entityType: type,
     });
 
+  const { data: featureMetadata, isLoading: featureMetadataLoading } =
+    api.features.getFeatureMetadata.useQuery();
+
+  const featureToMetadata = useMemo(
+    () =>
+      featureMetadata?.reduce((acc, curr) => {
+        acc[curr.id] = curr;
+        return acc;
+      }, {} as Record<string, any>) ?? {},
+
+    [featureMetadata]
+  );
+
   const limit = 10;
 
   const {
@@ -67,7 +80,7 @@ function EntitiesPage() {
               labels={entityLabels}
               features={entityFeatures.map((feature) => ({
                 feature,
-                dataType: "string",
+                dataType: featureToMetadata[feature]?.dataType ?? "text",
               }))}
             />
           )}

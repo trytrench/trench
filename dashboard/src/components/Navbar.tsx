@@ -83,6 +83,7 @@ export const Navbar = () => {
             <NavItem href="/find">Finder</NavItem>
             <NavItem href="/rules">Rules</NavItem>
             <NavItem href="/dashboard">Data Explorer</NavItem>
+            <NavItem href="/settings">Settings</NavItem>
           </HStack>
           <Box flex={1} />
           <HStack spacing={4} fontSize="sm">

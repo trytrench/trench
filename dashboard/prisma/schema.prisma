@@ -53,6 +53,13 @@ model EventFeature {
   @@id([eventType, name])
 }
 
+model FeatureMetadata {
+  id   String @id
+  name String
+
+  dataType String @default("string")
+}
+
 model EntityFeature {
   entityTypeObj EntityType @relation(fields: [entityType], references: [id])
   entityType    String
