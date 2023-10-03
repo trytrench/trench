@@ -1,14 +1,9 @@
 import { Client } from "pg";
-
-const env = {
-  POSTGRES_URL: process.env.POSTGRES_URL,
-  CLICKHOUSE_URL: process.env.CLICKHOUSE_URL,
-  REDIS_URL: process.env.REDIS_URL,
-};
+import { env } from "./env";
 
 const client = new Client({
   // Your PostgreSQL connection config
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: env.POSTGRES_URL,
 });
 
 async function processEvents(events: string[]) {}

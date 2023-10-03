@@ -1,0 +1,26 @@
+{
+  "private": true,
+  "workspaces": [
+    "dashboard",
+    "consumer",
+    "packages/*"
+  ],
+  "globalDependencies": [
+    "**/.env"
+  ],
+  "scripts": {
+    "build": "dotenv -- turbo run build",
+    "dev": "dotenv -- turbo run dev",
+    "start": "dotenv -- turbo run start",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "generate": "turbo run generate",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "dotenv-cli": "latest",
+    "eslint": "^8.48.0",
+    "prettier": "^3.0.3",
+    "turbo": "1.10.4"
+  },
+  "packageManager": "npm@9.5.0"
+}

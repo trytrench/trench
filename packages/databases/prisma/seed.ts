@@ -1,7 +1,7 @@
-import { prisma } from "~/server/db";
 import { readFile } from "fs/promises";
 import path from "path";
 import { glob } from "glob";
+import { prisma } from "..";
 
 async function main() {
   const files = await glob(

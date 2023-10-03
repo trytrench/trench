@@ -4,13 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@t3-oss/env-core": "^0.6.1",
+    "databases": "*",
+    "date-fns": "^2.30.0",
     "pg": "^8.11.3",
-    "typescript": "^5.2.2"
+    "sqrl": "^0.6.10",
+    "typescript": "^5.2.2",
+    "ulid": "^2.3.0",
+    "zod": "^3.22.2"
   },
   "devDependencies": {
     "@types/pg": "^8.10.3"

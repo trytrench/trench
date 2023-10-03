@@ -1,16 +1,7 @@
-# ./consumer/Dockerfile
-FROM node:latest
+FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
-# Copy both package*.json files and your source code to the working directory
-COPY package*.json ./
-COPY . .
-
-# Install dependencies
-RUN npm install
-
-# Compile TypeScript to JavaScript using npx
-RUN npx tsc
+COPY dist dist
 
 CMD ["node", "dist/index.js"]

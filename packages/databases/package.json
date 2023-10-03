@@ -1,0 +1,19 @@
+{
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {},
+  "devDependencies": {
+    "prisma": "^5.3.1"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^0.2.2",
+    "@prisma/client": "^5.3.1",
+    "@t3-oss/env-core": "^0.6.1",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "zod": "^3.22.2"
+  }
+}

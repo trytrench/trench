@@ -44,7 +44,7 @@ async function main() {
     //   "state.allow-in-memory": true,
     // },
     config: {
-      "redis.address": process.env.SQRL_REDIS_URL,
+      "redis.address": process.env.REDIS_URL,
     },
   });
 
@@ -54,10 +54,13 @@ async function main() {
     },
   });
   const fileData =
-    files.reduce((acc, file) => {
-      acc[file.name] = file.currentFileSnapshot.code;
-      return acc;
-    }, {} as Record<string, string>) || {};
+    files.reduce(
+      (acc, file) => {
+        acc[file.name] = file.currentFileSnapshot.code;
+        return acc;
+      },
+      {} as Record<string, string>
+    ) || {};
 
   const { executable } = await compileSqrl(instance, fileData);
 

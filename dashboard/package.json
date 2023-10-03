@@ -49,6 +49,7 @@
     "cheerio": "^1.0.0-rc.12",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
+    "databases": "*",
     "dayjs": "^1.11.9",
     "framer-motion": "^10.15.1",
     "glob": "^10.3.3",

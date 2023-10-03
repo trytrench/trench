@@ -29,7 +29,7 @@ export function EventDrawer(props: {
 
         <DrawerBody>
           <div>
-            {selectedEvent.labels.map((label) => {
+            {selectedEvent?.labels.map((label) => {
               return (
                 <Badge
                   key={label.id}
@@ -77,7 +77,7 @@ export function EventDrawer(props: {
           <Text>Entities</Text>
           <div className="h-4"></div>
           <div className="flex flex-col gap-2">
-            {selectedEvent.entities.map((entity) => {
+            {selectedEvent?.entities.map((entity) => {
               return (
                 <EntityCard
                   key={entity.id}

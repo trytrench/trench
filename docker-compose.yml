@@ -2,43 +2,35 @@ version: "3"
 
 services:
   redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+    extends:
+      file: docker-compose.base.yml
+      service: redis
 
   postgres:
-    image: postgres:latest
-    shm_size: 4g
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    extends:
+      file: docker-compose.base.yml
+      service: postgres
 
   clickhouse-server:
-    image: clickhouse/clickhouse-server:latest
-    ports:
-      - "18123:8123"
-      - "19000:9000"
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
+    extends:
+      file: docker-compose.base.yml
+      service: clickhouse-server
 
   consumer:
+    extends:
+      file: docker-compose.base.yml
+      service: consumer
+
+  webapp:
     build:
-      context: ./consumer
+      context: dashboard/
+    command: npm run start
+    restart: on-failure
     depends_on:
-      - postgres
-      - clickhouse-server
+      - db
       - redis
-    environment:
-      POSTGRES_URL: postgres://postgres:postgres@postgres:5432/postgres
-      CLICKHOUSE_URL: http://clickhouse-server:8123
-      REDIS_URL: redis://redis:6379
+      - clickhouse-server
+      - consumer
 
 volumes:
   postgres_data:
