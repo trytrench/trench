@@ -5,17 +5,26 @@ import { prisma } from "..";
 
 async function main() {
   const files = await glob(
-    path.resolve(__dirname, "../src/rules/*.{sqrl,txt}")
+    path.resolve(__dirname, "../src/rules/*.{sqrl,txt}"),
+    () => {}
+  );
+  const fileData = await Promise.all(
+    files.found.map(async (file) => {
+      const source = await readFile(file, "utf-8");
+      return {
+        name: file,
+        source,
+      };
+    })
   );
 
-  for (const file of files) {
-    const source = await readFile(file, "utf-8");
+  for (const file of fileData) {
     await prisma.file.create({
       data: {
-        name: path.basename(file),
+        name: path.basename(file.name),
         currentFileSnapshot: {
           create: {
-            code: source,
+            code: file.source,
           },
         },
         ruleset: {

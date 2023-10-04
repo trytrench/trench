@@ -30,11 +30,17 @@ services:
 
   consumer:
     build:
-      context: ./consumer
+      context: .
+      dockerfile: ./consumer/Dockerfile
     depends_on:
       - postgres
       - clickhouse-server
       - redis
+    environment:
+      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
+      CLICKHOUSE_URL: "http://clickhouse-server:18123"
+      REDIS_URL: "redis:6379"
+      NODE_ENV: "development"
 
 volumes:
   postgres_data:

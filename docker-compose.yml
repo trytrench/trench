@@ -21,16 +21,23 @@ services:
       file: docker-compose.base.yml
       service: consumer
 
-  webapp:
+  dashboard:
     build:
-      context: dashboard/
-    command: npm run start
+      context: .
+      dockerfile: ./dashboard/Dockerfile
     restart: on-failure
     depends_on:
-      - db
+      - postgres
       - redis
       - clickhouse-server
       - consumer
+    environment:
+      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
+      CLICKHOUSE_URL: "http://clickhouse-server:8123"
+      REDIS_URL: "redis:6379"
+      NODE_ENV: "development"
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:

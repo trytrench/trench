@@ -1,9 +1,22 @@
 {
-  "main": "./index.ts",
+  "name": "databases",
+  "main": "./dist/index.js",
+  "source": "./index.ts",
   "types": "./index.ts",
-  "scripts": {},
+  "private": true,
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "npx prisma db seed",
+    "build": "tsc"
+  },
   "devDependencies": {
-    "prisma": "^5.3.1"
+    "@types/glob": "^8.1.0",
+    "prisma": "^5.3.1",
+    "typescript": "^5.2.2"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

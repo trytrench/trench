@@ -1,7 +1,26 @@
-FROM node:18-alpine
+# Base Image
+FROM node:18 AS base
 
-WORKDIR /usr/src/app
+# Builder Stage
+FROM base AS builder
+WORKDIR /app
+RUN npm install -g turbo
+COPY . .
+RUN turbo prune --scope=consumer --docker
 
-COPY dist dist
+# Installer Stage
+FROM base AS installer
+WORKDIR /app
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/package-lock.json ./package-lock.json
+RUN npm install
 
-CMD ["node", "dist/index.js"]
+COPY --from=builder /app/out/full/ .
+RUN npm run build
+
+# Runner Stage
+FROM base AS runner
+WORKDIR /app
+COPY --from=installer /app .
+
+CMD ["node", "consumer/dist/index.js"]

@@ -1,8 +1,27 @@
-FROM node:18-alpine
+# Base Image
+FROM node:18 AS base
 
-WORKDIR /usr/src/app
+# Builder Stage
+FROM base AS builder
+WORKDIR /app
+RUN npm install -g turbo
+COPY . .
+RUN turbo prune --scope=dashboard --docker
 
-COPY .next .next
+# Installer Stage
+FROM base AS installer
+WORKDIR /app
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/package-lock.json ./package-lock.json
+RUN npm install
+
+COPY --from=builder /app/out/full/ .
+RUN SKIP_ENV_VALIDATION=true npm run build
+
+# Runner Stage
+FROM base AS runner
+WORKDIR /app
+COPY --from=installer /app .
+CMD ["npm", "run", "start"]
 
 EXPOSE 3000
-CMD [ "npm", "run", "start" ]

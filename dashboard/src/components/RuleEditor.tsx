@@ -114,10 +114,13 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
   const router = useRouter();
 
   const [sources, setSources] = useState<Record<string, string>>(
-    files.reduce((acc, file) => {
-      acc[file.id] = file.currentFileSnapshot.code;
-      return acc;
-    }, {} as Record<string, string>)
+    files.reduce(
+      (acc, file) => {
+        acc[file.id] = file.currentFileSnapshot.code;
+        return acc;
+      },
+      {} as Record<string, string>
+    )
   );
 
   const hasUnsavedChanges = useMemo(
@@ -167,10 +170,13 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
 
     try {
       const fileData =
-        files.reduce((acc, file) => {
-          acc[file.name] = sources[file.id];
-          return acc;
-        }, {} as Record<string, string>) || {};
+        files.reduce(
+          (acc, file) => {
+            acc[file.name] = sources[file.id];
+            return acc;
+          },
+          {} as Record<string, string>
+        ) || {};
 
       await compileSqrl(instance, fileData);
       setCompileStatus({
@@ -209,10 +215,13 @@ export const RuleEditor = ({ files, refetchFiles }: Props) => {
 
       lastFilesRef.current = files;
       setSources(
-        files.reduce((acc, file) => {
-          acc[file.id] = sources[file.id] || file.currentFileSnapshot.code;
-          return acc;
-        }, {} as Record<string, string>)
+        files.reduce(
+          (acc, file) => {
+            acc[file.id] = sources[file.id] || file.currentFileSnapshot.code;
+            return acc;
+          },
+          {} as Record<string, string>
+        )
       );
     }
   }, [files, sources, recompile, currentFile]);

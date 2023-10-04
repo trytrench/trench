@@ -10,12 +10,15 @@
         ".env.production",
         ".env"
       ],
-      "dependsOn": ["^db:generate"]
+      "dependsOn": ["^db:generate", "^build"]
     },
     "db:generate": {
       "cache": false
     },
     "db:migrate": {
+      "cache": false
+    },
+    "db:seed": {
       "cache": false
     },
     "dev": {

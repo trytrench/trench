@@ -1,19 +1,20 @@
-import { ulid } from "ulid";
 import { db } from "databases";
 import { getUnixTime } from "date-fns";
 import { createSimpleContext, type Executable } from "sqrl";
+import { VirtualFilesystem, compileFromFilesystem, type Instance } from "sqrl";
 import { SqrlManipulator } from "./SqrlManipulator";
 
 export interface Event {
-  timestamp: string;
+  id: string;
   type: string;
-  data: Record<string, any>;
+  timestamp: string;
+  data: any;
 }
 
 export async function runEvent(event: Event, executable: Executable) {
   const ctx = createSimpleContext();
 
-  // TODO: Extract this code to shared library
+  // TODO: Extract this code to shared
   const manipulator = new SqrlManipulator();
 
   const execution = await executable.execute(ctx, {
@@ -52,7 +53,7 @@ export async function runEvent(event: Event, executable: Executable) {
   });
 
   return {
-    id: ulid(),
+    id: event.id,
     type: event.type,
     timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
     data: event.data,
@@ -108,3 +109,12 @@ export async function batchUpsert(
     console.error("Error inserting data into ClickHouse:", error);
   }
 }
+
+export const compileSqrl = async (
+  instance: Instance,
+  files: Record<string, string>
+) => {
+  const fs = new VirtualFilesystem(files);
+
+  return compileFromFilesystem(instance, fs);
+};
