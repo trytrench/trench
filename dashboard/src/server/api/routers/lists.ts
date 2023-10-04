@@ -127,6 +127,15 @@ export const listsRouter = createTRPCRouter({
                 ?.map((filter) => getFeatureQuery(filter, "event_features"))
                 .join("\n") ?? ""
             }
+            ${
+              filters?.entityId
+                ? `AND event_id IN (
+                    SELECT DISTINCT event_id
+                    FROM event_entity_event_labels
+                    WHERE entity_id = '${filters.entityId}'
+                   )`
+                : ""
+            }
           GROUP BY
             event_id,
             event_type,

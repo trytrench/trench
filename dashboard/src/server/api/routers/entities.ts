@@ -10,6 +10,7 @@ import {
   buildEventExistsQuery,
   getFiltersWhereQuery,
 } from "../../lib/filters";
+import { db } from "~/server/db";
 
 export const entitiesRouter = createTRPCRouter({
   findIds: publicProcedure
@@ -24,46 +25,6 @@ export const entitiesRouter = createTRPCRouter({
           id: {
             in: input.ids,
           },
-        },
-      });
-    }),
-
-  findEvents: publicProcedure
-    .input(
-      z.object({
-        entityId: z.string(),
-        offset: z.number().optional(),
-        limit: z.number().optional(),
-        filters: eventFiltersZod.optional(),
-      })
-    )
-    .query(({ ctx, input }) => {
-      return ctx.prisma.event.findMany({
-        include: {
-          eventLabels: true,
-          entityLinks: {
-            include: {
-              entity: {
-                include: {
-                  entityLabels: true,
-                },
-              },
-            },
-          },
-        },
-        where: {
-          entityLinks: {
-            some: {
-              // type: "Actor",
-              entityId: input.entityId,
-            },
-          },
-          ...getFiltersWhereQuery(input.filters),
-        },
-        skip: input.offset,
-        take: input.limit,
-        orderBy: {
-          timestamp: "desc",
         },
       });
     }),
@@ -308,15 +269,38 @@ export const entitiesRouter = createTRPCRouter({
         id: z.string(),
       })
     )
-    .query(({ ctx, input }) => {
-      return ctx.prisma.entity.findUnique({
-        where: {
-          id: input.id,
-        },
-        include: {
-          entityLabels: true,
-        },
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+            entity_id as id,
+            entity_type as type,
+            entity_name as name,
+            max(event_timestamp) AS lastSeenAt,
+            argMax(entity_features, event_timestamp) AS features,
+            arrayDistinct(groupArray(label)) AS labels
+          FROM event_entity_entity_labels
+          WHERE id = '${input.id}'
+          GROUP BY entity_id, entity_type, entity_name;
+        `,
+        format: "JSONEachRow",
       });
+
+      const entities = await result.json<
+        {
+          id: string;
+          name: string;
+          type: string;
+          lastSeenAt: string;
+          features: string;
+          labels: string[];
+        }[]
+      >();
+
+      return {
+        ...entities[0],
+        features: JSON.parse(entities[0]?.features),
+      };
     }),
 
   findRelatedEntities: publicProcedure

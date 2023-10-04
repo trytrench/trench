@@ -253,70 +253,46 @@ function RenderEvents({
   view: "list" | "grid";
 }) {
   const [dateRange] = useDateRange();
-  const { data } = api.entities.findEvents.useQuery({
-    entityId: entityId ?? "",
-    limit: 100,
-    filters: {
-      dateRange: {
-        from: dateRange.from.getTime(),
-        to: dateRange.to.getTime(),
-      },
+  const { data } = api.lists.getEventsList.useQuery({
+    limit: 50,
+    eventFilters: {
+      entityId,
+      // dateRange: {
+      //   from: dateRange.from.getTime(),
+      //   to: dateRange.to.getTime(),
+      // },
     },
   });
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<
+    RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
+  >(null);
 
   return (
     <Stack spacing={2}>
-      {data?.map((event) =>
+      {data?.rows.map((event) =>
         view === "list" ? (
           <EventListItem
             key={event.id}
-            event={{
-              ...event,
-              labels: event.eventLabels.map((el) => ({
-                id: el.id,
-                name: el.name,
-                color: el.color,
-              })),
-            }}
+            event={event}
             onClick={() => {
-              setSelectedEventId(event.id);
+              setSelectedEvent(event);
             }}
-            selected={selectedEventId === event.id}
+            selected={selectedEvent?.id === event.id}
           />
         ) : (
-          <EventCard
-            key={event.id}
-            event={{
-              ...event,
-              labels: event.eventLabels.map((el) => ({
-                id: el.id,
-                name: el.name,
-                color: el.color,
-              })),
-              entities: event.entityLinks.map((el) => ({
-                id: el.entity.id,
-                name: el.entity.name,
-                type: el.entity.type,
-                labels: el.entity.entityLabels.map((el) => ({
-                  id: el.id,
-                  name: el.name,
-                  color: el.color,
-                })),
-                features: el.entity.features,
-              })),
-            }}
-          />
+          <EventCard key={event.id} event={event} />
         )
       )}
-      <EventDrawer
-        selectedEvent={selectedEventId}
-        isOpen={!!selectedEventId}
-        onClose={() => {
-          setSelectedEventId(null);
-        }}
-      />
+      {selectedEvent && (
+        <EventDrawer
+          selectedEvent={selectedEvent}
+          isOpen={!!selectedEvent}
+          onClose={() => {
+            setSelectedEvent(null);
+          }}
+        />
+      )}
     </Stack>
   );
 }
@@ -495,18 +471,10 @@ export default function Home() {
                 <Title className="shrink-0">Labels</Title>
               </div>
               <div className="h-4"></div>
-              {entityData?.entityLabels &&
-              entityData?.entityLabels.length > 0 ? (
+              {!!entityData?.labels?.length ? (
                 <div className="flex flex-row flex-wrap">
-                  {entityData?.entityLabels.map((label) => (
-                    <Tag
-                      key={label.name}
-                      colorScheme={
-                        label && label.color !== "" ? label.color : "gray"
-                      }
-                    >
-                      {label.name}
-                    </Tag>
+                  {entityData.labels.map((label) => (
+                    <Badge key={label}>{label}</Badge>
                   ))}
                 </div>
               ) : (
