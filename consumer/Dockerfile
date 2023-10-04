@@ -11,12 +11,13 @@ RUN turbo prune --scope=consumer --docker
 # Installer Stage
 FROM base AS installer
 WORKDIR /app
+RUN npm install -g pnpm
 COPY --from=builder /app/out/json/ .
-COPY --from=builder /app/out/package-lock.json ./package-lock.json
-RUN npm install
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install
 
 COPY --from=builder /app/out/full/ .
-RUN npm run build
+RUN pnpm run build
 
 # Runner Stage
 FROM base AS runner

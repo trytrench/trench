@@ -11,17 +11,19 @@ RUN turbo prune --scope=dashboard --docker
 # Installer Stage
 FROM base AS installer
 WORKDIR /app
+RUN npm install -g pnpm
 COPY --from=builder /app/out/json/ .
-COPY --from=builder /app/out/package-lock.json ./package-lock.json
-RUN npm install
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install
 
 COPY --from=builder /app/out/full/ .
-RUN SKIP_ENV_VALIDATION=true npm run build
+RUN SKIP_ENV_VALIDATION=true pnpm run build
 
 # Runner Stage
 FROM base AS runner
+RUN npm install -g pnpm
 WORKDIR /app
 COPY --from=installer /app .
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start"]
 
 EXPOSE 3000

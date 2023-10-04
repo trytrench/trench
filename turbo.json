@@ -26,6 +26,9 @@
     },
     "start": {
       "cache": false
+    },
+    "db:reset": {
+      "cache": false
     }
   }
 }

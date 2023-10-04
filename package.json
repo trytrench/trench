@@ -1,10 +1,5 @@
 {
   "private": true,
-  "workspaces": [
-    "dashboard",
-    "consumer",
-    "packages/*"
-  ],
   "globalDependencies": [
     "**/.env"
   ],
@@ -12,6 +7,7 @@
     "build": "dotenv -- turbo run build",
     "dev": "dotenv -- turbo run dev",
     "start": "dotenv -- turbo run start",
+    "db:reset": "dotenv -- turbo run db:reset",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "generate": "turbo run generate",
     "lint": "turbo run lint"
@@ -22,5 +18,10 @@
     "prettier": "^3.0.3",
     "turbo": "1.10.4"
   },
-  "packageManager": "npm@9.5.0"
+  "packageManager": "pnpm@8.8.0",
+  "pnpm": {
+    "patchedDependencies": {
+      "sqrl-redis-functions@0.6.10": "patches/sqrl-redis-functions@0.6.10.patch"
+    }
+  }
 }

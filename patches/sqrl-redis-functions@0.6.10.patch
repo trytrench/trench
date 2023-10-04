@@ -1,7 +1,7 @@
-diff --git a/node_modules/sqrl-redis-functions/lib/CountFunctions.js b/node_modules/sqrl-redis-functions/lib/CountFunctions.js
-index 2b17989..f14aefd 100644
---- a/node_modules/sqrl-redis-functions/lib/CountFunctions.js
-+++ b/node_modules/sqrl-redis-functions/lib/CountFunctions.js
+diff --git a/lib/CountFunctions.js b/lib/CountFunctions.js
+index 2b17989b28b588160425791be1a2149e1e2c62af..f14aefd77162f0c91af4c71da2b3d3b9d5b39382 100644
+--- a/lib/CountFunctions.js
++++ b/lib/CountFunctions.js
 @@ -150,7 +150,7 @@ function registerCountFunctions(instance, service) {
      }, {
          allowNull: true,
@@ -11,10 +11,10 @@ index 2b17989..f14aefd 100644
      });
      instance.register(function _fetchCountsFromDb(state, keys, windowMs) {
          if (keys === null) {
-diff --git a/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js b/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
-index 8ca1488..c3538b3 100644
---- a/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
-+++ b/node_modules/sqrl-redis-functions/lib/CountUniqueFunctions.js
+diff --git a/lib/CountUniqueFunctions.js b/lib/CountUniqueFunctions.js
+index 8ca14888115ec35d7b184b7572f5ce917a284645..c3538b399a513a5665c21a74c172b8ff6d178e79 100644
+--- a/lib/CountUniqueFunctions.js
++++ b/lib/CountUniqueFunctions.js
 @@ -31,7 +31,7 @@ const tupleToString = (tuple) => stringify(tuple.map(sqrl_1.SqrlObject.ensureBas
  function registerCountUniqueFunctions(instance, service) {
      instance.registerStatement("SqrlCountUniqueStatements", async function _bumpCountUnique(state, keys, uniques, windowMs) {
@@ -33,10 +33,10 @@ index 8ca1488..c3538b3 100644
      });
      instance.registerSync(function _unionCountUnique(left, right) {
          (0, sqrl_common_1.invariant)(left instanceof Set && right instanceof Set, "expected left and right to be Sets");
-diff --git a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js b/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
-index 0060dcd..25c2243 100644
---- a/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
-+++ b/node_modules/sqrl-redis-functions/lib/EntityFunctions.js
+diff --git a/lib/EntityFunctions.js b/lib/EntityFunctions.js
+index 0060dcd2e7c3bd217af67f97324d7e37a3094bb1..25c22430c7ce780e967643ae36fa9ba1684e014b 100644
+--- a/lib/EntityFunctions.js
++++ b/lib/EntityFunctions.js
 @@ -2,25 +2,29 @@
  Object.defineProperty(exports, "__esModule", { value: true });
  exports.registerEntityFunctions = void 0;
@@ -84,10 +84,10 @@ index 0060dcd..25c2243 100644
          docstring: "Create an entity of the given type",
      });
      instance.registerTransform(function entityList(state, ast) {
-diff --git a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
-index 80541e6..f8ea3f1 100644
---- a/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
-+++ b/node_modules/sqrl-redis-functions/lib/LabelFunctions.js
+diff --git a/lib/LabelFunctions.js b/lib/LabelFunctions.js
+index 80541e6015a2ab28aeef3352e5fbeaf3a5d2b932..f8ea3f1aa1f41e6d9545c167508c8f6dd56adff4 100644
+--- a/lib/LabelFunctions.js
++++ b/lib/LabelFunctions.js
 @@ -4,10 +4,10 @@ exports.registerLabelFunctions = void 0;
  const sqrl_common_1 = require("sqrl-common");
  const sqrl_1 = require("sqrl");
@@ -142,21 +142,11 @@ index 80541e6..f8ea3f1 100644
          allowSqrlObjects: true,
          argstring: "entity, label",
          docstring: "Returns true if the provided entity has the given label",
-diff --git a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
-index 626d8d5..feae89b 100644
---- a/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
-+++ b/node_modules/sqrl-redis-functions/lib/services/RedisLabelService.js
-@@ -8,21 +8,23 @@ class RedisLabelService {
-         this.redis = redis;
-         this.prefix = prefix;
-     }
--    addLabel(manipulator, entity, label, cause) {
-+    addEntityLabel(manipulator, entity, type, label, cause) {
-+        manipulator.addEntityLabel(cause, entity, type, label);
-         manipulator.addCallback(async (ctx) => {
--            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label);
-+            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), type, label);
-             await this.redis.set(ctx, key, "1");
+diff --git a/lib/services/RedisLabelService.js b/lib/services/RedisLabelService.js
+index 626d8d5ec44584e417a5fe8876b3daa080ace04c..ee8ce9b893f112cfefe4e6be75bdd03db99295c7 100644
+--- a/lib/services/RedisLabelService.js
++++ b/lib/services/RedisLabelService.js
+@@ -15,14 +15,15 @@ class RedisLabelService {
              await this.redis.expire(ctx, key, EXPIRY);
          });
      }

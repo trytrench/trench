@@ -7,7 +7,7 @@ import { SqrlManipulator } from "./SqrlManipulator";
 export interface Event {
   id: string;
   type: string;
-  timestamp: string;
+  timestamp: Date;
   data: any;
 }
 
@@ -55,7 +55,7 @@ export async function runEvent(event: Event, executable: Executable) {
   return {
     id: event.id,
     type: event.type,
-    timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
+    timestamp: event.timestamp,
     data: event.data,
     features: eventFeatures,
     labels: manipulator.eventLabels,
@@ -69,20 +69,32 @@ export async function runEvent(event: Event, executable: Executable) {
 export async function batchUpsert(
   events: Awaited<ReturnType<typeof runEvent>>[]
 ) {
-  const values = events.flatMap((event) =>
-    event.entities.map((entity) => ({
-      event_id: event.id,
-      event_type: event.type,
-      event_timestamp: getUnixTime(event.timestamp),
-      event_data: event.data,
-      event_features: event.features,
-      entity_id: entity.id,
-      entity_name: entity.features.Name || entity.id,
-      entity_type: entity.type,
-      entity_features: entity.features,
-      relation: entity.relation,
-    }))
-  );
+  const values = events.flatMap((event) => {
+    if (event.entities.length === 0) {
+      return [
+        {
+          event_id: event.id,
+          event_type: event.type,
+          event_timestamp: getUnixTime(event.timestamp),
+          event_data: event.data,
+          event_features: event.features,
+        },
+      ];
+    } else {
+      event.entities.map((entity) => ({
+        event_id: event.id,
+        event_type: event.type,
+        event_timestamp: getUnixTime(event.timestamp),
+        event_data: event.data,
+        event_features: event.features,
+        entity_id: entity.id,
+        entity_name: entity.features.Name || entity.id,
+        entity_type: entity.type,
+        entity_features: entity.features,
+        relation: entity.relation,
+      }));
+    }
+  });
 
   try {
     await db.insert({

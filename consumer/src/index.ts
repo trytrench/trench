@@ -64,9 +64,9 @@ async function initConsumer() {
 
       const eventsRes = await client.query(
         `
-        SELECT "id"
+        SELECT "id", "type", "data", "timestamp"
         FROM "EventLog"
-        WHERE "id" < $1
+        WHERE "id" > $1
         OR $1 IS NULL
         ORDER BY "id" ASC
         LIMIT 1000;

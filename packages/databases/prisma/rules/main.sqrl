@@ -1,0 +1,7 @@
+# Basic event set up. Read in EventData, and set the current clock time
+# [NOTE] Features do not need to be defined in order (Timestamp is set lower down)
+LET EventData := input();
+LET SqrlClock := Timestamp;
+
+LET Type := jsonValue(EventData, '$.type');
+LET Timestamp := jsonValue(EventData, '$.timestamp');

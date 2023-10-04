@@ -1,8 +1,8 @@
 {
   "name": "databases",
   "main": "./dist/index.js",
-  "source": "./index.ts",
-  "types": "./index.ts",
+  "source": "./src/index.ts",
+  "types": "./src/index.ts",
   "private": true,
   "files": [
     "dist/**"
@@ -11,6 +11,7 @@
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npx prisma db seed",
+    "db:reset": "npx prisma migrate reset --force",
     "build": "tsc"
   },
   "devDependencies": {

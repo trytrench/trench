@@ -5,7 +5,6 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "postinstall": "prisma generate && patch-package",
     "lint": "next lint",
     "start": "next start"
   },
@@ -44,7 +43,7 @@
     "chakra-react-select": "^4.7.0",
     "cheerio": "^1.0.0-rc.12",
     "clsx": "^2.0.0",
-    "databases": "*",
+    "databases": "workspace:*",
     "date-fns": "^2.30.0",
     "dayjs": "^1.11.9",
     "framer-motion": "^10.15.1",
@@ -58,7 +57,6 @@
     "next-auth": "^4.22.4",
     "next-query-params": "^4.2.3",
     "p-limit": "^4.0.0",
-    "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",
     "progress": "^2.0.3",
     "react": "18.2.0",
@@ -98,5 +96,10 @@
   },
   "ct3aMetadata": {
     "initVersion": "7.18.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "sqrl-redis-functions@0.6.10": "patches/sqrl-redis-functions@0.6.10.patch"
+    }
   }
 }
