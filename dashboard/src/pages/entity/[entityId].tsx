@@ -416,11 +416,10 @@ export default function Home() {
   const router = useRouter();
   const entityId = router.query.entityId as string | undefined;
 
-  // Entity Data
-  // TODO: handle when entityId is a string[], + other cases
-  const { data: entityData } = api.entities.get.useQuery({
-    id: entityId ?? "",
-  });
+  const { data: entityData } = api.entities.get.useQuery(
+    { id: entityId! },
+    { enabled: !!entityId }
+  );
 
   const entityInfo = useMemo(
     () =>
@@ -533,7 +532,7 @@ export default function Home() {
                         color={"gray"}
                         title={"Label Distribution"}
                         legend="Events"
-                        entityFilters={{
+                        eventFilters={{
                           entityId,
                         }}
                       />

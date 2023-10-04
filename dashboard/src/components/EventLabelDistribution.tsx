@@ -24,7 +24,7 @@ export function EventLabelDistribution({
   const eventLabelBarData: BarListProps["data"] = useMemo(() => {
     return [
       ...(labelDists?.map((label) => ({
-        name: label.label,
+        name: label.label ?? "No label",
         value: label.count,
       })) ?? []),
     ];

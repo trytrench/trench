@@ -6,6 +6,7 @@ import {
   getFiltersWhereQuery,
 } from "../../lib/filters";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { db } from "~/server/db";
 
 export const eventsRouter = createTRPCRouter({
   getTimeBuckets: publicProcedure
@@ -145,48 +146,29 @@ export const eventsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      // write above query in raw sql to avoid n+1 problem
-      const eventLabelDistros = await ctx.prisma.$queryRawUnsafe<
-        Array<{
+      const result = await db.query({
+        query: `
+          SELECT 
+              label,
+              COUNT(DISTINCT event_id) AS count
+          FROM 
+              event_entity_event_labels
+          WHERE 
+              entity_id = '${input.eventFilters?.entityId}'
+          GROUP BY 
+              label
+          ORDER BY 
+              count DESC;
+        `,
+        format: "JSONEachRow",
+      });
+
+      return result.json<
+        {
           label: string;
           count: number;
-        }>
-      >(
-        `
-          SELECT
-            "EventLabel"."name" as label, 
-            COUNT(*) as count
-          FROM
-            "_EventToEventLabel"
-          JOIN
-            "EventLabel"
-          ON
-            "_EventToEventLabel"."B" = "EventLabel"."id"
-          WHERE
-            ${buildEventExistsQuery(
-              input.eventFilters,
-              '"_EventToEventLabel"."A"'
-            )}
-            AND EXISTS (
-              SELECT FROM "EventToEntityLink"
-              WHERE
-                "EventToEntityLink"."eventId" = "_EventToEventLabel"."A"
-                AND ${buildEntityExistsQuery(
-                  input.entityFilters,
-                  '"EventToEntityLink"."entityId"'
-                )}
-            )
-          GROUP BY
-            "EventLabel"."name"
-          ORDER BY
-            count DESC
-          `
-      );
-
-      return eventLabelDistros.map((dbEventLabelDistro) => ({
-        label: dbEventLabelDistro.label,
-        count: Number(dbEventLabelDistro.count),
-      }));
+        }[]
+      >();
     }),
   getEventTypeDistributions: publicProcedure
     .input(
