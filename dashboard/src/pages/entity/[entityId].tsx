@@ -22,7 +22,20 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { AlignJustify, LayoutGrid } from "lucide-react";
+
+import { differenceInMinutes, format, formatRelative } from "date-fns";
+import { enUS } from "date-fns/locale";
+import {
+  AlignJustify,
+  AlignJustifyIcon,
+  Cable,
+  CableIcon,
+  FileQuestion,
+  LayoutGrid,
+  Link,
+  ListIcon,
+  LogIn,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { NumberParam, useQueryParam, useQueryParams } from "use-query-params";
@@ -36,6 +49,8 @@ import { EventLabelDistribution } from "../../components/EventLabelDistribution"
 import { EventListItem } from "../../components/EventListItem";
 import { EntityEventChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
+import LinksView from "~/components/LinksView";
+import LinksDisplay from "~/components/LinksView/refactor";
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -104,7 +119,7 @@ function RenderEvents({
 }
 
 function RelatedEntities({ entityId }: { entityId?: string }) {
-  const [entityType, setEntityType] = useState<string | undefined>(undefined);
+  const [entityType, setEntityType] = useState<string>("");
   const [entityLabel, setEntityLabel] = useState<string | undefined>(undefined);
 
   const { data } = api.entities.findRelatedEntities.useQuery({
@@ -120,7 +135,8 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
 
   return (
     <>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 grow">
+        <Text className="whitespace-nowrap">Filter</Text>
         <Select
           enableClear
           className="w-40"
@@ -129,8 +145,8 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
           placeholder="All entities"
         >
           {entityTypes?.map((et) => (
-            <SelectItem key={et.id} value={et.id}>
-              {et.name}
+            <SelectItem key={et} value={et}>
+              {et}
             </SelectItem>
           )) ?? []}
         </Select>
@@ -143,55 +159,20 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
           placeholder="All labels"
         >
           {entityLabels?.map((el) => (
-            <SelectItem key={el.id} value={el.id}>
-              {el.name}
+            <SelectItem key={el} value={el}>
+              {el}
             </SelectItem>
           )) ?? []}
         </Select>
       </div>
-      <div className="flex flex-col">
-        <Table className="mt-2">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Type</TableHeaderCell>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell># Links</TableHeaderCell>
-              <TableHeaderCell>Labels</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data?.length > 0 ? (
-              data.map((entity) => (
-                <TableRow key={entity.entityId}>
-                  <TableCell>{entity.entityType}</TableCell>
-                  <TableCell>
-                    <b>
-                      {entity.entityName}
-                      {/* <RenderEntity entity={entity} /> */}
-                    </b>
-                  </TableCell>
-                  <TableCell>{entity.count}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {entity.entityLabels.map((el) => (
-                        <Tag key={el.name} colorScheme={el.color}>
-                          {el.name}
-                        </Tag>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4}>
-                  <Text className="text-center">No related entities found</Text>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <Divider className="mb-0 mt-4" />
+      <LinksDisplay
+        entityId={entityId ?? ""}
+        entityFilter={{
+          entityType,
+        }}
+        onEntityFilterChange={setEntityType}
+      />
     </>
   );
 }
@@ -304,7 +285,7 @@ export default function Home() {
                 <Tab>Event History</Tab>
                 <Tab>Related Entities</Tab>
               </TabList>
-              <TabPanels className="p-2 overflow-y-auto">
+              <TabPanels className="p-2 overflow-y-auto grow">
                 <TabPanel className="">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
