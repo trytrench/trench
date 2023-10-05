@@ -2,7 +2,6 @@ import { format } from "date-fns";
 import { type RouterOutputs, api } from "../utils/api";
 import {
   DEFAULT_DATE_RANGE,
-  DateRangePicker,
   EventTypeFilter,
   IntervalPicker,
   useEventFilters,
@@ -55,6 +54,7 @@ import {
 } from "@chakra-ui/react";
 import { LoadingPlaceholder } from "../components/LoadingPlaceholder";
 import clsx from "clsx";
+import { DateRangePicker } from "~/components/DateRangePicker";
 
 function formatTimeRange([start, end]: [number, number], interval: number) {
   if (interval >= 1000 * 60 * 60 * 24) {
