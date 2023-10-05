@@ -17,24 +17,14 @@ model EventLog {
   type      String
   data      Json     @default("{}")
 
-  backfillJobs BackfillJob[] 
+  // Datasets that currently have this event as its last processed event
+  datasets Dataset[] 
 
   @@index([timestamp])
 
 }
 
 
-model BackfillJob {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ruleset Ruleset @relation(fields: [rulesetId], references: [id])
-  rulesetId String
-
-  lastEvent EventLog? @relation(fields: [lastEventId], references: [id])
-  lastEventId String?
-}
 
 
 model EventType {
@@ -146,13 +136,19 @@ model EventToEntityLink {
   @@index([type, entityId, eventId])
 }
 
+model ProductionDataset {
+  id String @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-model ProductionRuleset {
-  ruleset Ruleset @relation(fields: [rulesetId], references: [id])
-  rulesetId String @id
+  dataset Dataset @relation(fields: [datasetId], references: [id])
+  datasetId String
+
+  name String
+  description String?
 }
 
-model Ruleset {
+model Dataset {
   id String @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -160,10 +156,17 @@ model Ruleset {
   name       String 
   description String?
 
-  backfillJobs BackfillJob[]
-  productionRuleset ProductionRuleset?
+  backfillFrom DateTime? // If null, backfill from the beginning of time
+  backfillTo   DateTime? // If null, backfill to now plus all incoming events
 
-  files Json @default("[]")
+  lastEventLog EventLog? @relation(fields: [lastEventLogId], references: [id])
+  lastEventLogId String?
+
+  isProduction Boolean @default(false)
+
+  productionDatasets ProductionDataset[]
+
+  rules Json @default("[]")
 }
 
 model EntityLabelType {

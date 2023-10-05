@@ -11,8 +11,8 @@ import { Filter, useFilters } from "~/components/Filter";
 import { Navbar } from "~/components/Navbar";
 import { SelectOptionFlat } from "~/components/SelectOptionFlat";
 import { RouterOutputs, api } from "~/utils/api";
-import { EventListItem } from "../components/EventListItem";
-import { EventDrawer } from "../components/EventDrawer";
+import { EventListItem } from "../../../components/EventListItem";
+import { EventDrawer } from "../../../components/EventDrawer";
 
 function EventsPage() {
   const [view, setView] = useState<"grid" | "list">("list");

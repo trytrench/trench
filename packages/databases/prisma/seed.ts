@@ -56,22 +56,12 @@ async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
 async function main() {
   const fileData = await readTextAndSqrlFiles(__dirname + "/rules");
 
-  const firstRuleset = await prisma.ruleset.create({
+  const firstDataset = await prisma.dataset.create({
     data: {
-      name: "Version 0.0.0",
-      files: fileData as any,
-    },
-  });
-
-  const prod = await prisma.productionRuleset.create({
-    data: {
-      rulesetId: firstRuleset.id,
-    },
-  });
-
-  const job = await prisma.backfillJob.create({
-    data: {
-      rulesetId: firstRuleset.id,
+      name: "Starter Dataset",
+      description: "Click here to access the event feed!",
+      rules: fileData as any,
+      isProduction: true,
     },
   });
 }

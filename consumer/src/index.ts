@@ -45,7 +45,7 @@ async function initConsumer() {
       await client.query("BEGIN");
 
       const res = await client.query(`
-        SELECT "id", "lastEventId", "rulesetId"
+        SELECT "id", "lastEventId", "datasetId"
         FROM "BackfillJob"
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
@@ -60,7 +60,7 @@ async function initConsumer() {
         continue;
       }
 
-      const { id: jobId, lastEventId, rulesetId } = job;
+      const { id: jobId, lastEventId, datasetId } = job;
 
       const eventsRes = await client.query(
         `
@@ -90,9 +90,9 @@ async function initConsumer() {
         FROM "File"
         INNER JOIN "FileSnapshot" AS "currentFileSnapshot"
         ON "currentFileSnapshot"."id" = "File"."currentFileSnapshotId"
-        WHERE "File"."rulesetId" = $1;
+        WHERE "File"."datasetId" = $1;
       `,
-        [rulesetId]
+        [datasetId]
       );
 
       const files = resFiles.rows as FileRow[];

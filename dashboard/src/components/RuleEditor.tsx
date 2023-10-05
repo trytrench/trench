@@ -78,8 +78,8 @@ const shouldCompile = (file?: File) => {
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
-interface UseRulesetEditorHookProps {}
-function useRulesetEditor() {
+interface UseDatasetEditorHookProps {}
+function useDatasetEditor() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [selectedFileName, setSelectedFileName] = useState<string | undefined>(
     undefined
@@ -120,15 +120,15 @@ const monacoOptions = {
   fontSize: 14,
   // scrollbar: { alwaysConsumeMouseWheel: false },
 };
-export function RulesetEditor() {
-  const [selectedRulesetId, setSelectedRulesetId] = useQueryParam(
-    "ruleset",
+export function DatasetEditor() {
+  const [selectedDatasetId, setSelectedDatasetId] = useQueryParam(
+    "dataset",
     StringParam
   );
 
-  const { data: ruleset } = api.rulesets.get.useQuery(
-    { id: selectedRulesetId ?? "" },
-    { enabled: !!selectedRulesetId }
+  const { data: dataset } = api.datasets.get.useQuery(
+    { id: selectedDatasetId ?? "" },
+    { enabled: !!selectedDatasetId }
   );
 
   const {
@@ -138,17 +138,17 @@ export function RulesetEditor() {
     selectedFile,
     setSelectedFileName,
     handleFileChange,
-  } = useRulesetEditor();
+  } = useDatasetEditor();
 
-  const prevRulesetId = usePrevious(ruleset?.id);
+  const prevDatasetId = usePrevious(dataset?.id);
   useEffect(() => {
-    if (ruleset && !prevRulesetId) {
-      const rulesetFiles = ruleset.files as FileData[];
+    if (dataset && !prevDatasetId) {
+      const datasetFiles = dataset.files as FileData[];
 
-      setFiles(rulesetFiles);
-      setSelectedFileName(rulesetFiles[0]?.name);
+      setFiles(datasetFiles);
+      setSelectedFileName(datasetFiles[0]?.name);
     }
-  }, [prevRulesetId, ruleset, setFiles, setSelectedFileName]);
+  }, [prevDatasetId, dataset, setFiles, setSelectedFileName]);
 
   return (
     <div className="h-full flex items-stretch">
@@ -188,33 +188,33 @@ export function RulesetEditor() {
   );
 }
 
-export function RulesetSelector() {
-  const { data: rulesets } = api.rulesets.list.useQuery();
-  const { data: productionRuleset } = api.rulesets.getProduction.useQuery();
+export function DatasetSelector() {
+  const { data: datasets } = api.datasets.list.useQuery();
+  const { data: productionDataset } = api.datasets.getProduction.useQuery();
 
-  const [selectedRulesetId, setSelectedRulesetId] = useQueryParam(
-    "ruleset",
+  const [selectedDatasetId, setSelectedDatasetId] = useQueryParam(
+    "dataset",
     StringParam
   );
   useEffect(() => {
-    setSelectedRulesetId((prev) => {
+    setSelectedDatasetId((prev) => {
       if (prev) return prev;
-      if (productionRuleset) return productionRuleset.rulesetId;
+      if (productionDataset) return productionDataset.datasetId;
       return undefined;
     });
-  }, [productionRuleset, setSelectedRulesetId]);
+  }, [productionDataset, setSelectedDatasetId]);
 
   return (
     <div>
       <Select
-        value={selectedRulesetId ?? undefined}
+        value={selectedDatasetId ?? undefined}
         onValueChange={(val) => {
-          setSelectedRulesetId(val);
+          setSelectedDatasetId(val);
         }}
       >
-        {rulesets?.map((ruleset) => (
-          <SelectItem key={ruleset.id} value={ruleset.id}>
-            {ruleset.name}
+        {datasets?.map((dataset) => (
+          <SelectItem key={dataset.id} value={dataset.id}>
+            {dataset.name}
           </SelectItem>
         )) ?? []}
       </Select>
@@ -226,10 +226,10 @@ export function RuleEditor() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex p-4">
-        <RulesetSelector />
+        <DatasetSelector />
       </div>
       <div className="flex-1">
-        <RulesetEditor />
+        <DatasetEditor />
       </div>
     </div>
   );
