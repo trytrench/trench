@@ -48,7 +48,7 @@ import { api } from "~/utils/api";
 import { PublishModal } from "./PublishModal";
 import { RuleEditorSidebar } from "./RuleEditorSidebar";
 import { useRouter } from "next/router";
-import { useBeforeUnload } from "react-use";
+import { useBeforeUnload, usePrevious } from "react-use";
 import { sortBy } from "lodash";
 import { analyze } from "~/lib/analyzeSqrl";
 import {
@@ -140,14 +140,15 @@ export function RulesetEditor() {
     handleFileChange,
   } = useRulesetEditor();
 
+  const prevRulesetId = usePrevious(ruleset?.id);
   useEffect(() => {
-    if (ruleset) {
+    if (ruleset && !prevRulesetId) {
       const rulesetFiles = ruleset.files as FileData[];
 
       setFiles(rulesetFiles);
       setSelectedFileName(rulesetFiles[0]?.name);
     }
-  }, [ruleset, setFiles, setSelectedFileName]);
+  }, [prevRulesetId, ruleset, setFiles, setSelectedFileName]);
 
   return (
     <div className="h-full flex items-stretch">

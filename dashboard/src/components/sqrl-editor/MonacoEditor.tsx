@@ -27,86 +27,53 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   markers,
   sqrlFunctions,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const monacoEditorObj = useMonacoEditor();
-  const editorRef = useRef<EditorApi.editor.IStandaloneCodeEditor>();
-  const theme = isDarkMode ? "custom-dark" : "custom";
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  useEffect(() => {
-    editorRef.current?.updateOptions({ theme });
-  }, [theme]);
+  const monacoSetup = useCallback(
+    (monaco: Monaco) => {
+      monaco.editor.getModels().forEach((model) => model.dispose());
 
-  useEffect(() => {
-    if (!editorRef.current || monacoEditorObj.state !== "success") return;
+      configureSqrlLanguage(monaco, sqrlFunctions ?? {});
+    },
+    [sqrlFunctions]
+  );
 
-    const model = editorRef.current.getModel();
-    if (!model) return;
+  const handleMount = useCallback(
+    (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      editorRef.current = editor;
 
-    monacoEditorObj.value.editor.setModelMarkers(
-      model,
-      "monaco editor react",
-      markers ?? []
-    );
-  }, [monacoEditorObj.state, markers, monacoEditorObj.value]);
+      const model = editor.getModel();
+      if (!model) return;
 
-  useEffect(() => {
-    if (monacoEditorObj.state !== "success" || !containerRef.current) return;
+      editor.updateOptions({
+        readOnly: false,
+      });
+    },
+    []
+  );
 
-    const monacoEditor = monacoEditorObj.value;
+  const editorElement = useRef<HTMLDivElement>(null);
 
-    // @todo(josh): Not sure if this is the correct way to do this only once per editor? The SQRL
-    // functions will be compiled in so they won't change ever.
-    const sqrlLanguage = configureSqrlLanguage(
-      monacoEditor,
-      sqrlFunctions ?? {}
-    );
-
-    const model = monacoEditor.editor.createModel(
-      "",
-      "sqrl",
-      monacoEditor.Uri.file("example.tsx")
-    );
-
-    const editor = monacoEditor.editor.create(containerRef.current, {
-      scrollBeyondLastLine: true,
-      minimap: {
-        enabled: true,
-      },
-      ...options,
-      language: "sqrl",
-      model,
-      theme,
-    });
-
-    editorRef.current = editor;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const containerElement = entries.find(
-        (entry) => entry.target === containerRef.current
-      );
-      // container was resized
-      if (containerElement) {
-        editor.layout();
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    const onChangeModelContentSubscription = editor.onDidChangeModelContent(
-      (event) => {
-        const value = editor.getValue() || "";
-        onChange?.(value, event);
-      }
-    );
-
-    return () => {
-      sqrlLanguage.dispose();
-      editor.dispose();
-      model.dispose();
-      onChangeModelContentSubscription.dispose();
-      resizeObserver.disconnect();
-    };
-  }, [monacoEditorObj.state, sqrlFunctions, monacoEditorObj.value, theme]);
-
-  return <div style={style} className={className} ref={containerRef} />;
+  return (
+    <Editor
+      language="sqrl"
+      theme="vs-dark"
+      value={value}
+      onChange={(e, ev) => {
+        onChange?.(e ?? "", ev);
+      }}
+      beforeMount={monacoSetup}
+      onMount={handleMount}
+      height={"100%"}
+      options={{
+        minimap: { enabled: false },
+        automaticLayout: true,
+        fontSize: 16,
+        padding: {
+          top: 24,
+          bottom: 24,
+        },
+      }}
+    />
+  );
 };
