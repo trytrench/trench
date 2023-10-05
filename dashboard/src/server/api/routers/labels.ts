@@ -1,3 +1,4 @@
+import { groupBy } from "lodash";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
@@ -80,27 +81,31 @@ export const labelsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
-          SELECT DISTINCT feature
+          SELECT DISTINCT entity_type, feature
           FROM event_entity
           ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
         `,
         format: "JSONEachRow",
       });
-      const features = await result.json<{ feature: string }[]>();
-      return features.flatMap((feature) => feature.feature);
+      const features = await result.json<
+        { entity_type: String; feature: string }[]
+      >();
+      return groupBy(features, (feature) => feature.entity_type);
     }),
   getEventFeatures: publicProcedure
     .input(z.object({ eventType: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
-          SELECT DISTINCT feature
+          SELECT DISTINCT event_type, feature
           FROM event_entity
           ARRAY JOIN JSONExtractKeys(event_features) AS feature;
         `,
         format: "JSONEachRow",
       });
-      const features = await result.json<{ feature: string }[]>();
-      return features.flatMap((feature) => feature.feature);
+      const features = await result.json<
+        { event_type: string; feature: string }[]
+      >();
+      return groupBy(features, (feature) => feature.event_type);
     }),
 });
