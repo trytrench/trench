@@ -6,134 +6,68 @@ import {
   getFiltersWhereQuery,
 } from "../../lib/filters";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { db } from "~/server/db";
+import { uniq } from "lodash";
 
 export const eventsRouter = createTRPCRouter({
-  getTimeBuckets: publicProcedure
+  getTimeBins: publicProcedure
     .input(
       z.object({
         interval: z.number(),
-        start: z.number(),
-        end: z.number(),
-        eventFilters: eventFiltersZod,
-        entityFilters: entityFiltersZod,
+        start: z.date(),
+        end: z.date(),
+        entityId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
-      // Convert milliseconds to seconds
-      const startInSeconds = Math.ceil(input.start / 1000);
-      const endInSeconds = Math.ceil(input.end / 1000);
-      const intervalInSeconds = Math.ceil(input.interval / 1000);
+      const result = await db.query({
+        query: `
+          SELECT 
+              toStartOfInterval(event_timestamp, INTERVAL 1 day) AS time,
+              label,
+              count(DISTINCT event_id) AS count
+          FROM 
+              event_entity_event_labels
+          WHERE 
+              entity_id = '${input.entityId}'
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+          GROUP BY 
+              time,
+              label
+          ORDER BY 
+              time ASC
+          WITH FILL
+          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
+          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          STEP INTERVAL 1 day
+        `,
+        format: "JSONEachRow",
+      });
 
-      const bucketsFromDB = await ctx.prisma.$queryRawUnsafe<
-        Array<{
-          bucket: Date;
-          label: string;
-          labelColor: string;
-          count: number;
-        }>
-      >(`
-      WITH RECURSIVE TimeBucketTable(bucket) AS (
-          SELECT to_timestamp(${startInSeconds}) AS bucket
-          UNION ALL
-          SELECT bucket + INTERVAL '1 second' * ${intervalInSeconds}
-          FROM TimeBucketTable
-          WHERE bucket < to_timestamp(${endInSeconds})
-      ),
-      events AS (
-        SELECT "Event"."id", "Event"."timestamp" FROM "Event"
+      const bins = await result.json<
+        { time: string; label: string; count: number }[]
+      >();
 
-        WHERE (
-            "Event"."timestamp" >= to_timestamp(${startInSeconds})
-            AND "Event"."timestamp" <= to_timestamp(${endInSeconds})
-            AND ${buildEventExistsQuery(input.eventFilters)}
-            AND EXISTS (
-              SELECT FROM "EventToEntityLink"
-              WHERE
-                "EventToEntityLink"."eventId" = "Event"."id"
-                AND ${buildEntityExistsQuery(
-                  input.entityFilters,
-                  '"EventToEntityLink"."entityId"'
-                )}
-            )
-        ) 
-        OR "Event"."timestamp" IS NULL
-      )
-      SELECT
-          tb.bucket AS bucket,
-          "EventLabel"."name" AS label,
-          "EventLabel"."color" AS "labelColor",
-          COUNT(events."timestamp") AS count
-      FROM
-          TimeBucketTable AS tb
-      LEFT JOIN events
-          ON
-          events."timestamp" >= tb.bucket AND
-          events."timestamp" < tb.bucket + INTERVAL '1 second' * ${intervalInSeconds}
-      LEFT JOIN "_EventToEventLabel"
-          ON "_EventToEventLabel"."A" = events."id"
-      LEFT JOIN "EventLabel"
-          ON "EventLabel"."id" = "_EventToEventLabel"."B"
-      GROUP BY
-          tb.bucket, "EventLabel"."name", "EventLabel"."color"
-      ORDER BY
-          tb.bucket;
-      `);
+      const binData = bins.reduce((acc, bin) => {
+        if (!acc[bin.time]) acc[bin.time] = {};
+        acc[bin.time]![bin.label] = bin.count;
+        return acc;
+      }, {} as Record<string, Record<string, number>>);
 
-      // turn row into array of bucket, map of counts (EventLabel -> count)
+      const times = uniq(bins.map((bin) => bin.time));
+      const labels = uniq(bins.map((bin) => bin.label));
 
-      type Result = {
-        bucket: number;
-        counts: Record<string, number>;
-      };
-      const results: Array<Result> = [];
-
-      const allLabels = new Set<string>();
-      for (const row of bucketsFromDB) {
-        if (row.label) allLabels.add(row.label);
-      }
-
-      for (const row of bucketsFromDB) {
-        const bucket = row.bucket;
-        const label = row.label;
-        const count = Number(row.count);
-
-        const bucketResult = results.find((r) => r.bucket === bucket.getTime());
-
-        if (bucketResult) {
-          bucketResult.counts[label] = count;
-          bucketResult.counts.Total += count;
-        } else {
-          const newObj: Result = {
-            bucket: bucket.getTime(),
-            counts: {},
-          };
-
-          for (const label of allLabels) {
-            newObj.counts[label] = 0;
-          }
-
-          newObj.counts.Total = count;
-          newObj.counts[label] = count;
-
-          results.push(newObj);
+      const allBins: Record<string, Record<string, number>> = {};
+      for (const time of times) {
+        for (const label of labels) {
+          if (!allBins[time]) allBins[time] = {};
+          allBins[time]![label] = binData[time]?.[label] ?? 0;
         }
       }
 
-      const labels = Array.from(allLabels).map((label) => ({
-        label,
-        color:
-          bucketsFromDB.find((row) => row.label === label)?.labelColor ||
-          "gray",
-      }));
-
       return {
-        data: results
-          .map((bucket) => ({
-            ...bucket,
-            bucket: new Date(bucket.bucket),
-          }))
-          .slice(0, -1),
-        labels: [{ label: "Total", color: "blue" }, ...labels],
+        bins: allBins,
+        labels,
       };
     }),
 
@@ -145,48 +79,29 @@ export const eventsRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      // write above query in raw sql to avoid n+1 problem
-      const eventLabelDistros = await ctx.prisma.$queryRawUnsafe<
-        Array<{
+      const result = await db.query({
+        query: `
+          SELECT 
+              label,
+              COUNT(DISTINCT event_id) AS count
+          FROM 
+              event_entity_event_labels
+          WHERE 
+              entity_id = '${input.eventFilters?.entityId}'
+          GROUP BY 
+              label
+          ORDER BY 
+              count DESC;
+        `,
+        format: "JSONEachRow",
+      });
+
+      return result.json<
+        {
           label: string;
           count: number;
-        }>
-      >(
-        `
-          SELECT
-            "EventLabel"."name" as label, 
-            COUNT(*) as count
-          FROM
-            "_EventToEventLabel"
-          JOIN
-            "EventLabel"
-          ON
-            "_EventToEventLabel"."B" = "EventLabel"."id"
-          WHERE
-            ${buildEventExistsQuery(
-              input.eventFilters,
-              '"_EventToEventLabel"."A"'
-            )}
-            AND EXISTS (
-              SELECT FROM "EventToEntityLink"
-              WHERE
-                "EventToEntityLink"."eventId" = "_EventToEventLabel"."A"
-                AND ${buildEntityExistsQuery(
-                  input.entityFilters,
-                  '"EventToEntityLink"."entityId"'
-                )}
-            )
-          GROUP BY
-            "EventLabel"."name"
-          ORDER BY
-            count DESC
-          `
-      );
-
-      return eventLabelDistros.map((dbEventLabelDistro) => ({
-        label: dbEventLabelDistro.label,
-        count: Number(dbEventLabelDistro.count),
-      }));
+        }[]
+      >();
     }),
   getEventTypeDistributions: publicProcedure
     .input(

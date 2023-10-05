@@ -1,10 +1,11 @@
-import { Skeleton } from "@chakra-ui/react";
-import { Title } from "@tremor/react";
+import { Skeleton, Spinner } from "@chakra-ui/react";
+import { Button, Title } from "@tremor/react";
 import { Navbar } from "~/components/Navbar";
 import { api } from "~/utils/api";
 
 import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
+import { useMemo } from "react";
 
 function EntitiesPage() {
   const { type, labels, features, sortBy } = useFilters();
@@ -22,15 +23,47 @@ function EntitiesPage() {
       entityType: type,
     });
 
-  const { data: entitiesList } = api.lists.getEntitiesList.useQuery({
-    entityFilters: {
-      entityType: type,
-      entityLabels: labels,
-      entityFeatures: features,
+  const { data: featureMetadata, isLoading: featureMetadataLoading } =
+    api.features.getFeatureMetadata.useQuery();
+
+  const featureToMetadata = useMemo(
+    () =>
+      featureMetadata?.reduce((acc, curr) => {
+        acc[curr.id] = curr;
+        return acc;
+      }, {} as Record<string, any>) ?? {},
+
+    [featureMetadata]
+  );
+
+  const limit = 10;
+
+  const {
+    data: entities,
+    isLoading: entitiesLoading,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = api.lists.getEntitiesList.useInfiniteQuery(
+    {
+      entityFilters: {
+        entityType: type,
+        entityLabels: labels,
+        entityFeatures: features,
+      },
+      sortBy,
+      limit,
     },
-    sortBy,
-    limit: 100,
-  });
+    {
+      getNextPageParam: (lastPage, pages) => {
+        if (lastPage.rows.length < limit) return false;
+        return pages.length * limit;
+      },
+    }
+  );
+
+  const allEntities = useMemo(() => {
+    return entities?.pages.flatMap((page) => page.rows) ?? [];
+  }, [entities]);
 
   return (
     <>
@@ -45,15 +78,38 @@ function EntitiesPage() {
             <Filter
               types={entityTypes}
               labels={entityLabels}
-              features={entityFeatures}
+              features={entityFeatures.map((feature) => ({
+                feature,
+                dataType: featureToMetadata[feature]?.dataType ?? "text",
+              }))}
             />
           )}
         </div>
         <div className="relative flex-1">
-          <div className="h-full flex flex-wrap gap-4 p-8 overflow-y-auto">
-            {entitiesList?.rows.map((entity) => {
-              return <EntityCard key={entity.id} entity={entity} />;
-            })}
+          <div className="h-full flex flex-col gap-4 p-8 overflow-y-auto">
+            {entitiesLoading ? (
+              <Spinner alignSelf="center" mt={3} />
+            ) : (
+              <>
+                {allEntities.map((entity) => {
+                  return <EntityCard key={entity.id} entity={entity} />;
+                })}
+                <div className="self-center my-4">
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    onClick={() => {
+                      fetchNextPage().catch((err) => {
+                        console.error(err);
+                      });
+                    }}
+                    loading={isFetchingNextPage}
+                  >
+                    Fetch more events
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
           <div className="absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-white pointer-events-none"></div>
         </div>

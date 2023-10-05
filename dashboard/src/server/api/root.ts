@@ -5,6 +5,8 @@ import { labelsRouter } from "./routers/labels";
 import { datasetsRouter } from "./routers/datasets";
 import { listsRouter } from "./routers/lists";
 import { dashboardRouter } from "./routers/dashboard";
+import { featuresRouter } from "./routers/features";
+import { linksRouter } from "./routers/links";
 
 /**
  * This is the primary router for your server.
@@ -18,6 +20,8 @@ export const appRouter = createTRPCRouter({
   datasets: datasetsRouter,
   lists: listsRouter,
   dashboard: dashboardRouter,
+  features: featuresRouter,
+  links: linksRouter,
 });
 
 // export type definition of API

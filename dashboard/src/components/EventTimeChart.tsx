@@ -1,49 +1,36 @@
-import { addDays, format } from "date-fns";
-import { api } from "../utils/api";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AreaChart, Card, Title, type Color } from "@trytrench/tremor";
-import {
-  useDateRange,
-  useEntityFilters,
-  useEventFilters,
-} from "../components/Filters";
-import { EntityFilters, type EventFilters } from "../shared/validation";
-import { CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { AreaChartProps } from "@tremor/react";
+import { AreaChart } from "@trytrench/tremor";
+import { format } from "date-fns";
+import { useCallback, useEffect, useState } from "react";
 import { ReferenceArea } from "recharts";
+import { CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { useQueryParams } from "use-query-params";
+import { DateParam } from "~/utils/DateParam";
+import { api } from "../utils/api";
 
-export function EventTimeChart({
-  eventFilters,
-  entityFilters,
-  title,
-  color = "gray",
-}: {
-  color?: Color;
-  title: string;
-  eventFilters?: Partial<EventFilters>;
-  entityFilters?: Partial<EntityFilters>;
-}) {
-  const actualEventFilters = useEventFilters(eventFilters);
-  const actualEntityFilters = useEntityFilters(entityFilters);
+interface Props extends AreaChartProps {
+  entityId: string;
+}
 
-  const { data } = api.events.getTimeBuckets.useQuery(
+export function EntityEventChart({ entityId, ...props }: Props) {
+  const [dateRange, setDateRange] = useQueryParams({
+    from: DateParam,
+    to: DateParam,
+  });
+
+  const { data } = api.events.getTimeBins.useQuery(
     {
       interval: 1000 * 60 * 60 * 24,
-      start: actualEventFilters?.dateRange?.from ?? 0,
-      end: actualEventFilters?.dateRange?.to ?? 0,
-      eventFilters: actualEventFilters,
-      entityFilters: actualEntityFilters,
+      start: dateRange.from,
+      end: dateRange.to,
+      entityId,
     },
-    {
-      enabled: true,
-    }
+    { enabled: !!dateRange.from }
   );
-
-  const timeBuckets = data?.data ?? [];
-  const labels = data?.labels ?? [];
 
   const [dragging, _setDragging] = useState<boolean>(false);
   const [firstX, setFirstX] = useState<string | undefined>(undefined);
-  const [firstTime, setFirstTime] = useState<number | undefined>(undefined);
+  const [firstTime, setFirstTime] = useState<string | undefined>(undefined);
   const [secondX, setSecondX] = useState<string | undefined>(undefined);
 
   const setDragging = useCallback(
@@ -59,8 +46,6 @@ export function EventTimeChart({
       setSecondX(undefined);
     }
   }, [dragging, setFirstX, setSecondX]);
-
-  const [_, setDateRange] = useDateRange();
 
   const handleMouseDown = useCallback(
     (e: CategoricalChartState) => {
@@ -91,8 +76,6 @@ export function EventTimeChart({
       setDragging(false);
       const secondTime = e.activePayload?.[0]?.payload.time;
 
-      console.log(secondTime);
-      console.log(e.activePayload);
       if (firstTime && secondTime) {
         if (firstTime > secondTime) {
           setDateRange({
@@ -111,33 +94,31 @@ export function EventTimeChart({
   );
 
   return (
-    <Card>
-      <Title>{title}</Title>
-      <AreaChart
-        className="h-48 mt-4"
-        data={
-          timeBuckets?.map((bucket) => ({
-            date: format(addDays(new Date(bucket.bucket), 1), "MMM d"),
-            time: bucket.bucket,
-            ...bucket.counts,
-          })) ?? []
-        }
-        index="date"
-        categories={labels.map((label) => label.label)}
-        colors={labels.map((label) => label.color)}
-        tooltipOrder="byValue"
-        onMouseDownChart={handleMouseDown}
-        onMouseMoveChart={handleMouseMove}
-        onMouseUpChart={handleMouseUp}
-      >
-        <ReferenceArea
-          visibility={firstX && secondX ? "visible" : "hidden"}
-          x1={firstX}
-          x2={secondX}
-          fill="gray"
-          fillOpacity={0.4}
-        />
-      </AreaChart>
-    </Card>
+    <AreaChart
+      data={
+        data?.bins
+          ? Object.entries(data.bins).map(([time, labels]) => ({
+              date: format(new Date(time), "MMM d"),
+              time,
+              ...labels,
+            }))
+          : []
+      }
+      index="date"
+      categories={data?.labels}
+      tooltipOrder="byValue"
+      onMouseDownChart={handleMouseDown}
+      onMouseMoveChart={handleMouseMove}
+      onMouseUpChart={handleMouseUp}
+      {...props}
+    >
+      <ReferenceArea
+        visibility={firstX && secondX ? "visible" : "hidden"}
+        x1={firstX}
+        x2={secondX}
+        fill="gray"
+        fillOpacity={0.4}
+      />
+    </AreaChart>
   );
 }

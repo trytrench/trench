@@ -1,72 +1,58 @@
+import { Stack, Tag } from "@chakra-ui/react";
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  Box,
-  HStack,
-  Stack,
-  Tag,
-  Tooltip,
-} from "@chakra-ui/react";
-import * as ScrollArea from "@radix-ui/react-scroll-area";
-import {
-  Accordion,
-  AccordionBody,
-  AccordionHeader,
-  AccordionList,
-  BarList,
+  Badge,
   Card,
+  Divider,
+  Icon,
   List,
   ListItem,
   Metric,
-  Subtitle,
+  Select,
+  SelectItem,
+  Tab,
+  TabGroup,
   Table,
-  Text,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
-  Title,
-  Badge,
   TabList,
-  TabGroup,
-  Tab,
   TabPanel,
   TabPanels,
-  Select,
-  SelectItem,
-  Icon,
+  Text,
+  Title,
 } from "@tremor/react";
+
 import { differenceInMinutes, format, formatRelative } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { AlignJustify, FileQuestion, LayoutGrid, LogIn } from "lucide-react";
-import { useRouter } from "next/router";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { NumberParam, StringParam, useQueryParam } from "use-query-params";
 import {
-  DateRangePicker,
-  EntityTypeFilter,
-  useDateRange,
-} from "~/components/Filters";
+  AlignJustify,
+  AlignJustifyIcon,
+  Cable,
+  CableIcon,
+  FileQuestion,
+  LayoutGrid,
+  Link,
+  ListIcon,
+  LogIn,
+} from "lucide-react";
+import { useRouter } from "next/router";
+import { useMemo, useState } from "react";
+import { NumberParam, useQueryParam, useQueryParams } from "use-query-params";
+import * as ScrollArea from "@radix-ui/react-scroll-area";
+import { DateRangePicker } from "~/components/DateRangePicker";
 import { api, type RouterOutputs } from "~/utils/api";
-import { EventLabelDistribution } from "../../components/EventLabelDistribution";
-import { EventTimeChart } from "../../components/EventTimeChart";
-import { Navbar } from "../../components/Navbar";
-import { RenderEntity } from "../../components/RenderEntity";
-import clsx from "clsx";
-import { EventListItem } from "../../components/EventListItem";
-import { EventDrawer } from "../../components/EventDrawer";
+import { DateParam } from "~/utils/DateParam";
 import { EventCard } from "../../components/EventCard";
+import { EventDrawer } from "../../components/EventDrawer";
+import { EventLabelDistribution } from "../../components/EventLabelDistribution";
+import { EventListItem } from "../../components/EventListItem";
+import { EntityEventChart } from "../../components/EventTimeChart";
+import { Navbar } from "../../components/Navbar";
+import LinksView from "~/components/LinksView";
+import LinksDisplay from "~/components/LinksView/refactor";
 
-type EntityType = RouterOutputs["entities"]["get"];
-
-function getTypeAndId(fullId: string) {
-  const [type, ...id] = fullId.split("_");
-  return { type, id: id.join("_") };
-}
-
-// TODO: extract to component (used by dashboard too)
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
     <ScrollArea.Root>
@@ -82,169 +68,6 @@ function HorzScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-type EventType = RouterOutputs["entities"]["findEvents"][number];
-function RenderEvent({
-  event,
-  isTopLevel,
-}: {
-  event: EventType;
-  isTopLevel?: boolean;
-}) {
-  return (
-    <Card>
-      <HStack spacing={2} mb={2}>
-        <Title>{event.type}</Title>
-        {event.eventLabels.map((label) => (
-          <Tag key={label.id} colorScheme="gray">
-            {label.name}
-          </Tag>
-        ))}
-      </HStack>
-      <Text fontSize="sm" mb={3}>
-        {format(event.timestamp, "MMM d, yyyy h:mm a")}
-      </Text>
-
-      <AccordionList>
-        <Accordion>
-          <AccordionHeader className="text-sm">Details</AccordionHeader>
-          <AccordionBody>
-            <List>
-              {Object.entries(event.features).map(([key, value]) => (
-                <ListItem key={key}>
-                  <span>{key}</span>
-                  <span>{value}</span>
-                </ListItem>
-              ))}
-            </List>
-          </AccordionBody>
-        </Accordion>
-
-        <>
-          {event.entityLinks.map((link) => (
-            <Accordion key={link.entity.id}>
-              <AccordionHeader className="text-sm">
-                <HStack spacing={2}>
-                  <span>
-                    {link.entity.type}: {link.entity.name}
-                  </span>
-
-                  {link.entity.entityLabels.map((label) => (
-                    <Tag key={label.id} colorScheme="gray">
-                      {label.name}
-                    </Tag>
-                  ))}
-                </HStack>
-              </AccordionHeader>
-              <AccordionBody>
-                <List>
-                  {Object.entries(link.entity.features).map(([key, value]) => (
-                    <ListItem key={key}>
-                      <span>{key}</span>
-                      <span>{value}</span>
-                    </ListItem>
-                  ))}
-                </List>
-              </AccordionBody>
-            </Accordion>
-          ))}
-        </>
-      </AccordionList>
-    </Card>
-  );
-}
-
-type BatchType = {
-  events: EventType[];
-  firstTimestamp: Date;
-  lastTimestamp: Date;
-  eventType: string;
-};
-
-function RenderBatch({
-  batch,
-  onClick,
-  expanded,
-}: {
-  batch: BatchType;
-  onClick?: () => void;
-  expanded?: boolean;
-}) {
-  const getTypeSpecificDetails = useCallback(() => {
-    switch (batch.eventType) {
-      case "create-session": {
-        return {
-          icon: <LogIn />,
-          description: <Text>Started {batch.events.length} sessions.</Text>,
-        };
-      }
-      case "create-post": {
-        return {
-          icon: <FileQuestion />,
-          description: <Text>Posted {batch.events.length} times.</Text>,
-        };
-      }
-      default: {
-        return {
-          icon: <FileQuestion />,
-          description: (
-            <Text>
-              {batch.eventType} ({batch.events.length} times)
-            </Text>
-          ),
-        };
-      }
-    }
-  }, [batch.eventType, batch.events.length]);
-
-  if (batch.events.length === 1) {
-    return <RenderEvent event={batch.events[0]!} isTopLevel={true} />;
-  }
-
-  const { icon, description } = getTypeSpecificDetails();
-  return (
-    <>
-      {!expanded && (
-        <Tooltip
-          openDelay={500}
-          placement="right"
-          label={format(batch.firstTimestamp, "MMM d, yyyy h:mm a")}
-        >
-          <Alert
-            mt={2}
-            mb={expanded ? 1 : 0}
-            variant="left-accent"
-            colorScheme="gray"
-            fontSize="sm"
-            cursor="pointer"
-            onClick={onClick}
-          >
-            <AlertIcon>{icon}</AlertIcon>
-            <AlertDescription>{description}</AlertDescription>
-          </Alert>
-        </Tooltip>
-      )}
-
-      {expanded && (
-        <>
-          {batch.events.map((event) => (
-            <RenderEvent event={event} key={event.id} />
-          ))}
-        </>
-      )}
-    </>
-  );
-}
-
-function shouldAddToBatch(batch: BatchType, event: EventType) {
-  if (event.eventLabels.length !== 0) {
-    return false;
-  }
-  return (
-    differenceInMinutes(batch.lastTimestamp, event.timestamp) < 1 &&
-    batch.eventType === event.type
-  );
-}
-
 function RenderEvents({
   entityId,
   view,
@@ -252,77 +75,52 @@ function RenderEvents({
   entityId?: string;
   view: "list" | "grid";
 }) {
-  const [dateRange] = useDateRange();
-  const { data } = api.entities.findEvents.useQuery({
-    entityId: entityId ?? "",
-    limit: 100,
-    filters: {
-      dateRange: {
-        from: dateRange.from.getTime(),
-        to: dateRange.to.getTime(),
-      },
+  const { data } = api.lists.getEventsList.useQuery({
+    limit: 50,
+    eventFilters: {
+      entityId,
+      // dateRange: {
+      //   from: dateRange.from.getTime(),
+      //   to: dateRange.to.getTime(),
+      // },
     },
   });
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<
+    RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
+  >(null);
 
   return (
     <Stack spacing={2}>
-      {data?.map((event) =>
+      {data?.rows.map((event) =>
         view === "list" ? (
           <EventListItem
             key={event.id}
-            event={{
-              ...event,
-              labels: event.eventLabels.map((el) => ({
-                id: el.id,
-                name: el.name,
-                color: el.color,
-              })),
-            }}
+            event={event}
             onClick={() => {
-              setSelectedEventId(event.id);
+              setSelectedEvent(event);
             }}
-            selected={selectedEventId === event.id}
+            selected={selectedEvent?.id === event.id}
           />
         ) : (
-          <EventCard
-            key={event.id}
-            event={{
-              ...event,
-              labels: event.eventLabels.map((el) => ({
-                id: el.id,
-                name: el.name,
-                color: el.color,
-              })),
-              entities: event.entityLinks.map((el) => ({
-                id: el.entity.id,
-                name: el.entity.name,
-                type: el.entity.type,
-                labels: el.entity.entityLabels.map((el) => ({
-                  id: el.id,
-                  name: el.name,
-                  color: el.color,
-                })),
-                features: el.entity.features,
-              })),
-            }}
-          />
+          <EventCard key={event.id} event={event} />
         )
       )}
-      <EventDrawer
-        selectedEvent={selectedEventId}
-        isOpen={!!selectedEventId}
-        onClose={() => {
-          setSelectedEventId(null);
-        }}
-      />
+      {selectedEvent && (
+        <EventDrawer
+          selectedEvent={selectedEvent}
+          isOpen={!!selectedEvent}
+          onClose={() => {
+            setSelectedEvent(null);
+          }}
+        />
+      )}
     </Stack>
   );
 }
 
 function RelatedEntities({ entityId }: { entityId?: string }) {
-  const [entityType, setEntityType] = useState<string | undefined>(undefined);
+  const [entityType, setEntityType] = useState<string>("");
   const [entityLabel, setEntityLabel] = useState<string | undefined>(undefined);
 
   const { data } = api.entities.findRelatedEntities.useQuery({
@@ -338,7 +136,8 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
 
   return (
     <>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 grow">
+        <Text className="whitespace-nowrap">Filter</Text>
         <Select
           enableClear
           className="w-40"
@@ -347,8 +146,8 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
           placeholder="All entities"
         >
           {entityTypes?.map((et) => (
-            <SelectItem key={et.id} value={et.id}>
-              {et.name}
+            <SelectItem key={et} value={et}>
+              {et}
             </SelectItem>
           )) ?? []}
         </Select>
@@ -361,78 +160,25 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
           placeholder="All labels"
         >
           {entityLabels?.map((el) => (
-            <SelectItem key={el.id} value={el.id}>
-              {el.name}
+            <SelectItem key={el} value={el}>
+              {el}
             </SelectItem>
           )) ?? []}
         </Select>
       </div>
-      <div className="flex flex-col">
-        <Table className="mt-2">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>Type</TableHeaderCell>
-              <TableHeaderCell>Name</TableHeaderCell>
-              <TableHeaderCell># Links</TableHeaderCell>
-              <TableHeaderCell>Labels</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data?.length > 0 ? (
-              data.map((entity) => (
-                <TableRow key={entity.entityId}>
-                  <TableCell>{entity.entityType}</TableCell>
-                  <TableCell>
-                    <b>
-                      {entity.entityName}
-                      {/* <RenderEntity entity={entity} /> */}
-                    </b>
-                  </TableCell>
-                  <TableCell>{entity.count}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {entity.entityLabels.map((el) => (
-                        <Tag key={el.name} colorScheme={el.color}>
-                          {el.name}
-                        </Tag>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4}>
-                  <Text className="text-center">No related entities found</Text>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <Divider className="mb-0 mt-4" />
+      <LinksDisplay
+        entityId={entityId ?? ""}
+        entityFilter={{
+          entityType,
+        }}
+        onEntityFilterChange={setEntityType}
+      />
     </>
   );
 }
 
-function formatDateReadable(date: Date) {
-  return formatRelative(date, new Date(), {
-    locale: {
-      ...enUS,
-      formatRelative: (token, _date, _baseDate, _options) => {
-        switch (token) {
-          case "today":
-            return "h:mm a";
-          case "yesterday":
-            return "'Yesterday at' h:mm a";
-          case "lastWeek":
-            return "EEEE 'at' h:mm a";
-          default:
-            return "MMM d, yyyy, h:mm a";
-        }
-      },
-    },
-  });
-}
+const TODAY = new Date();
 
 export default function Home() {
   const { data: labelsData } = api.labels.getAllLabels.useQuery();
@@ -440,11 +186,10 @@ export default function Home() {
   const router = useRouter();
   const entityId = router.query.entityId as string | undefined;
 
-  // Entity Data
-  // TODO: handle when entityId is a string[], + other cases
-  const { data: entityData } = api.entities.get.useQuery({
-    id: entityId ?? "",
-  });
+  const { data: entityData } = api.entities.get.useQuery(
+    { id: entityId! },
+    { enabled: !!entityId }
+  );
 
   const entityInfo = useMemo(
     () =>
@@ -462,6 +207,11 @@ export default function Home() {
 
   const [tab, setTab] = useQueryParam("tab", NumberParam);
   const [view, setView] = useState<"grid" | "list">("list");
+
+  const [dateRange, setDateRange] = useQueryParams({
+    from: DateParam,
+    to: DateParam,
+  });
 
   return (
     <>
@@ -495,18 +245,10 @@ export default function Home() {
                 <Title className="shrink-0">Labels</Title>
               </div>
               <div className="h-4"></div>
-              {entityData?.entityLabels &&
-              entityData?.entityLabels.length > 0 ? (
+              {!!entityData?.labels?.length ? (
                 <div className="flex flex-row flex-wrap">
-                  {entityData?.entityLabels.map((label) => (
-                    <Tag
-                      key={label.name}
-                      colorScheme={
-                        label && label.color !== "" ? label.color : "gray"
-                      }
-                    >
-                      {label.name}
-                    </Tag>
+                  {entityData.labels.map((label) => (
+                    <Badge key={label}>{label}</Badge>
                   ))}
                 </div>
               ) : (
@@ -544,28 +286,33 @@ export default function Home() {
                 <Tab>Event History</Tab>
                 <Tab>Related Entities</Tab>
               </TabList>
-              <TabPanels className="p-2 overflow-y-auto">
+              <TabPanels className="p-2 overflow-y-auto grow">
                 <TabPanel className="">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
-                      <DateRangePicker />
+                      <DateRangePicker
+                        value={dateRange}
+                        onValueChange={(value) =>
+                          setDateRange(
+                            Object.keys(value).length
+                              ? value
+                              : { from: undefined, to: undefined }
+                          )
+                        }
+                      />
                     </div>
                     <div className="col-span-2">
-                      <EventTimeChart
-                        color={"gray"}
-                        title={"Event History"}
-                        legend="Events"
-                        entityFilters={{
-                          entityId,
-                        }}
-                      />
+                      <Card>
+                        <Title>Event History</Title>
+                        <EntityEventChart entityId={entityId} />
+                      </Card>
                     </div>
                     <div className="col-span-1">
                       <EventLabelDistribution
                         color={"gray"}
                         title={"Label Distribution"}
                         legend="Events"
-                        entityFilters={{
+                        eventFilters={{
                           entityId,
                         }}
                       />

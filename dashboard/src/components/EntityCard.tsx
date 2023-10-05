@@ -28,11 +28,11 @@ export const EntityCard = ({ entity, relation }: Props) => {
           </Text>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entity.labels.filter((label) => label.id).length > 0 ? (
-            entity.labels.map((label, idx) => {
+          {entity.labels.length > 0 ? (
+            entity.labels.map((label) => {
               return (
-                <Badge key={idx} color={label.color} size="xs">
-                  {label.name}
+                <Badge key={label} size="xs">
+                  {label}
                 </Badge>
               );
             })

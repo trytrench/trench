@@ -1,4 +1,4 @@
-import { Skeleton } from "@chakra-ui/react";
+import { Skeleton, Spinner } from "@chakra-ui/react";
 
 import { Button, Card, Icon, Title } from "@tremor/react";
 import clsx from "clsx";
@@ -34,30 +34,31 @@ function EventsPage() {
 
   const [limit, setLimit] = useState(50);
 
-  const { data: eventsList, fetchNextPage } =
-    api.lists.getEventsList.useInfiniteQuery(
-      {
-        eventFilters: {
-          eventType: type,
-          eventLabels: labels,
-          eventFeatures: features,
-        },
-        limit,
+  const {
+    data: events,
+    fetchNextPage,
+    isLoading: eventsLoading,
+    isFetchingNextPage,
+  } = api.lists.getEventsList.useInfiniteQuery(
+    {
+      eventFilters: {
+        eventType: type,
+        eventLabels: labels,
+        eventFeatures: features,
       },
-      {
-        getNextPageParam: (lastPage, pages) => {
-          if (lastPage.rows.length < limit) return false;
-          return pages.length * limit;
-        },
-      }
-    );
+      limit,
+    },
+    {
+      getNextPageParam: (lastPage, pages) => {
+        if (lastPage.rows.length < limit) return false;
+        return pages.length * limit;
+      },
+    }
+  );
 
-  const flattenedEvents = useMemo(() => {
-    const flat = eventsList?.pages.flatMap((page) => page.rows) ?? [];
-    // dedupe
-
-    return uniqBy(flat, (item) => item.id);
-  }, [eventsList]);
+  const allEvents = useMemo(() => {
+    return events?.pages.flatMap((page) => page.rows) ?? [];
+  }, [events]);
 
   const [selectedEvent, setSelectedEvent] = useState<
     RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
@@ -118,34 +119,41 @@ function EventsPage() {
               "gap-4": view === "grid",
             })}
           >
-            {flattenedEvents?.map((event) =>
-              view === "list" ? (
-                <EventListItem
-                  key={event.id}
-                  event={event}
-                  onClick={() => {
-                    setSelectedEvent(event);
-                  }}
-                  selected={selectedEvent?.id === event.id}
-                />
-              ) : (
-                <EventCard key={event.id} event={event} />
-              )
+            {eventsLoading ? (
+              <Spinner alignSelf="center" mt={3} />
+            ) : (
+              <>
+                {allEvents.map((event) =>
+                  view === "list" ? (
+                    <EventListItem
+                      key={event.id}
+                      event={event}
+                      onClick={() => {
+                        setSelectedEvent(event);
+                      }}
+                      selected={selectedEvent?.id === event.id}
+                    />
+                  ) : (
+                    <EventCard key={event.id} event={event} />
+                  )
+                )}
+                <div className="self-center my-4">
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    onClick={() => {
+                      fetchNextPage().catch((err) => {
+                        console.error(err);
+                      });
+                    }}
+                    loading={isFetchingNextPage}
+                  >
+                    Fetch more events
+                  </Button>
+                </div>
+              </>
             )}
 
-            <div className="h-4"></div>
-            <div className="w-full flex justify-center mt-2">
-              <Button
-                size="xs"
-                onClick={() => {
-                  fetchNextPage().catch((err) => {
-                    console.error(err);
-                  });
-                }}
-              >
-                Fetch more events
-              </Button>
-            </div>
             <div className="h-16 shrink-0"></div>
           </div>
           <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
