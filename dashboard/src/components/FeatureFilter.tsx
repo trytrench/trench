@@ -102,7 +102,7 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
     () =>
       selectedFeatureDataType === "number"
         ? numberFilterOptions
-        : selectedFeatureDataType === "string"
+        : selectedFeatureDataType === "text"
         ? stringFilterOptions
         : commonFilterOptions,
     [selectedFeatureDataType]

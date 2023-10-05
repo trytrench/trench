@@ -81,31 +81,63 @@ export const labelsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
-          SELECT DISTINCT entity_type, feature
+          SELECT DISTINCT feature
           FROM event_entity
           ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
         `,
         format: "JSONEachRow",
       });
-      const features = await result.json<
-        { entity_type: String; feature: string }[]
-      >();
-      return groupBy(features, (feature) => feature.entity_type);
+      const features = await result.json<{ feature: string }[]>();
+      return features.flatMap((feature) => feature.feature);
     }),
   getEventFeatures: publicProcedure
     .input(z.object({ eventType: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
-          SELECT DISTINCT event_type, feature
+          SELECT DISTINCT feature
           FROM event_entity
           ARRAY JOIN JSONExtractKeys(event_features) AS feature;
         `,
         format: "JSONEachRow",
       });
-      const features = await result.json<
-        { event_type: string; feature: string }[]
-      >();
-      return groupBy(features, (feature) => feature.event_type);
+      const features = await result.json<{ feature: string }[]>();
+      return features.flatMap((feature) => feature.feature);
     }),
+
+  allFeatures: publicProcedure.query(async ({}) => {
+    const entityQuery = `
+      SELECT DISTINCT feature, entity_type
+      FROM event_entity
+      ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
+    `;
+    const eventQuery = `
+      SELECT DISTINCT feature, event_type
+      FROM event_entity
+      ARRAY JOIN JSONExtractKeys(event_features) AS feature;
+    `;
+
+    const [entityResult, eventResult] = await Promise.all([
+      db.query({ query: entityQuery, format: "JSONEachRow" }),
+      db.query({ query: eventQuery, format: "JSONEachRow" }),
+    ]);
+
+    const entityFeatures = await entityResult.json<
+      {
+        feature: string;
+        entity_type: string;
+      }[]
+    >();
+    const eventFeatures = await eventResult.json<
+      {
+        feature: string;
+        event_type: string;
+      }[]
+    >();
+
+    return {
+      entities: groupBy(entityFeatures, (f) => f.entity_type),
+      events: groupBy(eventFeatures, (f) => f.event_type),
+    };
+  }),
 });
