@@ -121,12 +121,15 @@ export const processEverything = (
     })
     .map((e) => e.id);
 
-  // step 4: remove links only connected to those entities
+  // step 4: remove links only connected hidden entities
   linksFiltered = linksFiltered.filter(
     (l) =>
       !(
         leftIdsToNotShowLinksFor.includes(l.from) &&
-        linksFiltered.filter((l2) => l2.to === l.to).length <= 1
+        linksFiltered
+          .filter((l2) => l2.to === l.to)
+          .filter((l2) => !leftIdsToNotShowLinksFor.includes(l2.from)).length <=
+          1
       )
   );
   // remaining links involved with those entities are still visible, but faded.

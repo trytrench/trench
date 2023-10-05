@@ -1,7 +1,7 @@
 import { groupBy, uniqBy } from "lodash";
 import { it } from "node:test";
 import { z } from "zod";
-import { Link } from "~/pages/links/types";
+import { Link } from "~/components/LinksView/types";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 

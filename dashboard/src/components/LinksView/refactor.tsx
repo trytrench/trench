@@ -1,7 +1,6 @@
 import { useState } from "react";
 import LinksView from "./index";
 import { api } from "~/utils/api";
-import { dummyUserLabels } from "~/pages/links/dummy";
 
 // uhhhhhhhhh
 interface LinksDisplayProps {
@@ -36,8 +35,6 @@ export default function LinksDisplay({
 
   const leftSideTypes = [...new Set(leftSide.map((item) => item.type))];
 
-  const labels = dummyUserLabels;
-
   return (
     <LinksView
       data={{
@@ -45,7 +42,6 @@ export default function LinksDisplay({
         right: rightSide,
         links: links,
         entityInfo,
-        entityLabels: labels,
       }}
       leftTypeFilter={entityFilter.entityType}
       onLeftTypeFilterChange={onEntityFilterChange}

@@ -1,13 +1,22 @@
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import useResizeObserver from "@react-hook/resize-observer";
-import { Card, Text } from "@tremor/react";
+import { Card, Icon, Text } from "@tremor/react";
 import clsx from "clsx";
-import { BoxesIcon, BoxIcon, MoreHorizontalIcon } from "lucide-react";
+import {
+  BoxesIcon,
+  BoxIcon,
+  EyeOff,
+  EyeOffIcon,
+  ListFilterIcon,
+  LogInIcon,
+  Maximize2Icon,
+  MaximizeIcon,
+  MoreHorizontal,
+  MoreHorizontalIcon,
+} from "lucide-react";
 import { useState, useRef, useLayoutEffect, Fragment, useEffect } from "react";
 import { processEverything } from "./helpers";
 import { EntityData, Link } from "./types";
 import { FirstLinkSVG, LinkSVG } from "./LinkSvg";
-import { max } from "lodash";
 
 interface LinksViewProps {
   data: {
@@ -127,7 +136,7 @@ function LinksView({
                 })}
                 ref={(element) => (leftDivs.current[item.id] = element)}
                 onClick={() => {
-                  if (item.type === "###GROUP###") {
+                  if (item.type === "###GROUP###" && false) {
                     onLeftTypeFilterChange?.(item.id);
                   } else {
                     setLastLeftFilter(leftFilter);
@@ -165,7 +174,41 @@ function LinksView({
                   </div>
                 )}
 
-                <DotsHorizontalIcon className="my-auto text-gray-400 hover:text-gray-700" />
+                <div className="flex gap-3 text-gray-400">
+                  {item.type === "###GROUP###" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onLeftTypeFilterChange?.(item.id);
+                      }}
+                    >
+                      <ListFilterIcon
+                        className="my-auto text-gray-400 hover:text-gray-500 transition"
+                        size={18}
+                      />
+                    </button>
+                  )}
+
+                  <MoreHorizontalIcon
+                    className="my-auto hover:text-gray-500 transition"
+                    size={18}
+                  />
+                </div>
+
+                {EVERYTHING.hiddenEntities.includes(item.id) && (
+                  <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
+                    <div className="my-auto rounded-[200px] p-1 bg-white flex items-center">
+                      <Icon
+                        icon={EyeOffIcon}
+                        size="md"
+                        color="gray"
+                        className={`p-0 m-0 ${
+                          leftFilter === item.id ? "" : "opacity-30"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* the link number indicator (right side) */}
                 <div className="absolute left-[calc(100%+10px)] pointer-events-none select-none">
@@ -252,6 +295,7 @@ function LinksView({
                     </Text>
                   </a>
                 </div>
+
                 <MoreHorizontalIcon
                   size={18}
                   className="my-auto text-gray-400 ml-auto mr-0"
