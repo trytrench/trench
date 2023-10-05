@@ -16,7 +16,7 @@ import {
   Type,
   TypeIcon,
 } from "lucide-react";
-import { use, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 
 interface FeatureCardProps {
