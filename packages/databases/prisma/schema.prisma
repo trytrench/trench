@@ -29,7 +29,7 @@ model BackfillJob {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+  ruleset Ruleset @relation(fields: [rulesetId], references: [id])
   rulesetId String
 
   lastEvent EventLog? @relation(fields: [lastEventId], references: [id])
@@ -148,53 +148,22 @@ model EventToEntityLink {
 
 
 model ProductionRuleset {
-  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
+  ruleset Ruleset @relation(fields: [rulesetId], references: [id])
   rulesetId String @id
 }
 
 model Ruleset {
-  rulesetId String @id @default(dbgenerated("nanoid()"))
+  id String @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   name       String 
   description String?
 
-  files File[]
   backfillJobs BackfillJob[]
   productionRuleset ProductionRuleset?
-}
 
-
-model FileSnapshot {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  code        String
-  description String?
-
-  file   File?   @relation("fileSnapshot", fields: [fileId], references: [id])
-  fileId String?
-
-  currentFile File? @relation("currentFileSnapshot")
-}
-
-model File {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  name        String
-  description String?
-
-  currentFileSnapshot   FileSnapshot @relation("currentFileSnapshot", fields: [currentFileSnapshotId], references: [id])
-  currentFileSnapshotId String       @unique
-
-  ruleset Ruleset @relation(fields: [rulesetId], references: [rulesetId])
-  rulesetId String
-
-  fileSnapshots FileSnapshot[] @relation("fileSnapshot")
+  files Json @default("[]")
 }
 
 model EntityLabelType {

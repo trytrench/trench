@@ -1,13 +1,12 @@
-import { readFile } from "fs/promises";
-import { glob } from "glob";
+import { Prisma } from "@prisma/client";
 import { prisma } from "..";
 
 import * as fs from "fs";
 import * as path from "path";
 
 interface FileData {
-  fileName: string;
-  code: string;
+  name: string;
+  source: string;
 }
 
 async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
@@ -37,8 +36,8 @@ async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
             }
 
             const fileData: FileData = {
-              fileName: path.basename(file),
-              code: data,
+              name: path.basename(file),
+              source: data,
             };
 
             fileDataArray.push(fileData);
@@ -60,27 +59,19 @@ async function main() {
   const firstRuleset = await prisma.ruleset.create({
     data: {
       name: "Version 0.0.0",
+      files: fileData as any,
     },
   });
 
-  for (const file of fileData) {
-    const fileSnapshot = await prisma.fileSnapshot.create({
-      data: {
-        code: file.code,
-      },
-    });
-    await prisma.file.create({
-      data: {
-        name: path.basename(file.fileName),
-        currentFileSnapshotId: fileSnapshot.id,
-        rulesetId: firstRuleset.rulesetId,
-      },
-    });
-  }
+  const prod = await prisma.productionRuleset.create({
+    data: {
+      rulesetId: firstRuleset.id,
+    },
+  });
 
   const job = await prisma.backfillJob.create({
     data: {
-      rulesetId: firstRuleset.rulesetId,
+      rulesetId: firstRuleset.id,
     },
   });
 }

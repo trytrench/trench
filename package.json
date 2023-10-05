@@ -8,8 +8,8 @@
     "dev": "dotenv -- turbo run dev",
     "start": "dotenv -- turbo run start",
     "db:reset": "dotenv -- turbo run db:reset",
+    "db:generate": "dotenv -- turbo run db:generate",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "generate": "turbo run generate",
     "lint": "turbo run lint"
   },
   "devDependencies": {
