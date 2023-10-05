@@ -6,7 +6,7 @@ import * as path from "path";
 
 interface FileData {
   name: string;
-  source: string;
+  code: string;
 }
 
 async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
@@ -37,7 +37,7 @@ async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
 
             const fileData: FileData = {
               name: path.basename(file),
-              source: data,
+              code: data,
             };
 
             fileDataArray.push(fileData);

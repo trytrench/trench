@@ -16,7 +16,7 @@
     "jsx": "preserve",
     "incremental": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": "."
+    "baseUrl": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

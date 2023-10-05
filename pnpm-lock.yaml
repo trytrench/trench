@@ -137,6 +137,9 @@ importers:
       '@radix-ui/react-scroll-area':
         specifier: ^1.0.4
         version: 1.0.5(@types/react-dom@18.2.8)(@types/react@18.2.24)(react-dom@18.2.0)(react@18.2.0)
+      '@react-hook/resize-observer':
+        specifier: ^1.2.6
+        version: 1.2.6(react@18.2.0)
       '@t3-oss/env-nextjs':
         specifier: ^0.3.1
         version: 0.3.1(typescript@5.2.2)(zod@3.22.3)
@@ -164,6 +167,9 @@ importers:
       '@trytrench/tremor':
         specifier: ^0.0.0-development
         version: 0.0.0-development(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)(tailwindcss@3.3.3)
+      '@types/pluralize':
+        specifier: ^0.0.31
+        version: 0.0.31
       amqplib:
         specifier: ^0.10.3
         version: 0.10.3
@@ -224,6 +230,9 @@ importers:
       p-limit:
         specifier: ^4.0.0
         version: 4.0.0
+      pluralize:
+        specifier: ^8.0.0
+        version: 8.0.0
       postinstall-postinstall:
         specifier: ^2.1.0
         version: 2.1.0
@@ -352,6 +361,9 @@ importers:
       '@types/glob':
         specifier: ^8.1.0
         version: 8.1.0
+      dbmate:
+        specifier: ^2.6.0
+        version: 2.6.0
       prisma:
         specifier: ^5.3.1
         version: 5.3.1
@@ -1528,6 +1540,62 @@ packages:
       '@clickhouse/client-common': 0.2.2
     dev: false
 
+  /@dbmate/darwin-arm64@2.6.0:
+    resolution: {integrity: sha512-b+jM2L5Ts4h1YiWGI8B6hYfjTyj8Ge9vE3vnjhmB7TSqXxw+DOFtGtXuEFD5eufL1SenBlhoq2O+FaAZsoDKkw==}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/darwin-x64@2.6.0:
+    resolution: {integrity: sha512-g2NzMA02OOiwGQVISJWPLYLi7sSVeoPCFUOq17hOK0X8dAoxPU3U+cBh6GfmFzMUiXt/oVnnz9dCj1hsc4crjg==}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/linux-arm64@2.6.0:
+    resolution: {integrity: sha512-zgKqsnQWaKLPLhpEeK1jVt5EslntdMN98bPzr4LEY6C5BeEMce4Bq2GSpsJDah364U4pUq3Ad4DTBeHSQXUUTg==}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/linux-arm@2.6.0:
+    resolution: {integrity: sha512-jCna7da7vPXcsTlNKHBIuAkPEgsVvNJqvsn5gQk9XbmyUXxsQT1SoBssBSH8nKhp0LOVFk0l0tbu2RmWRC1C1Q==}
+    cpu: [arm]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/linux-ia32@2.6.0:
+    resolution: {integrity: sha512-Xcfp+Yym8FFSLibfxbIoc56BctSvngtMmEXVL5WRU88QL9OWboXIHnpOwkjEZEYPQeSNnUwaOI+T3hLdfR7atQ==}
+    cpu: [ia32]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/linux-x64@2.6.0:
+    resolution: {integrity: sha512-M+dWa27O02Fm7nFubJsN01Wh4U5TeK049Rm7aSFDddXWs6SP0UtIVgQd5tubxCRdHpu6thiUB81alAe8PY3n9g==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@dbmate/win32-x64@2.6.0:
+    resolution: {integrity: sha512-4yYW51VwVfzAZhkaQp5OZrkZWjqxFa6zGoSuYNC+0Ra/QZwLWJ7dvUvRtLBNTpzBvvSC6FdaaCHMElDEsfHZrA==}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /@discoveryjs/json-ext@0.5.7:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
@@ -1838,6 +1906,10 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
+
+  /@juggle/resize-observer@3.4.0:
+    resolution: {integrity: sha512-dfLbk+PwWvFzSxwk3n5ySL0hfBog779o8h68wK/7/APo/7cgyWp5jcXockbxdk5kFRkbeXWm4Fbi9FrdN381sA==}
+    dev: false
 
   /@monaco-editor/loader@1.4.0(monaco-editor@0.41.0):
     resolution: {integrity: sha512-00ioBig0x642hytVspPl7DbQyaSWRaolYie/UFNjoTdvoKPzo6xrXLhTk9ixgIKcLH5b5vDOjVNiGyY+uDCUlg==}
@@ -2760,6 +2832,33 @@ packages:
       '@babel/runtime': 7.23.1
     dev: false
 
+  /@react-hook/latest@1.0.3(react@18.2.0):
+    resolution: {integrity: sha512-dy6duzl+JnAZcDbNTfmaP3xHiKtbXYOaz3G51MGVljh548Y8MWzTr+PHLOfvpypEVW9zwvl+VyKjbWKEVbV1Rg==}
+    peerDependencies:
+      react: '>=16.8'
+    dependencies:
+      react: 18.2.0
+    dev: false
+
+  /@react-hook/passive-layout-effect@1.2.1(react@18.2.0):
+    resolution: {integrity: sha512-IwEphTD75liO8g+6taS+4oqz+nnroocNfWVHWz7j+N+ZO2vYrc6PV1q7GQhuahL0IOR7JccFTsFKQ/mb6iZWAg==}
+    peerDependencies:
+      react: '>=16.8'
+    dependencies:
+      react: 18.2.0
+    dev: false
+
+  /@react-hook/resize-observer@1.2.6(react@18.2.0):
+    resolution: {integrity: sha512-DlBXtLSW0DqYYTW3Ft1/GQFZlTdKY5VAFIC4+km6IK5NiPPDFchGbEJm1j6pSgMqPRHbUQgHJX7RaR76ic1LWA==}
+    peerDependencies:
+      react: '>=16.8'
+    dependencies:
+      '@juggle/resize-observer': 3.4.0
+      '@react-hook/latest': 1.0.3(react@18.2.0)
+      '@react-hook/passive-layout-effect': 1.2.1(react@18.2.0)
+      react: 18.2.0
+    dev: false
+
   /@rushstack/eslint-patch@1.5.1:
     resolution: {integrity: sha512-6i/8UoL0P5y4leBIGzvkZdS85RDMG9y1ihZzmTZQ5LdHUYmZ7pKFoj8X0236s3lusPs1Fa5HTQUpwI+UfTcmeA==}
     dev: true
@@ -3066,6 +3165,10 @@ packages:
       pg-protocol: 1.6.0
       pg-types: 4.0.1
     dev: true
+
+  /@types/pluralize@0.0.31:
+    resolution: {integrity: sha512-MQh69PPwFlYAL2qz/Mw5Zc34VTdt7pTck0Xbb6pbPSzdt5oaLB87iyJJxEMS5Dco/s7lXHunEezAvQurZZdrsQ==}
+    dev: false
 
   /@types/prop-types@15.7.8:
     resolution: {integrity: sha512-kMpQpfZKSCBqltAJwskgePRaYRFukDkm1oItcAbC3gNELR20XIBcN9VRgg4+m8DKsTfkWeA4m4Imp4DDuWy7FQ==}
@@ -4343,6 +4446,19 @@ packages:
   /dayjs@1.11.10:
     resolution: {integrity: sha512-vjAczensTgRcqDERK0SR2XMwsF/tSvnvlv6VcF2GIhg6Sx4yOIt/irsr1RDJsKiIyBzJDpCoXiWWq28MqH2cnQ==}
     dev: false
+
+  /dbmate@2.6.0:
+    resolution: {integrity: sha512-VzZPgCE+Vvy+C2Qr1BurZIWFcU8zU55TtFbNWNCiNe8/TnHzE1kykiS5dE83JAHCjXOak30XxO5vZlJ3GkU6EQ==}
+    hasBin: true
+    optionalDependencies:
+      '@dbmate/darwin-arm64': 2.6.0
+      '@dbmate/darwin-x64': 2.6.0
+      '@dbmate/linux-arm': 2.6.0
+      '@dbmate/linux-arm64': 2.6.0
+      '@dbmate/linux-ia32': 2.6.0
+      '@dbmate/linux-x64': 2.6.0
+      '@dbmate/win32-x64': 2.6.0
+    dev: true
 
   /debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -6917,6 +7033,11 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       find-up: 4.1.0
+
+  /pluralize@8.0.0:
+    resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
+    engines: {node: '>=4'}
+    dev: false
 
   /postcss-import@15.1.0(postcss@8.4.31):
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
