@@ -2,6 +2,7 @@ import { Stack, Tag } from "@chakra-ui/react";
 import {
   Badge,
   Card,
+  Divider,
   Icon,
   List,
   ListItem,
