@@ -22,12 +22,7 @@ async function processEvents(events: Event[], files: Record<string, string>) {
   const { executable } = await compileSqrl(instance, files);
 
   for (const event of events) {
-    try {
-      results.push(await runEvent(event, executable));
-    } catch (e) {
-      console.error(`Error processing event ${event.id}:`);
-      console.error(e);
-    }
+    results.push(await runEvent(event, executable));
   }
   await batchUpsert(results);
 }
@@ -39,28 +34,36 @@ async function initConsumer() {
 
     while (true) {
       // Sleep for 1 second
-      await new Promise((resolve) => setTimeout(resolve, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Start a transaction
       await client.query("BEGIN");
 
       const res = await client.query(`
-        SELECT "id", "lastEventId", "datasetId"
-        FROM "BackfillJob"
+        SELECT "id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
+        FROM "Dataset"
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
       `);
 
-      const job = res.rows[0];
-      if (!job) {
-        // No open BackfillJob, commit the transaction and continue
-
-        console.log("No open BackfillJob, continuing...");
+      const dataset = res.rows[0];
+      if (!dataset) {
+        console.log("No open Dataset, continuing...");
         await client.query("COMMIT");
         continue;
       }
 
-      const { id: jobId, lastEventId, datasetId } = job;
+      type FileRow = { name: string; code: string };
+
+      const {
+        id: datasetId,
+        lastEventLogId,
+        rules,
+      } = dataset as {
+        id: string;
+        lastEventLogId: number;
+        rules: FileRow[];
+      };
 
       const eventsRes = await client.query(
         `
@@ -71,7 +74,7 @@ async function initConsumer() {
         ORDER BY "id" ASC
         LIMIT 1000;
       `,
-        [lastEventId]
+        [lastEventLogId]
       );
 
       const events = eventsRes.rows as Event[];
@@ -83,42 +86,27 @@ async function initConsumer() {
         continue;
       }
 
-      type FileRow = { name: string; code?: string };
-      const resFiles = await client.query(
-        `
-        SELECT "name", "currentFileSnapshot"."code"
-        FROM "File"
-        INNER JOIN "FileSnapshot" AS "currentFileSnapshot"
-        ON "currentFileSnapshot"."id" = "File"."currentFileSnapshotId"
-        WHERE "File"."datasetId" = $1;
-      `,
-        [datasetId]
-      );
-
-      const files = resFiles.rows as FileRow[];
       const fileData =
-        files.reduce(
+        rules.reduce(
           (acc, file) => {
-            if (!file.code) return acc;
             acc[file.name] = file.code;
             return acc;
           },
           {} as Record<string, string>
         ) || {};
-
       await processEvents(events, fileData);
 
       const newLastEventId = events.length
         ? events[events.length - 1]!.id
-        : lastEventId;
+        : lastEventLogId;
 
       await client.query(
         `
-        UPDATE "BackfillJob"
-        SET "lastEventId" = $1
+        UPDATE "Dataset"
+        SET "lastEventLogId" = $1
         WHERE id = $2;
       `,
-        [newLastEventId, jobId]
+        [newLastEventId, datasetId]
       );
 
       // Commit the transaction

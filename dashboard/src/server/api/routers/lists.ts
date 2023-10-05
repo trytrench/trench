@@ -164,6 +164,7 @@ export const listsRouter = createTRPCRouter({
         }[]
       >();
 
+      console.log(events);
       return {
         count: 0,
         rows: events.map((event) => ({
@@ -179,7 +180,7 @@ export const listsRouter = createTRPCRouter({
               type: event.entity_types[index],
               name: event.entity_names[index],
               relation: event.entity_relations[index],
-              features: JSON.parse(event.entity_features[index]),
+              // features: JSON.parse(event.entity_features[index]),
               labels: [],
             };
           }),

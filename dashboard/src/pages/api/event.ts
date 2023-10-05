@@ -54,8 +54,6 @@ export default async function handler(
 
   const queue = new PostgresEventQueue();
 
-  console.log(event);
-
   await queue.addEvent(event);
 
   res.status(200).json({

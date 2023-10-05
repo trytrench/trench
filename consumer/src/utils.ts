@@ -55,12 +55,15 @@ export async function runEvent(event: Event, executable: Executable) {
   return {
     id: event.id,
     type: event.type,
-    timestamp: event.timestamp,
+    timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
     data: event.data,
     features: eventFeatures,
     labels: manipulator.eventLabels,
     entities: manipulator.entities.map((entity) => ({
       ...entity,
+      labels: manipulator.entityLabels.filter(
+        (label) => label.entityId === entity.id
+      ),
       features: entityIdToFeatures[entity.id] ?? {},
     })),
   };
@@ -69,57 +72,85 @@ export async function runEvent(event: Event, executable: Executable) {
 export async function batchUpsert(
   events: Awaited<ReturnType<typeof runEvent>>[]
 ) {
-  const values = events.flatMap((event) => {
-    if (event.entities.length === 0) {
-      return [
-        {
-          event_id: event.id,
-          event_type: event.type,
-          event_timestamp: getUnixTime(event.timestamp),
-          event_data: event.data,
-          event_features: event.features,
-        },
-      ];
-    } else {
-      event.entities.map((entity) => ({
-        event_id: event.id,
-        event_type: event.type,
-        event_timestamp: getUnixTime(event.timestamp),
-        event_data: event.data,
-        event_features: event.features,
-        entity_id: entity.id,
-        entity_name: entity.features.Name || entity.id,
-        entity_type: entity.type,
-        entity_features: entity.features,
-        relation: entity.relation,
-      }));
-    }
+  console.log(events);
+  await db.insert({
+    table: "event_labels",
+    values: events.flatMap((event) =>
+      event.labels.length > 0
+        ? event.labels.map((label) => ({
+            created_at: getUnixTime(new Date()),
+            event_id: event.id,
+            label: label.label,
+            type: label.type,
+            status: "ADDED",
+          }))
+        : [
+            {
+              created_at: getUnixTime(new Date()),
+              event_id: event.id,
+            },
+          ]
+    ),
+    format: "JSONEachRow",
   });
 
-  try {
-    await db.insert({
-      table: "event_entity",
-      values,
-      format: "JSONEachRow",
-    });
-    await db.insert({
-      table: "event_labels",
-      values: events.flatMap((event) =>
-        event.labels.map((label) => ({
-          event_id: event.id,
-          event_type: event.type,
-          event_timestamp: getUnixTime(event.timestamp),
-          event_features: event.features,
-          label: label.label,
-          type: label.type,
-          status: "ADDED",
-        }))
+  await db.insert({
+    table: "entity_labels",
+    values: events
+      .filter((event) => event.entities.length)
+      .flatMap((event) =>
+        event.entities
+          .filter((entity) => entity.labels.length)
+          .flatMap((entity) =>
+            entity.labels.length > 0
+              ? entity.labels.map((label) => ({
+                  created_at: getUnixTime(new Date()),
+                  entity_id: entity.id,
+                  type: label.labelType,
+                  label: label.label,
+                  status: "ADDED",
+                }))
+              : [
+                  {
+                    created_at: getUnixTime(new Date()),
+                    entity_id: entity.id,
+                  },
+                ]
+          )
       ),
-      format: "JSONEachRow",
-    });
-  } catch (error) {
-    console.error("Error inserting data into ClickHouse:", error);
-  }
+    format: "JSONEachRow",
+  });
+
+  await db.insert({
+    table: "event_entity",
+    values: events.flatMap((event) =>
+      event.entities.length > 0
+        ? event.entities.map((entity) => ({
+            created_at: getUnixTime(new Date()),
+            event_id: event.id,
+            event_type: event.type,
+            event_timestamp: getUnixTime(event.timestamp),
+            event_data: event.data,
+            event_features: event.features,
+            entity_id: entity.id,
+            entity_name: entity.features.Name || entity.id,
+            entity_type: entity.type,
+            entity_features: entity.features,
+            relation: entity.relation,
+          }))
+        : [
+            {
+              created_at: getUnixTime(new Date()),
+              event_id: event.id,
+              event_type: event.type,
+              event_timestamp: getUnixTime(event.timestamp),
+              event_data: event.data,
+              event_features: event.features,
+            },
+          ]
+    ),
+    format: "JSONEachRow",
+  });
 }
 
 export const compileSqrl = async (
