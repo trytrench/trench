@@ -52,7 +52,7 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Rules", path: "rules" },
+  { name: "Info", path: "info" },
   { name: "Data Explorer", path: "dashboard" },
 ];
 
@@ -76,8 +76,6 @@ export const Navbar = () => {
       px={isDesktop ? 8 : 4}
       justify="start"
       align={"center"}
-      borderBottom="2px"
-      borderColor="gray.200"
       as="nav"
       shrink={0}
       flexShrink={0}

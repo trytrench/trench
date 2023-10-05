@@ -15,6 +15,7 @@ export interface MonacoEditorProps {
   style?: React.CSSProperties;
   markers?: Omit<EditorApi.editor.IMarkerData, "relatedInformation">[];
   sqrlFunctions: FunctionInfoMap | null;
+  readonly?: boolean;
 }
 
 export const MonacoEditor: React.FC<MonacoEditorProps> = ({
@@ -22,6 +23,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   onChange,
   options = {},
   isDarkMode = true,
+  readonly = false,
   value,
   style,
   markers,
@@ -40,16 +42,16 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   const handleMount = useCallback(
     (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      editor.updateOptions({
+        readOnly: readonly,
+      });
+
       editorRef.current = editor;
 
       const model = editor.getModel();
       if (!model) return;
-
-      editor.updateOptions({
-        readOnly: false,
-      });
     },
-    []
+    [readonly]
   );
 
   const editorElement = useRef<HTMLDivElement>(null);
@@ -60,7 +62,9 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       theme="vs-dark"
       value={value}
       onChange={(e, ev) => {
-        onChange?.(e ?? "", ev);
+        if (!readonly) {
+          onChange?.(e ?? "", ev);
+        }
       }}
       beforeMount={monacoSetup}
       onMount={handleMount}

@@ -19,9 +19,10 @@ export const datasetsRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string(),
+        description: z.string().optional(),
         backfillFrom: z.string().optional(),
         backfillTo: z.string().optional(),
-        files: z.array(
+        rules: z.array(
           z.object({
             name: z.string(),
             code: z.string(),
@@ -29,12 +30,13 @@ export const datasetsRouter = createTRPCRouter({
         ),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const { files, name, backfillFrom, backfillTo } = input;
+    .mutation(async ({ ctx, input }) => {
+      const { rules, name, description, backfillFrom, backfillTo } = input;
       const dataset = await ctx.prisma.dataset.create({
         data: {
           name,
-          files: JSON.stringify(files),
+          description,
+          rules: JSON.stringify(rules),
           backfillFrom,
           backfillTo,
         },
