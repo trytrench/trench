@@ -76,10 +76,12 @@ export const listsRouter = createTRPCRouter({
 
       return {
         count: 0,
-        rows: entities.map((entity) => ({
-          ...entity,
-          features: JSON.parse(entity.features),
-        })),
+        rows: entities
+          .filter((entity) => entity.id)
+          .map((entity) => ({
+            ...entity,
+            features: JSON.parse(entity.features),
+          })),
       };
     }),
 
@@ -173,7 +175,7 @@ export const listsRouter = createTRPCRouter({
           features: JSON.parse(event.event_features),
           timestamp: new Date(event.event_timestamp),
           labels: event.event_labels,
-          entities: event.entity_ids.map((id, index) => {
+          entities: event.entity_ids.filter(Boolean).map((id, index) => {
             return {
               id: id,
               type: event.entity_types[index],

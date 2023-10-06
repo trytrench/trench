@@ -82,7 +82,7 @@ export const Navbar = () => {
             <NavItem href="/events">Events</NavItem>
             <NavItem href="/find">Finder</NavItem>
             <NavItem href="/rules">Rules</NavItem>
-            <NavItem href="/dashboard">Data Explorer</NavItem>
+            <NavItem href="/explore">Data Explorer</NavItem>
             <NavItem href="/settings">Settings</NavItem>
           </HStack>
           <Box flex={1} />
@@ -124,9 +124,11 @@ export const Navbar = () => {
 
           <DrawerBody>
             <VStack align="start" onClick={onClose}>
-              <NavItem href="/dashboard">Dashboard</NavItem>
-              <NavItem href="/feed">Lists</NavItem>
+              <NavItem href="/events">Events</NavItem>
+              <NavItem href="/find">Finder</NavItem>
               <NavItem href="/rules">Rules</NavItem>
+              <NavItem href="/explore">Data Explorer</NavItem>
+              <NavItem href="/settings">Settings</NavItem>
             </VStack>
           </DrawerBody>
         </DrawerContent>

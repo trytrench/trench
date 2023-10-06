@@ -1,22 +1,18 @@
+import { uniq } from "lodash";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import {
-  buildEntityExistsQuery,
-  buildEventExistsQuery,
-  getFiltersWhereQuery,
-} from "../../lib/filters";
-import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { db } from "~/server/db";
-import { uniq } from "lodash";
+import { getBins } from "~/server/utils/getBins";
+import { eventFiltersZod } from "../../../shared/validation";
+import { getFiltersWhereQuery } from "../../lib/filters";
 
 export const eventsRouter = createTRPCRouter({
-  getTimeBins: publicProcedure
+  getEventTypeTimeData: publicProcedure
     .input(
       z.object({
-        interval: z.number(),
         start: z.date(),
         end: z.date(),
-        entityId: z.string(),
+        entityId: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -24,58 +20,211 @@ export const eventsRouter = createTRPCRouter({
         query: `
           SELECT 
               toStartOfInterval(event_timestamp, INTERVAL 1 day) AS time,
-              label,
+              event_type as label,
               count(DISTINCT event_id) AS count
           FROM 
-              event_entity_event_labels
+              event_entity
           WHERE 
-              entity_id = '${input.entityId}'
-              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
               time,
-              label
+              event_type
           ORDER BY 
               time ASC
           WITH FILL
           FROM parseDateTimeBestEffort('${input.start.toISOString()}')
           TO parseDateTimeBestEffort('${input.end.toISOString()}')
-          STEP INTERVAL 1 day
+          STEP INTERVAL 1 day;
         `,
         format: "JSONEachRow",
       });
 
-      const bins = await result.json<
+      const data = await result.json<
         { time: string; label: string; count: number }[]
       >();
 
-      const binData = bins.reduce((acc, bin) => {
-        if (!acc[bin.time]) acc[bin.time] = {};
-        acc[bin.time]![bin.label] = bin.count;
-        return acc;
-      }, {} as Record<string, Record<string, number>>);
+      return {
+        bins: getBins(data),
+        labels: uniq(data.map((bin) => bin.label).filter(Boolean)),
+      };
+    }),
 
-      const times = uniq(bins.map((bin) => bin.time));
-      const labels = uniq(bins.map((bin) => bin.label));
+  getEntityTypeTimeData: publicProcedure
+    .input(
+      z.object({
+        start: z.date(),
+        end: z.date(),
+        entityId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+              toStartOfInterval(event_timestamp, INTERVAL 1 day) AS time,
+              entity_type as label,
+              count(DISTINCT event_id) AS count
+          FROM 
+              event_entity
+          WHERE 
+              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
+          GROUP BY 
+              time,
+              entity_type
+          ORDER BY 
+              time ASC
+          WITH FILL
+          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
+          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          STEP INTERVAL 1 day;
+        `,
+        format: "JSONEachRow",
+      });
 
-      const allBins: Record<string, Record<string, number>> = {};
-      for (const time of times) {
-        for (const label of labels) {
-          if (!allBins[time]) allBins[time] = {};
-          allBins[time]![label] = binData[time]?.[label] ?? 0;
-        }
-      }
+      const data = await result.json<
+        { time: string; label: string; count: number }[]
+      >();
 
       return {
-        bins: allBins,
-        labels,
+        bins: getBins(data),
+        labels: uniq(data.map((bin) => bin.label).filter(Boolean)),
       };
+    }),
+
+  getEventLabelTimeData: publicProcedure
+    .input(
+      z.object({
+        // interval: z.number(),
+        start: z.date(),
+        end: z.date(),
+        entityId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+              toStartOfInterval(event_timestamp, INTERVAL 1 day) AS time,
+              event_type,
+              label,
+              count(DISTINCT event_id) AS count
+          FROM 
+              event_entity_event_labels
+          WHERE 
+              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
+          GROUP BY 
+              time,
+              label,
+              event_type
+          ORDER BY 
+              time ASC
+          WITH FILL
+          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
+          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          STEP INTERVAL 1 day;
+        `,
+        format: "JSONEachRow",
+      });
+
+      const data = await result.json<
+        { time: string; label: string; event_type: string; count: number }[]
+      >();
+
+      const eventTypes = uniq(data.map((bin) => bin.event_type)).filter(
+        Boolean
+      );
+
+      const bins: Record<string, Record<string, Record<string, number>>> = {};
+      const labels: Record<string, string[]> = {};
+
+      for (const eventType of eventTypes) {
+        bins[eventType] = getBins(
+          data.filter((bin) => bin.event_type === eventType || !bin.event_type)
+        );
+
+        labels[eventType] = uniq(
+          data
+            .filter((bin) => bin.event_type === eventType)
+            .map((bin) => bin.label)
+            .filter(Boolean)
+        );
+      }
+
+      return { bins, labels };
+    }),
+
+  getEntityLabelTimeData: publicProcedure
+    .input(
+      z.object({
+        // interval: z.number(),
+        start: z.date(),
+        end: z.date(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+              toStartOfInterval(event_timestamp, INTERVAL 1 day) AS time,
+              entity_type,
+              label,
+              count(DISTINCT event_id) AS count
+          FROM 
+              event_entity_entity_labels
+          WHERE 
+              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+          GROUP BY 
+              time,
+              label,
+              entity_type
+          ORDER BY 
+              time ASC
+          WITH FILL
+          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
+          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          STEP INTERVAL 1 day;
+        `,
+        format: "JSONEachRow",
+      });
+
+      const data = await result.json<
+        { time: string; label: string; entity_type: string; count: number }[]
+      >();
+
+      const entityTypes = uniq(data.map((bin) => bin.entity_type)).filter(
+        Boolean
+      );
+
+      const bins: Record<string, Record<string, Record<string, number>>> = {};
+      const labels: Record<string, string[]> = {};
+
+      for (const entityType of entityTypes) {
+        bins[entityType] = getBins(
+          data.filter(
+            (bin) => bin.entity_type === entityType || !bin.entity_type
+          )
+        );
+
+        labels[entityType] = uniq(
+          data
+            .filter((bin) => bin.entity_type === entityType)
+            .map((bin) => bin.label)
+            .filter(Boolean)
+        );
+      }
+
+      return { bins, labels };
     }),
 
   getEventLabelDistributions: publicProcedure
     .input(
       z.object({
-        eventFilters: eventFiltersZod,
-        entityFilters: entityFiltersZod,
+        start: z.date(),
+        end: z.date(),
+        entityId: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -83,13 +232,16 @@ export const eventsRouter = createTRPCRouter({
         query: `
           SELECT 
               label,
+              event_type,
               COUNT(DISTINCT event_id) AS count
           FROM 
               event_entity_event_labels
-          WHERE 
-              entity_id = '${input.eventFilters?.entityId}'
+          WHERE 1=1
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
-              label
+              label,
+              event_type
           ORDER BY 
               count DESC;
         `,
@@ -99,101 +251,114 @@ export const eventsRouter = createTRPCRouter({
       return result.json<
         {
           label: string;
+          event_type: string;
           count: number;
         }[]
       >();
     }),
-  getEventTypeDistributions: publicProcedure
-    .input(
-      z.object({
-        eventFilters: eventFiltersZod,
-        entityFilters: entityFiltersZod,
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const eventTypeDistros = await ctx.prisma.$queryRawUnsafe<
-        Array<{
-          label: string;
-          count: number;
-        }>
-      >(
-        `
-          SELECT
-            "Event"."type" as label,
-            COUNT(*) as count
-          FROM
-            "Event"
-          WHERE            
-            ${buildEventExistsQuery(input.eventFilters)}
-            AND EXISTS (
-              SELECT FROM "EventToEntityLink"
-              WHERE ${buildEntityExistsQuery(
-                input.entityFilters,
-                '"EventToEntityLink"."entityId"'
-              )}
-            )
-          GROUP BY
-            "Event"."type"
-          ORDER BY
-            count DESC
-          `
-      );
 
-      return eventTypeDistros.map((dbEventTypeDistro) => ({
-        label: dbEventTypeDistro.label,
-        count: Number(dbEventTypeDistro.count),
-      }));
-    }),
   getEntityLabelDistributions: publicProcedure
     .input(
       z.object({
-        eventFilters: eventFiltersZod,
-        entityFilters: entityFiltersZod,
+        start: z.date(),
+        end: z.date(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const entityLabelDistros = await ctx.prisma.$queryRawUnsafe<
-        Array<{
-          label: string;
-          color: string;
-          count: number;
-        }>
-      >(
-        `
-      SELECT
-        "EntityLabel"."name" as label,
-        "EntityLabel"."color" as color,
-        COUNT(*) as count
-      FROM
-        "_EntityToEntityLabel"
-      JOIN
-        "EntityLabel"
-      ON
-        "_EntityToEntityLabel"."B" = "EntityLabel"."id"
-      WHERE EXISTS (
-        SELECT FROM "EventToEntityLink"
-        WHERE 
-          "EventToEntityLink"."entityId" = "_EntityToEntityLabel"."A"
-          AND ${buildEntityExistsQuery(
-            input.entityFilters,
-            '"EventToEntityLink"."entityId"'
-          )}
-          AND ${buildEventExistsQuery(
-            input.eventFilters,
-            '"EventToEntityLink"."eventId"'
-          )}
-      )
-      GROUP BY
-        "EntityLabel"."name", "EntityLabel"."color"
-      ORDER BY
-        count DESC
-      `
-      );
+      const result = await db.query({
+        query: `
+          SELECT 
+              label,
+              entity_type,
+              COUNT(DISTINCT event_id) AS count
+          FROM 
+              event_entity_entity_labels
+          WHERE 1=1
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+          GROUP BY 
+              label,
+              entity_type
+          ORDER BY 
+              count DESC;
+        `,
+        format: "JSONEachRow",
+      });
 
-      return entityLabelDistros.map((dbEntityLabelDistro) => ({
-        ...dbEntityLabelDistro,
-        count: Number(dbEntityLabelDistro.count),
-      }));
+      return result.json<
+        {
+          label: string;
+          entity_type: string;
+          count: number;
+        }[]
+      >();
+    }),
+
+  getEntityTypeDistributions: publicProcedure
+    .input(
+      z.object({
+        start: z.date(),
+        end: z.date(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+              entity_type,
+              COUNT(DISTINCT event_id) AS count
+          FROM 
+              event_entity
+          WHERE 1=1
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+          GROUP BY 
+              entity_type
+          ORDER BY 
+              count DESC;
+        `,
+        format: "JSONEachRow",
+      });
+
+      return result.json<
+        {
+          entity_type: string;
+          count: number;
+        }[]
+      >();
+    }),
+
+  getEventTypeDistributions: publicProcedure
+    .input(
+      z.object({
+        start: z.date(),
+        end: z.date(),
+        entityId: z.string().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
+          SELECT 
+              event_type,
+              COUNT(DISTINCT event_id) AS count
+          FROM 
+              event_entity
+          WHERE 1=1
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
+          GROUP BY 
+              event_type
+          ORDER BY 
+              count DESC;
+        `,
+        format: "JSONEachRow",
+      });
+
+      return result.json<
+        {
+          event_type: string;
+          count: number;
+        }[]
+      >();
     }),
 
   findMany: publicProcedure
