@@ -112,20 +112,28 @@ export async function batchUpsert(
     await db.insert({
       table: "event_entity",
       values: events.flatMap((event) =>
-        // TODO: case when event has no entities
-        event.entities.map((entity) => ({
-          created_at: getUnixTime(new Date()),
-          event_id: event.id,
-          event_type: event.type,
-          event_timestamp: getUnixTime(event.timestamp),
-          event_data: event.data,
-          event_features: event.features,
-          entity_id: entity.id,
-          entity_name: entity.features.Name || entity.id,
-          entity_type: entity.type,
-          entity_features: entity.features,
-          relation: entity.relation,
-        }))
+        event.entities.length
+          ? event.entities.map((entity) => ({
+              created_at: getUnixTime(new Date()),
+              event_id: event.id,
+              event_type: event.type,
+              event_timestamp: getUnixTime(event.timestamp),
+              event_data: event.data,
+              event_features: event.features,
+              entity_id: entity.id,
+              entity_name: entity.features.Name || entity.id,
+              entity_type: entity.type,
+              entity_features: entity.features,
+              relation: entity.relation,
+            }))
+          : {
+              created_at: getUnixTime(new Date()),
+              event_id: event.id,
+              event_type: event.type,
+              event_timestamp: getUnixTime(event.timestamp),
+              event_data: event.data,
+              event_features: event.features,
+            }
       ),
       format: "JSONEachRow",
     });

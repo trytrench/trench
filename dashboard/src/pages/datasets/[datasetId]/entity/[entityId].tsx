@@ -39,16 +39,18 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
-import { NumberParam, useQueryParam, useQueryParams } from "use-query-params";
+import {
+  DateParam,
+  NumberParam,
+  useQueryParam,
+  useQueryParams,
+} from "use-query-params";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import { api, type RouterOutputs } from "~/utils/api";
-import { DateParam } from "~/utils/DateParam";
 import { EventCard } from "../../components/EventCard";
 import { EventDrawer } from "../../components/EventDrawer";
-import { EventLabelDistribution } from "../../components/EventLabelDistribution";
 import { EventListItem } from "../../components/EventListItem";
-import { EntityEventChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
 import LinksView from "~/components/LinksView";
 import LinksDisplay from "~/components/LinksView/refactor";
@@ -178,8 +180,6 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
   );
 }
 
-const TODAY = new Date();
-
 export default function Home() {
   const { data: labelsData } = api.labels.getAllLabels.useQuery();
 
@@ -303,19 +303,15 @@ export default function Home() {
                     </div>
                     <div className="col-span-2">
                       <Card>
-                        <Title>Event History</Title>
-                        <EntityEventChart entityId={entityId} />
+                        <Title className="mb-2">Event History</Title>
+                        {/* <EventChart entityId={entityId} /> */}
                       </Card>
                     </div>
                     <div className="col-span-1">
-                      <EventLabelDistribution
-                        color={"gray"}
-                        title={"Label Distribution"}
-                        legend="Events"
-                        eventFilters={{
-                          entityId,
-                        }}
-                      />
+                      <Card>
+                        <Title className="mb-2">Label Distribution</Title>
+                        {/* <EventLabelDistribution entityId={entityId} /> */}
+                      </Card>
                     </div>
                     <div className="col-span-3">
                       <Card className="p-0 pt-6">
