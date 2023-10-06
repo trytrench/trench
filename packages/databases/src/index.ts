@@ -25,36 +25,6 @@ export const prisma =
 
 if (env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-type ParsedURI = {
-  username: string;
-  password: string;
-  host: string;
-  port: string;
-  databaseName: string;
-};
-
-// function parseURI(uri: string): ParsedURI | null {
-//   const regex = /^clickhouse:\/\/([^:]*):([^@]*)@([^:]+):(\d+)\/([^\/]+)$/;
-//   const match = uri.match(regex);
-//   if (match) {
-//     return {
-//       username: match[1]!,
-//       password: match[2]!,
-//       host: match[3]!,
-//       port: match[4]!,
-//       databaseName: match[5]!,
-//     };
-//   } else {
-//     return null;
-//   }
-// }
-
-// const parsedURI = parseURI(env.CLICKHOUSE_URL);
-
-// if (!parsedURI) {
-//   throw new Error("Invalid CLICKHOUSE_URL");
-// }
-
 export const db = createClient({
   host: env.CLICKHOUSE_URL,
 });

@@ -13,8 +13,6 @@ export interface Event {
 
 export async function runEvent(event: Event, executable: Executable) {
   const ctx = createSimpleContext();
-
-  // TODO: Extract this code to shared
   const manipulator = new SqrlManipulator();
 
   const execution = await executable.execute(ctx, {
@@ -72,7 +70,6 @@ export async function runEvent(event: Event, executable: Executable) {
 export async function batchUpsert(
   events: Awaited<ReturnType<typeof runEvent>>[]
 ) {
-  console.log(events);
   await db.insert({
     table: "event_labels",
     values: events.flatMap((event) =>

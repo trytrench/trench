@@ -14,9 +14,9 @@ SELECT
     e.entity_type,
     e.entity_features,
     e.entity_relation,
-    l.status as label_status,
-    nullIf(l.type, '') as label_type,
-    nullIf(l.label, '') as label
+    l.status,
+    l.type,
+    l.label
 FROM
     event_entity e
     LEFT JOIN entity_labels l ON e.entity_id = l.entity_id;

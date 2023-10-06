@@ -78,7 +78,7 @@ export const Filter = ({ types, labels, features }: Props) => {
       <Text className="font-semibold text-lg mb-2 mt-6">Labels</Text>
 
       <MultiSelect value={selectedLabels} onValueChange={setSelectedLabels}>
-        {labels.map((label) => (
+        {labels?.map((label) => (
           <SelectItem key={label} value={label}>
             {label}
           </SelectItem>

@@ -16,7 +16,8 @@
     "jsx": "preserve",
     "incremental": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "preserveWatchOutput": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

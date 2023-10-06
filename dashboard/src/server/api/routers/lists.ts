@@ -165,6 +165,8 @@ export const listsRouter = createTRPCRouter({
       >();
 
       console.log(events);
+      console.log("===========");
+
       return {
         count: 0,
         rows: events.map((event) => ({
