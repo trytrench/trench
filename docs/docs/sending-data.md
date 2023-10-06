@@ -29,6 +29,7 @@ curl \
     },
     ...
   }
+}
 ```
 
 ### Data Fields

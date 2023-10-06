@@ -40,12 +40,12 @@ const msgs = data;
 
 async function main() {
   const instance = await createSqrlInstance({
-    config: {
-      "state.allow-in-memory": true,
-    },
     // config: {
-    //   "redis.address": process.env.SQRL_REDIS_URL,
+    //   "state.allow-in-memory": true,
     // },
+    config: {
+      "redis.address": process.env.REDIS_URL,
+    },
   });
 
   const files = await prisma.file.findMany({
@@ -54,10 +54,13 @@ async function main() {
     },
   });
   const fileData =
-    files.reduce((acc, file) => {
-      acc[file.name] = file.currentFileSnapshot.code;
-      return acc;
-    }, {} as Record<string, string>) || {};
+    files.reduce(
+      (acc, file) => {
+        acc[file.name] = file.currentFileSnapshot.code;
+        return acc;
+      },
+      {} as Record<string, string>
+    ) || {};
 
   const { executable } = await compileSqrl(instance, fileData);
 
@@ -67,43 +70,25 @@ async function main() {
     const batch = msgs.slice(i, i + BATCH_SIZE);
     const start = i;
     const end = Math.min(i + BATCH_SIZE, msgs.length);
-    console.time(
-      `Processed records ${start} to ${end} of ${msgs.length} (${Math.round(
-        (end / msgs.length) * 100
-      )}%)`
-    );
+
+    const timerMsg = `Processed records ${start} to ${end} of ${
+      msgs.length
+    } (${Math.round((end / msgs.length) * 100)}%)`;
+
+    console.time(timerMsg);
 
     const results: Awaited<ReturnType<typeof runEvent>>[] = [];
     for (const msg of batch) {
       try {
-        results.push(await runEvent(msg as Event, executable));
+        results.push(await runEvent(msg, executable));
       } catch (e) {
         console.error(msg);
         console.error(e);
       }
     }
-    console.timeEnd(
-      `Processed records ${start} to ${end} of ${msgs.length} (${Math.round(
-        (end / msgs.length) * 100
-      )}%)`
-    );
+    console.timeEnd(timerMsg);
 
-    queue.enqueue(() =>
-      batchUpsert({
-        events: results.flatMap((result) => result.events),
-        entities: results.flatMap((result) => result.entities),
-        entityLabelsToAdd: results.flatMap(
-          (result) => result.entityLabelsToAdd
-        ),
-        entityLabelsToRemove: results.flatMap(
-          (result) => result.entityLabelsToRemove
-        ),
-        eventLabels: results.flatMap((result) => result.eventLabels),
-        entityToEventLinks: results.flatMap(
-          (result) => result.entityToEventLinks
-        ),
-      })
-    );
+    queue.enqueue(() => batchUpsert(results));
     queue.process().catch(console.error);
   }
 

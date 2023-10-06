@@ -1,0 +1,36 @@
+{
+  "name": "consumer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "npx tsx watch src/index.ts --onSuccess \"node dist/index.js\""
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@t3-oss/env-core": "^0.6.1",
+    "databases": "workspace:*",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "sqrl": "^0.6.10",
+    "sqrl-jsonpath": "^0.6.10",
+    "sqrl-load-functions": "^0.6.10",
+    "sqrl-redis-functions": "^0.6.10",
+    "sqrl-text-functions": "^0.6.10",
+    "typescript": "^5.2.2",
+    "ulid": "^2.3.0",
+    "webpack": "^5.88.2",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.3",
+    "node-polyfill-webpack-plugin": "^2.0.1",
+    "ts-loader": "^9.4.4",
+    "webpack-cli": "^5.1.4"
+  }
+}

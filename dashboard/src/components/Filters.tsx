@@ -1,34 +1,22 @@
-import { addDays } from "date-fns";
 import {
-  ArrayParam,
-  NumberParam,
-  type UrlUpdateType,
-  useQueryParam,
-  useQueryParams,
-  StringParam,
-  BooleanParam,
-} from "use-query-params";
-import { type EntityFilters, type EventFilters } from "../shared/validation";
-import { useCallback, useMemo, useState } from "react";
-import { api } from "../utils/api";
-import {
-  type OptionBase,
-  Select as ChakraReactSelect,
-  type SingleValue,
-} from "chakra-react-select";
-import { Checkbox, HStack, Input, SelectField } from "@chakra-ui/react";
-import { ArrowRightIcon } from "lucide-react";
-import { isArray } from "lodash";
-import dayjs, { type Dayjs } from "dayjs";
-import {
-  DateRangePickerItem,
   MultiSelect,
   MultiSelectItem,
   Select,
   SelectItem,
   Text,
-  DateRangePicker as TremorDateRangePicker,
 } from "@tremor/react";
+import { Select as ChakraReactSelect } from "chakra-react-select";
+import dayjs from "dayjs";
+import { useMemo } from "react";
+import {
+  ArrayParam,
+  NumberParam,
+  StringParam,
+  useQueryParam,
+  type UrlUpdateType,
+} from "use-query-params";
+import { type EntityFilters, type EventFilters } from "../shared/validation";
+import { api } from "../utils/api";
 
 // const TODAY = dayjs(new Date("08-14-2023"));
 const TODAY = dayjs(new Date());
@@ -336,43 +324,6 @@ export function EntityLabelFilter() {
   );
 }
 
-export function useDateRange() {
-  const [dateRangeQuery, setDateRangeQuery] = useQueryParams({
-    from: NumberParam,
-    to: NumberParam,
-  });
-
-  const dateRangeValue = useMemo(() => {
-    return {
-      from: dateRangeQuery.from
-        ? new Date(dateRangeQuery.from)
-        : DEFAULT_DATE_RANGE.from,
-      to: dateRangeQuery.to
-        ? new Date(dateRangeQuery.to)
-        : DEFAULT_DATE_RANGE.to,
-    };
-  }, [dateRangeQuery]);
-
-  const setDateRangeValue = useCallback(
-    (val: { from?: Date; to?: Date }) => {
-      if (val.from || val.to) {
-        setDateRangeQuery({
-          from: val.from?.getTime() ?? undefined,
-          to: val.to?.getTime() ?? undefined,
-        });
-      } else {
-        setDateRangeQuery({
-          from: undefined,
-          to: undefined,
-        });
-      }
-    },
-    [setDateRangeQuery]
-  );
-
-  return [dateRangeValue, setDateRangeValue] as const;
-}
-
 const HOUR_TIME = 1000 * 60 * 60;
 const intervalOptions = [
   { label: "1 hour", value: HOUR_TIME },
@@ -412,58 +363,5 @@ export function IntervalPicker() {
         </SelectItem>
       ))}
     </Select>
-  );
-}
-
-export function DateRangePicker() {
-  const [dateRangeValue, setDateRangeValue] = useDateRange();
-
-  return (
-    <TremorDateRangePicker
-      value={dateRangeValue}
-      onValueChange={setDateRangeValue}
-      className="max-w-md"
-    >
-      <DateRangePickerItem
-        key="last3Days"
-        value="last3Days"
-        from={TODAY.add(-3, "day").startOf("day").toDate()}
-        to={TODAY.endOf("day").toDate()}
-      >
-        Last 3 Days
-      </DateRangePickerItem>
-      <DateRangePickerItem
-        key="lastWeek"
-        value="lastWeek"
-        from={TODAY.add(-7, "day").startOf("day").toDate()}
-        to={TODAY.endOf("day").toDate()}
-      >
-        Last 7 Days
-      </DateRangePickerItem>
-      <DateRangePickerItem
-        key="last14Days"
-        value="last14Days"
-        from={TODAY.add(-14, "day").startOf("day").toDate()}
-        to={TODAY.endOf("day").toDate()}
-      >
-        Last 14 Days
-      </DateRangePickerItem>
-      <DateRangePickerItem
-        key="last30Days"
-        value="last30Days"
-        from={TODAY.add(-30, "day").startOf("day").toDate()}
-        to={TODAY.endOf("day").toDate()}
-      >
-        Last 30 Days
-      </DateRangePickerItem>
-      <DateRangePickerItem
-        key="last90Days"
-        value="last90Days"
-        from={TODAY.add(-90, "day").startOf("day").toDate()}
-        to={TODAY.endOf("day").toDate()}
-      >
-        Last 90 Days
-      </DateRangePickerItem>
-    </TremorDateRangePicker>
   );
 }

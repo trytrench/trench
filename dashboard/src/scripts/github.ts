@@ -1,80 +1,109 @@
+import amqp from "amqplib";
 import axios, { AxiosResponse } from "axios";
-import { Transform } from "stream";
-import { createGunzip } from "zlib";
+import { eachDayOfInterval, format } from "date-fns";
 import ProgressBar from "progress";
+import { EventEmitter, Transform } from "stream";
 import { pipeline } from "stream/promises";
+import { createGunzip } from "zlib";
 
-async function fetchAndDecompress(hour: number): Promise<void> {
-  try {
-    let bar: ProgressBar | null = null;
+class GithubFirehose extends EventEmitter {
+  async process(date: Date, hour: number): Promise<void> {
+    try {
+      let bar: ProgressBar | null = null;
 
-    const response: AxiosResponse = await axios.get(
-      `https://data.gharchive.org/2023-01-01-${hour}.json.gz`,
-      {
-        responseType: "stream",
-        onDownloadProgress(progressEvent) {
-          if (progressEvent.total) {
-            bar = new ProgressBar("-> downloading [:bar] :percent :etas", {
-              complete: "=",
-              incomplete: " ",
-              width: 40,
-              total: progressEvent.total,
-            });
+      const response: AxiosResponse = await axios.get(
+        `https://data.gharchive.org/${format(
+          date,
+          "yyyy-MM-dd"
+        )}-${hour}.json.gz`,
+        {
+          responseType: "stream",
+          onDownloadProgress(progressEvent) {
+            if (progressEvent.total) {
+              bar = new ProgressBar("-> downloading [:bar] :percent :etas", {
+                complete: "=",
+                incomplete: " ",
+                width: 40,
+                total: progressEvent.total,
+              });
 
-            bar.tick(progressEvent.loaded);
-          }
-        },
-      }
-    );
-
-    if (bar) bar.terminate();
-
-    let buffer = "";
-
-    const jsonTransform = new Transform({
-      transform(chunk, encoding, callback) {
-        buffer += chunk.toString();
-
-        let lineEndIndex;
-        while ((lineEndIndex = buffer.indexOf("\n")) >= 0) {
-          const line = buffer.slice(0, lineEndIndex + 1);
-          buffer = buffer.slice(lineEndIndex + 1);
-
-          try {
-            const obj = JSON.parse(line);
-            this.push(obj);
-          } catch (err) {
-            // handle JSON parse error
-            console.error("Error parsing JSON:", err);
-          }
+              bar.tick(progressEvent.loaded);
+            }
+          },
         }
+      );
 
-        callback();
-      },
-      objectMode: true, // This allows us to push objects instead of string/buffer to the next stream
-    });
+      let buffer = "";
 
-    let count = 0;
-    jsonTransform.on("data", (data) => {
-      if (data.type === "WatchEvent") {
-        count++;
-        // console.log("Received JSON object:", data);
-      }
-    });
+      const jsonTransform = new Transform({
+        transform(chunk, encoding, callback) {
+          buffer += chunk.toString();
 
-    await pipeline(response.data, createGunzip(), jsonTransform);
+          let lineEndIndex;
+          while ((lineEndIndex = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, lineEndIndex + 1);
+            buffer = buffer.slice(lineEndIndex + 1);
 
-    console.log("Pipeline succeeded.");
-    console.log("Total WatchEvent count:", count);
-  } catch (error) {
-    console.error("An error occurred:", error);
+            try {
+              const obj = JSON.parse(line);
+              this.push(obj);
+            } catch (err) {
+              // handle JSON parse error
+              console.error("Error parsing JSON:", err);
+            }
+          }
+
+          callback();
+        },
+        objectMode: true, // This allows us to push objects instead of string/buffer to the next stream
+      });
+
+      jsonTransform.on("data", (data) => {
+        this.emit("event", data);
+      });
+
+      await pipeline(response.data, createGunzip(), jsonTransform);
+
+      console.log("Pipeline succeeded.");
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
   }
 }
 
-async function fetchDaysWorth() {
-  for (let hour = 0; hour < 24; hour++) {
-    await fetchAndDecompress(hour);
+async function main() {
+  const githubFirehose = new GithubFirehose();
+
+  const connection = await amqp.connect("amqp://localhost");
+  const channel = await connection.createChannel();
+  await channel.assertQueue("githubEvents");
+
+  githubFirehose.on("event", (data) => {
+    const { created_at, type, ...rest } = data;
+    const event = {
+      type,
+      timestamp: created_at,
+      data: rest,
+    };
+    const eventString = JSON.stringify(event);
+
+    if (type === "WatchEvent")
+      channel.sendToQueue("githubEvents", Buffer.from(eventString));
+  });
+
+  for (const date of eachDayOfInterval({
+    start: new Date("2023-09-14"),
+    end: new Date("2023-09-16"),
+    // end: new Date("2023-09-20"),
+  })) {
+    for (let hour = 0; hour < 24; hour++) {
+      await githubFirehose.process(date, hour);
+    }
+    console.log("Done with date:", date);
   }
 }
 
-fetchDaysWorth();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

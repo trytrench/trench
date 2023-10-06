@@ -1,56 +1,87 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { db } from "~/server/db";
+import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
-import {
-  JsonFilter,
-  JsonFilterOp,
-  parseValue,
-} from "../../../shared/jsonFilter";
-import {
-  buildEntityExistsQuery,
-  buildEventExistsQuery,
-  getEntityExistsSubqueries,
-  getFiltersWhereQuery,
-} from "../../lib/filters";
-import { Entity, PrismaClient } from "@prisma/client";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
     .input(
       z.object({
         entityFilters: entityFiltersZod,
-        sortBy: z.object({
-          feature: z.string(),
-          direction: z.enum(["asc", "desc"]),
-          dataType: z.enum(["string", "number", "boolean"]).optional(),
-        }),
+        sortBy: z
+          .object({
+            feature: z.string(),
+            direction: z.enum(["asc", "desc"]),
+            dataType: z.enum(["string", "number", "boolean"]),
+          })
+          .optional(),
         limit: z.number().optional(),
-        offset: z.number().optional(),
+        cursor: z.number().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
-      const [count, rows] = await Promise.all([
-        ctx.prisma.entity.count({
-          // where: {
-          //   entityType: {
-          //     id: input.entityFilters?.entityType,
-          //   },
-          // },
-        }),
-        getFilteredEntities(
-          ctx.prisma,
-          input.entityFilters?.entityType,
-          input.entityFilters?.entityLabels,
-          input.entityFilters?.entityFeatures,
-          input.limit,
-          input.offset,
-          input.sortBy
-        ),
-      ]);
+
+      // TODO: Implement sort by
+      const result = await db.query({
+        query: `
+          SELECT 
+            entity_id as id,
+            entity_type as type,
+            entity_name as name,
+            max(event_timestamp) AS lastSeenAt,
+            argMax(entity_features, event_timestamp) AS features,
+            arrayDistinct(groupArray(label)) AS labels
+          FROM event_entity_entity_labels
+          WHERE 1=1
+          ${
+            filters?.entityType
+              ? `AND entity_type = '${filters.entityType}'`
+              : ""
+          }
+          ${
+            filters?.entityLabels?.length
+              ? `AND label IN (${filters.entityLabels
+                  .map((label) => `'${label}'`)
+                  .join(", ")})`
+              : ""
+          }
+          ${
+            filters?.entityFeatures
+              ?.map((filter) => getFeatureQuery(filter, "entity_features"))
+              .join("\n") ?? ""
+          }
+          GROUP BY entity_id, entity_type, entity_name
+          ORDER BY ${
+            input.sortBy
+              ? getFeatureSortKey("features", input.sortBy)
+              : "lastSeenAt DESC"
+          }
+          LIMIT ${input.limit ?? 50}
+          OFFSET ${input.cursor ?? 0};
+        `,
+        format: "JSONEachRow",
+      });
+      const entities = await result.json<
+        {
+          id: string;
+          name: string;
+          type: string;
+          lastSeenAt: string;
+          features: string;
+          labels: string[];
+        }[]
+      >();
+
       return {
-        count,
-        rows,
+        count: 0,
+        rows: entities
+          .filter((entity) => entity.id)
+          .map((entity) => ({
+            ...entity,
+            features: JSON.parse(entity.features),
+          })),
       };
     }),
 
@@ -58,89 +89,106 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         eventFilters: eventFiltersZod,
-        cursor: z.string().optional(),
+        cursor: z.number().optional(),
         limit: z.number().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
-      const features = filters?.eventFeatures
-        ? getFeaturesFilter(filters.eventFeatures, `"Event"."features"`)
-        : "";
 
-      const cursor = input.cursor;
-
-      const [count, rows] = await Promise.all([
-        ctx.prisma.event.count({
-          where: getFiltersWhereQuery(input.eventFilters),
-        }),
-        ctx.prisma.$queryRawUnsafe<
-          Array<{
-            id: string;
-            type: string;
-            data: string;
-            timestamp: Date;
-            features: Record<string, any>;
-            labels: Array<{
-              id: string;
-              name: string;
-              color: string;
-            }>;
-            entities: {
-              id: string;
-              name: string;
-              type: string;
-              features: Record<string, any>;
-            }[];
-          }>
-        >(`
-          SELECT
-            "Event"."id" as "id",
-            "Event"."type" as "type",
-            "Event"."data" as "data",
-            "Event"."timestamp" as "timestamp",
-            "Event"."features" as "features",
-            JSON_AGG(
-              json_build_object(
-                'id', "_EventToEventLabel"."B",
-                'name', "EventLabel"."name",
-                'color', "EventLabel"."color"
-              )
-            ) as "labels",
-            JSON_AGG(
-              json_build_object(
-                'id', "EventToEntityLink"."entityId",
-                'name', "Entity"."name",
-                'type', "Entity"."type",
-                'features', "Entity"."features"
-              )
-            ) as "entities"
-          FROM "Event"
-          LEFT JOIN "_EventToEventLabel" ON "Event"."id" = "_EventToEventLabel"."A"
-          LEFT JOIN "EventLabel" ON "_EventToEventLabel"."B" = "EventLabel"."id"
-          LEFT JOIN "EventToEntityLink" ON "Event"."id" = "EventToEntityLink"."eventId"
-          LEFT JOIN "Entity" ON "EventToEntityLink"."entityId" = "Entity"."id"
-          WHERE ${buildEventExistsQuery(input.eventFilters)}
-          ${cursor ? `AND "Event"."timestamp" <= '${cursor}'` : ""}
-          ${features}
+      const result = await db.query({
+        query: `
+          SELECT 
+            event_id,
+            event_type,
+            event_data,
+            event_timestamp,
+            event_features,
+            groupArray(entity_id) AS entity_ids,
+            groupArray(entity_type) AS entity_types,
+            groupArray(entity_name) AS entity_names,
+            groupArray(entity_relation) AS entity_relations,
+            groupArray(entity_features) AS entity_features,
+            arrayDistinct(groupArray(label)) AS event_labels
+          FROM event_entity_event_labels
+          WHERE 1=1
+            ${
+              filters?.eventType
+                ? `AND event_type = '${filters.eventType}'`
+                : ""
+            }
+            ${
+              filters?.eventLabels?.length
+                ? `AND label IN (${filters.eventLabels
+                    .map((label) => `'${label}'`)
+                    .join(", ")})`
+                : ""
+            }
+            ${
+              filters?.eventFeatures
+                ?.map((filter) => getFeatureQuery(filter, "event_features"))
+                .join("\n") ?? ""
+            }
+            ${
+              filters?.entityId
+                ? `AND event_id IN (
+                    SELECT DISTINCT event_id
+                    FROM event_entity_event_labels
+                    WHERE entity_id = '${filters.entityId}'
+                   )`
+                : ""
+            }
           GROUP BY
-            "Event"."id",
-            "Event"."type",
-            "Event"."data",
-            "Event"."timestamp"
-          ORDER BY "Event"."timestamp" DESC
-          LIMIT ${input.limit ?? 10}
-        `),
-      ]);
+            event_id,
+            event_type,
+            event_data,
+            event_timestamp,
+            event_features
+          ORDER BY event_timestamp DESC
+          LIMIT ${input.limit ?? 50}
+          OFFSET ${input.cursor ?? 0};
+        `,
+        format: "JSONEachRow",
+      });
+      const events = await result.json<
+        {
+          event_id: string;
+          event_type: string;
+          event_data: string;
+          event_timestamp: Date;
+          event_features: Record<string, any>;
+          event_labels: string[];
+          entity_ids: string[];
+          entity_names: string[];
+          entity_types: string[];
+          entity_features: Record<string, any>[];
+          entity_relations: string[];
+        }[]
+      >();
+
+      console.log(events);
+      console.log("===========");
 
       return {
-        count,
-        rows: rows.map((row) => {
-          return {
-            ...row,
-            labels: row.labels.filter((label) => label.id !== null),
-          };
-        }),
+        count: 0,
+        rows: events.map((event) => ({
+          id: event.event_id,
+          type: event.event_type,
+          data: JSON.parse(event.event_data),
+          features: JSON.parse(event.event_features),
+          timestamp: new Date(event.event_timestamp),
+          labels: event.event_labels,
+          entities: event.entity_ids.filter(Boolean).map((id, index) => {
+            return {
+              id: id,
+              type: event.entity_types[index],
+              name: event.entity_names[index],
+              relation: event.entity_relations[index],
+              // features: JSON.parse(event.entity_features[index]),
+              labels: [],
+            };
+          }),
+        })),
       };
     }),
 
@@ -229,128 +277,50 @@ export const listsRouter = createTRPCRouter({
     }),
 });
 
-const getFeaturesFilter = (filters: JsonFilter[], jsonPath: string) => {
-  return filters
-    .map(({ path, op, value, dataType }) => {
-      if (op === JsonFilterOp.IsEmpty)
-        return `AND ${jsonPath}->>'${path}' IS NULL OR ${jsonPath}->>'${path}' = ''`;
-      if (op === JsonFilterOp.NotEmpty)
-        return `AND ${jsonPath}->>'${path}' IS NOT NULL AND ${jsonPath}->>'${path}' != ''`;
-
-      const sqlOperator = {
-        [JsonFilterOp.Equal]: "=",
-        [JsonFilterOp.NotEqual]: "!=",
-        [JsonFilterOp.GreaterThan]: ">",
-        [JsonFilterOp.LessThan]: "<",
-      }[op];
-
-      if (sqlOperator)
-        return `AND (${jsonPath}->>'${path}')${
-          dataType === "number" ? "::NUMERIC" : ""
-        } ${sqlOperator} ${dataType === "number" ? value : `'${value}'`}`;
-
-      const sqlOperator2 = {
-        [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
-        [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
-        [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
-        [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
-      }[op];
-
-      if (sqlOperator2) return `AND ${jsonPath}->>'${path}' ${sqlOperator2}`;
-    })
-    .join(" ");
-};
-
-async function getFilteredEntities(
-  prisma: PrismaClient,
-  entityType?: string,
-  entityLabels?: string[],
-  entityFeatures?: JsonFilter[],
-  limit?: number,
-  offset?: number,
-  sortBy?: {
+const getFeatureSortKey = (
+  column: string,
+  sortBy: {
     feature: string;
     direction: "asc" | "desc";
-    dataType?: "string" | "number";
+    dataType: "string" | "number" | "boolean";
   }
-) {
-  const features = entityFeatures
-    ? getFeaturesFilter(entityFeatures, `"Entity"."features"`)
-    : "";
+) => {
+  const { feature, direction, dataType } = sortBy;
+  return dataType === "number"
+    ? `toInt32OrZero(JSONExtractString(${column}, '${feature}')) ${direction}`
+    : `JSONExtractString(${column}, '${feature}') ${direction}`;
+};
 
-  const orderByFeature = sortBy?.feature
-    ? `("Entity"."features"->>'${sortBy.feature}')${
-        sortBy.dataType === "number" ? "::NUMERIC" : ""
-      } ${sortBy.direction}`
-    : `matViewSubquery."timestamp" DESC`;
+const getFeatureQuery = (filter: JsonFilter, column: string) => {
+  const { path, op, value, dataType } = filter;
+  const feature =
+    dataType === "number"
+      ? `toInt32OrZero(JSONExtractString(${column}, '${path}'))`
+      : `JSONExtractString(${column}, '${path}')`;
 
-  const rawResults = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      name: string;
-      type: string;
-      features: Record<string, any>;
-      labels: Array<{
-        id: string;
-        name: string;
-        color: string;
-      }>;
-      lastSeenAt: Date;
-    }>
-  >(`
-    SELECT
-      "Entity"."id" as "id",
-      "Entity"."name" as "name",
-      "Entity"."type" as "type",
-      "Entity"."features" as "features",
-      JSON_AGG(
-        json_build_object(
-          'id', "_EntityToEntityLabel"."B",
-          'name', "EntityLabel"."name",
-          'color', "EntityLabel"."color"
-        )
-      ) as "labels",
-      matViewSubquery."timestamp" as "lastSeenAt"
-    FROM "Entity"
-    LEFT JOIN (
-      SELECT "entityId", MAX("timestamp") as "timestamp"
-      FROM "EntityAppearancesMatView"
-      GROUP BY "entityId"
-    ) as matViewSubquery ON "Entity"."id" = matViewSubquery."entityId"
-    LEFT JOIN "_EntityToEntityLabel" ON "Entity"."id" = "_EntityToEntityLabel"."A"
-    LEFT JOIN "EntityLabel" ON "_EntityToEntityLabel"."B" = "EntityLabel"."id"
-    WHERE TRUE
-      ${entityType ? `AND "Entity"."type" = '${entityType}'` : ""}
-      ${
-        entityLabels?.length
-          ? entityLabels
-              .map((label) => {
-                return `AND EXISTS (
-              SELECT FROM "EntityAppearancesMatView"
-              WHERE "EntityAppearancesMatView"."entityId" = "Entity"."id"
-              AND "EntityAppearancesMatView"."entityLabel" = '${label}'
-            )`;
-              })
-              .join("\n")
-          : ""
-      }
-      ${features}
-    GROUP BY
-      "Entity"."id",
-      "Entity"."type",
-      "Entity"."features",
-      matViewSubquery."timestamp"
-    ORDER BY ${orderByFeature}
-    LIMIT ${limit ?? 10}
-    OFFSET ${offset ?? 0}
-  `);
+  if (op === JsonFilterOp.IsEmpty)
+    return `AND (${feature} IS NULL OR ${feature} = '')`;
+  if (op === JsonFilterOp.NotEmpty)
+    return `AND (${feature} IS NOT NULL AND ${feature} != '')`;
 
-  // Do some additional client-side processing here if needed
+  const comparisonOps = {
+    [JsonFilterOp.Equal]: "=",
+    [JsonFilterOp.NotEqual]: "!=",
+    [JsonFilterOp.GreaterThan]: ">",
+    [JsonFilterOp.LessThan]: "<",
+  };
 
-  return rawResults.map((row) => {
-    return {
-      ...row,
-      labels: row.labels,
-    };
-  });
-}
+  if (comparisonOps[op])
+    return `AND ${feature} ${comparisonOps[op]} ${
+      dataType === "number" ? value : `'${value}'`
+    }`;
+
+  const stringOps = {
+    [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
+    [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
+    [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
+    [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
+  };
+
+  if (stringOps[op]) return `AND ${feature} ${stringOps[op]}`;
+};

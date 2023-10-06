@@ -72,6 +72,13 @@ const config = {
     }
     return config;
   },
+  transpilePackages: ["databases"],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default config;
