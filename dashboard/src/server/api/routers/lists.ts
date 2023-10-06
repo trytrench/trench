@@ -91,6 +91,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -100,6 +101,7 @@ export const listsRouter = createTRPCRouter({
         query: `
           SELECT 
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,
@@ -111,7 +113,7 @@ export const listsRouter = createTRPCRouter({
             groupArray(entity_features) AS entity_features,
             arrayDistinct(groupArray(label)) AS event_labels
           FROM event_entity_event_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
             ${
               filters?.eventType
                 ? `AND event_type = '${filters.eventType}'`
@@ -140,6 +142,7 @@ export const listsRouter = createTRPCRouter({
             }
           GROUP BY
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,

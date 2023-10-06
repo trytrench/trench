@@ -8,7 +8,11 @@ const client = new Client({
   connectionString: env.POSTGRES_URL,
 });
 
-async function processEvents(events: Event[], files: Record<string, string>) {
+async function processEvents(
+  events: Event[],
+  files: Record<string, string>,
+  datasetId: string
+) {
   const results: Awaited<ReturnType<typeof runEvent>>[] = [];
   const instance = await createSqrlInstance({
     // config: {
@@ -22,9 +26,9 @@ async function processEvents(events: Event[], files: Record<string, string>) {
   const { executable } = await compileSqrl(instance, files);
 
   for (const event of events) {
-    results.push(await runEvent(event, executable));
+    results.push(await runEvent(event, executable, datasetId));
   }
-  await batchUpsert(results);
+  await batchUpsert(results, datasetId);
 }
 
 async function initConsumer() {
@@ -94,7 +98,7 @@ async function initConsumer() {
           },
           {} as Record<string, string>
         ) || {};
-      await processEvents(events, fileData);
+      await processEvents(events, fileData, datasetId);
 
       const newLastEventId = events.length
         ? events[events.length - 1]!.id

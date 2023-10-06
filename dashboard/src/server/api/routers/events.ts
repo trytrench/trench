@@ -40,9 +40,8 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const data = await result.json<
-        { time: string; label: string; count: number }[]
-      >();
+      const data =
+        await result.json<{ time: string; label: string; count: number }[]>();
 
       return {
         bins: getBins(data),
@@ -83,9 +82,8 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const data = await result.json<
-        { time: string; label: string; count: number }[]
-      >();
+      const data =
+        await result.json<{ time: string; label: string; count: number }[]>();
 
       return {
         bins: getBins(data),
@@ -129,9 +127,10 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const data = await result.json<
-        { time: string; label: string; event_type: string; count: number }[]
-      >();
+      const data =
+        await result.json<
+          { time: string; label: string; event_type: string; count: number }[]
+        >();
 
       const eventTypes = uniq(data.map((bin) => bin.event_type)).filter(
         Boolean
@@ -190,9 +189,10 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const data = await result.json<
-        { time: string; label: string; entity_type: string; count: number }[]
-      >();
+      const data =
+        await result.json<
+          { time: string; label: string; entity_type: string; count: number }[]
+        >();
 
       const entityTypes = uniq(data.map((bin) => bin.entity_type)).filter(
         Boolean
