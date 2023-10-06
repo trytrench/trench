@@ -6,32 +6,36 @@ import { DateParam, useQueryParams } from "use-query-params";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
 
-export default function EventsDashboard() {
+interface Props {
+  entityId?: string;
+}
+
+export default function EventsDashboard({ entityId }: Props) {
   const [dateRange, setDateRange] = useQueryParams({
     from: DateParam,
     to: DateParam,
   });
 
   const { data: eventTypeBins } = api.events.getEventTypeTimeData.useQuery(
-    { start: dateRange.from!, end: dateRange.to! },
+    { start: dateRange.from!, end: dateRange.to!, entityId },
     { enabled: !!dateRange.from && !!dateRange.to }
   );
 
   const { data: eventTypeDists } =
     api.events.getEventTypeDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to! },
+      { start: dateRange.from!, end: dateRange.to!, entityId },
       { enabled: !!dateRange.from && !!dateRange.to }
     );
 
   const { data: eventLabelDists } =
     api.events.getEventLabelDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to! },
+      { start: dateRange.from!, end: dateRange.to!, entityId },
       { enabled: !!dateRange.from && !!dateRange.to }
     );
 
   const { data: eventLabelTimeData } =
     api.events.getEventLabelTimeData.useQuery(
-      { start: dateRange.from!, end: dateRange.to! },
+      { start: dateRange.from!, end: dateRange.to!, entityId },
       { enabled: !!dateRange.from && !!dateRange.to }
     );
 
@@ -126,9 +130,9 @@ export default function EventsDashboard() {
                   <Metric>
                     {Intl.NumberFormat("us")
                       .format(
-                        eventTypeDists.find(
+                        eventTypeDists?.find(
                           (type) => type.event_type === eventType
-                        ).count
+                        )?.count ?? 0
                       )
                       .toString()}
                   </Metric>

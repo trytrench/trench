@@ -1,6 +1,6 @@
-import { Stack, Tag } from "@chakra-ui/react";
 import {
   Badge,
+  Button,
   Card,
   Divider,
   Icon,
@@ -11,12 +11,6 @@ import {
   SelectItem,
   Tab,
   TabGroup,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
   TabList,
   TabPanel,
   TabPanels,
@@ -24,19 +18,8 @@ import {
   Title,
 } from "@tremor/react";
 
-import { differenceInMinutes, format, formatRelative } from "date-fns";
-import { enUS } from "date-fns/locale";
-import {
-  AlignJustify,
-  AlignJustifyIcon,
-  Cable,
-  CableIcon,
-  FileQuestion,
-  LayoutGrid,
-  Link,
-  ListIcon,
-  LogIn,
-} from "lucide-react";
+import * as ScrollArea from "@radix-ui/react-scroll-area";
+import { AlignJustify, LayoutGrid } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import {
@@ -45,15 +28,12 @@ import {
   useQueryParam,
   useQueryParams,
 } from "use-query-params";
-import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { DateRangePicker } from "~/components/DateRangePicker";
-import { api, type RouterOutputs } from "~/utils/api";
-import { EventCard } from "../../components/EventCard";
-import { EventDrawer } from "../../components/EventDrawer";
-import { EventListItem } from "../../components/EventListItem";
-import { Navbar } from "../../components/Navbar";
-import LinksView from "~/components/LinksView";
+import EventsDashboard from "~/components/EventsDashboard";
+import EventsList from "~/components/EventsList";
 import LinksDisplay from "~/components/LinksView/refactor";
+import { api } from "~/utils/api";
+import { Navbar } from "../../components/Navbar";
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -67,57 +47,6 @@ function HorzScroll({ children }: { children: React.ReactNode }) {
       </ScrollArea.Scrollbar>
       <ScrollArea.Corner />
     </ScrollArea.Root>
-  );
-}
-
-function RenderEvents({
-  entityId,
-  view,
-}: {
-  entityId?: string;
-  view: "list" | "grid";
-}) {
-  const { data } = api.lists.getEventsList.useQuery({
-    limit: 50,
-    eventFilters: {
-      entityId,
-      // dateRange: {
-      //   from: dateRange.from.getTime(),
-      //   to: dateRange.to.getTime(),
-      // },
-    },
-  });
-
-  const [selectedEvent, setSelectedEvent] = useState<
-    RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
-  >(null);
-
-  return (
-    <Stack spacing={2}>
-      {data?.rows.map((event) =>
-        view === "list" ? (
-          <EventListItem
-            key={event.id}
-            event={event}
-            onClick={() => {
-              setSelectedEvent(event);
-            }}
-            selected={selectedEvent?.id === event.id}
-          />
-        ) : (
-          <EventCard key={event.id} event={event} />
-        )
-      )}
-      {selectedEvent && (
-        <EventDrawer
-          selectedEvent={selectedEvent}
-          isOpen={!!selectedEvent}
-          onClose={() => {
-            setSelectedEvent(null);
-          }}
-        />
-      )}
-    </Stack>
   );
 }
 
@@ -283,13 +212,14 @@ export default function Home() {
               }}
             >
               <TabList>
+                <Tab>Event Explorer</Tab>
                 <Tab>Event History</Tab>
                 <Tab>Related Entities</Tab>
               </TabList>
               <TabPanels className="p-2 overflow-y-auto grow">
                 <TabPanel className="">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2">
+                  <div className="">
+                    <div className="">
                       <DateRangePicker
                         value={dateRange}
                         onValueChange={(value) =>
@@ -301,66 +231,11 @@ export default function Home() {
                         }
                       />
                     </div>
-                    <div className="col-span-2">
-                      <Card>
-                        <Title className="mb-2">Event History</Title>
-                        {/* <EventChart entityId={entityId} /> */}
-                      </Card>
-                    </div>
-                    <div className="col-span-1">
-                      <Card>
-                        <Title className="mb-2">Label Distribution</Title>
-                        {/* <EventLabelDistribution entityId={entityId} /> */}
-                      </Card>
-                    </div>
-                    <div className="col-span-3">
-                      <Card className="p-0 pt-6">
-                        <div className="flex items-center">
-                          <Title className="px-6">Events</Title>
-                          <div className="flex  bg-tremor-background-subtle rounded-md p-0.5">
-                            <div onClick={() => setView("grid")}>
-                              {view === "grid" ? (
-                                <Card className="p-0">
-                                  <Icon
-                                    icon={LayoutGrid}
-                                    size="xs"
-                                    color="gray"
-                                  />
-                                </Card>
-                              ) : (
-                                <Icon
-                                  icon={LayoutGrid}
-                                  size="xs"
-                                  color="gray"
-                                  onClick={() => setView("list")}
-                                />
-                              )}
-                            </div>
-
-                            {view === "list" ? (
-                              <Card className="p-0">
-                                <Icon
-                                  icon={AlignJustify}
-                                  size="xs"
-                                  color="gray"
-                                />
-                              </Card>
-                            ) : (
-                              <Icon
-                                icon={AlignJustify}
-                                size="xs"
-                                color="gray"
-                                onClick={() => setView("list")}
-                              />
-                            )}
-                          </div>
-                        </div>
-                        <div className="h-4"></div>
-                        {/* <DonutChart /> */}
-                        <RenderEvents entityId={entityId} view={view} />
-                      </Card>
-                    </div>
+                    <EventsDashboard entityId={entityId} />
                   </div>
+                </TabPanel>
+                <TabPanel>
+                  <EventsList entityId={entityId} />
                 </TabPanel>
                 <TabPanel>
                   <div className="col-span-2">

@@ -13,7 +13,7 @@ export const listsRouter = createTRPCRouter({
           .object({
             feature: z.string(),
             direction: z.enum(["asc", "desc"]),
-            dataType: z.enum(["string", "number", "boolean"]),
+            dataType: z.enum(["text", "number", "boolean"]),
           })
           .optional(),
         limit: z.number().optional(),
@@ -56,7 +56,7 @@ export const listsRouter = createTRPCRouter({
           ORDER BY ${
             input.sortBy
               ? getFeatureSortKey("features", input.sortBy)
-              : "lastSeenAt DESC"
+              : "lastSeenAt DESC, entity_id DESC"
           }
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
@@ -279,7 +279,7 @@ const getFeatureSortKey = (
   sortBy: {
     feature: string;
     direction: "asc" | "desc";
-    dataType: "string" | "number" | "boolean";
+    dataType: "text" | "number" | "boolean";
   }
 ) => {
   const { feature, direction, dataType } = sortBy;
