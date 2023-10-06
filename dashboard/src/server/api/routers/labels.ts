@@ -83,7 +83,7 @@ export const labelsRouter = createTRPCRouter({
         query: `
           SELECT DISTINCT feature
           FROM event_entity
-          ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
+          ARRAY JOIN JSONExtractKeys(ifNull(entity_features, '{}')) AS feature;
         `,
         format: "JSONEachRow",
       });

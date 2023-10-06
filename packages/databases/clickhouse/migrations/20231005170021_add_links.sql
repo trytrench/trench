@@ -1,6 +1,7 @@
 -- migrate:up
 CREATE TABLE event_entity (
     created_at DateTime,
+    dataset_id String,
     event_id String,
     event_type String,
     event_timestamp DateTime,

@@ -5,6 +5,7 @@ ORDER BY
     event_timestamp AS
 SELECT
     e.created_at,
+    e.dataset_id,
     e.event_id,
     e.event_type,
     e.event_timestamp,

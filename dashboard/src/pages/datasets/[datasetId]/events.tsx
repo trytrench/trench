@@ -13,8 +13,10 @@ import { SelectOptionFlat } from "~/components/SelectOptionFlat";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventListItem } from "../../../components/EventListItem";
 import { EventDrawer } from "../../../components/EventDrawer";
+import { useRouter } from "next/router";
 
 function EventsPage() {
+  const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("list");
   const [eventType, setEventType] = useQueryParam("eventType", StringParam);
   const { type, features, labels, sortBy } = useFilters();
@@ -34,6 +36,7 @@ function EventsPage() {
 
   const [limit, setLimit] = useState(50);
 
+  const datasetId = router.query.datasetId as string;
   const {
     data: events,
     fetchNextPage,
@@ -46,6 +49,7 @@ function EventsPage() {
         eventLabels: labels,
         eventFeatures: features,
       },
+      datasetId,
       limit,
     },
     {

@@ -1,8 +1,10 @@
 import { db } from "databases";
 import { getUnixTime } from "date-fns";
-import { createSimpleContext, type Executable } from "sqrl";
+import { createSimpleContext, getGlobalLogger, type Executable } from "sqrl";
 import { VirtualFilesystem, compileFromFilesystem, type Instance } from "sqrl";
 import { SqrlManipulator } from "./SqrlManipulator";
+import { SimpleContext } from "sqrl/lib/platform/Trace";
+import { SimpleDatabaseSet } from "sqrl/lib/platform/DatabaseSet";
 
 export interface Event {
   id: string;
@@ -11,8 +13,19 @@ export interface Event {
   data: any;
 }
 
-export async function runEvent(event: Event, executable: Executable) {
-  const ctx = createSimpleContext();
+export function createContext(databaseId: string) {
+  return new SimpleContext(
+    new SimpleDatabaseSet(databaseId),
+    getGlobalLogger()
+  );
+}
+
+export async function runEvent(
+  event: Event,
+  executable: Executable,
+  datasetId: string
+) {
+  const ctx = createContext(datasetId);
   const manipulator = new SqrlManipulator();
 
   const execution = await executable.execute(ctx, {
@@ -68,7 +81,8 @@ export async function runEvent(event: Event, executable: Executable) {
 }
 
 export async function batchUpsert(
-  events: Awaited<ReturnType<typeof runEvent>>[]
+  events: Awaited<ReturnType<typeof runEvent>>[],
+  datasetId: string
 ) {
   await db.insert({
     table: "event_labels",
@@ -76,6 +90,7 @@ export async function batchUpsert(
       event.labels.length > 0
         ? event.labels.map((label) => ({
             created_at: getUnixTime(new Date()),
+            dataset_id: datasetId,
             event_id: event.id,
             label: label.label,
             type: label.type,
@@ -84,6 +99,7 @@ export async function batchUpsert(
         : [
             {
               created_at: getUnixTime(new Date()),
+              dataset_id: datasetId,
               event_id: event.id,
             },
           ]
@@ -102,6 +118,7 @@ export async function batchUpsert(
             entity.labels.length > 0
               ? entity.labels.map((label) => ({
                   created_at: getUnixTime(new Date()),
+                  dataset_id: datasetId,
                   entity_id: entity.id,
                   type: label.labelType,
                   label: label.label,
@@ -110,6 +127,7 @@ export async function batchUpsert(
               : [
                   {
                     created_at: getUnixTime(new Date()),
+                    dataset_id: datasetId,
                     entity_id: entity.id,
                   },
                 ]
@@ -124,6 +142,7 @@ export async function batchUpsert(
       event.entities.length > 0
         ? event.entities.map((entity) => ({
             created_at: getUnixTime(new Date()),
+            dataset_id: datasetId,
             event_id: event.id,
             event_type: event.type,
             event_timestamp: getUnixTime(event.timestamp),
@@ -138,6 +157,7 @@ export async function batchUpsert(
         : [
             {
               created_at: getUnixTime(new Date()),
+              dataset_id: datasetId,
               event_id: event.id,
               event_type: event.type,
               event_timestamp: getUnixTime(event.timestamp),

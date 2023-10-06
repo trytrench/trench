@@ -91,6 +91,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -100,6 +101,7 @@ export const listsRouter = createTRPCRouter({
         query: `
           SELECT 
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,
@@ -111,7 +113,7 @@ export const listsRouter = createTRPCRouter({
             groupArray(entity_features) AS entity_features,
             arrayDistinct(groupArray(label)) AS event_labels
           FROM event_entity_event_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
             ${
               filters?.eventType
                 ? `AND event_type = '${filters.eventType}'`
@@ -140,6 +142,7 @@ export const listsRouter = createTRPCRouter({
             }
           GROUP BY
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,
@@ -150,24 +153,22 @@ export const listsRouter = createTRPCRouter({
         `,
         format: "JSONEachRow",
       });
-      const events = await result.json<
-        {
-          event_id: string;
-          event_type: string;
-          event_data: string;
-          event_timestamp: Date;
-          event_features: Record<string, any>;
-          event_labels: string[];
-          entity_ids: string[];
-          entity_names: string[];
-          entity_types: string[];
-          entity_features: Record<string, any>[];
-          entity_relations: string[];
-        }[]
-      >();
 
-      console.log(events);
-      console.log("===========");
+      type EventResult = {
+        event_id: string;
+        event_type: string;
+        event_data: string;
+        event_timestamp: Date;
+        event_features: string;
+        event_labels: string[];
+        entity_ids: string[];
+        entity_names: string[];
+        entity_types: string[];
+        entity_features: string[];
+        entity_relations: string[];
+      };
+
+      const events = await result.json<EventResult[]>();
 
       return {
         count: 0,

@@ -10,14 +10,17 @@ import { analyze } from "../lib/analyzeSqrl";
 import { Button, Text, TextInput } from "@tremor/react";
 import Link from "next/link";
 import { handleError } from "../lib/handleError";
+import { Icon, Spinner } from "@chakra-ui/react";
+import { Check, X } from "lucide-react";
+import { useDebounce } from "../hooks/useDebounce";
 
 type FileData = {
   name: string;
   code: string;
 };
 
-const shouldCompile = (file?: File) => {
-  return file?.name.endsWith(".sqrl");
+const isSqrlFile = (fileName?: string) => {
+  return !!fileName?.endsWith(".sqrl");
 };
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
@@ -97,6 +100,15 @@ function useFilesEditor() {
       });
     }
   }, [files]);
+
+  const debouncedFile = useDebounce(selectedFile, 300);
+  const lastFile = usePrevious(debouncedFile);
+
+  useEffect(() => {
+    if (lastFile !== debouncedFile && isSqrlFile(debouncedFile?.name)) {
+      recompile().catch(handleError);
+    }
+  }, [debouncedFile, lastFile, recompile]);
 
   return {
     files,
@@ -188,20 +200,33 @@ export function DatasetEditor(props: DatasetEditorProps) {
           />
         </div>
         <div className="flex-1"></div>
-        <div>
-          {readonly ? (
-            <Link href={`/create?forkFrom=${datasetId}`}>
-              <Button>Fork</Button>
-            </Link>
-          ) : (
-            <Button
-              onClick={() => {
-                handleCreate().catch(handleError);
-              }}
-            >
-              Create
-            </Button>
-          )}
+        <div className="flex">
+          {isSqrlFile(selectedFile?.name ?? "") ? (
+            <div className="mr-2">
+              {compileStatus.status === "pending" ? (
+                <Spinner size="sm" speed="0.8s" />
+              ) : compileStatus.status === "error" ? (
+                <Icon fontSize="18" as={X} color="red.500" />
+              ) : compileStatus.status === "success" ? (
+                <Icon fontSize="18" as={Check} color="green.500" />
+              ) : null}
+            </div>
+          ) : null}
+          <div>
+            {readonly ? (
+              <Link href={`/create?forkFrom=${datasetId}`}>
+                <Button>Fork</Button>
+              </Link>
+            ) : (
+              <Button
+                onClick={() => {
+                  handleCreate().catch(handleError);
+                }}
+              >
+                Create
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex-1 flex items-stretch">
@@ -223,6 +248,7 @@ export function DatasetEditor(props: DatasetEditorProps) {
         </div>
         <div className="flex-1">
           <MonacoEditor
+            key={selectedFileName}
             readonly={readonly}
             style={{
               width: "100%",
