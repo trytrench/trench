@@ -67,6 +67,7 @@
     "react-dom": "18.2.0",
     "react-use": "^17.4.0",
     "recharts": "^2.8.0",
+    "sqrl": "^0.6.10",
     "sqrl-cli-functions": "^0.6.10",
     "sqrl-jsonpath": "^0.6.10",
     "sqrl-load-functions": "^0.6.10",

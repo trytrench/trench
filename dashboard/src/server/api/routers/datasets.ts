@@ -36,7 +36,7 @@ export const datasetsRouter = createTRPCRouter({
         data: {
           name,
           description,
-          rules: JSON.stringify(rules),
+          rules: rules,
           backfillFrom,
           backfillTo,
         },
