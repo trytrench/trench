@@ -100,10 +100,5 @@
   },
   "ct3aMetadata": {
     "initVersion": "7.18.0"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "sqrl-redis-functions@0.6.10": "patches/sqrl-redis-functions@0.6.10.patch"
-    }
   }
 }

@@ -48,10 +48,10 @@ import {
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import { api, type RouterOutputs } from "~/utils/api";
-import { EventCard } from "../../components/EventCard";
-import { EventDrawer } from "../../components/EventDrawer";
-import { EventListItem } from "../../components/EventListItem";
-import { Navbar } from "../../components/Navbar";
+import { EventCard } from "../../../../components/EventCard";
+import { EventDrawer } from "../../../../components/EventDrawer";
+import { EventListItem } from "../../../../components/EventListItem";
+import { Navbar } from "../../../../components/Navbar";
 import LinksView from "~/components/LinksView";
 import LinksDisplay from "~/components/LinksView/refactor";
 

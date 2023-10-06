@@ -32,10 +32,5 @@
     "node-polyfill-webpack-plugin": "^2.0.1",
     "ts-loader": "^9.4.4",
     "webpack-cli": "^5.1.4"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "sqrl-redis-functions@0.6.10": "patches/sqrl-redis-functions@0.6.10.patch"
-    }
   }
 }
