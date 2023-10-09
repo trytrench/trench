@@ -16,11 +16,14 @@ import {
   useBreakpointValue,
   useDisclosure,
 } from "@chakra-ui/react";
+import { Select, SelectItem, Tab, TabGroup, TabList } from "@tremor/react";
 import { Menu } from "lucide-react";
 import { signOut } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
+import { api } from "../utils/api";
+import { handleError } from "../lib/handleError";
 
 interface Props {
   href: string;
@@ -46,25 +49,46 @@ const NavItem = ({ href, children, ...props }: Props) => {
   );
 };
 
+const TABS = [
+  { name: "Events", path: "events" },
+  { name: "Finder", path: "find" },
+  { name: "Info", path: "info" },
+  { name: "Data Explorer", path: "dashboard" },
+];
+
 export const Navbar = () => {
   const isDesktop = useBreakpointValue({ base: false, lg: true });
   const { isOpen, onOpen, onClose } = useDisclosure();
   const btnRef = useRef(null);
 
+  const router = useRouter();
+
+  const datasetId = router.query.datasetId as string | undefined;
+
+  const isCreatePage = router.pathname === "/create";
+
+  const { data: datasets } = api.datasets.list.useQuery();
+
+  const pathEnd = router.pathname.split("/").pop();
+  const selectedTabIndex = TABS.findIndex((tab) => tab.path === pathEnd);
+
   return (
-    <Flex
+    <Box
       width="100%"
       px={isDesktop ? 8 : 4}
-      py={4}
       justify="start"
       align={"center"}
-      borderBottom="2px"
-      borderColor="gray.200"
       as="nav"
       shrink={0}
       flexShrink={0}
     >
-      <Box display="flex" alignItems="center" gap={4}>
+      <Box
+        display="flex"
+        mt={2}
+        alignItems="center"
+        justifyItems="flex-start"
+        gap={4}
+      >
         {!isDesktop && (
           <Box as="button" m={-3} p={3} ref={btnRef} onClick={onOpen}>
             <Menu height={24} width={24} />
@@ -75,48 +99,74 @@ export const Navbar = () => {
             Trench
           </Text>
         </NextLink>
+        {isCreatePage ? (
+          <>
+            <Text>Create new dataset</Text>
+          </>
+        ) : (
+          <>
+            <div>
+              <Select
+                value={datasetId}
+                placeholder="Select dataset..."
+                className="w-64"
+                onValueChange={(value) => {
+                  router.push(`/datasets/${value}/events`).catch(handleError);
+                }}
+              >
+                {datasets?.map((dataset) => {
+                  return (
+                    <SelectItem key={dataset.id} value={dataset.id}>
+                      {dataset.name}
+                    </SelectItem>
+                  );
+                }) ?? []}
+              </Select>
+            </div>
+
+            <Link href="/create">
+              <Button>Create</Button>
+            </Link>
+            <Link href={`/create?forkFrom=${datasetId}`}>
+              <Button>Fork</Button>
+            </Link>
+            <Box flex={1} />
+
+            <HStack spacing={4} fontSize="sm">
+              <NavItem href="/changelog">Changelog</NavItem>
+              <NavItem href="/help">Help</NavItem>
+              <NavItem href="/docs">Docs</NavItem>
+              <Spacer />
+              {/* <UserButton afterSignOutUrl="/" /> */}
+            </HStack>
+          </>
+        )}
       </Box>
-      {isDesktop ? (
+      {datasetId ? (
         <Box flex={1} flexDirection="row" display="flex">
-          <HStack spacing={6}>
-            <NavItem href="/events">Events</NavItem>
-            <NavItem href="/find">Finder</NavItem>
-            <NavItem href="/rules">Rules</NavItem>
-            <NavItem href="/dashboard">Data Explorer</NavItem>
-            <NavItem href="/settings">Settings</NavItem>
-          </HStack>
-          <Box flex={1} />
-          <HStack spacing={4} fontSize="sm">
-            <NavItem href="/changelog">Changelog</NavItem>
-            <NavItem href="/help">Help</NavItem>
-            <NavItem href="/docs">Docs</NavItem>
-            <Spacer />
-            <Button
-              size="sm"
-              onClick={() => {
-                signOut();
-              }}
-            >
-              Sign out
-            </Button>
-            {/* <UserButton afterSignOutUrl="/" /> */}
-          </HStack>
-        </Box>
-      ) : (
-        <Flex justify="end" flex={1}>
-          {/* <UserButton afterSignrOutUrl="/" /> */}
-          <Button
-            size="sm"
-            onClick={() => {
-              signOut();
+          <TabGroup
+            index={selectedTabIndex}
+            onIndexChange={(index) => {
+              const tab = TABS[index];
+              router
+                .push(`/datasets/${datasetId}/${tab?.path}`)
+                .catch(handleError);
             }}
           >
-            Sign out
-          </Button>
-        </Flex>
-      )}
+            <TabList>
+              {TABS.map((tab, idx) => {
+                return (
+                  <Tab key={idx} value={tab.path}>
+                    {tab.name}
+                  </Tab>
+                );
+              })}
+            </TabList>
+          </TabGroup>
+        </Box>
+      ) : null}
 
-      <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
+      {/* <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
         <DrawerContent>
           <DrawerCloseButton />
@@ -124,13 +174,15 @@ export const Navbar = () => {
 
           <DrawerBody>
             <VStack align="start" onClick={onClose}>
-              <NavItem href="/dashboard">Dashboard</NavItem>
-              <NavItem href="/feed">Lists</NavItem>
+              <NavItem href="/events">Events</NavItem>
+              <NavItem href="/find">Finder</NavItem>
               <NavItem href="/rules">Rules</NavItem>
+              <NavItem href="/explore">Data Explorer</NavItem>
+              <NavItem href="/settings">Settings</NavItem>
             </VStack>
           </DrawerBody>
         </DrawerContent>
-      </Drawer>
-    </Flex>
+      </Drawer> */}
+    </Box>
   );
 };

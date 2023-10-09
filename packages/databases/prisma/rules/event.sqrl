@@ -1,0 +1,1 @@
+LET Type := jsonValue(EventData, '$.type');

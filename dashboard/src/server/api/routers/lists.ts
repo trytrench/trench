@@ -13,7 +13,7 @@ export const listsRouter = createTRPCRouter({
           .object({
             feature: z.string(),
             direction: z.enum(["asc", "desc"]),
-            dataType: z.enum(["string", "number", "boolean"]),
+            dataType: z.enum(["text", "number", "boolean"]),
           })
           .optional(),
         limit: z.number().optional(),
@@ -56,7 +56,7 @@ export const listsRouter = createTRPCRouter({
           ORDER BY ${
             input.sortBy
               ? getFeatureSortKey("features", input.sortBy)
-              : "lastSeenAt DESC"
+              : "lastSeenAt DESC, entity_id DESC"
           }
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
@@ -76,10 +76,12 @@ export const listsRouter = createTRPCRouter({
 
       return {
         count: 0,
-        rows: entities.map((entity) => ({
-          ...entity,
-          features: JSON.parse(entity.features),
-        })),
+        rows: entities
+          .filter((entity) => entity.id)
+          .map((entity) => ({
+            ...entity,
+            features: JSON.parse(entity.features),
+          })),
       };
     }),
 
@@ -89,6 +91,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -98,6 +101,7 @@ export const listsRouter = createTRPCRouter({
         query: `
           SELECT 
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,
@@ -109,7 +113,7 @@ export const listsRouter = createTRPCRouter({
             groupArray(entity_features) AS entity_features,
             arrayDistinct(groupArray(label)) AS event_labels
           FROM event_entity_event_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
             ${
               filters?.eventType
                 ? `AND event_type = '${filters.eventType}'`
@@ -138,6 +142,7 @@ export const listsRouter = createTRPCRouter({
             }
           GROUP BY
             event_id,
+            dataset_id,
             event_type,
             event_data,
             event_timestamp,
@@ -148,21 +153,22 @@ export const listsRouter = createTRPCRouter({
         `,
         format: "JSONEachRow",
       });
-      const events = await result.json<
-        {
-          event_id: string;
-          event_type: string;
-          event_data: string;
-          event_timestamp: Date;
-          event_features: Record<string, any>;
-          event_labels: string[];
-          entity_ids: string[];
-          entity_names: string[];
-          entity_types: string[];
-          entity_features: Record<string, any>[];
-          entity_relations: string[];
-        }[]
-      >();
+
+      type EventResult = {
+        event_id: string;
+        event_type: string;
+        event_data: string;
+        event_timestamp: Date;
+        event_features: string;
+        event_labels: string[];
+        entity_ids: string[];
+        entity_names: string[];
+        entity_types: string[];
+        entity_features: string[];
+        entity_relations: string[];
+      };
+
+      const events = await result.json<EventResult[]>();
 
       return {
         count: 0,
@@ -173,13 +179,13 @@ export const listsRouter = createTRPCRouter({
           features: JSON.parse(event.event_features),
           timestamp: new Date(event.event_timestamp),
           labels: event.event_labels,
-          entities: event.entity_ids.map((id, index) => {
+          entities: event.entity_ids.filter(Boolean).map((id, index) => {
             return {
               id: id,
               type: event.entity_types[index],
               name: event.entity_names[index],
               relation: event.entity_relations[index],
-              features: JSON.parse(event.entity_features[index]),
+              // features: JSON.parse(event.entity_features[index]),
               labels: [],
             };
           }),
@@ -277,7 +283,7 @@ const getFeatureSortKey = (
   sortBy: {
     feature: string;
     direction: "asc" | "desc";
-    dataType: "string" | "number" | "boolean";
+    dataType: "text" | "number" | "boolean";
   }
 ) => {
   const { feature, direction, dataType } = sortBy;

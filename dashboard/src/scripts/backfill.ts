@@ -40,12 +40,12 @@ const msgs = data;
 
 async function main() {
   const instance = await createSqrlInstance({
-    config: {
-      "state.allow-in-memory": true,
-    },
     // config: {
-    //   "redis.address": process.env.SQRL_REDIS_URL,
+    //   "state.allow-in-memory": true,
     // },
+    config: {
+      "redis.address": process.env.REDIS_URL,
+    },
   });
 
   const files = await prisma.file.findMany({
@@ -54,10 +54,13 @@ async function main() {
     },
   });
   const fileData =
-    files.reduce((acc, file) => {
-      acc[file.name] = file.currentFileSnapshot.code;
-      return acc;
-    }, {} as Record<string, string>) || {};
+    files.reduce(
+      (acc, file) => {
+        acc[file.name] = file.currentFileSnapshot.code;
+        return acc;
+      },
+      {} as Record<string, string>
+    ) || {};
 
   const { executable } = await compileSqrl(instance, fileData);
 

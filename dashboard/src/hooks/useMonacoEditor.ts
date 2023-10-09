@@ -3,11 +3,12 @@ import type { IDisposable } from "monaco-editor/esm/vs/editor/editor.api";
 
 interface ErrorState {
   state: "error";
-  value: unknown;
+  value: string;
 }
 
 interface PendingState {
   state: "pending";
+  value: undefined;
 }
 
 interface SuccessState {
@@ -19,7 +20,7 @@ export const useMonacoEditor = (): ErrorState | PendingState | SuccessState => {
   const [monacoEditorState, setMonacoEditorState] =
     useState<typeof import("monaco-editor/esm/vs/editor/editor.api")>();
 
-  const [errorState, setErrorState] = useState<unknown>();
+  const [errorState, setErrorState] = useState<string>("");
 
   useEffect(() => {
     // only fetch monaco-editor in a browser environment
@@ -29,7 +30,11 @@ export const useMonacoEditor = (): ErrorState | PendingState | SuccessState => {
       /* webpackChunkName: "monaco-editor" */ "monaco-editor/esm/vs/editor/editor.api"
     )
       .then(setMonacoEditorState)
-      .catch(setErrorState);
+      .catch(() => {
+        setErrorState(
+          "Failed to load monaco-editor. Please check your internet connection."
+        );
+      });
   }, []);
 
   if (errorState) {
@@ -48,5 +53,6 @@ export const useMonacoEditor = (): ErrorState | PendingState | SuccessState => {
 
   return {
     state: "pending",
+    value: undefined,
   };
 };
