@@ -2,7 +2,7 @@
 
 CREATE TABLE entity_labels (
     created_at DateTime,
-    dataset_id String,
+    dataset_id BigInt,
     entity_id String,
     entity_type String,
     status Enum('ADDED' = 1, 'REMOVED' = 2),

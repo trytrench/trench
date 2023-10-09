@@ -4,7 +4,7 @@ import { runEvent } from "sqrl-helpers";
 
 export async function batchInsertEvents(
   events: Awaited<ReturnType<typeof runEvent>>[],
-  datasetId: string
+  datasetId: bigint
 ) {
   await db.insert({
     table: "event_labels",

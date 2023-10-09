@@ -13,7 +13,7 @@ if (!isMainThread) {
   async function processEvents(
     events: Event[],
     files: Record<string, string>,
-    datasetId: string
+    datasetId: bigint
   ) {
     const results: Awaited<ReturnType<typeof runEvent>>[] = [];
     const instance = await createSqrlInstance({
@@ -65,7 +65,7 @@ if (!isMainThread) {
           lastEventLogId,
           rules,
         } = dataset as {
-          id: string;
+          id: bigint;
           lastEventLogId: number;
           rules: FileRow[];
         };
