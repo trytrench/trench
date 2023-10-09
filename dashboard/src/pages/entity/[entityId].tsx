@@ -51,7 +51,6 @@ import { EventListItem } from "../../components/EventListItem";
 import { EntityEventChart } from "../../components/EventTimeChart";
 import { Navbar } from "../../components/Navbar";
 import LinksView from "~/components/LinksView";
-import LinksDisplay from "~/components/LinksView/refactor";
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -151,29 +150,22 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
             </SelectItem>
           )) ?? []}
         </Select>
-        <Text className="whitespace-nowrap">with label</Text>
-        <Select
-          enableClear
-          className="w-40"
-          value={entityLabel}
-          onValueChange={setEntityLabel}
-          placeholder="All labels"
-        >
-          {entityLabels?.map((el) => (
-            <SelectItem key={el} value={el}>
-              {el}
-            </SelectItem>
-          )) ?? []}
-        </Select>
+        <Text className="whitespace-nowrap">during</Text>
+        <DateRangePicker />
       </div>
       <Divider className="mb-0 mt-4" />
-      <LinksDisplay
+      <LinksView
+        entityId={entityId ?? ""}
+        leftTypeFilter={entityType}
+        onLeftTypeFilterChange={setEntityType}
+      />
+      {/* <LinksDisplay
         entityId={entityId ?? ""}
         entityFilter={{
           entityType,
         }}
         onEntityFilterChange={setEntityType}
-      />
+      /> */}
     </>
   );
 }

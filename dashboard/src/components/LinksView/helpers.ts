@@ -1,198 +1,136 @@
-import { countBy, groupBy, uniqBy } from "lodash";
-import { DisplayEntityData, EntityData, Link } from "./types";
-import pluralize from "pluralize";
+import { countBy, groupBy, uniq } from "lodash";
+import { LeftItem, LinkItem, RawLeft, RawLinks, RightItem } from "./types";
 
-// if there are more than GROUP_THRESHOLD entities of the same type,
-// we group them
-const GROUP_THRESHOLD = 3;
+export const INTERNAL_LIMIT = 1000;
+export const GROUP_THRESHOLD = 3;
+export const HIDE_LINKS_THRESHOLD = 20;
+export const MAX_ENTITIES_PER_GROUP = 10;
 
-// TODO: (somewhere) filter out entities that dont have any links
-
-export interface createGroupsOutput {
-  entities: EntityData[];
-  links: Link[];
-}
-
-export const createGroups = (
-  entities: EntityData[],
-  links: Link[]
-): createGroupsOutput => {
-  const typeCounts = countBy(entities, (e) => e.type);
-
-  const notGrouped = entities
-    .filter((e) => typeCounts[e.type]! <= GROUP_THRESHOLD)
-    .sort((a, b) => a.type.localeCompare(b.type));
-  const grouped = Object.entries(typeCounts)
-    .filter(([key, val]) => val > GROUP_THRESHOLD)
-    .map(([key, val]) => ({
-      type: key,
-      count: val,
-    }))
-    .sort((a, b) => a.type.localeCompare(b.type));
-
-  const newLinks = links.map((l) => {
-    const fromType = entities.find((e) => e.id === l.from)?.type;
-    if (grouped.find((g) => g.type === fromType)) {
-      return {
-        from: fromType!,
-        to: l.to,
-        weight: l.weight,
-      };
-    }
-    return l;
-  });
-
-  return {
-    entities: [
-      ...notGrouped,
-      ...grouped.map((g) => ({
-        id: g.type,
-        name: `${g.count} ${pluralize(g.type)}`,
-        type: "###GROUP###",
-        count: g.count,
-      })),
-    ],
-    links: newLinks,
-  };
+type ProcessInput = {
+  rawLeft: RawLeft;
+  rawLinks: RawLinks;
+  shouldGroup: boolean;
 };
 
-export interface ProcessEverythingOptions {
-  leftTypeFilter: string;
-  leftSelection: string;
-  rightSelection: string;
-  explicitlyVisibleLeft: string[];
-}
-
-export interface ProcessEverythingResult {
-  left: DisplayEntityData[];
-  right: DisplayEntityData[];
-  links: Link[];
-  selectedLinks: Link[];
-  hiddenEntities: string[];
-}
-
-// filters and sorts all the data.
-// some of this logic will be moved to the query
-
-const HIDE_LINKS_THRESHOLD = 40;
-
-export const processEverything = (
-  left: EntityData[],
-  right: EntityData[],
-  links: Link[],
-  options: ProcessEverythingOptions
-): ProcessEverythingResult => {
-  // dedupe links
-  links = uniqBy(links, (l) => `${l.from}-${l.to}`);
-
-  // right filter defaults to left filter
-  const lFilter = options.leftTypeFilter;
-  let rFilter = "";
-
-  // step 1: filter out entities that are not of the selected type
-  let leftFiltered: EntityData[] = [];
-  let rightFiltered: EntityData[] = right;
-  let linksFiltered = links;
-
-  if (lFilter !== "") {
-    leftFiltered = left.filter((e) => e.type === lFilter);
-  } else {
-    const res = createGroups(left, links);
-    leftFiltered = res.entities;
-    linksFiltered = res.links;
-  }
-  if (rFilter !== "") {
-    rightFiltered = right.filter((e) => e.type === rFilter);
-  }
-
-  // step 2: filter out links that are not between the selected entities
-  const leftIds = leftFiltered.map((e) => e.id);
-  const rightIds = right.map((e) => e.id);
-  linksFiltered = linksFiltered.filter(
-    (l) => leftIds.includes(l.from) && rightIds.includes(l.to)
-  );
-
-  // step 3: if a left entity or left group has more than HIDE_LINKS_THRESHOLD, assume that we want them hidden
-  const leftIdsToNotShowLinksFor = leftFiltered
-    .filter((e) => {
-      if (options.explicitlyVisibleLeft.includes(e.id)) return false;
-      const linksFrom = linksFiltered.filter((l) => l.from === e.id);
-      return linksFrom.length > HIDE_LINKS_THRESHOLD;
-    })
-    .map((e) => e.id);
-
-  // step 4: remove links only connected hidden entities
-  linksFiltered = linksFiltered.filter(
-    (l) =>
-      !(
-        leftIdsToNotShowLinksFor.includes(l.from) &&
-        linksFiltered
-          .filter((l2) => l2.to === l.to)
-          .filter((l2) => !leftIdsToNotShowLinksFor.includes(l2.from)).length <=
-          1
-      )
-  );
-  // remaining links involved with those entities are still visible, but faded.
-  linksFiltered = linksFiltered.map((l) => {
-    if (leftIdsToNotShowLinksFor.includes(l.from)) {
-      return {
-        ...l,
-        weight: 0,
-      };
-    }
-    return l;
-  });
-
-  // and remove right side entities that are not connected to any left side entities
-  const visibleRightIds = new Set(linksFiltered.map((l) => l.to));
-  rightFiltered = rightFiltered.filter((e) => visibleRightIds.has(e.id));
-
-  // step 5: for links connected to groups, determine weight by number of links/number of entities in group'
-  const leftGroups = leftFiltered.filter((e) => e.type === "###GROUP###");
-  const displayLinks = Object.values(
-    groupBy(linksFiltered, (l) => `${l.from}-${l.to}`)
-  ).flatMap((linksArr) => {
-    const group = leftGroups.find((g) => g.id === linksArr[0]!.from);
-    if (!group) return linksArr;
-    const weight = linksArr.length / (group.count ?? 1);
-    return [{ ...linksArr[0]!, weight }];
-  });
-
-  // last: sort left and right entities by some metric (TODO)
-  // Sort by number of outward links
-  leftFiltered = leftFiltered.sort((a, b) => {
-    const aLinks = linksFiltered.filter((l) => l.from === a.id).length;
-    const bLinks = linksFiltered.filter((l) => l.from === b.id).length;
-    return bLinks - aLinks;
-  });
-
-  return {
-    left: leftFiltered.map((e) => ({
-      id: e.id,
-      name: e.name,
-      type: e.type,
-      linkCount: links.filter((l) => l.from === e.id).length,
-    })),
-    right: rightFiltered.map((e) => ({
-      id: e.id,
-      name: e.name,
-      type: e.type,
-      linkCount: links.filter((l) => l.to === e.id).length,
-    })),
-    links: displayLinks,
-    selectedLinks: displayLinks.filter(
-      (l) => l.from === options.leftSelection || l.to === options.rightSelection
-    ),
-    hiddenEntities: leftIdsToNotShowLinksFor,
-  };
+type ProcessOutput = {
+  left: LeftItem[];
+  right: RightItem[];
+  links: LinkItem[];
 };
 
-// 1: filter left and right entities by type
-// 2: filter links by left and right entities
-// - if no filter, create groups.
-// 3: if a left entity or left group has more than HIDE_LINKS_THRESHOLD, assume that we want them hidden
-//    - i.e. remove those links
-//    - then remove right side entities that are not connected to any left side entities
-// 4: re-filter links?
-// 5: for links connected to groups, determine weight by number of links/number of entities in group
-// last: sort left and right entities by some metric (TODO)
+export const processQueryOutput = ({
+  rawLeft,
+  rawLinks,
+  shouldGroup,
+}: ProcessInput): ProcessOutput => {
+  // split this up into two parts:
+  // - entities that are not groups
+  // - entities that are groups
+
+  // 1. figure out what's grouped and what's not
+  const entitiesPerType = countBy(rawLeft, (e) => e.type);
+  const isGrouped = (type: string) =>
+    shouldGroup && entitiesPerType[type]! > GROUP_THRESHOLD;
+
+  const notGrouped = rawLeft.filter((e) => !isGrouped(e.type));
+  const notGroupedLinks = rawLinks.filter((l) => !isGrouped(l.from_type));
+
+  const groupedTypes = Object.entries(entitiesPerType)
+    .filter(([_, val]) => shouldGroup && val > GROUP_THRESHOLD)
+    .map(([key]) => key);
+  const groupedLinks = rawLinks.filter((l) => isGrouped(l.from_type));
+
+  // UNGROUPED, 1: get right entity ids
+  const linksPerUngroupedLeft = countBy(notGroupedLinks, (l) => l.from_id);
+  const nonHiddenLinks = notGroupedLinks.filter(
+    (l) => linksPerUngroupedLeft[l.from_id]! <= HIDE_LINKS_THRESHOLD
+  );
+  const rightSide = uniq(nonHiddenLinks.map((l) => l.to_id));
+
+  // GROUPED, 1: get right entity ids
+  const linksPerGroupedLeft = countBy(groupedLinks, (l) => l.from_type);
+  // TODO: for right side, only get the top 20 per type by link count
+  const groupLinks = Object.entries(
+    groupBy(groupedLinks, (l) => l.from_type)
+  ).flatMap(([type, links]) => {
+    const countedLinks = Object.entries(countBy(links, (l) => l.to_id));
+    const topLinks = countedLinks
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_ENTITIES_PER_GROUP);
+    return topLinks.map((l) => ({
+      from_type: type,
+      to_id: l[0],
+      count: l[1],
+    }));
+  });
+
+  // calculate all right side entities
+  const rightSideEntities = uniq([
+    ...rightSide,
+    ...groupLinks.map((l) => l.to_id),
+  ]);
+
+  // get final links
+  const ungroupedLinks = notGroupedLinks.filter((l) =>
+    rightSideEntities.includes(l.to_id)
+  );
+
+  // put everything together
+
+  const linkItems: LinkItem[] = [
+    ...ungroupedLinks.map((l) => {
+      const isHidden = linksPerUngroupedLeft[l.from_id]! > HIDE_LINKS_THRESHOLD;
+      return {
+        itemType: isHidden ? ("hiddenLink" as const) : ("link" as const),
+        from: l.from_id,
+        to: l.to_id,
+      };
+    }),
+    ...groupLinks.map((l) => ({
+      itemType: "weightedLink" as const,
+      from: l.from_type,
+      to: l.to_id,
+      weight: l.count,
+      reference: linksPerGroupedLeft[l.from_type] ?? 1,
+    })),
+  ];
+
+  const leftItems: LeftItem[] = [
+    ...notGrouped.map((e) => {
+      const linkCount = linksPerUngroupedLeft[e.id] ?? 0;
+      return {
+        itemType: "entity" as const,
+        id: e.id,
+        type: e.type,
+        name: e.name,
+        linkCount: linkCount,
+        isHidden: linkCount > HIDE_LINKS_THRESHOLD,
+      };
+    }),
+    ...groupedTypes.map((type) => ({
+      itemType: "group" as const,
+      id: type,
+      type: type,
+      linkCount: linksPerGroupedLeft[type] ?? 0,
+      entityCount: entitiesPerType[type]!,
+    })),
+  ];
+
+  const rightItems: RightItem[] = rightSideEntities.map((id) => {
+    const theEntity = rawLinks.find((e) => e.to_id === id)!;
+    return {
+      itemType: "entity" as const,
+      id: id,
+      name: theEntity.to_name,
+      type: theEntity.to_type,
+      linkCount: 0, // TODO
+    };
+  });
+
+  const ret = {
+    left: leftItems,
+    right: rightItems,
+    links: linkItems,
+  };
+  return ret;
+};

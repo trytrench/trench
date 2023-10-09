@@ -1,239 +1,121 @@
-import { groupBy, uniqBy } from "lodash";
-import { it } from "node:test";
 import { z } from "zod";
-import { Link } from "~/components/LinksView/types";
+import {
+  processQueryOutput,
+  INTERNAL_LIMIT,
+} from "~/components/LinksView/helpers";
+import { RawLeft, RawLinks } from "~/components/LinksView/types";
+
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 
 export const linksRouter = createTRPCRouter({
-  entityInfo: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const query = `
-        SELECT
-          e.entity_id as id,
-          e.entity_type as type,
-          e.entity_name as name
-        FROM event_entity AS e
-        WHERE e.entity_id = '${input.id}'
-        LIMIT 1
-      `;
-
-      const res = await db.query({
-        query,
-      });
-      const data = await res.json<{
-        data: {
-          eventId: string;
-          id: string;
-          name: string;
-          type: string;
-          lastSeenAt: Date;
-        }[];
-      }>();
-      return data.data[0];
-    }),
-
-  relatedEntities2: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const leftSideQuery = `
-        WITH leftIds AS (
-          SELECT
-            e.entity_id as leftId
-          FROM event_entity AS e 
-          WHERE e.event_id IN (
-              SELECT event_id
-              FROM event_entity
-              WHERE entity_id = '${input.id}'
-              GROUP BY event_id
-          )
-          GROUP BY e.entity_id
-        ),
-        counts AS (
-          SELECT
-            e.entity_id as id,
-            e.entity_type as type,
-            e.entity_name as name,
-            COUNT(e.event_id) as count
-          FROM event_entity AS e
-          WHERE e.event_id IN (
-              SELECT leftId FROM leftIds
-          )
-          GROUP BY e.entity_id, e.entity_type, e.entity_name
-        ),
-        SELECT * FROM counts
-        ORDER BY counts.count DESC
-        LIMIT 15
-      `;
-
-      const res = await db.query({
-        query: leftSideQuery,
-      });
-
-      const data = await res.json<{
-        data: {
-          id: string;
-          name: string;
-          type: string;
-          count: number;
-        }[];
-      }>();
-
-      return data.data;
-    }),
-
   relatedEntities: publicProcedure
     .input(
       z.object({
         id: z.string(),
+        leftSideType: z.string().optional(),
+        limit: z.number().optional(),
+        skip: z.number().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      // Gets all entities that are linked to the input entity
-      // i.e. They appeared in the same event.
-      const leftSideQuery = `
-        SELECT
-          e.event_id as eventId,
-          e.entity_id as id,
-          e.entity_type as type,
-          e.entity_name as name
-        FROM event_entity AS e
-        WHERE e.event_id IN (
-            SELECT event_id
-            FROM event_entity
-            WHERE entity_id = '${input.id}'
-            GROUP BY event_id
-        )
-      `;
+      const DEBUG = true;
 
-      const allLinksQuery = `
-        WITH leftSide AS (
-          ${leftSideQuery}
-        ),
-        relevantEvents AS (
-          SELECT e.event_id as eventId
-          FROM event_entity AS e
-          WHERE e.event_id IN (
-              SELECT event_id
-              FROM event_entity
-              WHERE entity_id IN (
-                SELECT id
-                FROM leftSide
-              )
-              GROUP BY event_id
-          )
-          GROUP BY e.event_id
-        ),
-        entityType AS (
-          SELECT entity_type
+      // 0: get the type of the entity.
+
+      const typeRes = await db.query({
+        query: `
+          SELECT
+            entity_type
           FROM event_entity
           WHERE entity_id = '${input.id}'
           LIMIT 1
-        )
-
-        SELECT
-          e.event_id as eventId,
-          e.entity_id as id,
-          e.entity_type as type,
-          e.entity_name as name
-        FROM event_entity AS e
-        WHERE 
-          (
-            e.entity_type = (SELECT entity_type FROM entityType)
-            OR e.entity_id IN (
-              SELECT id
-              FROM leftSide
-            )
-          )
-          AND e.entity_id != '${input.id}'
-          AND e.event_id IN (
-            SELECT eventId
-            FROM relevantEvents
-          )
-        GROUP BY e.event_id, e.entity_id, e.entity_type, e.entity_name
-      `;
-
-      const [leftSideResult, allLinksResult] = await Promise.all([
-        db.query({
-          query: leftSideQuery,
-        }),
-        db.query({
-          query: allLinksQuery,
-        }),
-      ]);
-
-      // entities that share an event with the input entity
-      const entities = await leftSideResult.json<{
-        data: {
-          id: string;
-          name: string;
-          type: string;
-        }[];
-      }>();
-
-      // all events that involve an entity that shares an event with above entities
-      const allLinks = await allLinksResult.json<{
-        data: {
-          eventId: string;
-          id: string;
-          name: string;
-          type: string;
-          lastSeenAt: Date;
-        }[];
-      }>();
-
-      const entityType =
-        entities.data.find((item) => item.id === input.id)?.type ?? "";
-
-      const leftSide = uniqBy(entities.data, (item) => item.id).filter(
-        (item) => item.id !== input.id
-      );
-      let rightSide = [] as typeof leftSide;
-
-      // extracting the actual links from "allLinks" is done on the clientside.
-      // for all leftSide entities, find all events that they're in. Then find
-      // all entities that are in those events, grouping by entity id.
-
-      let links = [] as Link[];
-
-      const leftSideIds = leftSide.map((item) => item.id);
-
-      const byEvent = groupBy(allLinks.data, (item) => item.eventId);
-      Object.entries(byEvent).forEach(([eventId, involved]) => {
-        const theLeftSideOne = involved.find((item) =>
-          leftSideIds.includes(item.id)
-        );
-        if (!theLeftSideOne) return;
-        const theRest = involved.filter(
-          (item) => item.id !== theLeftSideOne.id && item.type === entityType
-        );
-
-        theRest.forEach((item) => {
-          links.push({
-            from: theLeftSideOne.id,
-            to: item.id,
-          });
-
-          // uhhhh
-          rightSide.push(item);
-        });
+        `,
       });
+      const typeParsed = await typeRes.json<{
+        data: {
+          entity_type: string;
+        }[];
+        statistics: any;
+      }>();
 
-      rightSide = uniqBy(rightSide, (item) => item.id);
+      if (DEBUG) {
+        console.log("typeParsed     \t", typeParsed.statistics);
+        console.log("- Result Length\t", typeParsed.data.length);
+      }
 
-      return {
-        leftSide,
-        rightSide,
-        links: uniqBy(links, (item) => `${item.from}-${item.to}`),
-      };
+      const type = typeParsed.data[0]?.entity_type ?? "";
+
+      // 1: query left side
+
+      const typeFilter = input.leftSideType
+        ? `AND entity_type_2 = '${input.leftSideType}'`
+        : "";
+
+      const leftSideRes = await db.query({
+        query: `
+          SELECT
+            entity_id_2 as id,
+            entity_type_2 as type,
+            first_value(entity_name_2) as name
+          FROM entity_entity
+          WHERE entity_id_1 = '${input.id}'
+            ${typeFilter}
+          GROUP BY entity_id_2, entity_type_2
+          LIMIT ${INTERNAL_LIMIT} BY entity_type_2
+        `,
+      });
+      const leftSideParsed = await leftSideRes.json<{
+        data: RawLeft;
+        statistics: any;
+      }>();
+
+      if (DEBUG) {
+        console.log("leftSideParsed \t", leftSideParsed.statistics);
+        console.log("- Result Length\t", leftSideParsed.data.length);
+      }
+
+      // 2: query right side
+
+      const andLeftInLeft = leftSideParsed?.data.length
+        ? `AND entity_id_1 IN (${leftSideParsed.data
+            .map((item) => `'${item.id}'`)
+            .join(", ")})`
+        : "AND FALSE";
+
+      const linksRes = await db.query({
+        query: `
+          SELECT
+            entity_id_1 as from_id,
+            entity_type_1 as from_type,
+            entity_id_2 as to_id,
+            entity_type_2 as to_type,
+            first_value(entity_name_2) as to_name
+          FROM entity_entity
+          WHERE 
+            entity_id_2 != '${input.id}'
+            AND entity_type_2 = '${type}'
+            ${andLeftInLeft}
+          GROUP BY entity_id_1, entity_type_1, entity_id_2, entity_type_2
+          LIMIT ${INTERNAL_LIMIT} BY entity_id_1
+        `,
+      });
+      const linksParsed = await linksRes.json<{
+        data: RawLinks;
+        statistics: any;
+      }>();
+
+      if (DEBUG) {
+        console.log("linksParsed    \t", linksParsed.statistics);
+        console.log("- Result length\t", linksParsed.data.length);
+      }
+
+      // 3: final results
+
+      return processQueryOutput({
+        rawLeft: leftSideParsed.data,
+        rawLinks: linksParsed.data,
+        shouldGroup: !input.leftSideType,
+      });
     }),
 });
