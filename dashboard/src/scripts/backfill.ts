@@ -48,15 +48,11 @@ async function main() {
     },
   });
 
-  const files = await prisma.file.findMany({
-    include: {
-      currentFileSnapshot: true,
-    },
-  });
+  const dataset = await prisma.dataset.findFirstOrThrow();
   const fileData =
-    files.reduce(
+    (dataset.rules as { code: string; name: string }[]).reduce(
       (acc, file) => {
-        acc[file.name] = file.currentFileSnapshot.code;
+        acc[file.name] = file.code;
         return acc;
       },
       {} as Record<string, string>
@@ -88,7 +84,7 @@ async function main() {
     }
     console.timeEnd(timerMsg);
 
-    queue.enqueue(() => batchUpsert(results));
+    queue.enqueue(() => batchUpsert(results, dataset.id));
     queue.process().catch(console.error);
   }
 

@@ -72,7 +72,8 @@ export async function runEvent(event: Event, executable: Executable) {
 }
 
 export async function batchUpsert(
-  events: Awaited<ReturnType<typeof runEvent>>[]
+  events: Awaited<ReturnType<typeof runEvent>>[],
+  datasetId: string
 ) {
   try {
     await db.insert({
@@ -84,6 +85,7 @@ export async function batchUpsert(
           label: label.label,
           type: label.type,
           status: "ADDED",
+          dataset_id: datasetId,
         }))
       ),
       format: "JSONEachRow",
@@ -103,6 +105,7 @@ export async function batchUpsert(
                 type: label.labelType,
                 label: label.label,
                 status: "ADDED",
+                dataset_id: datasetId,
               }))
             )
         ),
@@ -125,6 +128,7 @@ export async function batchUpsert(
               entity_type: entity.type,
               entity_features: entity.features,
               relation: entity.relation,
+              dataset_id: datasetId,
             }))
           : {
               created_at: getUnixTime(new Date()),
@@ -133,6 +137,7 @@ export async function batchUpsert(
               event_timestamp: getUnixTime(event.timestamp),
               event_data: event.data,
               event_features: event.features,
+              dataset_id: datasetId,
             }
       ),
       format: "JSONEachRow",
