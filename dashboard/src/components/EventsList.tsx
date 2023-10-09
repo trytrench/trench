@@ -32,11 +32,12 @@ export default function EventsList({ entityId, datasetId }: Props) {
         eventLabels: labels,
         eventFeatures: features,
         entityId,
-        datasetId,
       },
+      datasetId,
       limit,
     },
     {
+      enabled: !!datasetId,
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.rows.length < limit) return false;
         return pages.length * limit;
