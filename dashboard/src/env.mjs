@@ -7,10 +7,11 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    DATABASE_URL: z.string().url(),
+    POSTGRES_URL: z.string().url(),
     NODE_ENV: z.enum(["development", "test", "production"]),
+    CLICKHOUSE_URL: z.string().url(),
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
-    SQRL_REDIS_URL: z.string().url(),
+    REDIS_URL: z.string().url(),
     // NEXTAUTH_SECRET:
     //   process.env.NODE_ENV === "production"
     //     ? z.string().min(1)
@@ -38,8 +39,9 @@ export const env = createEnv({
    * middlewares) or client-side so we need to destruct manually.
    */
   runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    SQRL_REDIS_URL: process.env.SQRL_REDIS_URL,
+    POSTGRES_URL: process.env.POSTGRES_URL,
+    CLICKHOUSE_URL: process.env.CLICKHOUSE_URL,
+    REDIS_URL: process.env.REDIS_URL,
     NODE_ENV: process.env.NODE_ENV,
     // NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     // NEXTAUTH_URL: process.env.NEXTAUTH_URL,

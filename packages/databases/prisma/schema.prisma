@@ -1,0 +1,276 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views", "fullTextSearch", "filteredRelationCount", "tracing"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model EventLog {
+  id        String   @id
+  timestamp DateTime
+  type      String
+  data      Json     @default("{}")
+
+  // Datasets that currently have this event as its last processed event
+  datasets Dataset[] 
+
+  @@index([timestamp])
+
+}
+
+
+
+
+model EventType {
+  id   String @id
+  name String
+
+  events      Event[]
+  eventLabels EventLabel[]
+
+  features EventFeature[]
+}
+
+model Event {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  timestamp DateTime
+  data      Json     @default("{}")
+
+  eventType EventType @relation(fields: [type], references: [id])
+  type      String
+
+  entityLinks EventToEntityLink[]
+  eventLabels EventLabel[]
+
+  features Json @default("{}")
+
+  @@index([data(ops: JsonbPathOps)], type: Gin)
+  @@index([type, id])
+  @@index([timestamp])
+  @@index([type, timestamp, id])
+  @@index([id, timestamp, type])
+}
+
+model EventFeature {
+  eventTypeObj EventType @relation(fields: [eventType], references: [id])
+  eventType    String
+
+  dataType String @default("string")
+
+  name        String
+  description String?
+
+  @@id([eventType, name])
+}
+
+model FeatureMetadata {
+  id   String @id
+  name String
+
+  dataType String @default("string")
+}
+
+model EntityFeature {
+  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
+  entityType    String
+
+  name        String
+  description String?
+
+  dataType String @default("string")
+
+  @@id([entityType, name])
+}
+
+model EntityType {
+  id   String @id
+  name String
+
+  entityLabels EntityLabel[]
+  entities     Entity[]
+
+  entityFeatures EntityFeature[]
+}
+
+model Entity {
+  id       String @id @default(dbgenerated("nanoid()"))
+  name     String
+  features Json   @default("{}")
+
+  entityType EntityType @relation(fields: [type], references: [id])
+  type       String
+
+  eventLinks   EventToEntityLink[]
+  entityLabels EntityLabel[]
+
+  @@index([features(ops: JsonbPathOps)], type: Gin)
+  @@index([type, id])
+}
+
+model LinkType {
+  id   String @id
+  name String
+
+  entitySnapshot Json @default("{}")
+
+  eventToEntityLink EventToEntityLink[]
+}
+
+model EventToEntityLink {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+
+  linkType LinkType @relation(fields: [type], references: [id])
+  type     String
+  data     Json     @default("{}")
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  entity   Entity @relation(fields: [entityId], references: [id])
+  entityId String
+
+  @@index([eventId])
+  @@index([entityId])
+  @@index([entityId, eventId])
+  @@index([type, eventId, entityId])
+  @@index([type, entityId, eventId])
+}
+
+model ProductionDataset {
+  id String @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dataset Dataset @relation(fields: [datasetId], references: [id])
+  datasetId String
+
+  name String
+  description String?
+}
+
+model Dataset {
+  id String @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name       String 
+  description String?
+
+  backfillFrom DateTime? // If null, backfill from the beginning of time
+  backfillTo   DateTime? // If null, backfill to now plus all incoming events
+
+  lastEventLog EventLog? @relation(fields: [lastEventLogId], references: [id])
+  lastEventLogId String?
+
+  isProduction Boolean @default(false)
+
+  productionDatasets ProductionDataset[]
+
+  rules Json @default("[]")
+}
+
+model EntityLabelType {
+  id          String   @id @default(dbgenerated("nanoid()"))
+  name        String
+  createdAt   DateTime @default(now())
+  description String
+
+  entityLabels EntityLabel[]
+}
+
+model EntityLabel {
+  id          String   @id @default(dbgenerated("nanoid()"))
+  name        String
+  createdAt   DateTime @default(now())
+  color       String
+  description String
+
+  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
+  entityType    String
+
+  labelTypeObj EntityLabelType @relation(fields: [labelType], references: [id])
+  labelType    String
+
+  entities Entity[]
+
+  @@unique([name, entityType, labelType])
+}
+
+model EventLabelType {
+  id          String   @id @default(dbgenerated("nanoid()"))
+  name        String
+  createdAt   DateTime @default(now())
+  description String
+
+  eventLabels EventLabel[]
+}
+
+model EventLabel {
+  id          String   @id @default(dbgenerated("nanoid()"))
+  name        String
+  createdAt   DateTime @default(now())
+  color       String
+  description String
+
+  eventTypeObj EventType @relation(fields: [eventType], references: [id])
+  eventType    String
+
+  labelTypeObj EventLabelType @relation(fields: [labelType], references: [id])
+  labelType    String
+
+  events Event[]
+
+  @@unique([name, eventType, labelType])
+}
+
+// Necessary for Next auth
+model Account {
+  id                String  @id @default(dbgenerated("nanoid()"))
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? // @db.Text
+  access_token      String? // @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? // @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("nanoid()"))
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(dbgenerated("nanoid()"))
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

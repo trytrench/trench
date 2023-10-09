@@ -8,7 +8,7 @@ import {
 import * as sqrlJsonPath from "sqrl-jsonpath";
 import * as sqrlLoadFunctions from "sqrl-load-functions";
 import * as sqrlRedisFunctions from "sqrl-redis-functions";
-import { type RedisInterface } from "sqrl-redis-functions/lib/Services/RedisInterface";
+import { type RedisInterface } from "sqrl-redis-functions/lib/services/RedisInterface";
 import { MockRedisService } from "sqrl-redis-functions/lib/mocks/MockRedisService";
 import * as sqrlTextFunctions from "sqrl-text-functions";
 import { SqrlManipulator } from "./SqrlManipulator";
@@ -19,7 +19,7 @@ let RedisService;
 
 if (typeof window === "undefined") {
   RedisService =
-    require("sqrl-redis-functions/lib/Services/RedisService").RedisService;
+    require("sqrl-redis-functions/lib/services/RedisService").RedisService;
 }
 
 export async function createSqrlInstance(

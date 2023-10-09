@@ -12,9 +12,10 @@ import { EventListItem } from "../components/EventListItem";
 
 interface Props {
   entityId?: string;
+  datasetId: string;
 }
 
-export default function EventsList({ entityId }: Props) {
+export default function EventsList({ entityId, datasetId }: Props) {
   const [view, setView] = useState<"grid" | "list">("list");
   const { type, features, labels, sortBy } = useFilters();
   const [limit, setLimit] = useState(50);
@@ -31,6 +32,7 @@ export default function EventsList({ entityId }: Props) {
         eventLabels: labels,
         eventFeatures: features,
         entityId,
+        datasetId,
       },
       limit,
     },
