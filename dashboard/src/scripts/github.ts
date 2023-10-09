@@ -1,4 +1,3 @@
-import amqp from "amqplib";
 import axios, { AxiosResponse } from "axios";
 import { prisma } from "databases";
 import { eachDayOfInterval, format, getUnixTime } from "date-fns";
@@ -76,17 +75,8 @@ class GithubFirehose extends EventEmitter {
 async function main() {
   const githubFirehose = new GithubFirehose();
 
-  const connection = await amqp.connect("amqp://localhost");
-  const channel = await connection.createChannel();
-  await channel.assertQueue("githubEvents");
-
   githubFirehose.on("event", (data) => {
     const { created_at, type, ...rest } = data;
-    const event = {
-      type,
-      timestamp: created_at,
-      data: rest,
-    };
 
     if (type === "WatchEvent")
       prisma.eventLog

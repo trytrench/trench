@@ -203,9 +203,6 @@ importers:
       pluralize:
         specifier: ^8.0.0
         version: 8.0.0
-      postinstall-postinstall:
-        specifier: ^2.1.0
-        version: 2.1.0
       progress:
         specifier: ^2.0.3
         version: 2.0.3
@@ -224,21 +221,9 @@ importers:
       sqrl:
         specifier: ^0.6.10
         version: 0.6.10
-      sqrl-cli-functions:
-        specifier: ^0.6.10
-        version: 0.6.10
-      sqrl-jsonpath:
-        specifier: ^0.6.10
-        version: 0.6.10
-      sqrl-load-functions:
-        specifier: ^0.6.10
-        version: 0.6.10
-      sqrl-redis-functions:
-        specifier: ^0.6.10
-        version: 0.6.10(patch_hash=yeeziso4m7x7ypc3j35vkognz4)
-      sqrl-text-functions:
-        specifier: ^0.6.10
-        version: 0.6.10
+      sqrl-helpers:
+        specifier: workspace:*
+        version: link:../packages/sqrl-helpers
       superjson:
         specifier: ^1.13.1
         version: 1.13.3
@@ -6986,11 +6971,6 @@ packages:
     resolution: {integrity: sha512-VdlZoocy5lCP0c/t66xAfclglEapXPCIVhqqJRncYpvbCgImF0w67aPKfbqUMr72tO2k5q0TdTZwCLjPTI6C9g==}
     dev: true
 
-  /postinstall-postinstall@2.1.0:
-    resolution: {integrity: sha512-7hQX6ZlZXIoRiWNrbMQaLzUUfH+sSx39u8EJ9HYuDc1kLo9IXKWjM5RSquZN1ad5GnH8CGFM78fsAAQi3OKEEQ==}
-    requiresBuild: true
-    dev: false
-
   /preact-render-to-string@5.2.6(preact@10.18.1):
     resolution: {integrity: sha512-JyhErpYOvBV1hEPwIxc/fHWXPfnEGdRKxc8gFdAZ7XV4tlzyzG847XAyEZqoDnynP88akM4eaHcSOzNcLWFguw==}
     peerDependencies:
@@ -7793,14 +7773,6 @@ packages:
 
   /sprintf-js@1.0.3:
     resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
-    dev: false
-
-  /sqrl-cli-functions@0.6.10:
-    resolution: {integrity: sha512-FBBdCSzmxz7J+oLeP3s85UnWmnnM+Vd4N7A4dScIbaNWF0LoJvDpm159+YAoN5gQ89XN/wOWEIWykC6uzFmBog==}
-    engines: {node: '>=12.0.0'}
-    dependencies:
-      sqrl: 0.6.10
-      sqrl-common: 0.6.10
     dev: false
 
   /sqrl-common@0.6.10:
