@@ -1,9 +1,10 @@
-import amqp from "amqplib";
 import axios, { AxiosResponse } from "axios";
-import { eachDayOfInterval, format } from "date-fns";
+import { prisma } from "databases";
+import { eachDayOfInterval, format, getUnixTime } from "date-fns";
 import ProgressBar from "progress";
 import { EventEmitter, Transform } from "stream";
 import { pipeline } from "stream/promises";
+import { ulid } from "ulid";
 import { createGunzip } from "zlib";
 
 class GithubFirehose extends EventEmitter {
@@ -74,21 +75,20 @@ class GithubFirehose extends EventEmitter {
 async function main() {
   const githubFirehose = new GithubFirehose();
 
-  const connection = await amqp.connect("amqp://localhost");
-  const channel = await connection.createChannel();
-  await channel.assertQueue("githubEvents");
-
   githubFirehose.on("event", (data) => {
     const { created_at, type, ...rest } = data;
-    const event = {
-      type,
-      timestamp: created_at,
-      data: rest,
-    };
-    const eventString = JSON.stringify(event);
 
     if (type === "WatchEvent")
-      channel.sendToQueue("githubEvents", Buffer.from(eventString));
+      prisma.eventLog
+        .create({
+          data: {
+            id: ulid(getUnixTime(new Date(created_at))),
+            timestamp: created_at,
+            type: type,
+            data: rest as Prisma.JsonObject,
+          },
+        })
+        .catch(console.error);
   });
 
   for (const date of eachDayOfInterval({

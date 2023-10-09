@@ -1,8 +1,8 @@
 import { Worker, isMainThread, parentPort } from "worker_threads";
 import { Client } from "pg";
 import { env } from "./env";
-import { Event, batchUpsert, compileSqrl, runEvent } from "./utils";
-import { createSqrlInstance } from "./createSqrlInstance";
+import { Event, compileSqrl, createSqrlInstance, runEvent } from "sqrl-helpers";
+import { batchInsertEvents } from "./batchInsertEvents";
 
 if (!isMainThread) {
   const client = new Client({
@@ -13,7 +13,7 @@ if (!isMainThread) {
   async function processEvents(
     events: Event[],
     files: Record<string, string>,
-    datasetId: string
+    datasetId: bigint
   ) {
     const results: Awaited<ReturnType<typeof runEvent>>[] = [];
     const instance = await createSqrlInstance({
@@ -30,7 +30,7 @@ if (!isMainThread) {
     for (const event of events) {
       results.push(await runEvent(event, executable, datasetId));
     }
-    await batchUpsert(results, datasetId);
+    await batchInsertEvents(results, datasetId);
   }
 
   async function initConsumer() {
@@ -65,7 +65,7 @@ if (!isMainThread) {
           lastEventLogId,
           rules,
         } = dataset as {
-          id: string;
+          id: bigint;
           lastEventLogId: number;
           rules: FileRow[];
         };

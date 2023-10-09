@@ -4,9 +4,7 @@ import { api } from "~/utils/api";
 import { usePrevious } from "react-use";
 import clsx from "clsx";
 import { editor } from "monaco-editor";
-import { createSqrlInstance } from "../lib/createSqrlInstance";
-import { compileSqrl } from "../lib/compileSqrl";
-import { analyze } from "../lib/analyzeSqrl";
+import { compileSqrl, createSqrlInstance, analyzeSqrl } from "sqrl-helpers";
 import { Button, Text, TextInput } from "@tremor/react";
 import Link from "next/link";
 import { handleError } from "../lib/handleError";
@@ -80,7 +78,7 @@ function useFilesEditor() {
         message: "Compiled successfully",
       });
 
-      const analysis = await analyze(instance, fileData);
+      const analysis = await analyzeSqrl(instance, fileData);
       setAnalysis(analysis);
     } catch (error: any) {
       setCompileStatus({

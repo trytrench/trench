@@ -11,9 +11,10 @@ import * as sqrlRedisFunctions from "sqrl-redis-functions";
 import { type RedisInterface } from "sqrl-redis-functions/lib/services/RedisInterface";
 import { MockRedisService } from "sqrl-redis-functions/lib/mocks/MockRedisService";
 import * as sqrlTextFunctions from "sqrl-text-functions";
-import { SqrlManipulator } from "./SqrlManipulator";
-import { fetchUserData } from "~/utils/fetchGithubData";
+import { SqrlManipulator } from "../SqrlManipulator";
+import { fetchUserData } from "./fetchGithubData";
 import pLimit from "p-limit";
+import { AxiosError } from "axios";
 
 let RedisService;
 
