@@ -18,6 +18,7 @@ export const listsRouter = createTRPCRouter({
           .optional(),
         limit: z.number().optional(),
         cursor: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -34,7 +35,7 @@ export const listsRouter = createTRPCRouter({
             argMax(entity_features, event_timestamp) AS features,
             arrayDistinct(groupArray(label)) AS labels
           FROM event_entity_entity_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
           ${
             filters?.entityType
               ? `AND entity_type = '${filters.entityType}'`

@@ -28,9 +28,9 @@ import {
 import { DateRangePicker } from "~/components/DateRangePicker";
 import EventsDashboard from "~/components/EventsDashboard";
 import EventsList from "~/components/EventsList";
-import LinksDisplay from "~/components/LinksView/refactor";
 import { api } from "~/utils/api";
 import { Navbar } from "../../../../components/Navbar";
+import LinksView from "~/components/LinksView";
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -47,20 +47,19 @@ function HorzScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RelatedEntities({ entityId }: { entityId?: string }) {
+interface RelatedEntitiesProps {
+  entityId: string;
+  datasetId: string;
+}
+
+function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
   const [entityType, setEntityType] = useState<string>("");
-  const [entityLabel, setEntityLabel] = useState<string | undefined>(undefined);
-
-  const { data } = api.entities.findRelatedEntities.useQuery({
-    id: entityId ?? "",
-    entityType: entityType,
-    entityLabel: entityLabel,
-  });
-
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
-  const { data: entityLabels } = api.labels.getEntityLabels.useQuery({
-    entityType: entityType,
-  });
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery(
+    {
+      datasetId,
+    },
+    { enabled: !!datasetId }
+  );
 
   return (
     <>
@@ -79,41 +78,25 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
             </SelectItem>
           )) ?? []}
         </Select>
-        <Text className="whitespace-nowrap">with label</Text>
-        <Select
-          enableClear
-          className="w-40"
-          value={entityLabel}
-          onValueChange={setEntityLabel}
-          placeholder="All labels"
-        >
-          {entityLabels?.map((el) => (
-            <SelectItem key={el} value={el}>
-              {el}
-            </SelectItem>
-          )) ?? []}
-        </Select>
       </div>
       <Divider className="mb-0 mt-4" />
-      <LinksDisplay
+      <LinksView
         entityId={entityId ?? ""}
-        entityFilter={{
-          entityType,
-        }}
-        onEntityFilterChange={setEntityType}
+        datasetId={datasetId}
+        leftTypeFilter={entityType}
+        onLeftTypeFilterChange={setEntityType}
       />
     </>
   );
 }
 
 export default function Home() {
-  const { data: labelsData } = api.labels.getAllLabels.useQuery();
-
   const router = useRouter();
-  const entityId = router.query.entityId as string | undefined;
+  const entityId = router.query.entityId as string;
+  const datasetId = router.query.datasetId as string;
 
   const { data: entityData } = api.entities.get.useQuery(
-    { id: entityId! },
+    { id: entityId!, datasetId },
     { enabled: !!entityId }
   );
 
@@ -228,15 +211,21 @@ export default function Home() {
                         }
                       />
                     </div>
-                    <EventsDashboard entityId={entityId} />
+                    <EventsDashboard
+                      entityId={entityId}
+                      datasetId={datasetId}
+                    />
                   </div>
                 </TabPanel>
                 <TabPanel>
-                  <EventsList entityId={entityId} />
+                  <EventsList entityId={entityId} datasetId={datasetId} />
                 </TabPanel>
                 <TabPanel>
                   <div className="col-span-2">
-                    <RelatedEntities entityId={entityId} />
+                    <RelatedEntities
+                      entityId={entityId}
+                      datasetId={datasetId}
+                    />
                   </div>
                 </TabPanel>
               </TabPanels>

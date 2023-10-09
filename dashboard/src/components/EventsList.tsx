@@ -57,6 +57,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
     <>
       {selectedEvent && (
         <EventDrawer
+          datasetId={datasetId}
           isOpen={!!selectedEvent}
           onClose={() => {
             setSelectedEvent(null);

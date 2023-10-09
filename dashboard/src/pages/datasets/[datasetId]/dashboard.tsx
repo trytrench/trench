@@ -55,6 +55,7 @@ import {
 import { LoadingPlaceholder } from "../../../components/LoadingPlaceholder";
 import clsx from "clsx";
 import { DateRangePicker } from "~/components/DateRangePicker";
+import { useRouter } from "next/router";
 
 function formatTimeRange([start, end]: [number, number], interval: number) {
   if (interval >= 1000 * 60 * 60 * 24) {
@@ -93,8 +94,21 @@ function formatPercentage(value: number, maxValue: number) {
 
 const DATE_FORMAT_X_AXIS = "MMM d, h:mm a";
 function EntitiesPage() {
-  const { data: entityLabels } = api.labels.getEntityLabels.useQuery();
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
+  const router = useRouter();
+  const datasetId = router.query.datasetId as string;
+
+  const { data: entityLabels } = api.labels.getEntityLabels.useQuery(
+    {
+      datasetId,
+    },
+    { enabled: !!datasetId }
+  );
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery(
+    {
+      datasetId,
+    },
+    { enabled: !!datasetId }
+  );
 
   const [entityType] = useQueryParam("entityType", StringParam);
   const eventFilters = useEventFilters();
@@ -120,7 +134,7 @@ function EntitiesPage() {
     <div className="p-8 flex flex-col gap-8">
       <div className="flex items-center gap-4">
         <Text>Search across</Text>
-        <EventTypeFilter />
+        <EventTypeFilter datasetId={datasetId} />
       </div>
       {sortedEntityTypes?.map((entityType, idx) => {
         return (
@@ -180,6 +194,7 @@ type Chart =
   RouterOutputs["dashboard"]["getTimeBuckets"]["anomalyCharts"][number];
 
 function AnomalyChart(props: {
+  datasetId: string;
   chart: Chart;
   selectedTimeRange: [number, number] | undefined;
   onSelectedTimeRangeChange: (dateRange: [number, number] | undefined) => void;
@@ -414,6 +429,7 @@ function AnomalyChart(props: {
         singleLine.metadata?.entityType &&
         singleLine.metadata?.entityLabel ? (
           <EntitiesWithLabelModal
+            datasetId={datasetId}
             open={modalOpen}
             onOpenChange={setModalOpen}
             entityType={singleLine.metadata?.entityType as string}
@@ -445,13 +461,17 @@ interface EntitiesWithLabelModalProps {
   entityType: string;
   entityLabel?: string;
   timeRange: [number, number];
+  datasetId: string;
 }
 function EntitiesWithLabelModal(props: EntitiesWithLabelModalProps) {
   const { open, onOpenChange, entityType, entityLabel, timeRange } = props;
+  const { datasetId } = props;
 
   const timeInterval = useTimeInterval();
   const eventFilters = useEventFilters();
-  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery();
+  const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
+    datasetId,
+  });
   const entityLabelData = useMemo(() => {
     if (!entityLabel || !entityLabelsData) {
       return undefined;
@@ -672,6 +692,9 @@ function InvestigateDateRangeModal(props: InvestigateDateRangeModalProps) {
 }
 
 function EventsPage() {
+  const router = useRouter();
+  const datasetId = router.query.datasetId as string;
+
   const eventFilters = useEventFilters();
 
   const timeInterval = useTimeInterval();
@@ -790,6 +813,7 @@ function EventsPage() {
 
               <div className="h-8"></div>
               <AnomalyChart
+                datasetId={datasetId}
                 chartClassName="h-72"
                 chart={data.eventChart}
                 selectedTimeRange={timeRange}
@@ -885,6 +909,7 @@ function EventsPage() {
           }
           return (
             <AnomalyChart
+              datasetId={datasetId}
               chartClassName="h-32"
               key={idx}
               chart={chart}

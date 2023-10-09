@@ -74,12 +74,15 @@ export function useEntityFilters(override?: Partial<EntityFilters>) {
 
 interface EventTypeFilterProps {
   showLabelFilter?: boolean;
+  datasetId: string;
 }
 export function EventTypeFilter(props: EventTypeFilterProps) {
-  const { showLabelFilter = false } = props;
+  const { showLabelFilter = false, datasetId } = props;
 
   // Options
-  const { data: eventTypesData } = api.labels.getEventTypes.useQuery();
+  const { data: eventTypesData } = api.labels.getEventTypes.useQuery({
+    datasetId,
+  });
   const eventTypeOptions = useMemo(
     () =>
       eventTypesData?.map((eventType) => ({
@@ -93,6 +96,7 @@ export function EventTypeFilter(props: EventTypeFilterProps) {
 
   const { data: eventLabelsData } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
+    datasetId,
   });
   const eventLabelOptions = useMemo(
     () =>
@@ -144,9 +148,14 @@ export function EventTypeFilter(props: EventTypeFilterProps) {
   );
 }
 
-export function EntityTypeFilter() {
+export function EntityTypeFilter({ datasetId }: { datasetId: string }) {
   // Options
-  const { data: entityTypesData } = api.labels.getEntityTypes.useQuery();
+  const { data: entityTypesData } = api.labels.getEntityTypes.useQuery(
+    {
+      datasetId,
+    },
+    { enabled: !!datasetId }
+  );
   const entityTypeOptions = useMemo(
     () =>
       entityTypesData?.map((entityType) => ({
@@ -170,6 +179,7 @@ export function EntityTypeFilter() {
 
   const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
     entityType: entityType ?? undefined,
+    datasetId,
   });
   const entityLabelOptions = useMemo(
     () =>
@@ -244,11 +254,12 @@ const createHandleLabelChange = (
   };
 };
 
-export function EventLabelFilter() {
+export function EventLabelFilter({ datasetId }: { datasetId: string }) {
   // Options
   const [eventType] = useQueryParam("eventType", StringParam);
   const { data: eventLabelsData } = api.labels.getEventLabels.useQuery({
     eventType: eventType ?? undefined,
+    datasetId,
   });
   const eventLabelOptions = useMemo(
     () =>
@@ -282,11 +293,12 @@ export function EventLabelFilter() {
   );
 }
 
-export function EntityLabelFilter() {
+export function EntityLabelFilter({ datasetId }: { datasetId: string }) {
   // Options
   const [entityType] = useQueryParam("entityType", StringParam);
   const { data: entityLabelsData } = api.labels.getEntityLabels.useQuery({
     entityType: entityType ?? undefined,
+    datasetId,
   });
   const entityLabelOptions = useMemo(
     () =>

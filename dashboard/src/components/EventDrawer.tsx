@@ -13,11 +13,12 @@ import { EntityCard } from "~/components/EntityCard";
 import { RouterOutputs, api } from "~/utils/api";
 
 export function EventDrawer(props: {
+  datasetId: string;
   selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { isOpen, selectedEvent, onClose } = props;
+  const { isOpen, selectedEvent, onClose, datasetId } = props;
   const [expandData, setExpandData] = useState(false);
 
   return (
@@ -82,6 +83,7 @@ export function EventDrawer(props: {
                 <EntityCard
                   key={entity.id}
                   entity={entity}
+                  datasetId={datasetId}
                   relation={entity.relation}
                 />
               );

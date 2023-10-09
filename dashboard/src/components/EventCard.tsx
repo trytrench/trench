@@ -64,20 +64,22 @@ export const EventCard = ({ event }: Props) => {
             </AccordionHeader>
             <AccordionBody>
               <SimpleGrid columns={5} spacing={2}>
-                {Object.entries(entity.features).map(([key, value], idx) => (
-                  <div key={key}>
-                    <Text className="font-semibold">{key}</Text>
-                    <Text className="truncate">
-                      {value === 0
-                        ? 0
-                        : value === true
-                        ? "True"
-                        : value === false
-                        ? "False"
-                        : value || "-"}
-                    </Text>
-                  </div>
-                ))}
+                {Object.entries(entity.features ?? {}).map(
+                  ([key, value], idx) => (
+                    <div key={key}>
+                      <Text className="font-semibold">{key}</Text>
+                      <Text className="truncate">
+                        {value === 0
+                          ? 0
+                          : value === true
+                          ? "True"
+                          : value === false
+                          ? "False"
+                          : value || "-"}
+                      </Text>
+                    </div>
+                  )
+                )}
               </SimpleGrid>
             </AccordionBody>
           </Accordion>

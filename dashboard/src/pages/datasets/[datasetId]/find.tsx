@@ -6,32 +6,47 @@ import { api } from "~/utils/api";
 import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
 import { useMemo } from "react";
+import { useRouter } from "next/router";
 
 function EntitiesPage() {
+  const router = useRouter();
+  const datasetId = router.query.datasetId as string;
+
   const { type, labels, features, sortBy } = useFilters();
 
   const { data: entityTypes, isLoading: entityTypesLoading } =
-    api.labels.getEntityTypes.useQuery();
+    api.labels.getEntityTypes.useQuery({ datasetId }, { enabled: !!datasetId });
 
   const { data: entityLabels, isLoading: entityLabelsLoading } =
-    api.labels.getEntityLabels.useQuery({
-      entityType: type,
-    });
+    api.labels.getEntityLabels.useQuery(
+      {
+        entityType: type,
+        datasetId,
+      },
+      { enabled: !!datasetId }
+    );
 
   const { data: entityFeatures, isLoading: entityFeaturesLoading } =
-    api.labels.getEntityFeatures.useQuery({
-      entityType: type,
-    });
+    api.labels.getEntityFeatures.useQuery(
+      {
+        entityType: type ?? undefined,
+        datasetId,
+      },
+      { enabled: !!datasetId }
+    );
 
   const { data: featureMetadata, isLoading: featureMetadataLoading } =
     api.features.getFeatureMetadata.useQuery();
 
   const featureToMetadata = useMemo(
     () =>
-      featureMetadata?.reduce((acc, curr) => {
-        acc[curr.id] = curr;
-        return acc;
-      }, {} as Record<string, any>) ?? {},
+      featureMetadata?.reduce(
+        (acc, curr) => {
+          acc[curr.id] = curr;
+          return acc;
+        },
+        {} as Record<string, any>
+      ) ?? {},
 
     [featureMetadata]
   );
@@ -46,18 +61,20 @@ function EntitiesPage() {
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
       entityFilters: {
-        entityType: type,
+        entityType: type ?? undefined,
         entityLabels: labels,
         entityFeatures: features,
       },
       sortBy,
       limit,
+      datasetId,
     },
     {
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.rows.length < limit) return false;
         return pages.length * limit;
       },
+      enabled: !!datasetId,
     }
   );
 
@@ -92,7 +109,13 @@ function EntitiesPage() {
             ) : (
               <>
                 {allEntities.map((entity) => {
-                  return <EntityCard key={entity.id} entity={entity} />;
+                  return (
+                    <EntityCard
+                      key={entity.id}
+                      datasetId={datasetId}
+                      entity={entity}
+                    />
+                  );
                 })}
                 <div className="self-center my-4">
                   <Button

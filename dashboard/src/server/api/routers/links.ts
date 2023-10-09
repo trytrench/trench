@@ -8,6 +8,9 @@ import { RawLeft, RawLinks } from "~/components/LinksView/types";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 
+// set to true to print out query statistics
+const DEBUG = false;
+
 export const linksRouter = createTRPCRouter({
   relatedEntities: publicProcedure
     .input(
@@ -16,11 +19,10 @@ export const linksRouter = createTRPCRouter({
         leftSideType: z.string().optional(),
         limit: z.number().optional(),
         skip: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const DEBUG = true;
-
       // 0: get the type of the entity.
 
       const typeRes = await db.query({
@@ -29,6 +31,7 @@ export const linksRouter = createTRPCRouter({
             entity_type
           FROM event_entity
           WHERE entity_id = '${input.id}'
+            AND dataset_id = '${input.datasetId}'
           LIMIT 1
         `,
       });
@@ -59,7 +62,8 @@ export const linksRouter = createTRPCRouter({
             entity_type_2 as type,
             first_value(entity_name_2) as name
           FROM entity_entity
-          WHERE entity_id_1 = '${input.id}'
+          WHERE dataset_id = '${input.datasetId}'
+            AND entity_id_1 = '${input.id}'
             ${typeFilter}
           GROUP BY entity_id_2, entity_type_2
           LIMIT ${INTERNAL_LIMIT} BY entity_type_2
@@ -79,7 +83,7 @@ export const linksRouter = createTRPCRouter({
 
       const andLeftInLeft = leftSideParsed?.data.length
         ? `AND entity_id_1 IN (${leftSideParsed.data
-            .map((item) => `'${item.id}'`)
+            .map((item: any) => `'${item.id}'`) // stupid typescript errors
             .join(", ")})`
         : "AND FALSE";
 
@@ -93,7 +97,8 @@ export const linksRouter = createTRPCRouter({
             first_value(entity_name_2) as to_name
           FROM entity_entity
           WHERE 
-            entity_id_2 != '${input.id}'
+            dataset_id = '${input.datasetId}'
+            AND entity_id_2 != '${input.id}'
             AND entity_type_2 = '${type}'
             ${andLeftInLeft}
           GROUP BY entity_id_1, entity_type_1, entity_id_2, entity_type_2

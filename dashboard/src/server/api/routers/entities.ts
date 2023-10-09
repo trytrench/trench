@@ -267,6 +267,7 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -281,6 +282,7 @@ export const entitiesRouter = createTRPCRouter({
             arrayDistinct(groupArray(label)) AS labels
           FROM event_entity_entity_labels
           WHERE id = '${input.id}'
+            AND dataset_id = '${input.datasetId}'
           GROUP BY entity_id, entity_type, entity_name;
         `,
         format: "JSONEachRow",

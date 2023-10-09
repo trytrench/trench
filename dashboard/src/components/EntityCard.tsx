@@ -7,13 +7,16 @@ import { type RouterOutputs } from "~/utils/api";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
+  datasetId: string;
 }
 
-export const EntityCard = ({ entity, relation }: Props) => {
+export const EntityCard = ({ entity, relation, datasetId }: Props) => {
+  const entityFeatures = entity.features ?? {};
+
   return (
     <Card>
       <div className="">
-        <Link href={`/entity/${entity.id}`}>
+        <Link href={`/datasets/${datasetId}/entity/${entity.id}`}>
           <div className="flex">
             <Title className="text-sm">
               {entity.type}: {entity.name}
@@ -42,12 +45,12 @@ export const EntityCard = ({ entity, relation }: Props) => {
         </div>
         <div className="h-4"></div>
         <SimpleGrid columns={5} spacing={2}>
-          {Object.entries(entity.features).map(([key, value], idx) => (
+          {Object.entries(entityFeatures).map(([key, value], idx) => (
             <Box key={key}>
               <Text className="font-semibold">{key}</Text>
               <Text className="truncate">
                 {value === 0
-                  ? 0
+                  ? "0"
                   : value === true
                   ? "True"
                   : value === false

@@ -129,7 +129,7 @@ export const Filter = ({ types, labels, features }: Props) => {
             });
           }}
         >
-          {features.map((feature) => (
+          {features?.map((feature) => (
             <SelectItem
               value={feature.feature}
               key={feature.feature}

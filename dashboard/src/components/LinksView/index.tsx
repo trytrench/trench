@@ -27,15 +27,18 @@ interface LinksViewProps {
   entityId: string;
   leftTypeFilter: string;
   onLeftTypeFilterChange?: (value: string) => void;
+  datasetId: string;
 }
 
 function LinksView({
   entityId,
   leftTypeFilter,
   onLeftTypeFilterChange,
+  datasetId,
 }: LinksViewProps) {
   const { data } = api.links.relatedEntities.useQuery(
     {
+      datasetId: datasetId,
       id: entityId ?? "",
       leftSideType: leftTypeFilter,
       limit: leftTypeFilter ? 20 : undefined,
@@ -158,6 +161,7 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
+                datasetId={datasetId}
               />
             );
           })}
@@ -193,6 +197,7 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
+              datasetId={datasetId}
             />
           );
         })}
@@ -227,10 +232,12 @@ interface LeftSideCardProps {
   onClick: () => void;
   onFilterClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
+  datasetId: string;
 }
 
 function LeftSideCard(props: LeftSideCardProps) {
   const { item, isActive, isSelected, onClick, onFilterClick, divRef } = props;
+  const { datasetId } = props;
 
   const isGroup = item.itemType === "group";
 
@@ -251,92 +258,91 @@ function LeftSideCard(props: LeftSideCardProps) {
   }
 
   return (
-    <Fragment key={item.id}>
-      <Card
-        className={clsx({
-          "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2":
-            true,
-          "opacity-30": !isActive,
-          "bg-blue-100": isSelected,
-        })}
-        ref={divRef}
-        onClick={onClick}
-      >
-        {isGroup ? (
-          <div className="flex gap-4">
-            <BoxesIcon className="my-auto text-blue-400" size={18} />
-            <div className="min-w-0">
-              <Text className="text-gray-400 font-semibold italic">
-                {entityCountStr}
-              </Text>
-            </div>
+    <Card
+      className={clsx({
+        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2":
+          true,
+        "opacity-30": !isActive,
+        "bg-blue-100": isSelected,
+      })}
+      ref={divRef}
+      onClick={onClick}
+    >
+      {isGroup ? (
+        <div className="flex gap-4">
+          <BoxesIcon className="my-auto text-blue-400" size={18} />
+          <div className="min-w-0">
+            <Text className="text-gray-400 font-semibold italic">
+              {entityCountStr}
+            </Text>
           </div>
-        ) : (
-          <div className="flex gap-4">
-            <BoxIcon className="my-auto text-blue-400" size={18} />
-            <div className="min-w-0">
-              <Text className="font-semibold text-black">{item.type}</Text>
-              <Text className="">{item.name}</Text>
-            </div>
+        </div>
+      ) : (
+        <div className="flex gap-4">
+          <BoxIcon className="my-auto text-blue-400" size={18} />
+          <div className="min-w-0">
+            <Text className="font-semibold text-black">{item.type}</Text>
+            <Text className="">{item.name}</Text>
           </div>
+        </div>
+      )}
+
+      <div className="flex gap-3 text-gray-400">
+        {isGroup && (
+          <button onClick={onFilterClick}>
+            <ListFilterIcon
+              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              size={18}
+            />
+          </button>
         )}
 
-        <div className="flex gap-3 text-gray-400">
-          {isGroup && (
-            <button onClick={onFilterClick}>
-              <ListFilterIcon
-                className="my-auto text-gray-400 hover:text-gray-500 transition"
-                size={18}
-              />
-            </button>
-          )}
+        <CardMenu
+          item={item}
+          parentActive={isActive}
+          left={true}
+          onFilterChange={onFilterClick}
+          datasetId={datasetId}
+        />
+      </div>
 
-          <CardMenu
-            item={item}
-            parentActive={isActive}
-            left={true}
-            onFilterChange={onFilterClick}
-          />
+      {/* the link number indicator (right side) */}
+      <div className="absolute left-[calc(100%+8px)] top-1 pointer-events-none select-none">
+        <div
+          color="gray"
+          className={`text-xs hover:brightness-[102%]  text-gray-700 ${
+            isSelected ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {linkCountStr}
         </div>
+      </div>
 
-        {/* the link number indicator (right side) */}
-        <div className="absolute left-[calc(100%+8px)] top-1 pointer-events-none select-none">
+      {!isGroup && item.isHidden && (
+        <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
           <div
-            color="gray"
-            className={`text-xs hover:brightness-[102%]  text-gray-700 ${
-              isSelected ? "opacity-100" : "opacity-0"
-            }`}
+            className="my-auto rounded-[200px] p-1 bg-white flex items-center group/eyeicon relative"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
           >
-            {linkCountStr}
-          </div>
-        </div>
-
-        {!isGroup && item.isHidden && (
-          <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
+            <Icon
+              icon={EyeOffIcon}
+              size="md"
+              color="gray"
+              className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
+            />
             <div
-              className="my-auto rounded-[200px] p-1 bg-white flex items-center group/eyeicon relative"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-            >
-              <Icon
-                icon={EyeOffIcon}
-                size="md"
-                color="gray"
-                className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
-              />
-              <div
-                className="absolute text-xs w-[8rem] text-center text-white font-semibold bg-[rgba(0,0,0,0.7)] rounded-md 
+              className="absolute text-xs w-[8rem] text-center text-white font-semibold bg-[rgba(0,0,0,0.7)] rounded-md 
                 p-0.5 bottom-full left-1/2 -translate-x-1/2 opacity-0 group-hover/eyeicon:opacity-100 transition-opacity pointer-events-none"
-              >
-                Too many links—not all are shown.
-              </div>
+            >
+              Too many links—not all are shown.
             </div>
           </div>
-        )}
-      </Card>
-    </Fragment>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -348,10 +354,12 @@ interface RightSideCardProps {
   isSelected: boolean;
   onClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
+  datasetId: string;
 }
 
 function RightSideCard(props: RightSideCardProps) {
   const { item, isActive, isSelected, onClick, divRef } = props;
+  const { datasetId } = props;
 
   return (
     <div key={item.id} ref={divRef}>
@@ -367,7 +375,12 @@ function RightSideCard(props: RightSideCardProps) {
           <div className="min-w-0 flex gap-2">
             <Text className="font-semibold text-black">{item.name}</Text>
           </div>
-          <CardMenu item={item} left={false} parentActive={isActive} />
+          <CardMenu
+            item={item}
+            left={false}
+            parentActive={isActive}
+            datasetId={datasetId}
+          />
         </div>
       </Card>
     </div>
@@ -381,10 +394,11 @@ interface CardMenuProps {
   left: boolean;
   parentActive: boolean;
   onFilterChange?: () => void;
+  datasetId: string;
 }
 
 function CardMenu(props: CardMenuProps) {
-  const { item, left, parentActive, onFilterChange } = props;
+  const { item, left, parentActive, onFilterChange, datasetId } = props;
   const isGroup = item.itemType === "group";
 
   const positionStyle = left
@@ -426,7 +440,7 @@ function CardMenu(props: CardMenuProps) {
 
                 {!isGroup && (
                   <a
-                    href={`/entity/${item.id}?tab=1`}
+                    href={`/datasets/${datasetId}/entity/${item.id}?tab=1`}
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
