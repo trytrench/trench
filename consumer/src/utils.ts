@@ -43,7 +43,8 @@ export async function runEvent(
 
   await Promise.all(
     allFeatures.map(async (name) => {
-      features[name] = (await execution.fetchValue(name)) as unknown;
+      const feature = await execution.fetchValue(name);
+      features[name] = feature;
     })
   );
 

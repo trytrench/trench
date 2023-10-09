@@ -149,14 +149,14 @@ model ProductionDataset {
   updatedAt DateTime @updatedAt
 
   dataset Dataset @relation(fields: [datasetId], references: [id])
-  datasetId String
+  datasetId BigInt
 
   name String
   description String?
 }
 
 model Dataset {
-  id String @id @default(dbgenerated("nanoid()"))
+  id BigInt @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
