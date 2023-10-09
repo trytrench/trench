@@ -18,14 +18,13 @@ import {
 } from "react";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
-import ButtonMenu from "./ButtonMenu";
 import { api } from "~/utils/api";
 import pluralize from "pluralize";
 import { LeftItem, RightItem } from "./types";
+import { Popover } from "@headlessui/react";
 
 interface LinksViewProps {
   entityId: string;
-  entityType: string;
   leftTypeFilter: string;
   onLeftTypeFilterChange?: (value: string) => void;
 }
@@ -156,7 +155,7 @@ function LinksView({
                   setRSelection(null);
                 }}
                 onFilterClick={() => {
-                  onLeftTypeFilterChange?.(item.id);
+                  onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
               />
@@ -219,6 +218,8 @@ export default Wrapped;
 
 // Helper components
 
+// Cards on the left side
+
 interface LeftSideCardProps {
   item: LeftItem;
   isActive: boolean;
@@ -240,6 +241,13 @@ function LeftSideCard(props: LeftSideCardProps) {
     } else {
       entityCountStr = `${item.entityCount} ${pluralize(item.type)}`;
     }
+  }
+
+  let linkCountStr = "";
+  if (item.linkCount >= INTERNAL_LIMIT) {
+    linkCountStr = `${INTERNAL_LIMIT}+`;
+  } else {
+    linkCountStr = `${item.linkCount}`;
   }
 
   return (
@@ -283,43 +291,56 @@ function LeftSideCard(props: LeftSideCardProps) {
             </button>
           )}
 
-          <ButtonMenu
-            entityId={item.id}
+          <CardMenu
+            item={item}
             parentActive={isActive}
-            isGroup={isGroup}
+            left={true}
+            onFilterChange={onFilterClick}
           />
         </div>
 
-        {!isGroup && item.isHidden && (
-          <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
-            <div className="my-auto rounded-[200px] p-1 bg-white flex items-center">
-              <Icon
-                icon={EyeOffIcon}
-                size="md"
-                color="gray"
-                className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
-              />
-            </div>
-          </div>
-        )}
-
         {/* the link number indicator (right side) */}
-        <div className="absolute left-[calc(100%+10px)] pointer-events-none select-none">
+        <div className="absolute left-[calc(100%+8px)] top-1 pointer-events-none select-none">
           <div
             color="gray"
             className={`text-xs hover:brightness-[102%]  text-gray-700 ${
               isSelected ? "opacity-100" : "opacity-0"
             }`}
           >
-            {item.linkCount}
+            {linkCountStr}
           </div>
         </div>
+
+        {!isGroup && item.isHidden && (
+          <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
+            <div
+              className="my-auto rounded-[200px] p-1 bg-white flex items-center group/eyeicon relative"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+            >
+              <Icon
+                icon={EyeOffIcon}
+                size="md"
+                color="gray"
+                className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
+              />
+              <div
+                className="absolute text-xs w-[8rem] text-center text-white font-semibold bg-[rgba(0,0,0,0.7)] rounded-md 
+                p-0.5 bottom-full left-1/2 -translate-x-1/2 opacity-0 group-hover/eyeicon:opacity-100 transition-opacity pointer-events-none"
+              >
+                Too many links—not all are shown.
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
     </Fragment>
   );
 }
 
-//
+// Cards on the right side
 
 interface RightSideCardProps {
   item: RightItem;
@@ -342,16 +363,86 @@ function RightSideCard(props: RightSideCardProps) {
         })}
         onClick={onClick}
       >
-        <div className="flex gap-4">
+        <div className="flex justify-between text-gray-400">
           <div className="min-w-0 flex gap-2">
             <Text className="font-semibold text-black">{item.name}</Text>
           </div>
-          <MoreHorizontalIcon
-            size={18}
-            className="my-auto text-gray-400 ml-auto mr-0"
-          />
+          <CardMenu item={item} left={false} parentActive={isActive} />
         </div>
       </Card>
     </div>
+  );
+}
+
+// The menu that appears when you click the three dots
+
+interface CardMenuProps {
+  item: LeftItem | RightItem;
+  left: boolean;
+  parentActive: boolean;
+  onFilterChange?: () => void;
+}
+
+function CardMenu(props: CardMenuProps) {
+  const { item, left, parentActive, onFilterChange } = props;
+  const isGroup = item.itemType === "group";
+
+  const positionStyle = left
+    ? "absolute top-0 -translate-y-1 z-10 left-full translate-x-3 ml-2 w-[10rem]"
+    : "absolute top-0 -translate-y-1 z-10 right-full mr-1 w-[10rem]";
+
+  return (
+    <Popover className="relative my-0 flex items-center -mr-1">
+      {({ open }) => (
+        <>
+          <Popover.Button
+            className={clsx({
+              "outline-none p-1 -my-1 rounded-full hover:bg-[rgba(0,0,0,0.05)] bg-blend-multiply transition group":
+                true,
+              "bg-[rgba(0,0,0,0.05)]": open,
+            })}
+            disabled={!parentActive}
+          >
+            <MoreHorizontalIcon
+              size={18}
+              className="group-hover:text-gray-500 transition"
+            />
+          </Popover.Button>
+
+          <Popover.Panel className={positionStyle}>
+            <div className="flex flex-col bg-white text-gray-700 border rounded-lg drop-shadow-md text-sm overflow-hidden font-semibold">
+              <div className="flex flex-col">
+                {left && (
+                  <a
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFilterChange?.();
+                    }}
+                    className="p-1 px-2 hover:bg-gray-50"
+                  >
+                    Filter by entity type
+                  </a>
+                )}
+
+                {!isGroup && (
+                  <a
+                    href={`/entity/${item.id}?tab=1`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className={clsx({
+                      "p-1 px-2 hover:bg-gray-50": true,
+                      "border-t": left,
+                    })}
+                  >
+                    Visit this entity
+                  </a>
+                )}
+              </div>
+            </div>
+          </Popover.Panel>
+        </>
+      )}
+    </Popover>
   );
 }

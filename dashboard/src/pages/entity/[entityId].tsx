@@ -150,8 +150,6 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
             </SelectItem>
           )) ?? []}
         </Select>
-        <Text className="whitespace-nowrap">during</Text>
-        <DateRangePicker />
       </div>
       <Divider className="mb-0 mt-4" />
       <LinksView
@@ -159,13 +157,6 @@ function RelatedEntities({ entityId }: { entityId?: string }) {
         leftTypeFilter={entityType}
         onLeftTypeFilterChange={setEntityType}
       />
-      {/* <LinksDisplay
-        entityId={entityId ?? ""}
-        entityFilter={{
-          entityType,
-        }}
-        onEntityFilterChange={setEntityType}
-      /> */}
     </>
   );
 }
