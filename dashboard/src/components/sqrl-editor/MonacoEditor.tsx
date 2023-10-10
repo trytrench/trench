@@ -22,7 +22,7 @@ export interface MonacoEditorProps {
   style?: React.CSSProperties;
   markers?: Omit<EditorApi.editor.IMarkerData, "relatedInformation">[];
   sqrlFunctions: FunctionInfoMap | null;
-  readonly?: boolean;
+  readOnly?: boolean;
 }
 
 function configureSqrlLanguage(
@@ -271,7 +271,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   style,
   markers,
   sqrlFunctions,
-  readonly,
+  readOnly,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const monacoEditorObj = useMonacoEditor();
@@ -279,7 +279,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const theme = isDarkMode ? "custom-dark" : "custom";
 
   useEffect(() => {
-    editorRef.current?.updateOptions({ theme, readOnly: readonly });
+    editorRef.current?.updateOptions({ theme, readOnly });
   }, [editorRef.current, theme]);
 
   useEffect(() => {
