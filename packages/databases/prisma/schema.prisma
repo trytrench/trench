@@ -24,6 +24,26 @@ model EventLog {
 
 }
 
+model OutputLog {
+  id       BigInt @id @default(autoincrement())
+  eventId   String
+  datasetId BigInt
+  data     Json
+
+  cursor OutputLogCursor?
+
+  @@unique([eventId, datasetId])
+}
+
+
+// Single row that represents the latest processed output log
+model OutputLogCursor {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  latestOutputLog OutputLog? @relation(fields: [latestOutputLogId], references: [id])
+  latestOutputLogId BigInt? @unique
+}
+
 model EventType {
   id   String @id
   name String
@@ -176,6 +196,8 @@ model DatasetJob {
   dataset Dataset @relation(fields: [datasetId], references: [id])
   datasetId BigInt @id
 }
+
+
 
 model EntityLabelType {
   id          String   @id @default(dbgenerated("nanoid()"))

@@ -1,11 +1,8 @@
 import { db } from "databases";
 import { getUnixTime } from "date-fns";
-import { runEvent } from "sqrl-helpers";
+import { type EventOutput } from "sqrl-helpers/src/utils/runEvent";
 
-export async function batchInsertEvents(
-  events: Awaited<ReturnType<typeof runEvent>>[],
-  datasetId: bigint
-) {
+export async function batchInsertEvents(events: EventOutput[]) {
   await db.insert({
     table: "event_labels",
     values: events.flatMap((event) =>
@@ -15,7 +12,7 @@ export async function batchInsertEvents(
         label: label.label,
         type: label.type,
         status: "ADDED",
-        dataset_id: datasetId,
+        dataset_id: event.datasetId,
       }))
     ),
     format: "JSONEachRow",
@@ -35,7 +32,7 @@ export async function batchInsertEvents(
               type: label.labelType,
               label: label.label,
               status: "ADDED",
-              dataset_id: datasetId,
+              dataset_id: event.datasetId,
             }))
           )
       ),
@@ -58,7 +55,7 @@ export async function batchInsertEvents(
             entity_type: entity.type,
             entity_features: entity.features,
             relation: entity.relation,
-            dataset_id: datasetId,
+            dataset_id: event.datasetId,
           }))
         : {
             created_at: getUnixTime(new Date()),
@@ -67,7 +64,7 @@ export async function batchInsertEvents(
             event_timestamp: getUnixTime(event.timestamp),
             event_data: event.data,
             event_features: event.features,
-            dataset_id: datasetId,
+            dataset_id: event.datasetId,
           }
     ),
     format: "JSONEachRow",

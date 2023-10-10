@@ -3,6 +3,8 @@ import { createContext } from "./createContext";
 import { SqrlManipulator } from "../SqrlManipulator";
 import { Event } from "../types";
 
+export type EventOutput = Awaited<ReturnType<typeof runEvent>>;
+
 export async function runEvent(
   event: Event,
   executable: Executable,
@@ -48,6 +50,7 @@ export async function runEvent(
 
   return {
     id: event.id,
+    datasetId: datasetId.toString(),
     type: event.type,
     timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
     data: event.data,

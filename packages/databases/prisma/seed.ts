@@ -59,6 +59,7 @@ async function main() {
   // ID 0 is reserved for the readonly dataset
   await prisma.dataset.create({
     data: {
+      id: 0,
       name: "Production (Readonly) Dataset",
       description: "Click here to access the event feed!",
       rules: {},
@@ -72,12 +73,21 @@ async function main() {
       description: "Click here to access the event feed!",
       rules: fileData as any,
       isProduction: true,
+      datasetJob: {
+        create: {},
+      },
     },
   });
 
   await prisma.productionDatasetLog.create({
     data: {
       datasetId: firstDataset.id,
+    },
+  });
+
+  await prisma.outputLogCursor.create({
+    data: {
+      latestOutputLogId: null,
     },
   });
 }
