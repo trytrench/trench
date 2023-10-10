@@ -56,12 +56,28 @@ async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
 async function main() {
   const fileData = await readTextAndSqrlFiles(__dirname + "/rules");
 
+  // ID 0 is reserved for the readonly dataset
+  await prisma.dataset.create({
+    data: {
+      name: "Production (Readonly) Dataset",
+      description: "Click here to access the event feed!",
+      rules: {},
+      isProduction: true,
+    },
+  });
+
   const firstDataset = await prisma.dataset.create({
     data: {
       name: "Starter Dataset",
       description: "Click here to access the event feed!",
       rules: fileData as any,
       isProduction: true,
+    },
+  });
+
+  await prisma.productionDatasetLog.create({
+    data: {
+      datasetId: firstDataset.id,
     },
   });
 }

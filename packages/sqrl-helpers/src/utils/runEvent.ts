@@ -6,7 +6,7 @@ import { Event } from "../types";
 export async function runEvent(
   event: Event,
   executable: Executable,
-  datasetId: string
+  datasetId: bigint
 ) {
   const ctx = createContext(datasetId);
   const manipulator = new SqrlManipulator();
