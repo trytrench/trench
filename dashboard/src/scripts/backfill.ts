@@ -1,95 +1,17 @@
-import { compileSqrl } from "~/lib/compileSqrl";
-import { createSqrlInstance } from "~/lib/createSqrlInstance";
-import { batchUpsert, runEvent } from "~/lib/sqrlExecution";
-import { prisma } from "~/server/db";
-import data from "./loadData";
+import { prisma } from "databases";
+import data from "./data.json";
+import { type Event } from "sqrl-helpers/src";
+import { ulid } from "ulid";
+import { getUnixTime } from "date-fns";
 
-class Queue {
-  tasks: (() => Promise<void>)[];
-  running: boolean;
-
-  constructor() {
-    this.tasks = [];
-    this.running = false;
-  }
-
-  enqueue(task: () => Promise<void>) {
-    this.tasks.push(task);
-  }
-
-  async process() {
-    if (this.running) return;
-    this.running = true;
-    while (this.tasks.length > 0) {
-      const task = this.tasks.shift();
-      try {
-        await task?.();
-        // console.log("Processed task. Tasks remaining:", this.tasks.length);
-      } catch (e) {
-        console.error("An error occurred while processing the task:", e);
-      }
-    }
-
-    this.running = false;
-  }
-}
-
-const queue = new Queue();
-
-const msgs = data;
+const events = data as Event[];
 
 async function main() {
-  const instance = await createSqrlInstance({
-    // config: {
-    //   "state.allow-in-memory": true,
-    // },
-    config: {
-      "redis.address": process.env.REDIS_URL,
-    },
-  });
-
-  const dataset = await prisma.dataset.findFirstOrThrow();
-  const fileData =
-    (dataset.rules as { code: string; name: string }[]).reduce(
-      (acc, file) => {
-        acc[file.name] = file.code;
-        return acc;
-      },
-      {} as Record<string, string>
-    ) || {};
-
-  const { executable } = await compileSqrl(instance, fileData);
-
-  const BATCH_SIZE = 3000;
-
-  for (let i = 0; i < msgs.length; i += BATCH_SIZE) {
-    const batch = msgs.slice(i, i + BATCH_SIZE);
-    const start = i;
-    const end = Math.min(i + BATCH_SIZE, msgs.length);
-
-    const timerMsg = `Processed records ${start} to ${end} of ${
-      msgs.length
-    } (${Math.round((end / msgs.length) * 100)}%)`;
-
-    console.time(timerMsg);
-
-    const results: Awaited<ReturnType<typeof runEvent>>[] = [];
-    for (const msg of batch) {
-      try {
-        results.push(await runEvent(msg, executable));
-      } catch (e) {
-        console.error(msg);
-        console.error(e);
-      }
-    }
-    console.timeEnd(timerMsg);
-
-    queue.enqueue(() => batchUpsert(results, dataset.id));
-    queue.process().catch(console.error);
-  }
-
-  process.on("SIGINT", () => {
-    process.exit(0);
+  await prisma.eventLog.createMany({
+    data: events.map((event) => ({
+      ...event,
+      id: ulid(getUnixTime(new Date(event.timestamp))),
+    })),
   });
 }
 
