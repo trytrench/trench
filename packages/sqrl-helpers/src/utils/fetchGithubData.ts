@@ -6,7 +6,7 @@ const parseDay = (day: cheerio.Cheerio<cheerio.Element>) => {
   return {
     date: day.attr("data-date"),
     count: parseInt(day.text().split(" ")[0], 10) || 0,
-    intensity: day.attr("data-level") || 0,
+    intensity: day.attr("data-level") ?? 0,
   };
 };
 
