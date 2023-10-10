@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   sqrl-redis-functions@0.6.10:
-    hash: yeeziso4m7x7ypc3j35vkognz4
+    hash: lqvxak7v2sy3zokk6jtbwvk3ea
     path: patches/sqrl-redis-functions@0.6.10.patch
 
 importers:
@@ -351,7 +351,7 @@ importers:
         version: 0.6.10
       sqrl-redis-functions:
         specifier: ^0.6.10
-        version: 0.6.10(patch_hash=yeeziso4m7x7ypc3j35vkognz4)
+        version: 0.6.10(patch_hash=lqvxak7v2sy3zokk6jtbwvk3ea)
       sqrl-text-functions:
         specifier: ^0.6.10
         version: 0.6.10
@@ -7797,7 +7797,7 @@ packages:
       sqrl: 0.6.10
     dev: false
 
-  /sqrl-redis-functions@0.6.10(patch_hash=yeeziso4m7x7ypc3j35vkognz4):
+  /sqrl-redis-functions@0.6.10(patch_hash=lqvxak7v2sy3zokk6jtbwvk3ea):
     resolution: {integrity: sha512-Rr2GHWILJjbuzjRWBTGQjPjE4KhquWkkecUSbl/mTcqQo7I53D2LcTJ11XuntirqzGu1TCxH7mp1lTl3xuXXKA==}
     engines: {node: '>=12.0.0'}
     dependencies:

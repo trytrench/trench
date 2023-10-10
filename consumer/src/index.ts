@@ -82,7 +82,10 @@ if (!isMainThread) {
           [lastEventLogId]
         );
 
-        const events = eventsRes.rows as Event[];
+        const events = (eventsRes.rows as Event[]).map((row) => ({
+          ...row,
+          timestamp: row.timestamp.toISOString(),
+        }));
 
         if (events.length === 0) {
           // No events to process, commit the transaction and continue

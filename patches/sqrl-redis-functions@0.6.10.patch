@@ -143,10 +143,20 @@ index 80541e6015a2ab28aeef3352e5fbeaf3a5d2b932..f8ea3f1aa1f41e6d9545c167508c8f6d
          argstring: "entity, label",
          docstring: "Returns true if the provided entity has the given label",
 diff --git a/lib/services/RedisLabelService.js b/lib/services/RedisLabelService.js
-index 626d8d5ec44584e417a5fe8876b3daa080ace04c..ee8ce9b893f112cfefe4e6be75bdd03db99295c7 100644
+index 626d8d5ec44584e417a5fe8876b3daa080ace04c..feae89b57de898f45e045d7576e59c3d9ed4c3c4 100644
 --- a/lib/services/RedisLabelService.js
 +++ b/lib/services/RedisLabelService.js
-@@ -15,14 +15,15 @@ class RedisLabelService {
+@@ -8,21 +8,23 @@ class RedisLabelService {
+         this.redis = redis;
+         this.prefix = prefix;
+     }
+-    addLabel(manipulator, entity, label, cause) {
++    addEntityLabel(manipulator, entity, type, label, cause) {
++        manipulator.addEntityLabel(cause, entity, type, label);
+         manipulator.addCallback(async (ctx) => {
+-            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), label);
++            const key = (0, RedisInterface_1.createRedisKey)(ctx.requireDatabaseSet(), this.prefix, "label", entity.getNumberString(), type, label);
+             await this.redis.set(ctx, key, "1");
              await this.redis.expire(ctx, key, EXPIRY);
          });
      }
