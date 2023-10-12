@@ -13,6 +13,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -25,7 +26,8 @@ export const eventsRouter = createTRPCRouter({
           FROM 
               event_entity
           WHERE 
-              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              dataset_id = '${input.datasetId}'
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
               time,
@@ -98,6 +100,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -111,7 +114,8 @@ export const eventsRouter = createTRPCRouter({
           FROM 
               event_entity_event_labels
           WHERE 
-              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              dataset_id = '${input.datasetId}'
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
               time,
@@ -225,6 +229,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -236,7 +241,7 @@ export const eventsRouter = createTRPCRouter({
               COUNT(DISTINCT event_id) AS count
           FROM 
               event_entity_event_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
               AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
@@ -332,6 +337,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -342,7 +348,7 @@ export const eventsRouter = createTRPCRouter({
               COUNT(DISTINCT event_id) AS count
           FROM 
               event_entity
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
               AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 

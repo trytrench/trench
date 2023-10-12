@@ -94,7 +94,8 @@ export default function FeatureFilter({ features, onAddFilter }: Props) {
 
   const selectedFeatureDataType = useMemo(
     () =>
-      features.find((feature) => feature.feature === selectedFeature)?.dataType,
+      features?.find((feature) => feature.feature === selectedFeature)
+        ?.dataType,
     [features, selectedFeature]
   );
 

@@ -8,36 +8,41 @@ import { api } from "../utils/api";
 
 interface Props {
   entityId?: string;
+  datasetId: string;
 }
 
-export default function EventsDashboard({ entityId }: Props) {
+export default function EventsDashboard({ entityId, datasetId }: Props) {
   const [dateRange, setDateRange] = useQueryParams({
     from: DateParam,
     to: DateParam,
   });
 
+  console.log(dateRange);
+
   const { data: eventTypeBins } = api.events.getEventTypeTimeData.useQuery(
-    { start: dateRange.from!, end: dateRange.to!, entityId },
-    { enabled: !!dateRange.from && !!dateRange.to }
+    { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
+    { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
   );
 
   const { data: eventTypeDists } =
     api.events.getEventTypeDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId },
-      { enabled: !!dateRange.from && !!dateRange.to }
+      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
+      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
     );
 
   const { data: eventLabelDists } =
     api.events.getEventLabelDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId },
-      { enabled: !!dateRange.from && !!dateRange.to }
+      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
+      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
     );
 
   const { data: eventLabelTimeData } =
     api.events.getEventLabelTimeData.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId },
-      { enabled: !!dateRange.from && !!dateRange.to }
+      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
+      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
     );
+
+  console.log(eventTypeDists);
 
   const eventTypeBarData = useMemo(
     () =>

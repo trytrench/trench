@@ -7,13 +7,18 @@ import { type RouterOutputs } from "~/utils/api";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
+  datasetId: string;
 }
 
-export const EntityCard = ({ entity, relation }: Props) => {
+export const EntityCard = ({ entity, relation, datasetId }: Props) => {
+  const entityFeatures = entity.features ?? {};
+
+  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
+
   return (
     <Card>
       <div className="">
-        <Link href={`/entity/${entity.id}`}>
+        <Link href={`/datasets/${datasetId}/entity/${entity.id}`}>
           <div className="flex">
             <Title className="text-sm">
               {entity.type}: {entity.name}
@@ -28,8 +33,8 @@ export const EntityCard = ({ entity, relation }: Props) => {
           </Text>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entity.labels.length > 0 ? (
-            entity.labels.map((label) => {
+          {entityLabels.length > 0 ? (
+            entityLabels.map((label) => {
               return (
                 <Badge key={label} size="xs">
                   {label}
@@ -41,22 +46,22 @@ export const EntityCard = ({ entity, relation }: Props) => {
           )}
         </div>
         <div className="h-4"></div>
-        <SimpleGrid columns={5} spacing={2}>
-          {Object.entries(entity.features).map(([key, value], idx) => (
+        <div className="grid grid-cols-5 gap-x-8 gap-y-4">
+          {Object.entries(entityFeatures).map(([key, value], idx) => (
             <Box key={key}>
               <Text className="font-semibold">{key}</Text>
               <Text className="truncate">
                 {value === 0
-                  ? 0
+                  ? "0"
                   : value === true
                   ? "True"
                   : value === false
                   ? "False"
-                  : value || "-"}
+                  : (value as string) || "-"}
               </Text>
             </Box>
           ))}
-        </SimpleGrid>
+        </div>
       </div>
     </Card>
   );

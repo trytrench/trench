@@ -3,6 +3,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { uniqBy } from "lodash";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -18,6 +19,7 @@ export const listsRouter = createTRPCRouter({
           .optional(),
         limit: z.number().optional(),
         cursor: z.number().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -34,7 +36,7 @@ export const listsRouter = createTRPCRouter({
             argMax(entity_features, event_timestamp) AS features,
             arrayDistinct(groupArray(label)) AS labels
           FROM event_entity_entity_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
           ${
             filters?.entityType
               ? `AND entity_type = '${filters.entityType}'`
@@ -179,16 +181,20 @@ export const listsRouter = createTRPCRouter({
           features: JSON.parse(event.event_features),
           timestamp: new Date(event.event_timestamp),
           labels: event.event_labels,
-          entities: event.entity_ids.filter(Boolean).map((id, index) => {
-            return {
-              id: id,
-              type: event.entity_types[index],
-              name: event.entity_names[index],
-              relation: event.entity_relations[index],
-              // features: JSON.parse(event.entity_features[index]),
-              labels: [],
-            };
-          }),
+          entities: uniqBy(
+            // deduplicate entities
+            event.entity_ids.filter(Boolean).map((id, index) => {
+              return {
+                id: id,
+                type: event.entity_types[index],
+                name: event.entity_names[index],
+                relation: event.entity_relations[index],
+                features: JSON.parse(event.entity_features[index] ?? "{}"),
+                labels: [],
+              };
+            }),
+            (entity) => entity.id
+          ),
         })),
       };
     }),
