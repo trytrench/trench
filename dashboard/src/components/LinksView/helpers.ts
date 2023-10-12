@@ -3,7 +3,7 @@ import { LeftItem, LinkItem, RawLeft, RawLinks, RightItem } from "./types";
 
 export const INTERNAL_LIMIT = 1000;
 export const GROUP_THRESHOLD = 3;
-export const HIDE_LINKS_THRESHOLD = 20;
+export const HIDE_LINKS_THRESHOLD = 30;
 export const MAX_ENTITIES_PER_GROUP = 10;
 
 type ProcessInput = {

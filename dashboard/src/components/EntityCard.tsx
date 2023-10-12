@@ -13,6 +13,8 @@ interface Props {
 export const EntityCard = ({ entity, relation, datasetId }: Props) => {
   const entityFeatures = entity.features ?? {};
 
+  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
+
   return (
     <Card>
       <div className="">
@@ -31,8 +33,8 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
           </Text>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entity.labels.length > 0 ? (
-            entity.labels.map((label) => {
+          {entityLabels.length > 0 ? (
+            entityLabels.map((label) => {
               return (
                 <Badge key={label} size="xs">
                   {label}
@@ -44,7 +46,7 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
           )}
         </div>
         <div className="h-4"></div>
-        <SimpleGrid columns={5} spacing={2}>
+        <div className="grid grid-cols-5 gap-x-8 gap-y-4">
           {Object.entries(entityFeatures).map(([key, value], idx) => (
             <Box key={key}>
               <Text className="font-semibold">{key}</Text>
@@ -55,11 +57,11 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
                   ? "True"
                   : value === false
                   ? "False"
-                  : value || "-"}
+                  : (value as string) || "-"}
               </Text>
             </Box>
           ))}
-        </SimpleGrid>
+        </div>
       </div>
     </Card>
   );

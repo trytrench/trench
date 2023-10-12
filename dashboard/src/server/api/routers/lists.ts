@@ -3,6 +3,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { uniqBy } from "lodash";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -180,16 +181,20 @@ export const listsRouter = createTRPCRouter({
           features: JSON.parse(event.event_features),
           timestamp: new Date(event.event_timestamp),
           labels: event.event_labels,
-          entities: event.entity_ids.filter(Boolean).map((id, index) => {
-            return {
-              id: id,
-              type: event.entity_types[index],
-              name: event.entity_names[index],
-              relation: event.entity_relations[index],
-              // features: JSON.parse(event.entity_features[index]),
-              labels: [],
-            };
-          }),
+          entities: uniqBy(
+            // deduplicate entities
+            event.entity_ids.filter(Boolean).map((id, index) => {
+              return {
+                id: id,
+                type: event.entity_types[index],
+                name: event.entity_names[index],
+                relation: event.entity_relations[index],
+                features: JSON.parse(event.entity_features[index] ?? "{}"),
+                labels: [],
+              };
+            }),
+            (entity) => entity.id
+          ),
         })),
       };
     }),

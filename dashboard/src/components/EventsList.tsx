@@ -25,6 +25,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
     fetchNextPage,
     isLoading: eventsLoading,
     isFetchingNextPage,
+    hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
       eventFilters: {
@@ -39,7 +40,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
     {
       enabled: !!datasetId,
       getNextPageParam: (lastPage, pages) => {
-        if (lastPage.rows.length < limit) return false;
+        if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
     }
@@ -55,16 +56,15 @@ export default function EventsList({ entityId, datasetId }: Props) {
 
   return (
     <>
-      {selectedEvent && (
-        <EventDrawer
-          datasetId={datasetId}
-          isOpen={!!selectedEvent}
-          onClose={() => {
-            setSelectedEvent(null);
-          }}
-          selectedEvent={selectedEvent}
-        />
-      )}
+      <EventDrawer
+        datasetId={datasetId}
+        isOpen={!!selectedEvent}
+        onClose={() => {
+          setSelectedEvent(null);
+        }}
+        selectedEvent={selectedEvent}
+      />
+
       <div className="flex justify-end py-2 px-4 border-b border-b-tremor-border">
         <div className="flex  bg-tremor-background-subtle rounded-md p-0.5">
           <div onClick={() => setView("grid")}>
@@ -119,20 +119,22 @@ export default function EventsList({ entityId, datasetId }: Props) {
                 <EventCard key={event.id} event={event} />
               )
             )}
-            <div className="self-center my-4">
-              <Button
-                size="xs"
-                variant="secondary"
-                onClick={() => {
-                  fetchNextPage().catch((err) => {
-                    console.error(err);
-                  });
-                }}
-                loading={isFetchingNextPage}
-              >
-                Fetch more events
-              </Button>
-            </div>
+            {hasNextPage && (
+              <div className="self-center my-4">
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={() => {
+                    fetchNextPage().catch((err) => {
+                      console.error(err);
+                    });
+                  }}
+                  loading={isFetchingNextPage}
+                >
+                  Fetch more events
+                </Button>
+              </div>
+            )}
           </>
         )}
 

@@ -4,24 +4,16 @@ import clsx from "clsx";
 import {
   BoxesIcon,
   BoxIcon,
+  ExternalLinkIcon,
   EyeOffIcon,
   ListFilterIcon,
-  MoreHorizontalIcon,
 } from "lucide-react";
-import {
-  useState,
-  useRef,
-  useLayoutEffect,
-  Fragment,
-  useEffect,
-  useMemo,
-} from "react";
+import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
 import { api } from "~/utils/api";
 import pluralize from "pluralize";
 import { LeftItem, RightItem } from "./types";
-import { Popover } from "@headlessui/react";
 
 interface LinksViewProps {
   entityId: string;
@@ -288,22 +280,27 @@ function LeftSideCard(props: LeftSideCardProps) {
       )}
 
       <div className="flex gap-3 text-gray-400">
-        {isGroup && (
+        {isGroup ? (
           <button onClick={onFilterClick}>
             <ListFilterIcon
               className="my-auto text-gray-400 hover:text-gray-500 transition"
               size={18}
             />
           </button>
+        ) : (
+          <a
+            className="my-auto text-gray-400"
+            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <ExternalLinkIcon
+              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              size={18}
+            />
+          </a>
         )}
-
-        <CardMenu
-          item={item}
-          parentActive={isActive}
-          left={true}
-          onFilterChange={onFilterClick}
-          datasetId={datasetId}
-        />
       </div>
 
       {/* the link number indicator (right side) */}
@@ -375,88 +372,20 @@ function RightSideCard(props: RightSideCardProps) {
           <div className="min-w-0 flex gap-2">
             <Text className="font-semibold text-black">{item.name}</Text>
           </div>
-          <CardMenu
-            item={item}
-            left={false}
-            parentActive={isActive}
-            datasetId={datasetId}
-          />
+          <a
+            className="my-auto text-gray-400"
+            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <ExternalLinkIcon
+              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              size={18}
+            />
+          </a>
         </div>
       </Card>
     </div>
-  );
-}
-
-// The menu that appears when you click the three dots
-
-interface CardMenuProps {
-  item: LeftItem | RightItem;
-  left: boolean;
-  parentActive: boolean;
-  onFilterChange?: () => void;
-  datasetId: string;
-}
-
-function CardMenu(props: CardMenuProps) {
-  const { item, left, parentActive, onFilterChange, datasetId } = props;
-  const isGroup = item.itemType === "group";
-
-  const positionStyle = left
-    ? "absolute top-0 -translate-y-1 z-10 left-full translate-x-3 ml-2 w-[10rem]"
-    : "absolute top-0 -translate-y-1 z-10 right-full mr-1 w-[10rem]";
-
-  return (
-    <Popover className="relative my-0 flex items-center -mr-1">
-      {({ open }) => (
-        <>
-          <Popover.Button
-            className={clsx({
-              "outline-none p-1 -my-1 rounded-full hover:bg-[rgba(0,0,0,0.05)] bg-blend-multiply transition group":
-                true,
-              "bg-[rgba(0,0,0,0.05)]": open,
-            })}
-            disabled={!parentActive}
-          >
-            <MoreHorizontalIcon
-              size={18}
-              className="group-hover:text-gray-500 transition"
-            />
-          </Popover.Button>
-
-          <Popover.Panel className={positionStyle}>
-            <div className="flex flex-col bg-white text-gray-700 border rounded-lg drop-shadow-md text-sm overflow-hidden font-semibold">
-              <div className="flex flex-col">
-                {left && (
-                  <a
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onFilterChange?.();
-                    }}
-                    className="p-1 px-2 hover:bg-gray-50"
-                  >
-                    Filter by entity type
-                  </a>
-                )}
-
-                {!isGroup && (
-                  <a
-                    href={`/datasets/${datasetId}/entity/${item.id}?tab=1`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className={clsx({
-                      "p-1 px-2 hover:bg-gray-50": true,
-                      "border-t": left,
-                    })}
-                  >
-                    Visit this entity
-                  </a>
-                )}
-              </div>
-            </div>
-          </Popover.Panel>
-        </>
-      )}
-    </Popover>
   );
 }

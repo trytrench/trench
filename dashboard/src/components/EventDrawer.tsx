@@ -4,43 +4,49 @@ import {
   DrawerCloseButton,
   DrawerContent,
   DrawerHeader,
+  DrawerOverlay,
 } from "@chakra-ui/react";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { Badge, List, ListItem, Text } from "@tremor/react";
 import { format } from "date-fns";
+import { uniq } from "lodash";
 import { useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
 import { RouterOutputs, api } from "~/utils/api";
 
 export function EventDrawer(props: {
   datasetId: string;
-  selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number];
+  selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number] | null;
   isOpen: boolean;
   onClose: () => void;
 }) {
   const { isOpen, selectedEvent, onClose, datasetId } = props;
   const [expandData, setExpandData] = useState(false);
 
+  const eventLabels = uniq(
+    selectedEvent?.labels?.filter((label) => label !== "") ?? []
+  );
+
   return (
     <Drawer size="lg" isOpen={isOpen} placement="right" onClose={onClose}>
-      {/* <DrawerOverlay /> */}
-      <DrawerContent transform="none !important">
+      <DrawerOverlay />
+      <DrawerContent>
         <DrawerCloseButton />
         <DrawerHeader>Event</DrawerHeader>
 
         <DrawerBody>
           <div>
-            {selectedEvent?.labels.map((label) => {
-              return (
-                <Badge
-                  key={label.id}
-                  color={label.color}
-                  className="cursor-pointer"
-                >
-                  {label.name}
-                </Badge>
-              );
-            })}
+            {eventLabels.length > 0 ? (
+              eventLabels.map((label) => {
+                return (
+                  <Badge key={label} className="cursor-pointer">
+                    {label}
+                  </Badge>
+                );
+              })
+            ) : (
+              <Badge color="neutral">No labels</Badge>
+            )}
           </div>
           <div className="h-4"></div>
           <List>

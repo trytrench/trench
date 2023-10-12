@@ -27,10 +27,11 @@ import {
 } from "use-query-params";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import EventsDashboard from "~/components/EventsDashboard";
-import EventsList from "~/components/EventsList";
+import EntityEventsList from "~/components/EntityEventsList";
 import { api } from "~/utils/api";
 import { Navbar } from "../../../../components/Navbar";
 import LinksView from "~/components/LinksView";
+import { ListIcon } from "lucide-react";
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -122,6 +123,9 @@ export default function Home() {
     to: DateParam,
   });
 
+  const entityLabels =
+    entityData?.labels?.filter((label) => label !== "") ?? [];
+
   return (
     <>
       <Navbar />
@@ -154,9 +158,9 @@ export default function Home() {
                 <Title className="shrink-0">Labels</Title>
               </div>
               <div className="h-4"></div>
-              {!!entityData?.labels?.length ? (
+              {entityLabels.length ? (
                 <div className="flex flex-row flex-wrap">
-                  {entityData.labels.map((label) => (
+                  {entityLabels.map((label) => (
                     <Badge key={label}>{label}</Badge>
                   ))}
                 </div>
@@ -218,7 +222,7 @@ export default function Home() {
                   </div>
                 </TabPanel>
                 <TabPanel>
-                  <EventsList entityId={entityId} datasetId={datasetId} />
+                  <EntityEventsList entityId={entityId} datasetId={datasetId} />
                 </TabPanel>
                 <TabPanel>
                   <div className="col-span-2">

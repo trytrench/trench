@@ -58,6 +58,7 @@ function EntitiesPage() {
     isLoading: entitiesLoading,
     fetchNextPage,
     isFetchingNextPage,
+    hasNextPage,
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
       entityFilters: {
@@ -71,7 +72,7 @@ function EntitiesPage() {
     },
     {
       getNextPageParam: (lastPage, pages) => {
-        if (lastPage.rows.length < limit) return false;
+        if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
       enabled: !!datasetId,
@@ -103,7 +104,7 @@ function EntitiesPage() {
           )}
         </div>
         <div className="relative flex-1">
-          <div className="h-full flex flex-col gap-4 p-8 overflow-y-auto">
+          <div className="h-full flex flex-col gap-4 px-8 py-4 overflow-y-auto">
             {entitiesLoading ? (
               <Spinner alignSelf="center" mt={3} />
             ) : (
@@ -117,24 +118,26 @@ function EntitiesPage() {
                     />
                   );
                 })}
-                <div className="self-center my-4">
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    onClick={() => {
-                      fetchNextPage().catch((err) => {
-                        console.error(err);
-                      });
-                    }}
-                    loading={isFetchingNextPage}
-                  >
-                    Fetch more events
-                  </Button>
-                </div>
+                {hasNextPage && (
+                  <div className="self-center my-4">
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      onClick={() => {
+                        fetchNextPage().catch((err) => {
+                          console.error(err);
+                        });
+                      }}
+                      loading={isFetchingNextPage}
+                    >
+                      Fetch more entities
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </div>
-          <div className="absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
         </div>
       </div>
     </>
