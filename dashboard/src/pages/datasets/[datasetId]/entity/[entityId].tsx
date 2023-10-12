@@ -27,7 +27,7 @@ import {
 } from "use-query-params";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import EventsDashboard from "~/components/EventsDashboard";
-import EntityEventsList from "~/components/EntityEventsList";
+import EventsList from "~/components/EventsList";
 import { api } from "~/utils/api";
 import { Navbar } from "../../../../components/Navbar";
 import LinksView from "~/components/LinksView";
@@ -222,7 +222,7 @@ export default function Home() {
                   </div>
                 </TabPanel>
                 <TabPanel>
-                  <EntityEventsList entityId={entityId} datasetId={datasetId} />
+                  <EventsList entityId={entityId} datasetId={datasetId} />
                 </TabPanel>
                 <TabPanel>
                   <div className="col-span-2">
