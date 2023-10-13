@@ -48,7 +48,8 @@ const UNSAVED_CHANGES_MESSAGE =
 export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
   const { mutateAsync: createDataset } = api.datasets.create.useMutation();
   const { mutateAsync: createRelease } = api.releases.create.useMutation();
-  const { data: releases } = api.releases.list.useQuery();
+  const { data: releases, refetch: refetchReleases } =
+    api.releases.list.useQuery();
 
   const lastSourcesRef = useRef();
   const [compileStatus, setCompileStatus] = useState<{
@@ -86,7 +87,7 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
 
   useEffect(() => {
     setSources(files);
-    setCurrentFileName("");
+    setCurrentFileName(Object.keys(files)[0] ?? "");
   }, [files]);
 
   const hasUnsavedChanges = useMemo(
@@ -164,6 +165,8 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
               projectId: releases?.[0]?.projectId,
             })
               .then(() => {
+                setIsEditing(false);
+                refetchReleases();
                 toast({ title: "Release created", status: "success" });
               })
               .catch((error) => {
@@ -171,7 +174,7 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
               });
             onPublishModalClose();
           }}
-          initialVersion="0.0.0"
+          initialVersion={release.version}
         />
 
         <BackfillModal

@@ -29,6 +29,7 @@ const Page: NextPageWithLayout = () => {
     <DatasetEditor
       release={currentRelease}
       onPreviewRelease={setCurrentRelease}
+      key={currentRelease.id}
     />
   );
 };
