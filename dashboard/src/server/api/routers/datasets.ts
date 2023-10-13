@@ -10,11 +10,11 @@ export const datasetsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.prisma.dataset.findUnique({
         where: { id: input.id },
+        include: {
+          release: true,
+        },
       });
     }),
-  listProduction: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.productionDataset.findMany();
-  }),
   create: publicProcedure
     .input(
       z.object({

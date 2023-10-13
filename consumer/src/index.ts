@@ -45,7 +45,7 @@ if (!isMainThread) {
         await client.query("BEGIN");
 
         const res = await client.query(`
-        SELECT "id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
+        SELECT "id", "lastEventLogId", "backfillFrom", "backfillTo", "code"
         FROM "Dataset"
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
@@ -58,16 +58,14 @@ if (!isMainThread) {
         const randomIndex = Math.floor(Math.random() * numDatasets);
         const dataset = res.rows[randomIndex];
 
-        type FileRow = { name: string; code: string };
-
         const {
           id: datasetId,
           lastEventLogId,
-          rules,
+          code,
         } = dataset as {
           id: bigint;
           lastEventLogId: number;
-          rules: FileRow[];
+          code: Record<string, string>;
         };
 
         const eventsRes = await client.query(
@@ -93,15 +91,7 @@ if (!isMainThread) {
           continue;
         }
 
-        const fileData =
-          rules.reduce(
-            (acc, file) => {
-              acc[file.name] = file.code;
-              return acc;
-            },
-            {} as Record<string, string>
-          ) || {};
-        await processEvents(events, fileData, datasetId);
+        await processEvents(events, code, datasetId);
 
         const newLastEventId = events.length
           ? events[events.length - 1]!.id

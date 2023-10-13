@@ -2,16 +2,16 @@ import { Skeleton, Spinner } from "@chakra-ui/react";
 import { Button, Title } from "@tremor/react";
 import { Navbar } from "~/components/Navbar";
 import { api } from "~/utils/api";
-
 import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
 import { useMemo } from "react";
 import { useRouter } from "next/router";
+import type { NextPageWithLayout } from "~/pages/_app";
+import AppLayout from "~/components/AppLayout";
 
-function EntitiesPage() {
+const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const datasetId = router.query.datasetId as string;
-
   const { type, labels, features, sortBy } = useFilters();
 
   const { data: entityTypes, isLoading: entityTypesLoading } =
@@ -142,15 +142,8 @@ function EntitiesPage() {
       </div>
     </>
   );
-}
+};
 
-function Page() {
-  return (
-    <>
-      <Navbar />
-      <EntitiesPage />
-    </>
-  );
-}
+Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default Page;

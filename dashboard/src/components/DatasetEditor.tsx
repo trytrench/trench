@@ -6,54 +6,49 @@ import {
   Icon,
   IconButton,
   Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Select,
   Spinner,
   VStack,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
 import { ClassNames } from "@emotion/react";
-import { subDays } from "date-fns";
-import { Check, History, MoreHorizontal, PlusCircle, X } from "lucide-react";
+import {
+  Check,
+  History,
+  MoreHorizontal,
+  PlusCircle,
+  Tag,
+  X,
+} from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SqrlAstError } from "sqrl";
+import { compileSqrl, createSqrlInstance } from "sqrl-helpers";
 import { FileListItem } from "~/components/FileListItem";
 import {
   MonacoEditor,
   type FunctionInfoMap,
 } from "~/components/sqrl-editor/MonacoEditor";
-import { api } from "~/utils/api";
-// import { RuleEditorSidebar } from "./RuleEditorSidebar";
-import { SqrlAstError } from "sqrl";
-import { compileSqrl, createSqrlInstance } from "sqrl-helpers";
 import { useConfirmPageLeave } from "~/hooks/useBeforeUnload";
+import { api } from "~/utils/api";
+import BackfillModal from "./BackfillModal";
 import { PublishModal } from "./PublishModal";
+import { ReleasesSidebar } from "./ReleasesSidebar";
+import { Release } from "@prisma/client";
 // import { sortBy } from "lodash";
 
 interface Props {
-  files: { code: string; name: string }[];
-  refetchFiles: () => void;
+  release: Release;
+  onPreviewRelease: (release: Release) => void;
 }
 
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
-export const DatasetEditor = ({ files }: Props) => {
+export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
   const { mutateAsync: createDataset } = api.datasets.create.useMutation();
-  // const handleCreate = useCallback(async () => {
-  //   await createDataset({
-  //     name,
-  //     description,
-  //     rules: files,
-  //   });
-  // }, [createDataset, name, description, files]);
+  const { mutateAsync: createRelease } = api.releases.create.useMutation();
+  const { data: releases } = api.releases.list.useQuery();
 
   const lastSourcesRef = useRef();
   const [compileStatus, setCompileStatus] = useState<{
@@ -62,49 +57,46 @@ export const DatasetEditor = ({ files }: Props) => {
     errorMarker?: editor.IMarkerData;
   }>({ status: "pending", message: "Requesting initial compilation…" });
 
-  const [value, setValue] = useState("3days");
+  const [isEditing, setIsEditing] = useState(false);
+
   const {
     isOpen: isDrawerOpen,
     onClose: onDrawerClose,
     onOpen: onDrawerOpen,
   } = useDisclosure();
   const {
-    isOpen: isModalOpen,
-    onClose: onModalClose,
-    onOpen: onModalOpen,
+    isOpen: isBackfillModalOpen,
+    onClose: onBackfillModalClose,
+    onOpen: onBackfillModalOpen,
   } = useDisclosure();
   const {
     isOpen: isPublishModalOpen,
     onClose: onPublishModalClose,
     onOpen: onPublishModalOpen,
   } = useDisclosure();
-  const btnRef = useRef();
+  // const btnRef = useRef();
 
   const toast = useToast();
 
-  const [sources, setSources] = useState(
-    files.reduce(
-      (acc, file) => {
-        acc[file.name] = file.code;
-        return acc;
-      },
-      {} as Record<string, string>
-    )
+  const files = useMemo(
+    () => release.code as Record<string, string>,
+    [release]
   );
+  const [sources, setSources] = useState(files);
+
+  useEffect(() => {
+    setSources(files);
+    setCurrentFileName("");
+  }, [files]);
 
   const hasUnsavedChanges = useMemo(
-    () => files.some((file) => file.code !== sources[file.name]),
+    () => Object.keys(files).some((file) => files[file] !== sources[file]),
     [files, sources]
   );
   useConfirmPageLeave(hasUnsavedChanges, UNSAVED_CHANGES_MESSAGE);
 
   const [currentFileName, setCurrentFileName] = useState<string>(
-    files[0]?.name ?? ""
-  );
-
-  const source = useMemo<string>(
-    () => sources[currentFileName] ?? "",
-    [sources, currentFileName]
+    Object.keys(files)[0] ?? ""
   );
 
   const [sqrlFunctions, setFunctions] = useState<FunctionInfoMap | null>(null);
@@ -165,70 +157,51 @@ export const DatasetEditor = ({ files }: Props) => {
           isOpen={isPublishModalOpen}
           onClose={onPublishModalClose}
           onPublish={(version, description) => {
-            // publishFile({
-            //   id: currentFileId,
-            //   version,
-            //   description,
-            //   code: source,
-            // })
-            //   .then(() => refetchFiles())
-            //   .catch((error) =>
-            //     toast({ title: error.message, status: "error" })
-            //   );
+            createRelease({
+              version,
+              description,
+              code: sources,
+              projectId: releases?.[0]?.projectId,
+            })
+              .then(() => {
+                toast({ title: "Release created", status: "success" });
+              })
+              .catch((error) => {
+                toast({ title: error.message, status: "error" });
+              });
             onPublishModalClose();
           }}
           initialVersion="0.0.0"
         />
 
-        <Modal isOpen={isModalOpen} onClose={onModalClose}>
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Test rules</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              <Select
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-              >
-                <option value="3days">3 days</option>
-                <option value="1week">1 week</option>
-                <option value="1month">1 month</option>
-              </Select>
-            </ModalBody>
+        <BackfillModal
+          isOpen={isBackfillModalOpen}
+          onClose={onBackfillModalClose}
+          onConfirm={(dateRange) => {
+            createDataset({
+              name: "test",
+              description: "test",
+              backfillFrom: dateRange.from,
+              backfillTo: dateRange.to,
+              rules: files,
+            })
+              .then(() => {
+                toast({ title: "Dataset created", status: "success" });
+                onBackfillModalClose();
+              })
+              .catch((error) => {
+                toast({ title: error.message, status: "error" });
+              });
+          }}
+        />
 
-            <ModalFooter>
-              <Button
-                colorScheme="blue"
-                mr={1}
-                onClick={() => {
-                  let startDate = new Date("2023-07-01T00:00:00.000Z");
-                  if (value === "3days") {
-                    startDate = subDays(startDate, 3);
-                  } else if (value === "1week") {
-                    startDate = subDays(startDate, 7);
-                  } else if (value === "1month") {
-                    startDate = subDays(startDate, 30);
-                  }
-
-                  onModalClose();
-                }}
-                size="sm"
-              >
-                Run test
-              </Button>
-              <Button variant="ghost" size="sm">
-                Cancel
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-
-        {/* <RuleEditorSidebar
-          fileSnapshots={currentFile?.fileSnapshots ?? []}
+        <ReleasesSidebar
+          releases={releases ?? []}
           isOpen={isDrawerOpen}
           onClose={onDrawerClose}
-          finalFocusRef={btnRef}
-        /> */}
+          onPreviewRelease={onPreviewRelease}
+          // finalFocusRef={btnRef}
+        />
 
         <Box w={200}>
           <VStack
@@ -280,50 +253,72 @@ export const DatasetEditor = ({ files }: Props) => {
         </Box>
 
         <Box flex={2} overflow={"hidden"}>
-          <HStack ml="auto" spacing={1} mb={1}>
-            <Box mr="2">
-              {compileStatus.status === "pending" ? (
-                <Spinner size="sm" speed="0.8s" />
-              ) : compileStatus.status === "error" ? (
-                <Icon fontSize="18" as={X} color="red.500" />
-              ) : compileStatus.status === "success" ? (
-                <Icon fontSize="18" as={Check} color="green.500" />
-              ) : null}
-            </Box>
+          <HStack justify="flex-end" spacing={1} mb={1}>
+            {isEditing ? (
+              <>
+                <Box mr="2">
+                  {compileStatus.status === "pending" ? (
+                    <Spinner size="sm" speed="0.8s" />
+                  ) : compileStatus.status === "error" ? (
+                    <Icon fontSize="18" as={X} color="red.500" />
+                  ) : compileStatus.status === "success" ? (
+                    <Icon fontSize="18" as={Check} color="green.500" />
+                  ) : null}
+                </Box>
 
-            <Button
-              onClick={onModalOpen}
-              size="sm"
-              isDisabled={compileStatus.status !== "success"}
-            >
-              Test
-            </Button>
-            <Button
-              onClick={onPublishModalOpen}
-              size="sm"
-              colorScheme="blue"
-              // isDisabled={
-              //   (compileStatus.status !== "success" &&
-              //     shouldCompile(currentFile)) ||
-              //   currentFile?.currentFileSnapshot.code === source
-              // }
-            >
-              Publish
-            </Button>
-            <IconButton
-              size="sm"
-              variant="ghost"
-              aria-label="Save"
-              icon={<Icon as={History} fontSize="lg" />}
-              onClick={onDrawerOpen}
-              ref={btnRef}
-            />
-            <IconButton
-              size="sm"
-              variant="ghost"
-              aria-label="Save"
-              icon={<Icon as={MoreHorizontal} fontSize="lg" />}
-            />
+                <Button
+                  size="sm"
+                  className="mr-2"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={onPublishModalOpen}
+                  size="sm"
+                  colorScheme="blue"
+                  isDisabled={compileStatus.status !== "success"}
+                >
+                  Create release
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button leftIcon={<Icon as={Tag} />} mr="auto" size="xs">
+                  v{release.version}
+                </Button>
+                <Button
+                  onClick={onBackfillModalOpen}
+                  size="sm"
+
+                  // isDisabled={compileStatus.status !== "success"}
+                >
+                  Test
+                </Button>
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={() => setIsEditing(true)}
+                  // ref={btnRef}
+                >
+                  Edit
+                </Button>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label="Releases"
+                  icon={<Icon as={History} fontSize="lg" />}
+                  onClick={onDrawerOpen}
+                  // ref={btnRef}
+                />
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label="More"
+                  icon={<Icon as={MoreHorizontal} fontSize="lg" />}
+                />
+              </>
+            )}
           </HStack>
 
           <ClassNames>
@@ -333,8 +328,8 @@ export const DatasetEditor = ({ files }: Props) => {
                   height: "100%",
                   width: "100%",
                 })}
-                key={currentFileName}
-                value={source || ""}
+                key={currentFileName + isEditing}
+                value={sources[currentFileName] ?? ""}
                 markers={
                   compileStatus.errorMarker
                     ? [compileStatus.errorMarker]
@@ -352,6 +347,7 @@ export const DatasetEditor = ({ files }: Props) => {
                   padding: { top: 16 },
                   fontSize: 14,
                 }}
+                readOnly={!isEditing}
               />
             )}
           </ClassNames>

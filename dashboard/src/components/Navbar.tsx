@@ -1,29 +1,20 @@
 import {
   Box,
   Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  DrawerOverlay,
-  Flex,
   HStack,
   Link,
   Spacer,
   Text,
-  VStack,
   useBreakpointValue,
   useDisclosure,
 } from "@chakra-ui/react";
 import { Select, SelectItem, Tab, TabGroup, TabList } from "@tremor/react";
 import { Menu } from "lucide-react";
-import { signOut } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
-import { api } from "../utils/api";
 import { handleError } from "../lib/handleError";
+import { api } from "../utils/api";
 
 interface Props {
   href: string;
@@ -65,8 +56,6 @@ export const Navbar = () => {
 
   const datasetId = router.query.datasetId as string | undefined;
 
-  const isCreatePage = router.pathname === "/create";
-
   const { data: datasets } = api.datasets.list.useQuery();
 
   const pathEnd = router.pathname.split("/").pop();
@@ -88,6 +77,7 @@ export const Navbar = () => {
         alignItems="center"
         justifyItems="flex-start"
         gap={4}
+        py={2}
       >
         {!isDesktop && (
           <Box as="button" m={-3} p={3} ref={btnRef} onClick={onOpen}>
@@ -99,48 +89,32 @@ export const Navbar = () => {
             Trench
           </Text>
         </NextLink>
-        {isCreatePage ? (
-          <>
-            <Text>Create new dataset</Text>
-          </>
-        ) : (
-          <>
-            <div>
-              <Select
-                value={datasetId}
-                placeholder="Select dataset..."
-                className="w-64"
-                onValueChange={(value) => {
-                  router.push(`/datasets/${value}/events`).catch(handleError);
-                }}
-              >
-                {datasets?.map((dataset) => {
-                  return (
-                    <SelectItem key={dataset.id} value={dataset.id}>
-                      {dataset.name}
-                    </SelectItem>
-                  );
-                }) ?? []}
-              </Select>
-            </div>
+        <div>
+          <Select
+            value={datasetId}
+            onValueChange={(value) => {
+              router.push(`/datasets/${value}/events`).catch(handleError);
+            }}
+          >
+            {datasets?.map((dataset) => {
+              return (
+                <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                  {dataset.name}
+                </SelectItem>
+              );
+            }) ?? []}
+          </Select>
+        </div>
 
-            <Link href="/create">
-              <Button>Create</Button>
-            </Link>
-            <Link href={`/create?forkFrom=${datasetId}`}>
-              <Button>Fork</Button>
-            </Link>
-            <Box flex={1} />
+        <Box flex={1} />
 
-            <HStack spacing={4} fontSize="sm">
-              <NavItem href="/changelog">Changelog</NavItem>
-              <NavItem href="/help">Help</NavItem>
-              <NavItem href="/docs">Docs</NavItem>
-              <Spacer />
-              {/* <UserButton afterSignOutUrl="/" /> */}
-            </HStack>
-          </>
-        )}
+        <HStack spacing={4} fontSize="sm">
+          <NavItem href="/changelog">Changelog</NavItem>
+          <NavItem href="/help">Help</NavItem>
+          <NavItem href="/docs">Docs</NavItem>
+          <Spacer />
+          {/* <UserButton afterSignOutUrl="/" /> */}
+        </HStack>
       </Box>
       {datasetId ? (
         <Box flex={1} flexDirection="row" display="flex">
