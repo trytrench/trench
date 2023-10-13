@@ -1,20 +1,18 @@
-// Events list with cool timeline display
-// used in entity page, but not events page.
-
-import { SimpleGrid, Spinner } from "@chakra-ui/react";
-
-import { Badge, Button, Card, Icon, Title, Text } from "@tremor/react";
-import clsx from "clsx";
-import { AlignJustify, LayoutGrid } from "lucide-react";
+import { LayoutGrid, List, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFilters } from "~/components/Filter";
+import ListFilter from "~/components/ListFilter";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventDrawer } from "./EventDrawer";
-import { EntityDrawer } from "./EntityDrawer";
 import { EventListItem } from "./EventListItem";
 import { format } from "date-fns";
 import { uniq } from "lodash";
 import { EntityChip } from "./EntityChip";
+import { Badge } from "./ui/badge";
+import { Panel } from "./ui/custom/panel";
+import { Toggle } from "~/components/ui/toggle";
+import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface Props {
   entityId?: string;
@@ -100,119 +98,114 @@ export default function EventsList({ entityId, datasetId }: Props) {
     RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
   >(null);
 
-  const [selectedEntity, setSelectedEntity] = useState<
-    RouterOutputs["lists"]["getEntitiesList"]["rows"][number] | null
-  >(null);
-
   return (
     <>
       <EventDrawer
         datasetId={datasetId}
         isOpen={!!selectedEvent}
-        onClose={() => {
-          setSelectedEvent(null);
+        onOpenChange={(open) => {
+          if (!open) setSelectedEvent(null);
         }}
         selectedEvent={selectedEvent}
       />
 
-      <EntityDrawer
-        datasetId={datasetId}
-        isOpen={!!selectedEntity}
-        onClose={() => {
-          setSelectedEntity(null);
-        }}
-        selectedEntity={selectedEntity}
-      />
+      <div className="flex flex-col h-full">
+        <div className="flex justify-between items-center py-2 px-4 border-b">
+          <ListFilter
+            options={{
+              types: ["create-session", "payment-attempt"],
+              labels: ["needs KYC", "success", "blocked"],
+              features: [
+                { feature: "amount", dataType: "number" },
+                { feature: "is_recurring", dataType: "boolean" },
+              ],
+            }}
+            onChange={(v) => {
+              console.log(v);
+            }}
+          />
 
-      <div className="flex justify-end py-2 px-4 border-b border-b-tremor-border">
-        <div className="flex bg-tremor-background-subtle rounded-md p-0.5">
-          <div onClick={() => setView("grid")}>
-            {view === "grid" ? (
-              <Card className="p-0">
-                <Icon icon={LayoutGrid} size="xs" color="gray" />
-              </Card>
-            ) : (
-              <Icon
-                icon={LayoutGrid}
-                size="xs"
-                color="gray"
-                onClick={() => setView("list")}
-              />
-            )}
-          </div>
-
-          {view === "list" ? (
-            <Card className="p-0">
-              <Icon icon={AlignJustify} size="xs" color="gray" />
-            </Card>
-          ) : (
-            <Icon
-              icon={AlignJustify}
-              size="xs"
-              color="gray"
+          <div className="flex pl-2 border-l gap-1">
+            <Toggle
+              className="p-1 px-2 my-auto h-6 flex items-center"
+              onClick={() => setView("grid")}
+              pressed={view === "grid"}
+            >
+              <LayoutGrid className="h-4 w-4 mr-1.5" />
+              <span className="text-xs">Grid</span>
+            </Toggle>
+            <Toggle
+              className="p-1 px-2 my-auto h-6 flex items-center"
               onClick={() => setView("list")}
-            />
-          )}
+              pressed={view === "list"}
+            >
+              <List className="h-4 w-4 mr-1.5" />
+              <span className="text-xs">List</span>
+            </Toggle>
+          </div>
         </div>
-      </div>
-      <div
-        className={clsx("h-full flex flex-col overflow-y-auto px-4 pt-2", {
-          "gap-0": view === "grid",
-        })}
-      >
-        {eventsLoading ? (
-          <Spinner alignSelf="center" mt={3} />
-        ) : (
-          <>
-            {view === "list"
-              ? allEvents.map((event) => (
-                  <EventListItem
-                    key={event.id}
-                    event={event}
-                    onClick={() => {
-                      setSelectedEvent(event);
-                    }}
-                    selected={selectedEvent?.id === event.id}
-                  />
-                ))
-              : listItems.map((item, idx) =>
-                  item.type === "event" ? (
-                    <EventCard
-                      key={item.event.id}
-                      datasetId={datasetId}
-                      event={item.event}
-                      isFirst={idx === 0}
-                      isLast={idx === listItems.length - 1}
-                      onEntityClicked={(entity) => {
-                        setSelectedEntity(entity);
-                      }}
-                    />
-                  ) : (
-                    <TimeDivider key={item.duration} duration={item.duration} />
-                  )
-                )}
-            {hasNextPage && (
-              <div className="self-center my-4">
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  onClick={() => {
-                    fetchNextPage().catch((err) => {
-                      console.error(err);
-                    });
-                  }}
-                  loading={isFetchingNextPage}
-                >
-                  Fetch more events
-                </Button>
-              </div>
-            )}
-          </>
-        )}
 
-        <div className="h-16 shrink-0"></div>
+        <div className="grow flex flex-col relative px-4 pt-2">
+          {eventsLoading ? (
+            // <Spinner alignSelf="center" mt={3} />
+            <div>loading</div>
+          ) : (
+            <div className="absolute inset-0">
+              <ScrollArea className="h-full px-4">
+                {view === "list"
+                  ? allEvents.map((event) => (
+                      <EventListItem
+                        key={event.id}
+                        event={event}
+                        onClick={() => {
+                          setSelectedEvent(event);
+                        }}
+                        selected={selectedEvent?.id === event.id}
+                      />
+                    ))
+                  : listItems.map((item, idx) =>
+                      item.type === "event" ? (
+                        <EventCard
+                          key={item.event.id}
+                          datasetId={datasetId}
+                          event={item.event}
+                          isFirst={idx === 0}
+                          isLast={idx === listItems.length - 1}
+                        />
+                      ) : (
+                        <TimeDivider
+                          key={item.duration}
+                          duration={item.duration}
+                        />
+                      )
+                    )}
+                {hasNextPage && (
+                  <div className="w-auto mt-4 mb-6 flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        fetchNextPage().catch((err) => {
+                          console.error(err);
+                        });
+                      }}
+                    >
+                      <Loader2
+                        className={`${
+                          isFetchingNextPage ? "w-4 mr-2" : "w-0 mr-0"
+                        } h-4 animate-spin transition-all`}
+                      />
+                      Fetch more events
+                    </Button>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+
+          <div className="h-16 shrink-0"></div>
+        </div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
       </div>
-      <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
     </>
   );
 }
@@ -292,13 +285,10 @@ interface EventCardProps {
   datasetId: string;
   isFirst: boolean;
   isLast: boolean;
-  onEntityClicked: (
-    entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
-  ) => void;
 }
 
 function EventCard(props: EventCardProps) {
-  const { event, isFirst, isLast, onEntityClicked } = props;
+  const { event, isFirst, isLast } = props;
   const { datasetId } = props;
 
   const eventLabels = uniq(event.labels.filter((label) => label !== ""));
@@ -317,18 +307,18 @@ function EventCard(props: EventCardProps) {
           <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
         )}
       </div>
-      <div className="w-[22rem] mt-4">
+      <div className="w-[16rem] mt-4">
         <div className="flex">
-          <Title className="text-sm">{event.type}</Title>
+          <h1 className="text-lg">{event.type}</h1>
         </div>
-        <Text>
+        <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
-        </Text>
+        </div>
         <div className="flex flex-wrap gap-1 mt-3">
           {eventLabels.length > 0 ? (
             eventLabels.map((label, idx) => {
               return (
-                <Badge key={idx} size="xs">
+                <Badge key={idx} variant="default">
                   {label}
                 </Badge>
               );
@@ -338,14 +328,14 @@ function EventCard(props: EventCardProps) {
           )}
         </div>
       </div>
-      <Card className="mt-3 min-w-0">
+      <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
         {hasFeatures ? (
           <>
-            <SimpleGrid columns={5} spacing={2}>
+            <div className="grid grid-cols-5 gap-4">
               {eventFeatures.map(([key, value], idx) => (
                 <div key={key}>
-                  <Text className="font-semibold">{key}</Text>
-                  <Text className="truncate">
+                  <div className="font-semibold">{key}</div>
+                  <div className="truncate">
                     {value === 0
                       ? "0"
                       : value === true
@@ -353,13 +343,13 @@ function EventCard(props: EventCardProps) {
                       : value === false
                       ? "False"
                       : (value as string) || "-"}
-                  </Text>
+                  </div>
                 </div>
               ))}
-            </SimpleGrid>
+            </div>
           </>
         ) : (
-          <Text className="italic text-gray-400">No features</Text>
+          <div className="italic text-gray-400">No features</div>
         )}
         <div className="h-2"></div>
 
@@ -368,7 +358,7 @@ function EventCard(props: EventCardProps) {
             return <EntityChip entity={entity} datasetId={datasetId} />;
           })}
         </div>
-      </Card>
+      </Panel>
     </div>
   );
 }

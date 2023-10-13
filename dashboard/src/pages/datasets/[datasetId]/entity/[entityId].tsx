@@ -1,20 +1,4 @@
-import {
-  Badge,
-  Card,
-  Divider,
-  List,
-  ListItem,
-  Metric,
-  Select,
-  SelectItem,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Text,
-  Title,
-} from "@tremor/react";
+import { Text, Title } from "@tremor/react";
 
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { useRouter } from "next/router";
@@ -22,16 +6,32 @@ import { useMemo, useState } from "react";
 import {
   DateParam,
   NumberParam,
+  StringParam,
   useQueryParam,
   useQueryParams,
 } from "use-query-params";
-import { DateRangePicker } from "~/components/DateRangePicker";
 import EventsDashboard from "~/components/EventsDashboard";
 import EventsList from "~/components/EventsList";
 import { api } from "~/utils/api";
 import { Navbar } from "../../../../components/Navbar";
 import LinksView from "~/components/LinksView";
-import { ListIcon } from "lucide-react";
+import { DatePickerWithRange } from "~/components/DRPicker";
+import { Panel } from "~/components/ui/custom/panel";
+import { Badge } from "~/components/ui/badge";
+import { PropertyList } from "~/components/ui/custom/property-list";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "~/components/ui/custom/light-tabs";
+import {
+  ScrollBar,
+  ScrollArea as ShadCNScrollArea,
+} from "~/components/ui/scroll-area";
+import { ClearableSelect } from "~/components/ui/custom/clearable-select";
+
+// a
 
 function HorzScroll({ children }: { children: React.ReactNode }) {
   return (
@@ -64,23 +64,20 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
 
   return (
     <>
-      <div className="flex items-center gap-4 grow">
-        <Text className="whitespace-nowrap">Filter</Text>
-        <Select
-          enableClear
-          className="w-40"
-          value={entityType}
-          onValueChange={setEntityType}
-          placeholder="All entities"
-        >
-          {entityTypes?.map((et) => (
-            <SelectItem key={et} value={et}>
-              {et}
-            </SelectItem>
-          )) ?? []}
-        </Select>
+      <div className="flex items-center gap-4 grow px-2 pb-2 border-b">
+        <span className="whitespace-nowrap text-sm">Filter</span>
+
+        <ClearableSelect
+          options={entityTypes?.map((et) => ({ label: et, value: et })) ?? []}
+          onChange={(value: any) => {
+            console.log("VALUE:", value);
+            setEntityType((value?.value as string) ?? "");
+          }}
+          placeholder="All Entities"
+          value={entityType ? { label: entityType, value: entityType } : null}
+          isClearable={true}
+        />
       </div>
-      <Divider className="mb-0 mt-4" />
       <LinksView
         entityId={entityId ?? ""}
         datasetId={datasetId}
@@ -115,7 +112,7 @@ export default function Home() {
     [entityData]
   );
 
-  const [tab, setTab] = useQueryParam("tab", NumberParam);
+  const [tab, setTab] = useQueryParam("tab", StringParam);
   const [view, setView] = useState<"grid" | "list">("list");
 
   const [dateRange, setDateRange] = useQueryParams({
@@ -131,80 +128,71 @@ export default function Home() {
       <Navbar />
 
       <main className="flex-1 h-0 flex flex-col">
-        <div className="px-9 py-4 border-b-2 flex items-baseline gap-4 shrink-0">
-          <Metric>{entityData?.name}</Metric>
-          <Badge>Entity Type: {entityData?.type}</Badge>
+        <div className="px-8 py-6 border-b flex items-baseline gap-4 shrink-0">
+          <h1 className="text-2xl">{entityData?.name}</h1>
+          <Badge variant="secondary">Entity Type: {entityData?.type}</Badge>
         </div>
         <div className="grid grid-cols-4 flex-1 overflow-hidden">
-          <div className="flex flex-col gap-4 bg-tremor-background-subtle p-4 overflow-y-auto">
-            <Card>
-              <div className="flex items-center justify-between w-full">
+          <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
+            <Panel>
+              <div className="flex items-center justify-between w-full mb-2">
                 <Title className="shrink-0">Entity Information</Title>
               </div>
-              <div className="h-4"></div>
-              <List>
-                {Object.entries(entityInfo).map(([key, value]) => (
-                  <ListItem key={key}>
-                    <span>{key}</span>
-                    <span className="ml-4 truncate">
-                      <HorzScroll>{value}</HorzScroll>
-                    </span>
-                  </ListItem>
-                ))}
-              </List>
-            </Card>
-            <Card>
-              <div className="flex items-center justify-between w-full">
+              <PropertyList
+                entries={Object.entries(entityInfo).map(([key, value]) => ({
+                  label: key,
+                  value: value as string,
+                }))}
+              />
+            </Panel>
+            <Panel>
+              <div className="flex items-center justify-between w-full mb-2">
                 <Title className="shrink-0">Labels</Title>
               </div>
-              <div className="h-4"></div>
               {entityLabels.length ? (
                 <div className="flex flex-row flex-wrap">
                   {entityLabels.map((label) => (
-                    <Badge key={label}>{label}</Badge>
+                    <Badge variant="secondary" key={label}>
+                      {label}
+                    </Badge>
                   ))}
                 </div>
               ) : (
-                <Text>None</Text>
+                <span className="italic text-muted-foreground text-sm">
+                  None
+                </span>
               )}
-            </Card>
-            <Card>
-              <div className="flex items-center justify-between w-full">
+            </Panel>
+            <Panel>
+              <div className="flex items-center justify-between w-full mb-2">
                 <Title className="shrink-0">Data</Title>
               </div>
-              <div className="h-4"></div>
-              <List>
-                {Object.entries(entityData?.features ?? {}).map(
-                  ([key, value]) => (
-                    <ListItem key={key}>
-                      <span className="mr-8">{key}</span>
-                      <span className="truncate">
-                        <HorzScroll>{value}</HorzScroll>
-                      </span>
-                    </ListItem>
-                  )
+              <PropertyList
+                entries={Object.entries(entityData?.features ?? {}).map(
+                  ([key, value]) => ({
+                    label: key,
+                    value: value as string,
+                  })
                 )}
-              </List>
-            </Card>
+              />
+            </Panel>
           </div>
-          <div className="flex flex-col col-span-3 p-4 pb-0 overflow-hidden h-full">
-            <TabGroup
-              className="flex flex-col h-full"
-              index={tab ?? undefined}
-              onIndexChange={(idx) => {
-                setTab(idx);
-              }}
+          <div className="flex flex-col col-span-3 p-4 py-2 overflow-hidden h-full">
+            <Tabs
+              defaultValue="explorer"
+              className="flex flex-col grow"
+              value={tab ?? "explorer"}
+              onValueChange={setTab}
             >
-              <TabList>
-                <Tab>Event Explorer</Tab>
-                <Tab>Event History</Tab>
-                <Tab>Related Entities</Tab>
-              </TabList>
-              <TabPanels className="p-2 overflow-y-auto grow">
-                <TabPanel className="">
-                  <div className="">
-                    <div className="">
-                      <DateRangePicker
+              <TabsList className="w-full">
+                <TabsTrigger value="explorer">Event Explorer</TabsTrigger>
+                <TabsTrigger value="history">Event History</TabsTrigger>
+                <TabsTrigger value="links">Related Entities</TabsTrigger>
+              </TabsList>
+              <TabsContent value="explorer">
+                <div className="">
+                  <DatePickerWithRange />
+                  {/* <DateRangePicker
                         value={dateRange}
                         onValueChange={(value) =>
                           setDateRange(
@@ -213,27 +201,17 @@ export default function Home() {
                               : { from: undefined, to: undefined }
                           )
                         }
-                      />
-                    </div>
-                    <EventsDashboard
-                      entityId={entityId}
-                      datasetId={datasetId}
-                    />
-                  </div>
-                </TabPanel>
-                <TabPanel>
-                  <EventsList entityId={entityId} datasetId={datasetId} />
-                </TabPanel>
-                <TabPanel>
-                  <div className="col-span-2">
-                    <RelatedEntities
-                      entityId={entityId}
-                      datasetId={datasetId}
-                    />
-                  </div>
-                </TabPanel>
-              </TabPanels>
-            </TabGroup>
+                      /> */}
+                </div>
+                {/* <EventsDashboard entityId={entityId} datasetId={datasetId} /> */}
+              </TabsContent>
+              <TabsContent value="history" className="relative grow mt-0">
+                <EventsList entityId={entityId} datasetId={datasetId} />
+              </TabsContent>
+              <TabsContent value="links" className="relative grow">
+                <RelatedEntities entityId={entityId} datasetId={datasetId} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>

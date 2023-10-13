@@ -1,11 +1,4 @@
-import {
-  Badge,
-  Button,
-  MultiSelect,
-  Select,
-  SelectItem,
-  Text,
-} from "@tremor/react";
+import { Badge, MultiSelect, Text } from "@tremor/react";
 import {
   ArrayParam,
   JsonParam,
@@ -17,6 +10,28 @@ import { Hash, Type, XCircle } from "lucide-react";
 import FeatureFilter, {
   type FeatureFilterType,
 } from "~/components/FeatureFilter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Button } from "~/components/ui/button";
+
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "~/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { SearchableSelect } from "./ui/custom/searchable-select";
 
 export const useFilters = () => {
   const [type, setType] = useQueryParam("type", StringParam);
@@ -67,12 +82,17 @@ export const Filter = ({ types, labels, features }: Props) => {
   return (
     <>
       <Text className="font-semibold text-lg mb-2 mt-6">Type</Text>
-      <Select value={type ?? ""} onChange={setType}>
-        {types.map((type) => (
-          <SelectItem value={type} key={type}>
-            {type}
-          </SelectItem>
-        ))}
+      <Select value={type ?? ""} onValueChange={setType}>
+        <SelectTrigger className="w-64">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {types.map((type) => (
+            <SelectItem value={type} key={type}>
+              {type}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
 
       <Text className="font-semibold text-lg mb-2 mt-6">Labels</Text>
@@ -116,41 +136,28 @@ export const Filter = ({ types, labels, features }: Props) => {
       </div>
 
       <Text className="font-semibold text-lg mb-2 mt-6">Sort by</Text>
-      <div className="flex flex-col gap-2">
-        <Select
-          value={sortBy?.feature || ""}
-          onValueChange={(value) => {
-            setSortBy({
-              feature: value,
-              dataType:
-                features.find((feature) => feature.feature === value)
-                  ?.dataType ?? "string",
-              direction: "desc",
-            });
-          }}
-        >
-          {features?.map((feature) => (
-            <SelectItem
-              value={feature.feature}
-              key={feature.feature}
-              icon={feature.dataType === "number" ? Hash : Type}
-            >
-              {feature.feature}
-            </SelectItem>
-          ))}
-        </Select>
-        <style global jsx>
-          {`
-            .tremor-SelectItem-icon {
-              height: 1rem;
-              width: 1rem;
-            }
-          `}
-        </style>
-      </div>
+
+      <SearchableSelect
+        options={features.map((feature) => ({
+          label: feature.feature,
+          value: feature.feature,
+        }))}
+        className="w-64"
+        placeholder="Select feature..."
+        value={sortBy?.feature || ""}
+        onValueChange={(value) => {
+          setSortBy({
+            feature: value,
+            dataType:
+              features.find((feature) => feature.feature === value)?.dataType ??
+              "string",
+            direction: "desc",
+          });
+        }}
+      />
+
       <Button
         className="mt-6"
-        size="xs"
         onClick={() => {
           setFeatureFilters([]);
           setSelectedLabels([]);

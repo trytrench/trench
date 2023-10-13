@@ -1,10 +1,4 @@
-import {
-  MultiSelect,
-  MultiSelectItem,
-  Select,
-  SelectItem,
-  Text,
-} from "@tremor/react";
+import { MultiSelect, MultiSelectItem, Text } from "@tremor/react";
 import { Select as ChakraReactSelect } from "chakra-react-select";
 import dayjs from "dayjs";
 import { useMemo } from "react";
@@ -17,6 +11,13 @@ import {
 } from "use-query-params";
 import { type EntityFilters, type EventFilters } from "../shared/validation";
 import { api } from "../utils/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 // const TODAY = dayjs(new Date("08-14-2023"));
 const TODAY = dayjs(new Date());
@@ -111,7 +112,19 @@ export function EventTypeFilter(props: EventTypeFilterProps) {
 
   return (
     <div className="flex items-center gap-4 shrink-0">
-      <Select
+      <Select>
+        <SelectTrigger className="w-48">
+          <SelectValue placeholder="All events" />
+        </SelectTrigger>
+        <SelectContent>
+          {eventTypeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {/* <Select
         className="w-48"
         value={eventType ?? undefined}
         onValueChange={setEventType}
@@ -123,7 +136,7 @@ export function EventTypeFilter(props: EventTypeFilterProps) {
             {option.label}
           </SelectItem>
         ))}
-      </Select>
+      </Select> */}
       {eventType && showLabelFilter && (
         <>
           <Text className="font-normal whitespace-nowrap">with label</Text>
@@ -359,21 +372,24 @@ export function IntervalPicker() {
 
   return (
     <Select
-      className="w-48"
       value={selectedInterval?.label}
       onValueChange={(val) =>
         setInterval(
           intervalOptions.find((option) => option.label === val)?.value
         )
       }
-      placeholder="24 hours"
-      enableClear
+      // enableClear
     >
-      {intervalOptions.map((option) => (
-        <SelectItem key={option.value} value={option.label}>
-          {option.label}
-        </SelectItem>
-      ))}
+      <SelectTrigger className="w-48">
+        <SelectValue placeholder="24 hours" />
+      </SelectTrigger>
+      <SelectContent>
+        {intervalOptions.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
   );
 }

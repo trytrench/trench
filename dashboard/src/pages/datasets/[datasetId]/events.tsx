@@ -1,4 +1,3 @@
-import { Skeleton } from "@chakra-ui/react";
 import { Title } from "@tremor/react";
 import { useRouter } from "next/router";
 import EventsList from "~/components/EventsList";
@@ -36,10 +35,11 @@ function EventsPage() {
   return (
     <div className="flex-1 overflow-hidden flex items-stretch">
       <div className="flex-1 w-full flex items-stretch">
-        <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
+        {/* <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
           <Title>Events</Title>
           {eventFeaturesLoading || eventLabelsLoading || eventTypesLoading ? (
-            <Skeleton />
+            // skeleton
+            <></>
           ) : (
             <Filter
               types={eventTypes}
@@ -50,7 +50,7 @@ function EventsPage() {
               }))}
             />
           )}
-        </div>
+        </div> */}
         <div className="relative flex-1">
           <EventsList datasetId={router.query.datasetId as string} />
         </div>

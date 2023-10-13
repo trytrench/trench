@@ -1,4 +1,3 @@
-import { Skeleton, Spinner } from "@chakra-ui/react";
 import { Button, Title } from "@tremor/react";
 import { Navbar } from "~/components/Navbar";
 import { api } from "~/utils/api";
@@ -7,6 +6,7 @@ import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
 import { useMemo } from "react";
 import { useRouter } from "next/router";
+import { Loader2Icon } from "lucide-react";
 
 function EntitiesPage() {
   const router = useRouter();
@@ -91,7 +91,8 @@ function EntitiesPage() {
           {entityFeaturesLoading ||
           entityLabelsLoading ||
           entityTypesLoading ? (
-            <Skeleton />
+            // supposed to be a Skeleton
+            <></>
           ) : (
             <Filter
               types={entityTypes}
@@ -106,7 +107,7 @@ function EntitiesPage() {
         <div className="relative flex-1">
           <div className="h-full flex flex-col gap-4 px-8 py-4 overflow-y-auto">
             {entitiesLoading ? (
-              <Spinner alignSelf="center" mt={3} />
+              <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
             ) : (
               <>
                 {allEntities.map((entity) => {

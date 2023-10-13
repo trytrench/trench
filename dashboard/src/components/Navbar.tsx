@@ -1,29 +1,20 @@
-import {
-  Box,
-  Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  DrawerOverlay,
-  Flex,
-  HStack,
-  Link,
-  Spacer,
-  Text,
-  VStack,
-  useBreakpointValue,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { Select, SelectItem, Tab, TabGroup, TabList } from "@tremor/react";
-import { Menu } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { Button } from "~/components/ui/button";
+import { Menu, X } from "lucide-react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
 import { api } from "../utils/api";
 import { handleError } from "../lib/handleError";
+import clsx from "clsx";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
 
 interface Props {
   href: string;
@@ -35,17 +26,16 @@ const NavItem = ({ href, children, ...props }: Props) => {
   const active = router.pathname.split("/")[1] === href.split("/")[1];
 
   return (
-    <Link
-      as={NextLink}
+    <NextLink
       href={href}
-      color={active ? "black" : "gray.500"}
-      textShadow={active ? "0 0 0.5px black" : "none"}
-      // fontWeight="medium"
-      _hover={{ color: "black" }}
+      className={clsx({
+        "text-gray-500 hover:text-black": !active,
+        "text-black": active,
+      })}
       {...props}
     >
       {children}
-    </Link>
+    </NextLink>
   );
 };
 
@@ -57,8 +47,9 @@ const TABS = [
 ];
 
 export const Navbar = () => {
-  const isDesktop = useBreakpointValue({ base: false, lg: true });
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  // const isDesktop = useBreakpointValue({ base: false, lg: true });
+  const isDesktop = true;
+  // const { isOpen, onOpen, onClose } = useDisclosure();
   const btnRef = useRef(null);
 
   const router = useRouter();
@@ -73,97 +64,92 @@ export const Navbar = () => {
   const selectedTabIndex = TABS.findIndex((tab) => tab.path === pathEnd);
 
   return (
-    <Box
-      width="100%"
-      px={isDesktop ? 8 : 4}
-      justify="start"
-      align={"center"}
-      as="nav"
-      shrink={0}
-      flexShrink={0}
+    <nav
+      className={clsx({
+        "w-full self-center shrink-0 flex flex-col justify-start p-0": true,
+      })}
     >
-      <Box
-        display="flex"
-        mt={2}
-        alignItems="center"
-        justifyItems="flex-start"
-        gap={4}
-      >
+      <div className="flex mt-2 px-4 items-center justify-start gap-4">
         {!isDesktop && (
-          <Box as="button" m={-3} p={3} ref={btnRef} onClick={onOpen}>
+          // missing onclick
+          <button className="-m-3 p-3" ref={btnRef}>
             <Menu height={24} width={24} />
-          </Box>
+          </button>
         )}
         <NextLink href="/">
-          <Text fontSize="lg" fontWeight="bold" mr={12}>
-            Trench
-          </Text>
+          <h1 className="text-lg font-bold mr-12">Trench</h1>
         </NextLink>
         {isCreatePage ? (
           <>
-            <Text>Create new dataset</Text>
+            <div>Create new dataset</div>
           </>
         ) : (
           <>
             <div>
               <Select
                 value={datasetId}
-                placeholder="Select dataset..."
-                className="w-64"
                 onValueChange={(value) => {
                   router.push(`/datasets/${value}/events`).catch(handleError);
                 }}
               >
-                {datasets?.map((dataset) => {
-                  return (
-                    <SelectItem key={dataset.id} value={dataset.id}>
-                      {dataset.name}
-                    </SelectItem>
-                  );
-                }) ?? []}
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Select dataset..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {datasets?.map((dataset) => {
+                    return (
+                      <SelectItem
+                        key={dataset.id}
+                        value={dataset.id.toString()}
+                      >
+                        {dataset.name}
+                      </SelectItem>
+                    );
+                  }) ?? []}
+                </SelectContent>
               </Select>
             </div>
 
-            <Link href="/create">
-              <Button>Create</Button>
-            </Link>
-            <Link href={`/create?forkFrom=${datasetId}`}>
-              <Button>Fork</Button>
-            </Link>
-            <Box flex={1} />
+            <a href="/create">
+              <Button variant="ghost">Create</Button>
+            </a>
+            <a href={`/create?forkFrom=${datasetId}`}>
+              <Button variant="ghost">Fork</Button>
+            </a>
+            <div className="grow" />
 
-            <HStack spacing={4} fontSize="sm">
+            <div className="flex gap-4 text-sm">
               <NavItem href="/changelog">Changelog</NavItem>
               <NavItem href="/help">Help</NavItem>
               <NavItem href="/docs">Docs</NavItem>
-              <Spacer />
+              <div className="grow" />
               {/* <UserButton afterSignOutUrl="/" /> */}
-            </HStack>
+            </div>
           </>
         )}
-      </Box>
+      </div>
       {datasetId ? (
-        <Box flex={1} flexDirection="row" display="flex">
-          <TabGroup
-            index={selectedTabIndex}
-            onIndexChange={(index) => {
-              const tab = TABS[index];
+        <div className="">
+          <Tabs
+            value={`${selectedTabIndex}`}
+            onValueChange={(index) => {
+              const tab = TABS[parseInt(index)];
               router
                 .push(`/datasets/${datasetId}/${tab?.path}`)
                 .catch(handleError);
             }}
           >
-            <TabList>
+            <TabsList className="pl-2">
               {TABS.map((tab, idx) => {
                 return (
-                  <Tab key={idx} value={tab.path}>
+                  <TabsTrigger key={idx} value={`${idx}`}>
                     {tab.name}
-                  </Tab>
+                  </TabsTrigger>
                 );
               })}
-            </TabList>
-          </TabGroup>
-        </Box>
+            </TabsList>
+          </Tabs>
+        </div>
       ) : null}
 
       {/* <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
@@ -183,6 +169,6 @@ export const Navbar = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer> */}
-    </Box>
+    </nav>
   );
 };

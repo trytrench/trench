@@ -8,7 +8,6 @@ import {
 import {
   buildEntityExistsQuery,
   buildEventExistsQuery,
-  getFiltersWhereQuery,
 } from "../../lib/filters";
 import { db } from "~/server/db";
 

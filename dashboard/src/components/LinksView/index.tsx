@@ -1,5 +1,4 @@
 import useResizeObserver from "@react-hook/resize-observer";
-import { Card, Icon, Text } from "@tremor/react";
 import clsx from "clsx";
 import {
   BoxesIcon,
@@ -250,9 +249,9 @@ function LeftSideCard(props: LeftSideCardProps) {
   }
 
   return (
-    <Card
+    <div
       className={clsx({
-        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2":
+        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm bg-white":
           true,
         "opacity-30": !isActive,
         "bg-blue-100": isSelected,
@@ -263,18 +262,18 @@ function LeftSideCard(props: LeftSideCardProps) {
       {isGroup ? (
         <div className="flex gap-4">
           <BoxesIcon className="my-auto text-blue-400" size={18} />
-          <div className="min-w-0">
-            <Text className="text-gray-400 font-semibold italic">
+          <div className="min-w-0 text-sm">
+            <div className="text-gray-400 font-semibold italic">
               {entityCountStr}
-            </Text>
+            </div>
           </div>
         </div>
       ) : (
         <div className="flex gap-4">
           <BoxIcon className="my-auto text-blue-400" size={18} />
-          <div className="min-w-0">
-            <Text className="font-semibold text-black">{item.type}</Text>
-            <Text className="">{item.name}</Text>
+          <div className="min-w-0 text-sm">
+            <div className="font-semibold text-black">{item.type}</div>
+            <div className="">{item.name}</div>
           </div>
         </div>
       )}
@@ -324,12 +323,13 @@ function LeftSideCard(props: LeftSideCardProps) {
               e.preventDefault();
             }}
           >
-            <Icon
-              icon={EyeOffIcon}
-              size="md"
-              color="gray"
-              className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
+            <EyeOffIcon
+              size={18}
+              className={`text-gray-500 p-0 m-0 ${
+                isSelected ? "" : "opacity-20"
+              }`}
             />
+
             <div
               className="absolute text-xs w-[8rem] text-center text-white font-semibold bg-[rgba(0,0,0,0.7)] rounded-md 
                 p-0.5 bottom-full left-1/2 -translate-x-1/2 opacity-0 group-hover/eyeicon:opacity-100 transition-opacity pointer-events-none"
@@ -339,7 +339,7 @@ function LeftSideCard(props: LeftSideCardProps) {
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -360,17 +360,18 @@ function RightSideCard(props: RightSideCardProps) {
 
   return (
     <div key={item.id} ref={divRef}>
-      <Card
+      <div
         className={clsx({
-          "p-2 px-3 cursor-pointer transition": true,
+          "p-2 px-3 cursor-pointer transition rounded-lg border shadow-sm":
+            true,
           "opacity-30": !isActive,
           "bg-blue-100": isSelected,
         })}
         onClick={onClick}
       >
         <div className="flex justify-between text-gray-400">
-          <div className="min-w-0 flex gap-2">
-            <Text className="font-semibold text-black">{item.name}</Text>
+          <div className="min-w-0 flex gap-2 text-sm">
+            <div className="font-semibold text-black">{item.name}</div>
           </div>
           <a
             className="my-auto text-gray-400"
@@ -385,7 +386,7 @@ function RightSideCard(props: RightSideCardProps) {
             />
           </a>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
