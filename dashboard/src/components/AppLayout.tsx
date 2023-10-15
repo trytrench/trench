@@ -1,6 +1,4 @@
-import { Button, Icon } from "@chakra-ui/react";
 import { Navbar } from "./Navbar";
-import { Tag } from "lucide-react";
 import { ReleasesModal } from "./ReleasesModal";
 import { useState } from "react";
 import { api } from "~/utils/api";
@@ -23,19 +21,6 @@ export default function AppLayout({ children }: Props) {
       />
       <Navbar />
       {children}
-      <div className="fixed bottom-0 bg-white left-0 right-0">
-        <Button colorScheme="blue" size="xs" rounded="none">
-          Production
-        </Button>
-        <Button
-          leftIcon={<Icon as={Tag} />}
-          size="xs"
-          rounded="none"
-          onClick={() => setIsReleasesModalOpen(true)}
-        >
-          v0.0.0
-        </Button>
-      </div>
     </div>
   );
 }

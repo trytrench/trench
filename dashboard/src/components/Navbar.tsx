@@ -1,4 +1,3 @@
-import { Select, SelectItem } from "@tremor/react";
 import clsx from "clsx";
 import { Menu } from "lucide-react";
 import NextLink from "next/link";
@@ -8,6 +7,8 @@ import { Button } from "~/components/ui/button";
 import { handleError } from "../lib/handleError";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
 import {
+  Select,
+  SelectItem,
   SelectContent,
   SelectTrigger,
   SelectValue,
@@ -41,23 +42,18 @@ const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
   { name: "Info", path: "info" },
-  { name: "Data Explorer", path: "dashboard" },
+  { name: "Explore", path: "explore" },
 ];
 
 export const Navbar = () => {
   // const isDesktop = useBreakpointValue({ base: false, lg: true });
   const isDesktop = true;
-  // const { isOpen, onOpen, onClose } = useDisclosure();
   const btnRef = useRef(null);
 
   const router = useRouter();
+  const { data: projects } = api.project.list.useQuery();
 
-  const datasetId = router.query.datasetId as string | undefined;
-
-  const { data: datasets } = api.datasets.list.useQuery();
-
-  const pathEnd = router.pathname.split("/").pop();
-  const selectedTabIndex = TABS.findIndex((tab) => tab.path === pathEnd);
+  const projectName = router.query.projectName as string;
 
   return (
     <nav
@@ -77,19 +73,19 @@ export const Navbar = () => {
         </NextLink>
         <div>
           <Select
-            value={datasetId}
+            value={projectName}
             onValueChange={(value) => {
               router.push(`/datasets/${value}/events`).catch(handleError);
             }}
           >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select dataset..." />
+            <SelectTrigger>
+              <SelectValue placeholder="Select project..." />
             </SelectTrigger>
             <SelectContent>
-              {datasets?.map((dataset) => {
+              {projects?.map((project) => {
                 return (
-                  <SelectItem key={dataset.id} value={dataset.id.toString()}>
-                    {dataset.name}
+                  <SelectItem key={project.name} value={project.name}>
+                    {project.name}
                   </SelectItem>
                 );
               }) ?? []}
@@ -108,29 +104,24 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {datasetId ? (
-        <div className="">
-          <Tabs
-            value={`${selectedTabIndex}`}
-            onValueChange={(index) => {
-              const tab = TABS[parseInt(index)];
-              router
-                .push(`/datasets/${datasetId}/${tab?.path}`)
-                .catch(handleError);
-            }}
-          >
-            <TabsList className="pl-2">
-              {TABS.map((tab, idx) => {
-                return (
-                  <TabsTrigger key={idx} value={`${idx}`}>
-                    {tab.name}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-        </div>
-      ) : null}
+      <div className="">
+        <Tabs
+          value={router.pathname.split("/").pop()}
+          onValueChange={(tab) => {
+            router.push(`/${projectName}/${tab}`).catch(handleError);
+          }}
+        >
+          <TabsList className="pl-2">
+            {TABS.map((tab) => {
+              return (
+                <TabsTrigger key={tab.path} value={tab.path}>
+                  {tab.name}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />

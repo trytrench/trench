@@ -106,6 +106,9 @@ CREATE TABLE "VerificationToken" (
 CREATE INDEX "EventLog_timestamp_idx" ON "EventLog"("timestamp");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Project_name_key" ON "Project"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Project_prodDatasetId_key" ON "Project"("prodDatasetId");
 
 -- CreateIndex

@@ -1,11 +1,9 @@
-// unused
-
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { DateParam, useQueryParams } from "use-query-params";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import EntitiesDashboard from "~/components/EntitiesDashboard";
 import EventsDashboard from "~/components/EventsDashboard";
-import { Navbar } from "../components/Navbar";
+import { Navbar } from "~/components/Navbar";
 
 function EventsPage() {
   const [dateRange, setDateRange] = useQueryParams({

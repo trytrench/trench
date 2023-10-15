@@ -13,7 +13,7 @@ import {
 import EventsDashboard from "~/components/EventsDashboard";
 import EventsList from "~/components/EventsList";
 import { api } from "~/utils/api";
-import { Navbar } from "../../../../components/Navbar";
+import { Navbar } from "../../../components/Navbar";
 import LinksView from "~/components/LinksView";
 import { DatePickerWithRange } from "~/components/DRPicker";
 import { Panel } from "~/components/ui/custom/panel";

@@ -6,15 +6,23 @@ import { Button, Icon } from "@chakra-ui/react";
 import { Tag } from "lucide-react";
 import type { NextPageWithLayout } from "~/pages/_app";
 import AppLayout from "~/components/AppLayout";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Release } from "@prisma/client";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
-  const datasetId = router.query.datasetId;
+
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.projectName as string },
+    { enabled: !!router.query.projectName }
+  );
+  const datasetId = useMemo(
+    () => project?.prodDatasetId?.toString(),
+    [project]
+  );
 
   const { data: dataset } = api.datasets.get.useQuery(
-    { id: datasetId as string },
+    { id: datasetId! },
     { enabled: !!datasetId }
   );
 

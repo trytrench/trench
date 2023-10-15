@@ -12,27 +12,32 @@ import { api } from "~/utils/api";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
-  const datasetId = router.query.datasetId as string;
+
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.projectName as string },
+    { enabled: !!router.query.projectName }
+  );
+  const datasetId = useMemo(
+    () => project?.prodDatasetId?.toString(),
+    [project]
+  );
   const { type, labels, features, sortBy } = useFilters();
 
   const { data: entityTypes, isLoading: entityTypesLoading } =
-    api.labels.getEntityTypes.useQuery({ datasetId }, { enabled: !!datasetId });
+    api.labels.getEntityTypes.useQuery(
+      { datasetId: datasetId! },
+      { enabled: !!datasetId }
+    );
 
   const { data: entityLabels, isLoading: entityLabelsLoading } =
     api.labels.getEntityLabels.useQuery(
-      {
-        entityType: type,
-        datasetId,
-      },
+      { entityType: type, datasetId: datasetId! },
       { enabled: !!datasetId }
     );
 
   const { data: entityFeatures, isLoading: entityFeaturesLoading } =
     api.labels.getEntityFeatures.useQuery(
-      {
-        entityType: type ?? undefined,
-        datasetId,
-      },
+      { entityType: type ?? undefined, datasetId: datasetId! },
       { enabled: !!datasetId }
     );
 

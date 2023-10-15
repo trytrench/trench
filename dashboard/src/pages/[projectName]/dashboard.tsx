@@ -1,22 +1,22 @@
 import { format } from "date-fns";
-import { type RouterOutputs, api } from "../../../utils/api";
+import { type RouterOutputs, api } from "../../utils/api";
 import {
   DEFAULT_DATE_RANGE,
   EventTypeFilter,
   IntervalPicker,
   useEventFilters,
   useTimeInterval,
-} from "../../../components/Filters";
-import { Navbar } from "../../../components/Navbar";
-import { TopList } from "../../../components/TopList";
+} from "../../components/Filters";
+import { Navbar } from "../../components/Navbar";
+import { TopList } from "../../components/TopList";
 import {
   ArrayParam,
   NumberParam,
   StringParam,
   useQueryParam,
 } from "use-query-params";
-import { EntityTimeChart } from "../../../components/EntityTimeChart";
-import { EntityLabelDistribution } from "../../../components/EntityLabelDistribution";
+import { EntityTimeChart } from "../../components/EntityTimeChart";
+import { EntityLabelDistribution } from "../../components/EntityLabelDistribution";
 import {
   MouseEventHandler,
   useCallback,
@@ -44,7 +44,7 @@ import {
   ContextMenuItem,
   ContextMenuLabel,
   ContextMenuTrigger,
-} from "../../../components/base/ContextMenu";
+} from "../../components/base/ContextMenu";
 // import {
 //   Modal,
 //   ModalCloseButton,
@@ -52,7 +52,7 @@ import {
 //   ModalHeader,
 //   ModalOverlay,
 // } from "@chakra-ui/react";
-import { LoadingPlaceholder } from "../../../components/LoadingPlaceholder";
+import { LoadingPlaceholder } from "../../components/LoadingPlaceholder";
 import clsx from "clsx";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import { useRouter } from "next/router";

@@ -45,8 +45,9 @@ if (!isMainThread) {
         await client.query("BEGIN");
 
         const res = await client.query(`
-        SELECT "id", "lastEventLogId", "backfillFrom", "backfillTo", "code"
+        SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "Release"."code"
         FROM "Dataset"
+        JOIN "Release" ON "Release"."id" = "Dataset"."releaseId"
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
       `);
