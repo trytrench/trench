@@ -34,23 +34,8 @@ function EventsPage() {
 
   return (
     <div className="flex-1 overflow-hidden flex items-stretch">
-      <div className="flex-1 w-full flex items-stretch">
-        {/* <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
-          <Title>Events</Title>
-          {eventFeaturesLoading || eventLabelsLoading || eventTypesLoading ? (
-            // skeleton
-            <></>
-          ) : (
-            <Filter
-              types={eventTypes}
-              labels={eventLabels ?? []}
-              features={eventFeatures?.map((feature: string) => ({
-                feature,
-                dataType: "text",
-              }))}
-            />
-          )}
-        </div> */}
+      <div className="flex-1 w-full flex flex-col items-stretch">
+        {/* heading? */}
         <div className="relative flex-1">
           <EventsList datasetId={router.query.datasetId as string} />
         </div>

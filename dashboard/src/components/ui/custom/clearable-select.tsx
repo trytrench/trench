@@ -36,7 +36,7 @@ function DropdownIndicator() {
 function Option({ children, ...props }: any) {
   return (
     <div className="relative">
-      <components.Option {...props} className={`pl-8 hover:bg-muted`}>
+      <components.Option {...props} className={`pl-8 hover:bg-accent`}>
         {props.label}
       </components.Option>
       {props.isSelected && (

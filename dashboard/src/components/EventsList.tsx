@@ -13,6 +13,8 @@ import { Panel } from "./ui/custom/panel";
 import { Toggle } from "~/components/ui/toggle";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
+import { SpinnerButton } from "./ui/custom/spinner-button";
+import { cn } from "~/lib/utils";
 
 interface Props {
   entityId?: string;
@@ -110,7 +112,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
       />
 
       <div className="flex flex-col h-full">
-        <div className="flex justify-between items-center py-2 px-4 border-b">
+        <div className="flex justify-between items-center py-3 px-8 border-b">
           <ListFilter
             options={{
               types: ["create-session", "payment-attempt"],
@@ -118,6 +120,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
               features: [
                 { feature: "amount", dataType: "number" },
                 { feature: "is_recurring", dataType: "boolean" },
+                { feature: "name", dataType: "text" },
               ],
             }}
             onChange={(v) => {
@@ -147,13 +150,14 @@ export default function EventsList({ entityId, datasetId }: Props) {
 
         <div className="grow flex flex-col relative px-4 pt-2">
           {eventsLoading ? (
-            // <Spinner alignSelf="center" mt={3} />
             <div>loading</div>
           ) : (
             <div className="absolute inset-0">
               <ScrollArea className="h-full px-4">
-                {view === "list"
-                  ? allEvents.map((event) => (
+                {view === "list" ? (
+                  <>
+                    <div className="h-2" />
+                    {allEvents.map((event) => (
                       <EventListItem
                         key={event.id}
                         event={event}
@@ -162,40 +166,39 @@ export default function EventsList({ entityId, datasetId }: Props) {
                         }}
                         selected={selectedEvent?.id === event.id}
                       />
-                    ))
-                  : listItems.map((item, idx) =>
-                      item.type === "event" ? (
-                        <EventCard
-                          key={item.event.id}
-                          datasetId={datasetId}
-                          event={item.event}
-                          isFirst={idx === 0}
-                          isLast={idx === listItems.length - 1}
-                        />
-                      ) : (
-                        <TimeDivider
-                          key={item.duration}
-                          duration={item.duration}
-                        />
-                      )
-                    )}
+                    ))}
+                  </>
+                ) : (
+                  listItems.map((item, idx) =>
+                    item.type === "event" ? (
+                      <EventCard
+                        key={item.event.id}
+                        datasetId={datasetId}
+                        event={item.event}
+                        isFirst={idx === 0}
+                        isLast={idx === listItems.length - 1}
+                      />
+                    ) : (
+                      <TimeDivider
+                        key={item.duration}
+                        duration={item.duration}
+                      />
+                    )
+                  )
+                )}
                 {hasNextPage && (
                   <div className="w-auto mt-4 mb-6 flex justify-center">
-                    <Button
+                    <SpinnerButton
                       variant="outline"
                       onClick={() => {
                         fetchNextPage().catch((err) => {
                           console.error(err);
                         });
                       }}
+                      loading={isFetchingNextPage}
                     >
-                      <Loader2
-                        className={`${
-                          isFetchingNextPage ? "w-4 mr-2" : "w-0 mr-0"
-                        } h-4 animate-spin transition-all`}
-                      />
                       Fetch more events
-                    </Button>
+                    </SpinnerButton>
                   </div>
                 )}
               </ScrollArea>
@@ -309,7 +312,7 @@ function EventCard(props: EventCardProps) {
       </div>
       <div className="w-[16rem] mt-4">
         <div className="flex">
-          <h1 className="text-lg">{event.type}</h1>
+          <h1 className="text-lg text-emphasis-foreground">{event.type}</h1>
         </div>
         <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}

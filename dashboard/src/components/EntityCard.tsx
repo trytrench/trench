@@ -19,7 +19,7 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
       <div className="">
         <Link href={`/datasets/${datasetId}/entity/${entity.id}`}>
           <div className="flex">
-            <h1 className="text-lg">
+            <h1 className="text-lg text-emphasis-foreground">
               {entity.type}: {entity.name}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
@@ -41,11 +41,11 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
               );
             })
           ) : (
-            <Badge variant="outline">No labels</Badge>
+            <div className="italic text-sm">No labels</div>
           )}
         </div>
         <div className="h-4"></div>
-        <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-secondary-foreground">
+        <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
           {Object.entries(entityFeatures).map(([key, value], idx) => (
             <div key={key}>
               <div className="font-semibold">{key}</div>

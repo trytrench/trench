@@ -19,18 +19,6 @@ import {
 } from "~/components/ui/select";
 import { Button } from "~/components/ui/button";
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "~/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
 import { SearchableSelect } from "./ui/custom/searchable-select";
 
 export const useFilters = () => {

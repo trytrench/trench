@@ -1,12 +1,15 @@
-import { Button, Title } from "@tremor/react";
+import { Title } from "@tremor/react";
 import { Navbar } from "~/components/Navbar";
 import { api } from "~/utils/api";
 
+import ListFilter from "~/components/ListFilter";
 import { EntityCard } from "~/components/EntityCard";
 import { Filter, useFilters } from "~/components/Filter";
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import { Loader2Icon } from "lucide-react";
+import { SpinnerButton } from "~/components/ui/custom/spinner-button";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 function EntitiesPage() {
   const router = useRouter();
@@ -84,64 +87,61 @@ function EntitiesPage() {
   }, [entities]);
 
   return (
-    <>
-      <div className="flex-1 overflow-hidden flex items-stretch">
-        <div className="w-96 shrink-0 flex flex-col items-start bg-tremor-background-muted p-8 border-r border-r-tremor-border">
-          <Title>Entities</Title>
-          {entityFeaturesLoading ||
-          entityLabelsLoading ||
-          entityTypesLoading ? (
-            // supposed to be a Skeleton
-            <></>
-          ) : (
-            <Filter
-              types={entityTypes}
-              labels={entityLabels}
-              features={entityFeatures.map((feature) => ({
+    <div className="flex flex-col overflow-hidden grow">
+      <div className="flex p-3 px-8 border-b">
+        <ListFilter
+          options={{
+            types: entityTypes ?? [],
+            labels: entityLabels ?? [],
+            features:
+              entityFeatures?.map((feature) => ({
                 feature,
                 dataType: featureToMetadata[feature]?.dataType ?? "text",
-              }))}
-            />
-          )}
-        </div>
-        <div className="relative flex-1">
-          <div className="h-full flex flex-col gap-4 px-8 py-4 overflow-y-auto">
-            {entitiesLoading ? (
-              <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
-            ) : (
-              <>
-                {allEntities.map((entity) => {
-                  return (
-                    <EntityCard
-                      key={entity.id}
-                      datasetId={datasetId}
-                      entity={entity}
-                    />
-                  );
-                })}
-                {hasNextPage && (
-                  <div className="self-center my-4">
-                    <Button
-                      size="xs"
-                      variant="secondary"
-                      onClick={() => {
-                        fetchNextPage().catch((err) => {
-                          console.error(err);
-                        });
-                      }}
-                      loading={isFetchingNextPage}
-                    >
-                      Fetch more entities
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
-        </div>
+              })) ?? [],
+          }}
+          onChange={() => {}}
+        />
       </div>
-    </>
+      <div className="grow relative">
+        <div className="absolute inset-0">
+          <ScrollArea className="h-full">
+            <div className="flex flex-col gap-4 px-8 py-4">
+              {entitiesLoading ? (
+                <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
+              ) : (
+                <>
+                  {allEntities.map((entity) => {
+                    return (
+                      <EntityCard
+                        key={entity.id}
+                        datasetId={datasetId}
+                        entity={entity}
+                      />
+                    );
+                  })}
+                  {hasNextPage && (
+                    <div className="self-center my-4">
+                      <SpinnerButton
+                        variant="outline"
+                        onClick={() => {
+                          fetchNextPage().catch((err) => {
+                            console.error(err);
+                          });
+                        }}
+                        loading={isFetchingNextPage}
+                      >
+                        Fetch more entities
+                      </SpinnerButton>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+      </div>
+    </div>
   );
 }
 

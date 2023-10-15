@@ -251,7 +251,7 @@ function LeftSideCard(props: LeftSideCardProps) {
   return (
     <div
       className={clsx({
-        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm bg-white":
+        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm":
           true,
         "opacity-30": !isActive,
         "bg-blue-100": isSelected,

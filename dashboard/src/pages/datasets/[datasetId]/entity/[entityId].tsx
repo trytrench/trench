@@ -30,6 +30,7 @@ import {
   ScrollArea as ShadCNScrollArea,
 } from "~/components/ui/scroll-area";
 import { ClearableSelect } from "~/components/ui/custom/clearable-select";
+import { Box } from "lucide-react";
 
 // a
 
@@ -128,16 +129,19 @@ export default function Home() {
       <Navbar />
 
       <main className="flex-1 h-0 flex flex-col">
-        <div className="px-8 py-6 border-b flex items-baseline gap-4 shrink-0">
+        <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
           <h1 className="text-2xl">{entityData?.name}</h1>
-          <Badge variant="secondary">Entity Type: {entityData?.type}</Badge>
+          <Badge className="-translate-y-0.5">
+            Entity Type: {entityData?.type}
+          </Badge>
         </div>
         <div className="grid grid-cols-4 flex-1 overflow-hidden">
           <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
             <Panel>
-              <div className="flex items-center justify-between w-full mb-2">
-                <Title className="shrink-0">Entity Information</Title>
-              </div>
+              <h1 className="shrink-0 text-emphasis-foreground mb-2">
+                Entity Information
+              </h1>
+
               <PropertyList
                 entries={Object.entries(entityInfo).map(([key, value]) => ({
                   label: key,
@@ -146,15 +150,12 @@ export default function Home() {
               />
             </Panel>
             <Panel>
-              <div className="flex items-center justify-between w-full mb-2">
-                <Title className="shrink-0">Labels</Title>
-              </div>
+              <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
+
               {entityLabels.length ? (
                 <div className="flex flex-row flex-wrap">
                   {entityLabels.map((label) => (
-                    <Badge variant="secondary" key={label}>
-                      {label}
-                    </Badge>
+                    <Badge key={label}>{label}</Badge>
                   ))}
                 </div>
               ) : (
@@ -164,9 +165,7 @@ export default function Home() {
               )}
             </Panel>
             <Panel>
-              <div className="flex items-center justify-between w-full mb-2">
-                <Title className="shrink-0">Data</Title>
-              </div>
+              <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
               <PropertyList
                 entries={Object.entries(entityData?.features ?? {}).map(
                   ([key, value]) => ({
