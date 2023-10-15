@@ -1,11 +1,13 @@
 import { Title } from "@tremor/react";
 import { useRouter } from "next/router";
+import AppLayout from "~/components/AppLayout";
 import EventsList from "~/components/EventsList";
 import { Filter, useFilters } from "~/components/Filter";
 import { Navbar } from "~/components/Navbar";
+import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
-function EventsPage() {
+const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const datasetId = router.query.datasetId as string;
 
@@ -42,15 +44,8 @@ function EventsPage() {
       </div>
     </div>
   );
-}
+};
 
-function Page() {
-  return (
-    <>
-      <Navbar />
-      <EventsPage />
-    </>
-  );
-}
+Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default Page;

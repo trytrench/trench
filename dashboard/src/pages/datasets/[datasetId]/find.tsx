@@ -1,20 +1,18 @@
-import { Title } from "@tremor/react";
-import { Navbar } from "~/components/Navbar";
-import { api } from "~/utils/api";
-
-import ListFilter from "~/components/ListFilter";
-import { EntityCard } from "~/components/EntityCard";
-import { Filter, useFilters } from "~/components/Filter";
-import { useMemo } from "react";
-import { useRouter } from "next/router";
 import { Loader2Icon } from "lucide-react";
+import { useRouter } from "next/router";
+import { useMemo } from "react";
+import AppLayout from "~/components/AppLayout";
+import { EntityCard } from "~/components/EntityCard";
+import { useFilters } from "~/components/Filter";
+import ListFilter from "~/components/ListFilter";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import type { NextPageWithLayout } from "~/pages/_app";
+import { api } from "~/utils/api";
 
-function EntitiesPage() {
+const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const datasetId = router.query.datasetId as string;
-
   const { type, labels, features, sortBy } = useFilters();
 
   const { data: entityTypes, isLoading: entityTypesLoading } =
@@ -143,15 +141,8 @@ function EntitiesPage() {
       </div>
     </div>
   );
-}
+};
 
-function Page() {
-  return (
-    <>
-      <Navbar />
-      <EntitiesPage />
-    </>
-  );
-}
+Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
 
 export default Page;

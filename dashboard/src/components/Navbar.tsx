@@ -1,20 +1,18 @@
-import { Button } from "~/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Select, SelectItem } from "@tremor/react";
+import clsx from "clsx";
+import { Menu } from "lucide-react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
-import { api } from "../utils/api";
+import { Button } from "~/components/ui/button";
 import { handleError } from "../lib/handleError";
-import clsx from "clsx";
-
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
 import {
-  Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
+import { api } from "../utils/api";
 
 interface Props {
   href: string;
@@ -56,8 +54,6 @@ export const Navbar = () => {
 
   const datasetId = router.query.datasetId as string | undefined;
 
-  const isCreatePage = router.pathname === "/create";
-
   const { data: datasets } = api.datasets.list.useQuery();
 
   const pathEnd = router.pathname.split("/").pop();
@@ -79,55 +75,39 @@ export const Navbar = () => {
         <NextLink href="/">
           <h1 className="text-lg font-bold text-black mr-12">Trench</h1>
         </NextLink>
-        {isCreatePage ? (
-          <>
-            <div>Create new dataset</div>
-          </>
-        ) : (
-          <>
-            <div>
-              <Select
-                value={datasetId}
-                onValueChange={(value) => {
-                  router.push(`/datasets/${value}/events`).catch(handleError);
-                }}
-              >
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Select dataset..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {datasets?.map((dataset) => {
-                    return (
-                      <SelectItem
-                        key={dataset.id}
-                        value={dataset.id.toString()}
-                      >
-                        {dataset.name}
-                      </SelectItem>
-                    );
-                  }) ?? []}
-                </SelectContent>
-              </Select>
-            </div>
+        <div>
+          <Select
+            value={datasetId}
+            onValueChange={(value) => {
+              router.push(`/datasets/${value}/events`).catch(handleError);
+            }}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Select dataset..." />
+            </SelectTrigger>
+            <SelectContent>
+              {datasets?.map((dataset) => {
+                return (
+                  <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                    {dataset.name}
+                  </SelectItem>
+                );
+              }) ?? []}
+            </SelectContent>
+          </Select>
+        </div>
 
-            <a href="/create">
-              <Button variant="ghost">Create</Button>
-            </a>
-            <a href={`/create?forkFrom=${datasetId}`}>
-              <Button variant="ghost">Fork</Button>
-            </a>
-            <div className="grow" />
+        <div className="grow" />
 
-            <div className="flex gap-4 text-sm">
-              <NavItem href="/changelog">Changelog</NavItem>
-              <NavItem href="/help">Help</NavItem>
-              <NavItem href="/docs">Docs</NavItem>
-              <div className="grow" />
-              {/* <UserButton afterSignOutUrl="/" /> */}
-            </div>
-          </>
-        )}
+        <div className="flex gap-4 text-sm">
+          <NavItem href="/changelog">Changelog</NavItem>
+          <NavItem href="/help">Help</NavItem>
+          <NavItem href="/docs">Docs</NavItem>
+          <div className="grow" />
+          {/* <UserButton afterSignOutUrl="/" /> */}
+        </div>
       </div>
+
       {datasetId ? (
         <div className="">
           <Tabs
