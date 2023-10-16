@@ -10,6 +10,7 @@ if (isMainThread) {
     const worker = new Worker(__filename, {
       workerData: {
         isProductionWorker: i === 0,
+        index: i,
       },
     });
   }
@@ -33,9 +34,6 @@ if (isMainThread) {
       while (true) {
         // Sleep for 1 second
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Start a transaction
-        await client.query("BEGIN");
 
         const resCursor = await client.query(
           `
@@ -67,8 +65,7 @@ if (isMainThread) {
         }[];
 
         if (outputs.length === 0) {
-          // No events to process, commit the transaction and continue
-          await client.query("COMMIT");
+          // No events to process, continue
           continue;
         }
 
@@ -88,15 +85,11 @@ if (isMainThread) {
           [newLastOutputId]
         );
 
-        // Commit the transaction
-        await client.query("COMMIT");
-
         console.log(`Wrote ${outputs.length} events to Clickhouse`);
       }
     } catch (err) {
       console.error(err);
       // If an error occurs, rollback the transaction
-      await client.query("ROLLBACK");
     } finally {
       await client.end();
     }
@@ -147,7 +140,10 @@ if (isMainThread) {
         ...results.map((result) => ({
           eventId: result.id,
           datasetId: BigInt(0),
-          data: result,
+          data: {
+            ...result,
+            datasetId: "0",
+          },
         }))
       );
     }
@@ -182,6 +178,11 @@ if (isMainThread) {
       FROM "Dataset"
       JOIN "DatasetJob" ON "DatasetJob"."datasetId" = "Dataset"."id"
       WHERE "Dataset"."id" > 0
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "ProductionDatasetLog"
+        WHERE "ProductionDatasetLog"."datasetId" = "Dataset"."id"
+      )
       FOR UPDATE OF "DatasetJob" 
       SKIP LOCKED
       LIMIT 1;
@@ -274,12 +275,23 @@ if (isMainThread) {
         `,
           [newLastEventId, datasetId]
         );
+        if (IS_PRODUCTION_WORKER) {
+          await client.query(
+            `
+            UPDATE "DatasetJob"
+            SET "lastProductionEventLogId" = $1
+            WHERE "datasetId" = 0;
+          `,
+            [newLastEventId, datasetId]
+          );
+        }
 
         // Commit the transaction
         await client.query("COMMIT");
 
         console.log(
-          `Processed ${events.length} events for dataset ${datasetId}`
+          `Processed ${events.length} events for dataset ${datasetId}`,
+          IS_PRODUCTION_WORKER ? "(prod)" : "(backfill)"
         );
       }
     } catch (err) {
