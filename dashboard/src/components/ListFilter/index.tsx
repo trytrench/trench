@@ -42,7 +42,7 @@ import { Badge } from "../ui/badge";
 import { Calendar } from "../ui/calendar";
 import type { DateRange } from "react-day-picker";
 import { cn } from "~/lib/utils";
-import { opsByDataType } from "./helpers";
+import { opsByDataType } from "./types";
 
 const dataTypeToIcon = {
   number: Hash,

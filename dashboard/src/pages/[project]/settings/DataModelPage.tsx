@@ -1,4 +1,3 @@
-import { Card, Divider, Icon, Text, Title } from "@tremor/react";
 import clsx from "clsx";
 import {
   Asterisk,
@@ -76,8 +75,8 @@ const FeatureCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
 function DataModelPage() {
   const router = useRouter();
   const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.projectName as string },
-    { enabled: !!router.query.projectName }
+    { name: router.query.project as string },
+    { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
     () => project?.prodDatasetId?.toString(),
@@ -88,7 +87,6 @@ function DataModelPage() {
     api.labels.getEntityTypes.useQuery({ datasetId }, { enabled: !!datasetId });
   const { data: allEvents, isLoading: allEventsLoading } =
     api.labels.getEventTypes.useQuery({ datasetId }, { enabled: !!datasetId });
-
   const { data: allFeatures, isLoading: allFeaturesLoading } =
     api.labels.allFeatures.useQuery({ datasetId }, { enabled: !!datasetId });
 

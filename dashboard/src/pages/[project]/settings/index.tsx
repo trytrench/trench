@@ -8,7 +8,7 @@ const Page: NextPageWithLayout = () => {
       <h1 className="text-2xl p-8 border-b text-emphasis-foreground">
         Settings
       </h1>
-      <div className="max-w-[70rem] mx-auto">
+      <div className="max-w-[72rem] mx-auto px-8">
         <div className="flex mt-12 gap-4">
           <div className="w-[16rem] flex flex-col gap-2 text-muted-foreground">
             <div className="font-semibold">Data Model</div>
