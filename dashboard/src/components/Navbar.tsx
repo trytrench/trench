@@ -43,6 +43,7 @@ const TABS = [
   { name: "Finder", path: "find" },
   { name: "Rules", path: "rules" },
   { name: "Explore", path: "explore" },
+  { name: "Settings", path: "settings" },
 ];
 
 export const Navbar = () => {

@@ -1,13 +1,10 @@
-import { Navbar } from "~/components/Navbar";
-import { RuleEditor } from "~/components/RuleEditor";
-import { useRouter } from "next/router";
-import { api } from "~/utils/api";
-import { Button, Icon } from "@chakra-ui/react";
-import { Tag } from "lucide-react";
-import type { NextPageWithLayout } from "~/pages/_app";
-import AppLayout from "~/components/AppLayout";
-import { useEffect, useMemo, useState } from "react";
 import { Release } from "@prisma/client";
+import { useRouter } from "next/router";
+import { useEffect, useMemo, useState } from "react";
+import AppLayout from "~/components/AppLayout";
+import { RuleEditor } from "~/components/RuleEditor";
+import type { NextPageWithLayout } from "~/pages/_app";
+import { api } from "~/utils/api";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();

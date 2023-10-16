@@ -3,9 +3,10 @@ import { DateParam, useQueryParams } from "use-query-params";
 import { DateRangePicker } from "~/components/DateRangePicker";
 import EntitiesDashboard from "~/components/EntitiesDashboard";
 import EventsDashboard from "~/components/EventsDashboard";
-import { Navbar } from "~/components/Navbar";
+import { type NextPageWithLayout } from "../_app";
+import AppLayout from "~/components/AppLayout";
 
-function EventsPage() {
+const Page: NextPageWithLayout = () => {
   const [dateRange, setDateRange] = useQueryParams({
     from: DateParam,
     to: DateParam,
@@ -39,12 +40,8 @@ function EventsPage() {
       </div>
     </div>
   );
-}
-export default function Dashboard() {
-  return (
-    <>
-      <Navbar />
-      <EventsPage />
-    </>
-  );
-}
+};
+
+Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
+
+export default Page;
