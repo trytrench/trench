@@ -61,8 +61,8 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const entityId = router.query.entityId as string;
   const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.projectName as string },
-    { enabled: !!router.query.projectName }
+    { name: router.query.project as string },
+    { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
     () => project?.prodDatasetId?.toString(),

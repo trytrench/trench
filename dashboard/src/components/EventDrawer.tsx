@@ -31,7 +31,7 @@ export function EventDrawer(props: {
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg">
+      <SheetContent className="sm:max-w-lg overflow-auto">
         <SheetHeader>Event</SheetHeader>
 
         <div className="w-full">
@@ -90,9 +90,7 @@ export function EventDrawer(props: {
                 entity={entity}
                 datasetId={datasetId}
                 relation={entity.relation}
-                href={`/${router.query.projectName as string}/entity/${
-                  entity.id
-                }`}
+                href={`/${router.query.project as string}/entity/${entity.id}`}
               />
             );
           })}

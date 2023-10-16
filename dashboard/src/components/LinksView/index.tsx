@@ -155,7 +155,7 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                href={`/${router.query.projectName as string}/entity/${
+                href={`/${router.query.project as string}/entity/${
                   item.id
                 }?tab=links`}
               />
@@ -194,7 +194,7 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              href={`/${router.query.projectName as string}/entity/${
+              href={`/${router.query.project as string}/entity/${
                 item.id
               }?tab=links`}
             />

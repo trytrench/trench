@@ -362,9 +362,7 @@ function EventCard(props: EventCardProps) {
               <EntityChip
                 key={entity.id}
                 entity={entity}
-                href={`/${router.query.projectName as string}/entity/${
-                  entity.id
-                }`}
+                href={`/${router.query.project as string}/entity/${entity.id}`}
               />
             );
           })}

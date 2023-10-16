@@ -54,7 +54,7 @@ export const Navbar = () => {
   const router = useRouter();
   const { data: projects } = api.project.list.useQuery();
 
-  const projectName = router.query.projectName as string;
+  const project = router.query.project as string;
 
   return (
     <nav
@@ -74,7 +74,7 @@ export const Navbar = () => {
         </NextLink>
         <div>
           <Select
-            value={projectName}
+            value={project}
             onValueChange={(value) => {
               router.push(`/${value}/events`).catch(handleError);
             }}
@@ -109,7 +109,7 @@ export const Navbar = () => {
         <Tabs
           value={router.pathname.split("/").pop()}
           onValueChange={(tab) => {
-            router.push(`/${projectName}/${tab}`).catch(handleError);
+            router.push(`/${project}/${tab}`).catch(handleError);
           }}
         >
           <TabsList className="pl-2">
