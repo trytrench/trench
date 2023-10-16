@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { cn } from "~/lib/utils";
+import { useRouter } from "next/router";
 
 interface Props {
   entityId?: string;
@@ -285,14 +286,13 @@ function TimeDivider({ duration }: TimeDividerProps) {
 
 interface EventCardProps {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
-  datasetId: string;
   isFirst: boolean;
   isLast: boolean;
 }
 
 function EventCard(props: EventCardProps) {
   const { event, isFirst, isLast } = props;
-  const { datasetId } = props;
+  const router = useRouter();
 
   const eventLabels = uniq(event.labels.filter((label) => label !== ""));
   const eventFeatures = Object.entries(event.features);
@@ -358,7 +358,15 @@ function EventCard(props: EventCardProps) {
 
         <div className="flex gap-1.5 flex-wrap mt-2">
           {event.entities.map((entity) => {
-            return <EntityChip entity={entity} datasetId={datasetId} />;
+            return (
+              <EntityChip
+                key={entity.id}
+                entity={entity}
+                href={`/${router.query.projectName as string}/entity/${
+                  entity.id
+                }`}
+              />
+            );
           })}
         </div>
       </Panel>

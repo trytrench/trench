@@ -8,10 +8,10 @@ import { Panel } from "./ui/custom/panel";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
-  datasetId: string;
+  href: string;
 }
 
-export const EntityChip = ({ entity, datasetId }: Props) => {
+export const EntityChip = ({ entity, href }: Props) => {
   const entityFeatures = Object.entries(entity.features ?? {});
   const hasFeatures = entityFeatures.length > 0;
   const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
@@ -32,7 +32,7 @@ export const EntityChip = ({ entity, datasetId }: Props) => {
               true,
           })}
           key={entity.id}
-          href={`/datasets/${datasetId}/entity/${entity.id}`}
+          href={href}
           onClick={(e) => {
             e.stopPropagation();
           }}

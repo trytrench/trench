@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "~/components/ui/sheet";
+import { useRouter } from "next/router";
 
 export function EventDrawer(props: {
   datasetId: string;
@@ -22,6 +23,7 @@ export function EventDrawer(props: {
 }) {
   const { isOpen, selectedEvent, onOpenChange, datasetId } = props;
   const [expandData, setExpandData] = useState(false);
+  const router = useRouter();
 
   const eventLabels = uniq(
     selectedEvent?.labels?.filter((label) => label !== "") ?? []
@@ -88,6 +90,9 @@ export function EventDrawer(props: {
                 entity={entity}
                 datasetId={datasetId}
                 relation={entity.relation}
+                href={`/${router.query.projectName as string}/entity/${
+                  entity.id
+                }`}
               />
             );
           })}
