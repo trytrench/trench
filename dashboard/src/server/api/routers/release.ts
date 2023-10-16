@@ -39,4 +39,36 @@ export const releasesRouter = createTRPCRouter({
 
       return release;
     }),
+  publish: publicProcedure
+    .input(
+      z.object({
+        description: z.string().optional(),
+        version: z.string(),
+        code: z.record(z.string()),
+        projectId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { description, version, code } = input;
+
+      const release = await ctx.prisma.release.create({
+        data: {
+          description,
+          version,
+          code,
+          projectId: input.projectId,
+        },
+      });
+
+      const project = await ctx.prisma.project.findUniqueOrThrow({
+        where: { id: input.projectId },
+      });
+
+      await ctx.prisma.dataset.update({
+        where: { id: project.prodDatasetId! },
+        data: { releaseId: release.id },
+      });
+
+      return release;
+    }),
 });

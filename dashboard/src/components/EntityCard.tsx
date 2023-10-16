@@ -6,10 +6,10 @@ import { type RouterOutputs } from "~/utils/api";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
-  datasetId: string;
+  href: string;
 }
 
-export const EntityCard = ({ entity, relation, datasetId }: Props) => {
+export const EntityCard = ({ entity, relation, href }: Props) => {
   const entityFeatures = entity.features ?? {};
 
   const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
@@ -17,7 +17,7 @@ export const EntityCard = ({ entity, relation, datasetId }: Props) => {
   return (
     <div className="border rounded-lg shadow-sm p-8 bg-card">
       <div className="">
-        <Link href={`/datasets/${datasetId}/entity/${entity.id}`}>
+        <Link href={href}>
           <div className="flex">
             <h1 className="text-lg text-emphasis-foreground">
               {entity.type}: {entity.name}

@@ -37,7 +37,7 @@ interface Props {
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
-export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
+export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
   const router = useRouter();
 
   const { data: project } = api.project.getByName.useQuery(
@@ -47,6 +47,7 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
 
   const { mutateAsync: createDataset } = api.datasets.create.useMutation();
   const { mutateAsync: createRelease } = api.releases.create.useMutation();
+  const { mutateAsync: publish } = api.releases.publish.useMutation();
   const { data: releases, refetch: refetchReleases } =
     api.releases.list.useQuery();
 
@@ -68,11 +69,6 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
     isOpen: isBackfillModalOpen,
     onClose: onBackfillModalClose,
     onOpen: onBackfillModalOpen,
-  } = useDisclosure();
-  const {
-    isOpen: isPublishModalOpen,
-    onClose: onPublishModalClose,
-    onOpen: onPublishModalOpen,
   } = useDisclosure();
   // const btnRef = useRef();
 
@@ -237,13 +233,16 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
                 <Button
                   size="sm"
                   className="mr-2"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                    setSources(files);
+                    setIsEditing(false);
+                  }}
                 >
                   Cancel
                 </Button>
                 <PublishModal
                   onPublish={(version, description) => {
-                    createRelease({
+                    publish({
                       version,
                       description,
                       code: sources,
@@ -257,7 +256,6 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
                       .catch((error) => {
                         toast({ title: error.message, status: "error" });
                       });
-                    onPublishModalClose();
                   }}
                   initialVersion={release.version}
                   button={<Button>Publish</Button>}

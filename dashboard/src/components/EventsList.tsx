@@ -1,4 +1,4 @@
-import { LayoutGrid, List, Loader2 } from "lucide-react";
+import { LayoutGrid, List, Loader2, Loader2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFilters } from "~/components/Filter";
 import ListFilter from "~/components/ListFilter";
@@ -150,7 +150,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
 
         <div className="grow flex flex-col relative px-4 pt-2">
           {eventsLoading ? (
-            <div>loading</div>
+            <Loader2Icon className="w-4 h-4 animate-spin" />
           ) : (
             <div className="absolute inset-0">
               <ScrollArea className="h-full px-4">

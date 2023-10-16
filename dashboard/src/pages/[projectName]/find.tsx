@@ -117,7 +117,7 @@ const Page: NextPageWithLayout = () => {
                     return (
                       <EntityCard
                         key={entity.id}
-                        datasetId={datasetId}
+                        href={`/${project?.name}/entity/${entity.id}`}
                         entity={entity}
                       />
                     );

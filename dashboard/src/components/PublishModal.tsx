@@ -90,7 +90,15 @@ export const PublishModal = ({ onPublish, initialVersion, button }: Props) => {
           <DialogClose asChild>
             <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button onClick={onPublish}>Publish</Button>
+          <DialogClose asChild>
+            <Button
+              onClick={() =>
+                onPublish(updateSemver(initialVersion, version), description)
+              }
+            >
+              Publish
+            </Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

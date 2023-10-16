@@ -1,53 +1,26 @@
-import { Text, Title } from "@tremor/react";
-
-import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import {
   DateParam,
-  NumberParam,
   StringParam,
   useQueryParam,
   useQueryParams,
 } from "use-query-params";
-import EventsDashboard from "~/components/EventsDashboard";
-import EventsList from "~/components/EventsList";
-import { api } from "~/utils/api";
-import { Navbar } from "../../../components/Navbar";
-import LinksView from "~/components/LinksView";
 import { DatePickerWithRange } from "~/components/DRPicker";
-import { Panel } from "~/components/ui/custom/panel";
+import EventsList from "~/components/EventsList";
+import LinksView from "~/components/LinksView";
 import { Badge } from "~/components/ui/badge";
-import { PropertyList } from "~/components/ui/custom/property-list";
+import { ClearableSelect } from "~/components/ui/custom/clearable-select";
 import {
   Tabs,
+  TabsContent,
   TabsList,
   TabsTrigger,
-  TabsContent,
 } from "~/components/ui/custom/light-tabs";
-import {
-  ScrollBar,
-  ScrollArea as ShadCNScrollArea,
-} from "~/components/ui/scroll-area";
-import { ClearableSelect } from "~/components/ui/custom/clearable-select";
-import { Box } from "lucide-react";
-
-// a
-
-function HorzScroll({ children }: { children: React.ReactNode }) {
-  return (
-    <ScrollArea.Root>
-      <ScrollArea.Viewport>{children}</ScrollArea.Viewport>
-      <ScrollArea.Scrollbar
-        orientation="horizontal"
-        className="flex select-none touch-none p-0.5 bg-black/20 transition-colors duration-[160ms] ease-out hover:bg-blackA8 data-[orientation=vertical]:w-2.5 data-[orientation=horizontal]:flex-col data-[orientation=horizontal]:h-2"
-      >
-        <ScrollArea.Thumb className="flex-1 bg-white/50 rounded-[10px] relative" />
-      </ScrollArea.Scrollbar>
-      <ScrollArea.Corner />
-    </ScrollArea.Root>
-  );
-}
+import { Panel } from "~/components/ui/custom/panel";
+import { PropertyList } from "~/components/ui/custom/property-list";
+import { api } from "~/utils/api";
+import { Navbar } from "../../../components/Navbar";
 
 interface RelatedEntitiesProps {
   entityId: string;
@@ -92,11 +65,18 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
 export default function Home() {
   const router = useRouter();
   const entityId = router.query.entityId as string;
-  const datasetId = router.query.datasetId as string;
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.projectName as string },
+    { enabled: !!router.query.projectName }
+  );
+  const datasetId = useMemo(
+    () => project?.prodDatasetId?.toString(),
+    [project]
+  );
 
   const { data: entityData } = api.entities.get.useQuery(
-    { id: entityId!, datasetId },
-    { enabled: !!entityId }
+    { id: entityId, datasetId: datasetId! },
+    { enabled: !!entityId && !!datasetId }
   );
 
   const entityInfo = useMemo(
@@ -114,12 +94,6 @@ export default function Home() {
   );
 
   const [tab, setTab] = useQueryParam("tab", StringParam);
-  const [view, setView] = useState<"grid" | "list">("list");
-
-  const [dateRange, setDateRange] = useQueryParams({
-    from: DateParam,
-    to: DateParam,
-  });
 
   const entityLabels =
     entityData?.labels?.filter((label) => label !== "") ?? [];
@@ -127,7 +101,6 @@ export default function Home() {
   return (
     <>
       <Navbar />
-
       <main className="flex-1 h-0 flex flex-col">
         <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
           <h1 className="text-2xl">{entityData?.name}</h1>
@@ -135,7 +108,7 @@ export default function Home() {
             Entity Type: {entityData?.type}
           </Badge>
         </div>
-        <div className="grid grid-cols-4 flex-1 overflow-hidden">
+        <div className="grid grid-cols-4 flex-1">
           <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
             <Panel>
               <h1 className="shrink-0 text-emphasis-foreground mb-2">

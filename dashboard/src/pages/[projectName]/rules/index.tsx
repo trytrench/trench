@@ -1,5 +1,5 @@
 import { Navbar } from "~/components/Navbar";
-import { DatasetEditor } from "~/components/DatasetEditor";
+import { RuleEditor } from "~/components/RuleEditor";
 import { useRouter } from "next/router";
 import { api } from "~/utils/api";
 import { Button, Icon } from "@chakra-ui/react";
@@ -34,7 +34,7 @@ const Page: NextPageWithLayout = () => {
 
   if (!currentRelease) return null;
   return (
-    <DatasetEditor
+    <RuleEditor
       release={currentRelease}
       onPreviewRelease={setCurrentRelease}
       key={currentRelease.id}
