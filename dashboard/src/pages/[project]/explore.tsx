@@ -1,14 +1,26 @@
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
-import { DateParam, useQueryParams } from "use-query-params";
 import EntitiesDashboard from "~/components/EntitiesDashboard";
 import EventsDashboard from "~/components/EventsDashboard";
 import { type NextPageWithLayout } from "../_app";
 import AppLayout from "~/components/AppLayout";
 import { DatePickerWithRange } from "~/components/DatePickerWithRange";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DateRange } from "react-day-picker";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useRouter } from "next/router";
+import { api } from "~/utils/api";
 
 const Page: NextPageWithLayout = () => {
+  const router = useRouter();
+
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.project as string },
+    { enabled: !!router.query.project }
+  );
+  const datasetId = useMemo(
+    () => project?.prodDatasetId?.toString(),
+    [project]
+  );
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   return (
@@ -22,20 +34,23 @@ const Page: NextPageWithLayout = () => {
       <div className="h-4"></div>
 
       <div className="px-8">
-        <TabGroup>
-          <TabList>
-            <Tab>Events</Tab>
-            <Tab>Entities</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel className="pb-40">
-              <EventsDashboard />
-            </TabPanel>
-            <TabPanel>
-              <EntitiesDashboard />
-            </TabPanel>
-          </TabPanels>
-        </TabGroup>
+        <Tabs>
+          <TabsList>
+            <TabsTrigger value="events">Events</TabsTrigger>
+            <TabsTrigger value="entities">Entities</TabsTrigger>
+          </TabsList>
+
+          {dateRange && (
+            <>
+              <TabsContent value="events">
+                <EventsDashboard datasetId={datasetId} dateRange={dateRange} />
+              </TabsContent>
+              <TabsContent value="entities">
+                <EntitiesDashboard dateRange={dateRange} />
+              </TabsContent>
+            </>
+          )}
+        </Tabs>
       </div>
     </div>
   );

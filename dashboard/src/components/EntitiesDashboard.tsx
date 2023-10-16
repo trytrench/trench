@@ -2,16 +2,15 @@ import { BarList, Card, Divider, Metric, Text, Title } from "@tremor/react";
 import { format } from "date-fns";
 import { sumBy } from "lodash";
 import { useMemo } from "react";
-import { DateParam, useQueryParams } from "use-query-params";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
+import { DateRange } from "react-day-picker";
 
-export default function EntitiesDashboard() {
-  const [dateRange, setDateRange] = useQueryParams({
-    from: DateParam,
-    to: DateParam,
-  });
+interface Props {
+  dateRange: DateRange;
+}
 
+export default function EntitiesDashboard({ dateRange }: Props) {
   const { data: entityTypeTimeData } =
     api.events.getEntityTypeTimeData.useQuery(
       { start: dateRange.from!, end: dateRange.to! },
