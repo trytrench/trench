@@ -1,7 +1,6 @@
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { StringParam, useQueryParam } from "use-query-params";
-import { DatePickerWithRange } from "~/components/DRPicker";
 import EventsList from "~/components/EventsList";
 import LinksView from "~/components/LinksView";
 import { Badge } from "~/components/ui/badge";
@@ -18,6 +17,8 @@ import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import AppLayout from "~/components/AppLayout";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "~/components/DatePickerWithRange";
 
 interface RelatedEntitiesProps {
   entityId: string;
@@ -96,6 +97,7 @@ const Page: NextPageWithLayout = () => {
   );
 
   const [tab, setTab] = useQueryParam("tab", StringParam);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const entityLabels =
     entityData?.labels?.filter((label) => label !== "") ?? [];
@@ -161,17 +163,10 @@ const Page: NextPageWithLayout = () => {
             </TabsList>
             <TabsContent value="explorer">
               <div className="">
-                <DatePickerWithRange />
-                {/* <DateRangePicker
-                        value={dateRange}
-                        onValueChange={(value) =>
-                          setDateRange(
-                            Object.keys(value).length
-                              ? value
-                              : { from: undefined, to: undefined }
-                          )
-                        }
-                      /> */}
+                <DatePickerWithRange
+                  dateRange={dateRange}
+                  onDateRangeChange={setDateRange}
+                />
               </div>
               {/* <EventsDashboard entityId={entityId} datasetId={datasetId} /> */}
             </TabsContent>

@@ -9,7 +9,8 @@ import {
   ModalOverlay,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { DateRangePicker } from "./DateRangePicker";
+import { DatePickerWithRange } from "./DatePickerWithRange";
+import { DateRange } from "react-day-picker";
 
 interface Props {
   isOpen: boolean;
@@ -24,9 +25,7 @@ export default function BackfillModal({
   onConfirm: onBackfill,
   isLoading,
 }: Props) {
-  const [dateRange, setDateRange] = useState<
-    { from: Date; to: Date } | undefined
-  >();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -35,7 +34,11 @@ export default function BackfillModal({
         <ModalHeader>Test rules</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+          <DatePickerWithRange
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+          />
+          ;
         </ModalBody>
 
         <ModalFooter>
