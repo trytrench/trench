@@ -12,7 +12,8 @@ import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
 import { api } from "~/utils/api";
 import pluralize from "pluralize";
-import { LeftItem, RightItem } from "./types";
+import type { LeftItem, RightItem } from "./types";
+import { useRouter } from "next/router";
 
 interface LinksViewProps {
   entityId: string;
@@ -27,6 +28,7 @@ function LinksView({
   onLeftTypeFilterChange,
   datasetId,
 }: LinksViewProps) {
+  const router = useRouter();
   const { data } = api.links.relatedEntities.useQuery(
     {
       datasetId: datasetId,
@@ -140,6 +142,7 @@ function LinksView({
             const isActive = !selectionExists || activeIds.has(item.id);
             return (
               <LeftSideCard
+                key={item.id}
                 item={item}
                 isActive={isActive}
                 isSelected={isSelected}
@@ -152,7 +155,9 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                datasetId={datasetId}
+                href={`/${router.query.projectName as string}/entity/${
+                  item.id
+                }?tab=links`}
               />
             );
           })}
@@ -180,6 +185,7 @@ function LinksView({
           const isActive = !selectionExists || activeIds.has(item.id); // TODO: active when linked to right selection.
           return (
             <RightSideCard
+              key={item.id}
               item={item}
               isActive={isActive}
               isSelected={isSelected}
@@ -188,7 +194,9 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              datasetId={datasetId}
+              href={`/${router.query.projectName as string}/entity/${
+                item.id
+              }?tab=links`}
             />
           );
         })}
@@ -223,12 +231,12 @@ interface LeftSideCardProps {
   onClick: () => void;
   onFilterClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
-  datasetId: string;
+  href: string;
 }
 
 function LeftSideCard(props: LeftSideCardProps) {
-  const { item, isActive, isSelected, onClick, onFilterClick, divRef } = props;
-  const { datasetId } = props;
+  const { item, isActive, isSelected, onClick, onFilterClick, divRef, href } =
+    props;
 
   const isGroup = item.itemType === "group";
 
@@ -289,7 +297,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         ) : (
           <a
             className="my-auto text-gray-400"
-            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -351,12 +359,11 @@ interface RightSideCardProps {
   isSelected: boolean;
   onClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
-  datasetId: string;
+  href: string;
 }
 
 function RightSideCard(props: RightSideCardProps) {
-  const { item, isActive, isSelected, onClick, divRef } = props;
-  const { datasetId } = props;
+  const { item, isActive, isSelected, onClick, divRef, href } = props;
 
   return (
     <div key={item.id} ref={divRef}>
@@ -375,7 +382,7 @@ function RightSideCard(props: RightSideCardProps) {
           </div>
           <a
             className="my-auto text-gray-400"
-            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
