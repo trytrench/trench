@@ -25,7 +25,7 @@ async function main() {
 
   const project = await prisma.project.create({
     data: {
-      name: "Test Project",
+      name: "production",
       releases: {
         create: [
           {

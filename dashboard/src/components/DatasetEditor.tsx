@@ -1,24 +1,14 @@
-import {
-  Box,
-  Button,
-  Flex,
-  HStack,
-  Icon,
-  IconButton,
-  Input,
-  Spinner,
-  VStack,
-  useDisclosure,
-  useToast,
-} from "@chakra-ui/react";
+import { useDisclosure, useToast } from "@chakra-ui/react";
 import { ClassNames } from "@emotion/react";
+import { type Release } from "@prisma/client";
 import {
-  Check,
-  History,
-  MoreHorizontal,
-  PlusCircle,
-  Tag,
-  X,
+  CheckIcon,
+  HistoryIcon,
+  Loader2,
+  MoreHorizontalIcon,
+  PlusCircleIcon,
+  TagIcon,
+  XIcon,
 } from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +24,9 @@ import { api } from "~/utils/api";
 import BackfillModal from "./BackfillModal";
 import { PublishModal } from "./PublishModal";
 import { ReleasesSidebar } from "./ReleasesSidebar";
-import { Release } from "@prisma/client";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { useRouter } from "next/router";
 // import { sortBy } from "lodash";
 
 interface Props {
@@ -46,6 +38,13 @@ const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
 export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
+  const router = useRouter();
+
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.projectName as string },
+    { enabled: !!router.query.projectName }
+  );
+
   const { mutateAsync: createDataset } = api.datasets.create.useMutation();
   const { mutateAsync: createRelease } = api.releases.create.useMutation();
   const { data: releases, refetch: refetchReleases } =
@@ -153,30 +152,7 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
 
   return (
     <>
-      <Flex h="95vh" gap={6} p={4}>
-        <PublishModal
-          isOpen={isPublishModalOpen}
-          onClose={onPublishModalClose}
-          onPublish={(version, description) => {
-            createRelease({
-              version,
-              description,
-              code: sources,
-              projectId: releases?.[0]?.projectId,
-            })
-              .then(() => {
-                setIsEditing(false);
-                refetchReleases();
-                toast({ title: "Release created", status: "success" });
-              })
-              .catch((error) => {
-                toast({ title: error.message, status: "error" });
-              });
-            onPublishModalClose();
-          }}
-          initialVersion={release.version}
-        />
-
+      <div className="flex h-full">
         <BackfillModal
           isOpen={isBackfillModalOpen}
           onClose={onBackfillModalClose}
@@ -198,38 +174,27 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
           }}
         />
 
-        <ReleasesSidebar
-          releases={releases ?? []}
-          isOpen={isDrawerOpen}
-          onClose={onDrawerClose}
-          onPreviewRelease={onPreviewRelease}
-          // finalFocusRef={btnRef}
-        />
-
-        <Box w={200}>
-          <VStack
-            spacing={2}
-            divider={<Box height={"1px"} w={"100%"} bg="gray.200" />}
-            borderColor="gray.200"
-          >
-            <HStack>
-              <Input placeholder="Search" size="sm" />
-              <IconButton
-                size="xs"
-                variant="ghost"
-                aria-label="Save"
-                icon={<Icon as={PlusCircle} fontSize="sm" />}
+        <div className="w-72">
+          <div>
+            <div className="flex space-x-2">
+              <Input type="search" placeholder="Search" />
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => {
                   setSources({
                     ...sources,
                     [`Untitled-${Object.keys(sources).length}.sqrl`]: "",
                   });
                 }}
-              />
-            </HStack>
-            {Object.keys(sources).map((source) => (
+              >
+                <PlusCircleIcon className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {Object.keys(sources).map((source, index) => (
               <FileListItem
-                key={source}
+                key={index}
                 active={currentFileName === source}
                 onClick={() => {
                   setCurrentFileName(source);
@@ -252,22 +217,22 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
                 // }
               />
             ))}
-          </VStack>
-        </Box>
+          </div>
+        </div>
 
-        <Box flex={2} overflow={"hidden"}>
-          <HStack justify="flex-end" spacing={1} mb={1}>
+        <div className="flex-1">
+          <div className="flex justify-end items-center h-11">
             {isEditing ? (
               <>
-                <Box mr="2">
+                <div className="mr-2">
                   {compileStatus.status === "pending" ? (
-                    <Spinner size="sm" speed="0.8s" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : compileStatus.status === "error" ? (
-                    <Icon fontSize="18" as={X} color="red.500" />
+                    <XIcon className="w-4 h-4" />
                   ) : compileStatus.status === "success" ? (
-                    <Icon fontSize="18" as={Check} color="green.500" />
+                    <CheckIcon className="w-4 h-4" />
                   ) : null}
-                </Box>
+                </div>
 
                 <Button
                   size="sm"
@@ -276,53 +241,64 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
                 >
                   Cancel
                 </Button>
-                <Button
-                  onClick={onPublishModalOpen}
-                  size="sm"
-                  colorScheme="blue"
-                  isDisabled={compileStatus.status !== "success"}
-                >
-                  Create release
-                </Button>
+                <PublishModal
+                  onPublish={(version, description) => {
+                    createRelease({
+                      version,
+                      description,
+                      code: sources,
+                      projectId: project?.id,
+                    })
+                      .then(() => {
+                        setIsEditing(false);
+                        refetchReleases();
+                        toast({ title: "Release created", status: "success" });
+                      })
+                      .catch((error) => {
+                        toast({ title: error.message, status: "error" });
+                      });
+                    onPublishModalClose();
+                  }}
+                  initialVersion={release.version}
+                  button={<Button>Publish</Button>}
+                />
               </>
             ) : (
               <>
-                <Button leftIcon={<Icon as={Tag} />} mr="auto" size="xs">
-                  v{release.version}
+                <Button>
+                  <TagIcon className="mr-2 w-4 h-4" />v{release.version}
                 </Button>
+                <div className="flex-1" />
                 <Button
                   onClick={onBackfillModalOpen}
                   size="sm"
-
-                  // isDisabled={compileStatus.status !== "success"}
+                  variant="secondary"
                 >
                   Test
                 </Button>
                 <Button
-                  size="sm"
-                  colorScheme="blue"
+                  // size="sm"
+                  // colorScheme="blue"
                   onClick={() => setIsEditing(true)}
-                  // ref={btnRef}
                 >
                   Edit
                 </Button>
-                <IconButton
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Releases"
-                  icon={<Icon as={History} fontSize="lg" />}
-                  onClick={onDrawerOpen}
-                  // ref={btnRef}
+
+                <ReleasesSidebar
+                  releases={releases ?? []}
+                  onPreviewRelease={onPreviewRelease}
+                  button={
+                    <Button size="icon" variant="ghost" onClick={onDrawerOpen}>
+                      <HistoryIcon className="w-4 h-4" />
+                    </Button>
+                  }
                 />
-                <IconButton
-                  size="sm"
-                  variant="ghost"
-                  aria-label="More"
-                  icon={<Icon as={MoreHorizontal} fontSize="lg" />}
-                />
+                <Button size="icon" variant="ghost">
+                  <MoreHorizontalIcon className="w-4 h-4" />
+                </Button>
               </>
             )}
-          </HStack>
+          </div>
 
           <ClassNames>
             {({ css }) => (
@@ -354,8 +330,8 @@ export const DatasetEditor = ({ release, onPreviewRelease }: Props) => {
               />
             )}
           </ClassNames>
-        </Box>
-      </Flex>
+        </div>
+      </div>
     </>
   );
 };

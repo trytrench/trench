@@ -41,7 +41,7 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Info", path: "info" },
+  { name: "Rules", path: "rules" },
   { name: "Explore", path: "explore" },
 ];
 
@@ -75,10 +75,10 @@ export const Navbar = () => {
           <Select
             value={projectName}
             onValueChange={(value) => {
-              router.push(`/datasets/${value}/events`).catch(handleError);
+              router.push(`/${value}/events`).catch(handleError);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-64">
               <SelectValue placeholder="Select project..." />
             </SelectTrigger>
             <SelectContent>
