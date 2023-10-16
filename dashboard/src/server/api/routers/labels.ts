@@ -52,6 +52,7 @@ export const labelsRouter = createTRPCRouter({
           SELECT DISTINCT event_type
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
+          ORDER BY event_type ASC
         `,
         format: "JSONEachRow",
       });
@@ -66,6 +67,7 @@ export const labelsRouter = createTRPCRouter({
           SELECT DISTINCT entity_type
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
+          ORDER BY entity_type ASC
         `,
         format: "JSONEachRow",
       });
@@ -118,15 +120,20 @@ export const labelsRouter = createTRPCRouter({
       const entityQuery = `
       SELECT DISTINCT feature, entity_type
       FROM event_entity
-      WHERE dataset_id = '${input.datasetId}'
-      ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
+      ARRAY JOIN JSONExtractKeys(assumeNotNull(entity_features)) AS feature
+      WHERE dataset_id = '${input.datasetId}' AND entity_features IS NOT NULL
+      ORDER BY entity_type ASC
     `;
       const eventQuery = `
       SELECT DISTINCT feature, event_type
       FROM event_entity
-      WHERE dataset_id = '${input.datasetId}'
-      ARRAY JOIN JSONExtractKeys(event_features) AS feature;
+      ARRAY JOIN JSONExtractKeys(assumeNotNull(event_features)) AS feature
+      WHERE dataset_id = '${input.datasetId}' AND event_features IS NOT NULL
+      ORDER BY event_type ASC
     `;
+
+      console.log(entityQuery);
+      console.log(eventQuery);
 
       const [entityResult, eventResult] = await Promise.all([
         db.query({ query: entityQuery, format: "JSONEachRow" }),

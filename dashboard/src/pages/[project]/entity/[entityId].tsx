@@ -17,6 +17,7 @@ import { PropertyList } from "~/components/ui/custom/property-list";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import AppLayout from "~/components/AppLayout";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 interface RelatedEntitiesProps {
   entityId: string;
@@ -33,8 +34,8 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
   );
 
   return (
-    <>
-      <div className="flex items-center gap-4 grow px-2 pb-2 border-b">
+    <div className="h-full flex flex-col">
+      <div className="flex items-center gap-4 px-2 pb-2 border-b">
         <span className="whitespace-nowrap text-sm">Filter</span>
 
         <ClearableSelect
@@ -47,13 +48,19 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
           isClearable={true}
         />
       </div>
-      <LinksView
-        entityId={entityId ?? ""}
-        datasetId={datasetId}
-        leftTypeFilter={entityType}
-        onLeftTypeFilterChange={setEntityType}
-      />
-    </>
+      <div className="grow relative">
+        <div className="absolute inset-0">
+          <ScrollArea className="h-full pr-4">
+            <LinksView
+              entityId={entityId ?? ""}
+              datasetId={datasetId}
+              leftTypeFilter={entityType}
+              onLeftTypeFilterChange={setEntityType}
+            />
+          </ScrollArea>
+        </div>
+      </div>
+    </div>
   );
 }
 

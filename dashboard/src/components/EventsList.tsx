@@ -151,7 +151,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
 
         <div className="grow flex flex-col relative px-4 pt-2">
           {eventsLoading ? (
-            <Loader2Icon className="w-4 h-4 animate-spin" />
+            <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
           ) : (
             <div className="absolute inset-0">
               <ScrollArea className="h-full px-4">

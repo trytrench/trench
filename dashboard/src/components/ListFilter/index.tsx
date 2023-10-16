@@ -3,7 +3,6 @@
 import { Command as CommandPrimitive } from "cmdk";
 
 import {
-  Asterisk,
   Check,
   Hash,
   ListFilter,
@@ -34,9 +33,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -44,7 +40,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Badge } from "../ui/badge";
 import { Calendar } from "../ui/calendar";
-import { DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
 import { cn } from "~/lib/utils";
 import { opsByDataType } from "./helpers";
 
@@ -76,7 +72,7 @@ interface FilterOutput {
 function Filter(props: Props) {
   const { options, onChange } = props;
 
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [filters, setFilters] = useState<[string, string, string][]>([]);
 
@@ -97,14 +93,14 @@ function Filter(props: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
             {/* Type Filter */}
-            <DropdownMenuSub>
+            {/* <DropdownMenuSub>
               <DropdownMenuSubTrigger>Type</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 {options.types.map((type) => (
                   <DropdownMenuItem
                     key={type}
                     onClick={() => {
-                      setSelectedType(type);
+                      setSelectedTypes(type);
                     }}
                   >
                     <Badge
@@ -116,6 +112,49 @@ function Filter(props: Props) {
                     </Badge>
                   </DropdownMenuItem>
                 ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub> */}
+
+            {/* Types Filter */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Types</DropdownMenuSubTrigger>
+
+              <DropdownMenuSubContent>
+                <Command>
+                  <CommandInput placeholder="Search Types..." autoFocus />
+                  <CommandList>
+                    <CommandEmpty>No types found.</CommandEmpty>
+                    <CommandGroup>
+                      {options.types.map((type) => (
+                        <CommandItem
+                          key={type}
+                          onSelect={() => {
+                            if (!selectedTypes.includes(type)) {
+                              setSelectedTypes([...selectedTypes, type]);
+                            } else {
+                              setSelectedTypes(
+                                selectedTypes.filter((l) => l !== type)
+                              );
+                            }
+                          }}
+                          className="pl-8 relative"
+                        >
+                          {selectedTypes.includes(type) && (
+                            <Check className="absolute w-4 h-4 left-2 top-2" />
+                          )}
+
+                          <Badge
+                            className="bg-card shadow-sm pr-2"
+                            variant="outline"
+                          >
+                            {type}
+                            <X className="ml-1 h-3 w-3 my-auto" />
+                          </Badge>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
@@ -174,25 +213,20 @@ function Filter(props: Props) {
               <DropdownMenuSubTrigger>Date Range</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <Calendar
-                  // initialFocus
+                  initialFocus
                   mode="range"
-                  defaultMonth={dateRange?.from}
+                  // defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  numberOfMonths={2}
+                  // numberOfMonths={2}
                 />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive-foreground ">
-              Clear Filters
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
       <div className="mr-auto ml-3 flex gap-1 flex-wrap">
-        {selectedType && (
+        {/* {selectedType && (
           <Badge
             variant="outline"
             className="flex pr-2 animate-in zoom-in-95 fade-in-20"
@@ -207,7 +241,23 @@ function Filter(props: Props) {
               <X className="ml-1 h-3 w-3 my-auto" />
             </button>
           </Badge>
-        )}
+        )} */}
+        {selectedTypes.map((type) => (
+          <Badge
+            variant="outline"
+            className="flex pr-2 animate-in zoom-in-95 fade-in-20"
+          >
+            {type}
+            <button
+              className="rounded-full flex items-center"
+              onClick={() => {
+                setSelectedTypes(selectedTypes.filter((l) => l !== type));
+              }}
+            >
+              <X className="ml-1 h-3 w-3 my-auto" />
+            </button>
+          </Badge>
+        ))}
         {selectedLabels.map((label) => (
           <Badge
             variant="default"
