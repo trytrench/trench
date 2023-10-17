@@ -2,6 +2,7 @@ import clsx from "clsx";
 import {
   Asterisk,
   Hash,
+  Loader2Icon,
   LucideIcon,
   ToggleLeft,
   Type,
@@ -83,10 +84,15 @@ function DataModelPage() {
     [project]
   );
 
-  const { data: allEntities, isLoading: allEntitiesLoading } =
-    api.labels.getEntityTypes.useQuery({ datasetId }, { enabled: !!datasetId });
-  const { data: allEvents, isLoading: allEventsLoading } =
-    api.labels.getEventTypes.useQuery({ datasetId }, { enabled: !!datasetId });
+  const { data: allEntities } = api.labels.getEntityTypes.useQuery(
+    { datasetId },
+    { enabled: !!datasetId }
+  );
+  const { data: allEvents } = api.labels.getEventTypes.useQuery(
+    { datasetId },
+    { enabled: !!datasetId }
+  );
+
   const { data: allFeatures, isLoading: allFeaturesLoading } =
     api.labels.allFeatures.useQuery({ datasetId }, { enabled: !!datasetId });
 
@@ -94,6 +100,11 @@ function DataModelPage() {
 
   const entityFeatures = allFeatures?.entities;
   const eventFeatures = allFeatures?.events;
+
+  // unused
+  const itemName = selectedItemType?.substring(
+    selectedItemType.indexOf("-") + 1
+  );
 
   // when the page loads, select the first entity type
   useEffect(() => {
@@ -110,12 +121,16 @@ function DataModelPage() {
 
   const featureList = useMemo(() => {
     if (!selectedItemType) return [];
+    const comparator = (a: { feature: string }, b: { feature: string }) => {
+      return a.feature.localeCompare(b.feature);
+    };
+
     if (selectedItemType.startsWith("ENTITY-")) {
       const entityName = selectedItemType.substring("ENTITY-".length);
-      return entityFeatures?.[entityName] ?? [];
+      return entityFeatures?.[entityName]?.sort(comparator) ?? [];
     } else {
       const eventName = selectedItemType.substring("EVENT-".length);
-      return eventFeatures?.[eventName] ?? [];
+      return eventFeatures?.[eventName]?.sort(comparator) ?? [];
     }
   }, [selectedItemType, entityFeatures, eventFeatures]);
 
@@ -129,55 +144,66 @@ function DataModelPage() {
 
       <div className="flex gap-4">
         <div className="w-[14rem] pl-2 text-sm text-gray-700">
+          {/* Entity List */}
           <div className="font-semibold mb-2">Entities</div>
           <div className="">
-            {allEntities?.map((type) => (
-              <button
-                className={clsx({
-                  "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
-                    true,
-                  "bg-accent text-accent-foreground":
-                    selectedItemType === `ENTITY-${type}`,
-                  "hover:bg-muted": selectedItemType !== `ENTITY-${type}`,
-                })}
-                onClick={() => {
-                  setSelectedItemType(`ENTITY-${type}`);
-                  setSearchValue("");
-                }}
-              >
-                {type}
-                <span className="text-xs text-mited-foreground">
-                  {entityFeatures?.[type]?.length ?? 0}
-                </span>
-              </button>
-            ))}
+            {allEntities ? (
+              allEntities.map((type) => (
+                <button
+                  className={clsx({
+                    "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
+                      true,
+                    "bg-accent text-accent-foreground":
+                      selectedItemType === `ENTITY-${type}`,
+                    "hover:bg-muted": selectedItemType !== `ENTITY-${type}`,
+                  })}
+                  onClick={() => {
+                    setSelectedItemType(`ENTITY-${type}`);
+                    setSearchValue("");
+                  }}
+                >
+                  {type}
+                  <span className="text-xs text-muted-foreground">
+                    {entityFeatures?.[type]?.length ?? 0}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
+            )}
           </div>
+
+          {/* Event List */}
           <div className="font-semibold mb-2 mt-4">Events</div>
           <div className="">
-            {allEvents?.map((type) => (
-              <button
-                className={clsx({
-                  "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
-                    true,
-                  "bg-accent text-accent-foreground":
-                    selectedItemType === `EVENT-${type}`,
-                  "hover:bg-muted": selectedItemType !== `EVENT-${type}`,
-                })}
-                onClick={() => {
-                  setSelectedItemType(`EVENT-${type}`);
-                  setSearchValue("");
-                }}
-              >
-                {type}
-                <span className="text-xs text-mited-foreground">
-                  {eventFeatures?.[type]?.length ?? 0}
-                </span>
-              </button>
-            ))}
+            {allEvents ? (
+              allEvents.map((type) => (
+                <button
+                  className={clsx({
+                    "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
+                      true,
+                    "bg-accent text-accent-foreground":
+                      selectedItemType === `EVENT-${type}`,
+                    "hover:bg-muted": selectedItemType !== `EVENT-${type}`,
+                  })}
+                  onClick={() => {
+                    setSelectedItemType(`EVENT-${type}`);
+                    setSearchValue("");
+                  }}
+                >
+                  {type}
+                  <span className="text-xs text-muted-foreground">
+                    {eventFeatures?.[type]?.length ?? 0}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
+            )}
           </div>
         </div>
         <div className="grow">
-          <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
+          <Panel className=" h-[30rem] flex flex-col p-4">
             <Command className="relative">
               <CommandInput
                 placeholder="Search features..."
@@ -185,9 +211,10 @@ function DataModelPage() {
                 onValueChange={setSearchValue}
               />
               <ScrollArea className="pr-1">
+                {/* 1000rem so the CommandList doesn't create its own scrollbar */}
                 <CommandList className="max-h-[1000rem]">
                   {featureList.map(({ feature: feature }) => (
-                    <CommandItem className="aria-selected:bg-card aria-selected:text-card-foreground p-0">
+                    <CommandItem className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4">
                       <FeatureCard
                         key={feature}
                         feature={feature}
@@ -203,10 +230,12 @@ function DataModelPage() {
                   ))}
                 </CommandList>
               </ScrollArea>
-              <div className="absolute bottom-0 left-0 w-full bg-gradient-to-b from-transparent to-card h-4"></div>
               <CommandEmpty>
                 No features found for this entity type.
               </CommandEmpty>
+
+              {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
+              <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-b from-transparent to-card h-4"></div>
             </Command>
           </Panel>
         </div>
