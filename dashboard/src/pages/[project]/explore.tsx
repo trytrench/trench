@@ -4,7 +4,7 @@ import { type NextPageWithLayout } from "../_app";
 import AppLayout from "~/components/AppLayout";
 import { DatePickerWithRange } from "~/components/DatePickerWithRange";
 import { useMemo, useState } from "react";
-import { DateRange } from "react-day-picker";
+import { type DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useRouter } from "next/router";
 import { api } from "~/utils/api";

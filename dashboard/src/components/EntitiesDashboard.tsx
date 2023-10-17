@@ -1,10 +1,12 @@
-import { BarList, Card, Divider, Metric, Text, Title } from "@tremor/react";
 import { format } from "date-fns";
 import { sumBy } from "lodash";
 import { useMemo } from "react";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
 import { DateRange } from "react-day-picker";
+import { BarList } from "./charts/BarList";
+import { Panel } from "./ui/custom/panel";
+import { Separator } from "./ui/separator";
 
 interface Props {
   dateRange: DateRange;
@@ -48,9 +50,10 @@ export default function EntitiesDashboard({ dateRange }: Props) {
     <>
       <div className="pt-8 flex gap-8">
         <div className="flex-1">
-          <Card>
-            <Title className="mb-2">Entities</Title>
+          <Panel>
+            <div className="mb-2">Entities</div>
             <ZoomAreaChart
+              stack={true}
               data={
                 entityTypeTimeData?.bins
                   ? Object.entries(entityTypeTimeData.bins).map(
@@ -69,40 +72,40 @@ export default function EntitiesDashboard({ dateRange }: Props) {
                 return Intl.NumberFormat("us").format(value).toString();
               }}
             />
-          </Card>
+          </Panel>
         </div>
 
         <div className="flex-1">
-          <Card>
-            <Text>Total Entities</Text>
-            <Metric>
+          <Panel>
+            <h1 className="">Total Entities</h1>
+            <div>
               {Intl.NumberFormat("us")
                 .format(sumBy(entityTypeDists, (type) => Number(type.count)))
                 .toString()}
-            </Metric>
-          </Card>
-          <Card className="mt-4">
-            <Title className="mb-4">Entity types</Title>
+            </div>
+          </Panel>
+          <Panel className="mt-4">
+            <div className="mb-4">Entity types</div>
             <BarList
               data={entityTypeBarData}
               valueFormatter={(value) => {
                 return Intl.NumberFormat("us").format(value).toString();
               }}
             />
-          </Card>
+          </Panel>
         </div>
       </div>
 
-      <Divider />
+      <Separator />
 
       {entityLabelTimeData &&
         Object.keys(entityLabelTimeData.bins).map((entityType) => (
           <div key={entityType} className="mb-8">
-            <Title className="mb-4">{entityType}</Title>
+            <div className="mb-4">{entityType}</div>
             <div className="flex gap-8">
               <div className="flex-1">
-                <Card>
-                  <Title className="mb-4">Labels</Title>
+                <Panel>
+                  <div className="mb-4">Labels</div>
                   <ZoomAreaChart
                     data={Object.entries(
                       entityLabelTimeData.bins[entityType]
@@ -118,21 +121,21 @@ export default function EntitiesDashboard({ dateRange }: Props) {
                       return Intl.NumberFormat("us").format(value).toString();
                     }}
                   />
-                </Card>
+                </Panel>
               </div>
               <div className="flex-1 flex-col">
-                <Card>
-                  <Text>Entities</Text>
-                  <Metric>
+                <Panel>
+                  <div>Entities</div>
+                  <div>
                     {Intl.NumberFormat("us").format(
                       entityTypeDists.find(
                         (type) => type.entity_type === entityType
                       ).count
                     )}
-                  </Metric>
-                </Card>
-                <Card className="mt-4 max-h-80 overflow-auto">
-                  <Title className="mb-4">Labels</Title>
+                  </div>
+                </Panel>
+                <Panel className="mt-4 max-h-80 overflow-auto">
+                  <div className="mb-4">Labels</div>
                   <BarList
                     data={entityLabelDists
                       .filter((d) => d.entity_type === entityType)
@@ -144,7 +147,7 @@ export default function EntitiesDashboard({ dateRange }: Props) {
                       return Intl.NumberFormat("us").format(value).toString();
                     }}
                   />
-                </Card>
+                </Panel>
               </div>
             </div>
           </div>

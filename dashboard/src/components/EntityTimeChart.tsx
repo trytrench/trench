@@ -3,7 +3,7 @@ import { api } from "../utils/api";
 import { Card, Title, type Color } from "@tremor/react";
 import { useEntityFilters, useEventFilters } from "./Filters";
 import { type EventFilters, type EntityFilters } from "../shared/validation";
-import { AreaChart } from "@trytrench/tremor";
+import { AreaChart } from "../components/charts/AreaChart";
 
 export function EntityTimeChart({
   entityFilters,
