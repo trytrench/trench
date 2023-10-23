@@ -2,6 +2,7 @@ import { Navbar } from "./Navbar";
 import { ReleasesModal } from "./ReleasesModal";
 import { useState } from "react";
 import { api } from "~/utils/api";
+import { Toaster } from "./ui/toaster";
 
 interface Props {
   children: React.ReactNode;
@@ -14,13 +15,9 @@ export default function AppLayout({ children }: Props) {
   // TODO: Show the current dataset
   return (
     <div className="min-h-screen h-0 flex flex-col">
-      <ReleasesModal
-        isOpen={isReleasesModalOpen}
-        onClose={() => setIsReleasesModalOpen(false)}
-        releases={releases ?? []}
-      />
       <Navbar />
       {children}
+      <Toaster />
     </div>
   );
 }

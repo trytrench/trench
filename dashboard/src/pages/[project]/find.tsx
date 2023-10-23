@@ -39,7 +39,7 @@ const Page: NextPageWithLayout = () => {
       entityFilters: filters,
       sortBy,
       limit,
-      datasetId,
+      datasetId: datasetId ?? "",
     },
     {
       getNextPageParam: (lastPage, pages) => {

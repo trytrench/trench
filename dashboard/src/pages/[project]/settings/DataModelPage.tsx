@@ -48,9 +48,9 @@ const FeatureCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
 
   return (
     <div className="flex items-center w-full justify-between gap-2 px-2 pt-1.5">
-      <Icon className="w-4 h-4" />
       <div className="mr-auto">{feature}</div>
 
+      <Icon className="w-4 h-4" />
       <Select
         value={value}
         onValueChange={(value) => {

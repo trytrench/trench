@@ -13,7 +13,8 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "./ui/sheet";
 
 interface Props {
-  button: React.ReactNode;
+  open: boolean;
+  onOpenChange: (val: boolean) => void;
   releases: Release[];
   onPreviewRelease: (release: Release) => void;
 }
@@ -21,11 +22,11 @@ interface Props {
 export const ReleasesSidebar = ({
   releases,
   onPreviewRelease,
-  button,
+  open,
+  onOpenChange,
 }: Props) => {
   return (
-    <Sheet>
-      <SheetTrigger asChild>{button}</SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>Releases</SheetHeader>
         <div>

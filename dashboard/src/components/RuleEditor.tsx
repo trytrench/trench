@@ -1,4 +1,5 @@
-import { useDisclosure, useToast } from "@chakra-ui/react";
+import { useToast } from "~/components/ui/use-toast";
+
 import { ClassNames } from "@emotion/react";
 import { type Release } from "@prisma/client";
 import {
@@ -60,19 +61,10 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const {
-    isOpen: isDrawerOpen,
-    onClose: onDrawerClose,
-    onOpen: onDrawerOpen,
-  } = useDisclosure();
-  const {
-    isOpen: isBackfillModalOpen,
-    onClose: onBackfillModalClose,
-    onOpen: onBackfillModalOpen,
-  } = useDisclosure();
-  // const btnRef = useRef();
+  const [releasesSidebarOpen, setReleasesSidebarOpen] = useState(false);
+  const [backfillModalOpen, setBackfillModalOpen] = useState(false);
 
-  const toast = useToast();
+  const { toast } = useToast();
 
   const files = useMemo(
     () => release.code as Record<string, string>,
@@ -150,8 +142,8 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
     <>
       <div className="flex h-full">
         <BackfillModal
-          isOpen={isBackfillModalOpen}
-          onClose={onBackfillModalClose}
+          isOpen={backfillModalOpen}
+          onOpenChange={setBackfillModalOpen}
           onConfirm={(dateRange) => {
             createDataset({
               name: "test",
@@ -161,13 +153,20 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
               rules: files,
             })
               .then(() => {
-                toast({ title: "Dataset created", status: "success" });
-                onBackfillModalClose();
+                toast({ title: "success", description: "Dataset created" });
+                setBackfillModalOpen(false);
               })
               .catch((error) => {
-                toast({ title: error.message, status: "error" });
+                toast({ title: "error", description: error.message });
               });
           }}
+        />
+
+        <ReleasesSidebar
+          releases={releases ?? []}
+          onPreviewRelease={onPreviewRelease}
+          open={releasesSidebarOpen}
+          onOpenChange={setReleasesSidebarOpen}
         />
 
         <div className="w-72">
@@ -251,10 +250,13 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                       .then(() => {
                         setIsEditing(false);
                         refetchReleases();
-                        toast({ title: "Release created", status: "success" });
+                        toast({
+                          title: "Success",
+                          description: "Release Created",
+                        });
                       })
                       .catch((error) => {
-                        toast({ title: error.message, status: "error" });
+                        toast({ title: "Error", description: error.message });
                       });
                   }}
                   initialVersion={release.version}
@@ -268,9 +270,9 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                 </Button>
                 <div className="flex-1" />
                 <Button
-                  onClick={onBackfillModalOpen}
-                  size="sm"
-                  variant="secondary"
+                  onClick={() => {
+                    setBackfillModalOpen(true);
+                  }}
                 >
                   Test
                 </Button>
@@ -282,15 +284,15 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                   Edit
                 </Button>
 
-                <ReleasesSidebar
-                  releases={releases ?? []}
-                  onPreviewRelease={onPreviewRelease}
-                  button={
-                    <Button size="icon" variant="ghost" onClick={onDrawerOpen}>
-                      <HistoryIcon className="w-4 h-4" />
-                    </Button>
-                  }
-                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setReleasesSidebarOpen(true);
+                  }}
+                >
+                  <HistoryIcon className="w-4 h-4" />
+                </Button>
                 <Button size="icon" variant="ghost">
                   <MoreHorizontalIcon className="w-4 h-4" />
                 </Button>

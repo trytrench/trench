@@ -105,7 +105,7 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="">
+      <div className="sticky">
         <Tabs
           value={router.pathname.split("/").pop()}
           onValueChange={(tab) => {
