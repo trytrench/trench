@@ -300,7 +300,7 @@ export const entitiesRouter = createTRPCRouter({
 
       return {
         ...entities[0],
-        features: JSON.parse(entities[0]?.features),
+        features: JSON.parse(entities[0]?.features!),
       };
     }),
 

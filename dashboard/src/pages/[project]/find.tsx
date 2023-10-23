@@ -1,13 +1,14 @@
 import { Loader2Icon } from "lucide-react";
 import { useRouter } from "next/router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
 import { EntityCard } from "~/components/EntityCard";
 import { useFilters } from "~/components/Filter";
-import ListFilter from "~/components/ListFilter";
+import { EntityFilter } from "~/components/ListFilter";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import type { NextPageWithLayout } from "~/pages/_app";
+import { EntityFilters } from "~/shared/validation";
 import { api } from "~/utils/api";
 
 const Page: NextPageWithLayout = () => {
@@ -23,39 +24,7 @@ const Page: NextPageWithLayout = () => {
   );
   const { type, labels, features, sortBy } = useFilters();
 
-  const { data: entityTypes, isLoading: entityTypesLoading } =
-    api.labels.getEntityTypes.useQuery(
-      { datasetId: datasetId! },
-      { enabled: !!datasetId }
-    );
-
-  const { data: entityLabels, isLoading: entityLabelsLoading } =
-    api.labels.getEntityLabels.useQuery(
-      { entityType: type, datasetId: datasetId! },
-      { enabled: !!datasetId }
-    );
-
-  const { data: entityFeatures, isLoading: entityFeaturesLoading } =
-    api.labels.getEntityFeatures.useQuery(
-      { entityType: type ?? undefined, datasetId: datasetId! },
-      { enabled: !!datasetId }
-    );
-
-  const { data: featureMetadata, isLoading: featureMetadataLoading } =
-    api.features.getFeatureMetadata.useQuery();
-
-  const featureToMetadata = useMemo(
-    () =>
-      featureMetadata?.reduce(
-        (acc, curr) => {
-          acc[curr.id] = curr;
-          return acc;
-        },
-        {} as Record<string, any>
-      ) ?? {},
-
-    [featureMetadata]
-  );
+  const [filters, setFilters] = useState<EntityFilters>(undefined);
 
   const limit = 10;
 
@@ -67,11 +36,7 @@ const Page: NextPageWithLayout = () => {
     hasNextPage,
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
-      entityFilters: {
-        entityType: type ?? undefined,
-        entityLabels: labels,
-        entityFeatures: features,
-      },
+      entityFilters: filters,
       sortBy,
       limit,
       datasetId,
@@ -92,18 +57,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <div className="flex flex-col overflow-hidden grow">
       <div className="flex p-3 px-8 border-b">
-        <ListFilter
-          options={{
-            types: entityTypes ?? [],
-            labels: entityLabels ?? [],
-            features:
-              entityFeatures?.map((feature) => ({
-                feature,
-                dataType: featureToMetadata[feature]?.dataType ?? "text",
-              })) ?? [],
-          }}
-          onChange={() => {}}
-        />
+        <EntityFilter datasetId={datasetId!} onChange={setFilters} />
       </div>
       <div className="grow relative">
         <div className="absolute inset-0">

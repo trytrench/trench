@@ -6,7 +6,6 @@ import {
   LucideIcon,
   ToggleLeft,
   Type,
-  TypeIcon,
 } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
@@ -203,7 +202,7 @@ function DataModelPage() {
           </div>
         </div>
         <div className="grow">
-          <Panel className=" h-[30rem] flex flex-col p-4">
+          <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
             <Command className="relative">
               <CommandInput
                 placeholder="Search features..."
@@ -235,7 +234,7 @@ function DataModelPage() {
               </CommandEmpty>
 
               {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
-              <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-b from-transparent to-card h-4"></div>
+              <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
             </Command>
           </Panel>
         </div>

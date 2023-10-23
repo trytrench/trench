@@ -31,7 +31,7 @@ export function EventDrawer(props: {
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg overflow-auto">
+      <SheetContent className="sm:max-w-2xl overflow-auto">
         <SheetHeader>Event</SheetHeader>
 
         <div className="w-full">

@@ -270,10 +270,18 @@ const getFeatureQuery = (filter: JsonFilter, column: string) => {
       ? `toInt32OrZero(JSONExtractString(${column}, '${path}'))`
       : `JSONExtractString(${column}, '${path}')`;
 
-  if (op === JsonFilterOp.IsEmpty)
-    return `AND (${feature} IS NULL OR ${feature} = '')`;
-  if (op === JsonFilterOp.NotEmpty)
-    return `AND (${feature} IS NOT NULL AND ${feature} != '')`;
+  if (op === JsonFilterOp.IsEmpty) {
+    if (dataType === "text")
+      return `AND (${feature} IS NULL OR ${feature} = '')`;
+    else return `AND ${feature} IS NULL`;
+  }
+  if (op === JsonFilterOp.NotEmpty) {
+    if (dataType === "text")
+      return `AND (${feature} IS NOT NULL AND ${feature} != '')`;
+    else return `AND ${feature} IS NOT NULL`;
+  }
+
+  if (value === undefined) return "";
 
   const comparisonOps = {
     [JsonFilterOp.Equal]: "=",

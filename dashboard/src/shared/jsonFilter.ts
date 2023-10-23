@@ -13,6 +13,8 @@ export enum JsonFilterOp {
   EndsWith = "ends with",
   IsEmpty = "is empty",
   NotEmpty = "not empty",
+  // In = "in",
+  // NotIn = "not in",
 }
 
 export const JSON_FILTER_OPS: { label: string; value: JsonFilterOp }[] = [
@@ -24,9 +26,9 @@ export const JSON_FILTER_OPS: { label: string; value: JsonFilterOp }[] = [
 
 export const jsonFilterZod = z.object({
   path: z.string(),
+  dataType: z.string(),
   op: z.nativeEnum(JsonFilterOp),
   value: z.any(),
-  dataType: z.string(),
 });
 
 export type JsonFilter = z.infer<typeof jsonFilterZod>;

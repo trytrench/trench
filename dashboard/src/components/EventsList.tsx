@@ -1,7 +1,6 @@
 import { LayoutGrid, List, Loader2, Loader2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFilters } from "~/components/Filter";
-import ListFilter from "~/components/ListFilter";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
@@ -11,11 +10,11 @@ import { EntityChip } from "./EntityChip";
 import { Badge } from "./ui/badge";
 import { Panel } from "./ui/custom/panel";
 import { Toggle } from "~/components/ui/toggle";
-import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { SpinnerButton } from "./ui/custom/spinner-button";
-import { cn } from "~/lib/utils";
 import { useRouter } from "next/router";
+import { EventFilter } from "./ListFilter";
+import { EventFilters } from "~/shared/validation";
 
 interface Props {
   entityId?: string;
@@ -27,6 +26,8 @@ export default function EventsList({ entityId, datasetId }: Props) {
   const { type, features, labels, sortBy } = useFilters();
   const [limit, setLimit] = useState(50);
 
+  const [filters, setFilters] = useState<EventFilters>(undefined);
+
   const {
     data: events,
     fetchNextPage,
@@ -35,12 +36,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: {
-        eventType: type,
-        eventLabels: labels,
-        eventFeatures: features,
-        entityId,
-      },
+      eventFilters: filters,
       datasetId,
       limit,
     },
@@ -113,21 +109,9 @@ export default function EventsList({ entityId, datasetId }: Props) {
       />
 
       <div className="flex flex-col h-full">
+        {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <ListFilter
-            options={{
-              types: ["create-session", "payment-attempt"],
-              labels: ["needs KYC", "success", "blocked"],
-              features: [
-                { feature: "amount", dataType: "number" },
-                { feature: "is_recurring", dataType: "boolean" },
-                { feature: "name", dataType: "text" },
-              ],
-            }}
-            onChange={(v) => {
-              console.log(v);
-            }}
-          />
+          <EventFilter datasetId={datasetId} onChange={setFilters} />
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle
@@ -149,6 +133,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
           </div>
         </div>
 
+        {/* The Events List */}
         <div className="grow flex flex-col relative px-4 pt-2">
           {eventsLoading ? (
             <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />

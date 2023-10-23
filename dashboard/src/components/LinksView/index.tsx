@@ -269,7 +269,7 @@ function LeftSideCard(props: LeftSideCardProps) {
     >
       {isGroup ? (
         <div className="flex gap-4">
-          <BoxesIcon className="my-auto text-blue-400" size={18} />
+          <BoxesIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
             <div className="text-gray-400 font-semibold italic">
               {entityCountStr}
@@ -278,7 +278,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         </div>
       ) : (
         <div className="flex gap-4">
-          <BoxIcon className="my-auto text-blue-400" size={18} />
+          <BoxIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
             <div className="font-semibold text-black">{item.type}</div>
             <div className="">{item.name}</div>
