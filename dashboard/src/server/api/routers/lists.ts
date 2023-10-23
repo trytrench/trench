@@ -107,14 +107,10 @@ export const listsRouter = createTRPCRouter({
             event_type,
             event_data,
             event_timestamp,
-            event_features,
+            features,
             groupArray(entity_id) AS entity_ids,
-            groupArray(entity_type) AS entity_types,
-            groupArray(entity_name) AS entity_names,
-            groupArray(entity_relation) AS entity_relations,
-            groupArray(entity_features) AS entity_features,
-            arrayDistinct(groupArray(label)) AS event_labels
-          FROM event_entity_event_labels
+            groupArray(entity_type) AS entity_types
+          FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
             ${
               filters?.eventType
@@ -122,25 +118,9 @@ export const listsRouter = createTRPCRouter({
                 : ""
             }
             ${
-              filters?.eventLabels?.length
-                ? `AND label IN (${filters.eventLabels
-                    .map((label) => `'${label}'`)
-                    .join(", ")})`
-                : ""
-            }
-            ${
               filters?.eventFeatures
-                ?.map((filter) => getFeatureQuery(filter, "event_features"))
+                ?.map((filter) => getFeatureQuery(filter, "features"))
                 .join("\n") ?? ""
-            }
-            ${
-              filters?.entityId
-                ? `AND event_id IN (
-                    SELECT DISTINCT event_id
-                    FROM event_entity_event_labels
-                    WHERE entity_id = '${filters.entityId}'
-                   )`
-                : ""
             }
           GROUP BY
             event_id,
@@ -148,7 +128,7 @@ export const listsRouter = createTRPCRouter({
             event_type,
             event_data,
             event_timestamp,
-            event_features
+            features
           ORDER BY event_timestamp DESC, event_id DESC
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
@@ -161,13 +141,9 @@ export const listsRouter = createTRPCRouter({
         event_type: string;
         event_data: string;
         event_timestamp: Date;
-        event_features: string;
-        event_labels: string[];
+        features: string;
         entity_ids: string[];
-        entity_names: string[];
         entity_types: string[];
-        entity_features: string[];
-        entity_relations: string[];
       };
 
       const events = await result.json<EventResult[]>();
@@ -178,23 +154,12 @@ export const listsRouter = createTRPCRouter({
           id: event.event_id,
           type: event.event_type,
           data: JSON.parse(event.event_data),
-          features: JSON.parse(event.event_features),
+          features: JSON.parse(event.features),
           timestamp: new Date(event.event_timestamp),
-          labels: event.event_labels,
-          entities: uniqBy(
-            // deduplicate entities
-            event.entity_ids.filter(Boolean).map((id, index) => {
-              return {
-                id: id,
-                type: event.entity_types[index],
-                name: event.entity_names[index],
-                relation: event.entity_relations[index],
-                features: JSON.parse(event.entity_features[index] ?? "{}"),
-                labels: [],
-              };
-            }),
-            (entity) => entity.id
-          ),
+          entities: event.entity_ids.map((id, index) => ({
+            id: id,
+            type: event.entity_types[index],
+          })),
         })),
       };
     }),

@@ -1,17 +1,10 @@
-import {
-  AT,
-  createInstance,
-  type Execution,
-  type SqrlEntity,
-  type WhenCause,
-} from "sqrl";
+import { AT, createInstance, type Execution } from "sqrl";
 import * as sqrlJsonPath from "sqrl-jsonpath";
 import * as sqrlLoadFunctions from "sqrl-load-functions";
 import * as sqrlRedisFunctions from "sqrl-redis-functions";
 import { type RedisInterface } from "sqrl-redis-functions/lib/services/RedisInterface";
 import { MockRedisService } from "sqrl-redis-functions/lib/mocks/MockRedisService";
 import * as sqrlTextFunctions from "sqrl-text-functions";
-import { SqrlManipulator } from "../SqrlManipulator";
 import { fetchUserData } from "./fetchGithubData";
 import pLimit from "p-limit";
 import { AxiosError } from "axios";
@@ -46,73 +39,6 @@ export async function createSqrlInstance(
   await instance.importFromPackage("sqrl-load-functions", sqrlLoadFunctions);
 
   instance.registerStatement(
-    "SqrlBlockStatements",
-    async function addEventLabel(
-      state: Execution,
-      cause: WhenCause,
-      type: string,
-      label: string
-    ) {
-      if (!(state.manipulator instanceof SqrlManipulator)) {
-        throw new Error(
-          "Expected manipulator to be an instance of SqrlManipulator"
-        );
-      }
-      state.manipulator.addEventLabel(type, label, cause);
-    },
-    {
-      args: [AT.state, AT.whenCause, AT.any.string, AT.any.string],
-      allowNull: true,
-      argstring: "",
-      docstring: "Add a label to the current action",
-    }
-  );
-
-  instance.registerStatement(
-    "SqrlBlockStatements",
-    async function addEventFeature(
-      state: Execution,
-      name: string,
-      value: string
-    ) {
-      if (!(state.manipulator instanceof SqrlManipulator)) {
-        throw new Error(
-          "Expected manipulator to be an instance of SqrlManipulator"
-        );
-      }
-      state.manipulator.addEventFeature(name, value);
-    },
-    {
-      args: [AT.state, AT.any.string, AT.any],
-      argstring: "",
-      docstring: "Add a feature to the current event",
-    }
-  );
-
-  instance.registerStatement(
-    "SqrlBlockStatements",
-    async function addEntityFeature(
-      state: Execution,
-      entity: SqrlEntity,
-      name: string,
-      value: string
-    ) {
-      if (!(state.manipulator instanceof SqrlManipulator)) {
-        throw new Error(
-          "Expected manipulator to be an instance of SqrlManipulator"
-        );
-      }
-      state.manipulator.addEntityFeature(entity, name, value);
-    },
-    {
-      args: [AT.state, AT.any, AT.any.string, AT.any],
-      allowSqrlObjects: true,
-      argstring: "",
-      docstring: "Add a feature to the entity",
-    }
-  );
-
-  instance.registerStatement(
     "SqrlLogStatements",
     async function consoleLog(state: Execution, format: string, ...args) {
       console.log(format, ...args);
@@ -145,13 +71,10 @@ export async function createSqrlInstance(
     }
   );
 
-  let counter = 0;
   const limit = pLimit(10);
 
   instance.register(
     async function getUserData(state: Execution, username: string) {
-      if (counter++ % 100 === 0) console.log("Counter:", counter);
-
       const cached = await redisService.get(
         state.ctx,
         Buffer.from(`user:${username}`)
