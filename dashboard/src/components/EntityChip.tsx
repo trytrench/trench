@@ -14,7 +14,7 @@ interface Props {
 export const EntityChip = ({ entity, href }: Props) => {
   const entityFeatures = Object.entries(entity.features ?? {});
   const hasFeatures = entityFeatures.length > 0;
-  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
+  const entityLabels = entity.labels?.filter((v) => v !== "") ?? [];
 
   const [open, setOpen] = useState(false);
 
@@ -28,7 +28,7 @@ export const EntityChip = ({ entity, href }: Props) => {
       <HoverCard.Trigger asChild>
         <a
           className={clsx({
-            "rounded-full p-1 px-3 flex gap-2 border bg-white hover:bg-gray-50 active:bg-gray-100 drop-shadow-sm max-w-[16rem] cursor-pointer":
+            "rounded-full p-1 px-3 flex gap-2 border bg-card hover:bg-muted active:bg-accent drop-shadow-sm max-w-[16rem] cursor-pointer":
               true,
           })}
           key={entity.id}
@@ -53,7 +53,7 @@ export const EntityChip = ({ entity, href }: Props) => {
           sideOffset={0}
           arrowPadding={10}
         >
-          <Panel className="w-[24rem] shadow-none drop-shadow-lg bg-white p-4 mr-4">
+          <Panel className="w-[24rem] shadow-none drop-shadow-lg bg-card p-4 mr-4">
             <div className="">
               <div className="font-semibold text-black">{entity.name}</div>
               <div className="text-xs">Last seen {"--"}</div>

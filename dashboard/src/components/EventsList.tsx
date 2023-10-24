@@ -193,7 +193,7 @@ export default function EventsList({ entityId, datasetId }: EventsListProps) {
 
           <div className="h-16 shrink-0"></div>
         </div>
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </>
   );
@@ -279,20 +279,20 @@ function EventCard(props: EventCardProps) {
   const { event, isFirst, isLast } = props;
   const router = useRouter();
 
-  const eventLabels = uniq(event.labels.filter((label) => label !== ""));
+  const eventLabels = uniq(event.labels?.filter((label) => label !== ""));
   const eventFeatures = Object.entries(event.features);
   const hasFeatures = eventFeatures.length > 0;
 
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
-        <div className="absolute left-0 w-[2px] bg-gray-300 ml-3 h-full" />
-        <div className="absolute w-[14px] h-[14px] left-[6px] top-[24px] rounded-full bg-white border-2 border-gray-300" />
+        <div className="absolute left-0 w-[2px] bg-accent ml-3 h-full" />
+        <div className="absolute w-[14px] h-[14px] left-[6px] top-[24px] rounded-full bg-background border-2 border-accent" />
         {isFirst && (
-          <div className="absolute top-0 w-full h-4 bg-gradient-to-b from-white to-transparent" />
+          <div className="absolute top-0 w-full h-4 bg-gradient-to-b from-background" />
         )}
         {isLast && (
-          <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
+          <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-background" />
         )}
       </div>
       <div className="w-[16rem] mt-4">

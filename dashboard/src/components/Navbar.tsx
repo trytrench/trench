@@ -70,7 +70,9 @@ export const Navbar = () => {
           </button>
         )}
         <NextLink href="/">
-          <h1 className="text-lg font-bold text-black mr-12">Trench</h1>
+          <h1 className="text-lg font-bold text-emphasis-foreground mr-12">
+            Trench
+          </h1>
         </NextLink>
         <div>
           <Select

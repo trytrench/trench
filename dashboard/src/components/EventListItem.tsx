@@ -37,8 +37,8 @@ export function EventListItem({ event, selected, ...rest }: EventCardProps) {
       className={clsx({
         "px-8 w-full flex items-center text-xs  font-mono cursor-pointer text-left":
           true,
-        "hover:bg-gray-50": !selected,
-        "bg-gray-200": selected,
+        "hover:bg-muted": !selected,
+        "bg-muted": selected,
       })}
       {...rest}
     >

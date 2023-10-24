@@ -7,6 +7,7 @@ import { QueryParamProvider } from "use-query-params";
 import { NextAdapter } from "next-query-params";
 import type { NextPage } from "next";
 import type { ReactElement, ReactNode } from "react";
+import { ThemeProvider } from "~/components/ui/custom/theme-provider";
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -25,7 +26,14 @@ function MyApp({
   return (
     <QueryParamProvider adapter={NextAdapter}>
       <SessionProvider session={pageProps.session}>
-        {getLayout(<Component {...pageProps} />)}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {getLayout(<Component {...pageProps} />)}
+        </ThemeProvider>
       </SessionProvider>
     </QueryParamProvider>
   );

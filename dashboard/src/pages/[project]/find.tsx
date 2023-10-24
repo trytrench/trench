@@ -91,7 +91,7 @@ const Page: NextPageWithLayout = () => {
             </div>
           </ScrollArea>
         </div>
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </div>
   );

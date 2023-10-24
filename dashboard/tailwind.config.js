@@ -49,7 +49,8 @@ module.exports = {
 
         //
         emphasis: {
-          foreground: "#1e293b",
+          DEFAULT: "hsl(var(--emphasis))",
+          foreground: "hsl(var(--emphasis-foreground))",
         },
       },
       borderRadius: {
