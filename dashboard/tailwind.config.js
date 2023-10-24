@@ -12,40 +12,39 @@ module.exports = {
       },
     },
     extend: {
-      // TODO: use CSS variables
       colors: {
-        border: "#e5e7eb",
-        input: "#e5e7eb",
-        ring: "#eff6ff",
-        background: "#ffffff",
-        foreground: "#6b7280",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#dbeafe",
-          foreground: "#3b82f6",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#1f2937",
-          foreground: "#e5e7eb",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: "#ef4444",
-          foreground: "#b91c1c",
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "#f9fafb",
-          foreground: "#6b7280",
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "#dbeafe",
-          foreground: "#3b82f6",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
-          DEFAULT: "#ffffff",
-          foreground: "#6b7280",
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "#ffffff",
-          foreground: "#6b7280",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
 
         //
@@ -105,41 +104,3 @@ module.exports = {
     },
   ],
 };
-
-// shadcn defaults
-
-// colors: {
-//   border: "hsl(var(--border))",
-//   input: "hsl(var(--input))",
-//   ring: "hsl(var(--ring))",
-//   background: "hsl(var(--background))",
-//   foreground: "hsl(var(--foreground))",
-//   primary: {
-//     DEFAULT: "hsl(var(--primary))",
-//     foreground: "hsl(var(--primary-foreground))",
-//   },
-//   secondary: {
-//     DEFAULT: "hsl(var(--secondary))",
-//     foreground: "hsl(var(--secondary-foreground))",
-//   },
-//   destructive: {
-//     DEFAULT: "hsl(var(--destructive))",
-//     foreground: "hsl(var(--destructive-foreground))",
-//   },
-//   muted: {
-//     DEFAULT: "hsl(var(--muted))",
-//     foreground: "hsl(var(--muted-foreground))",
-//   },
-//   accent: {
-//     DEFAULT: "hsl(var(--accent))",
-//     foreground: "hsl(var(--accent-foreground))",
-//   },
-//   popover: {
-//     DEFAULT: "hsl(var(--popover))",
-//     foreground: "hsl(var(--popover-foreground))",
-//   },
-//   card: {
-//     DEFAULT: "hsl(var(--card))",
-//     foreground: "hsl(var(--card-foreground))",
-//   },
-// },
