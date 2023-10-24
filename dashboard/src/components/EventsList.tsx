@@ -1,6 +1,5 @@
-import { LayoutGrid, List, Loader2, Loader2Icon } from "lucide-react";
+import { LayoutGrid, List, Loader2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useFilters } from "~/components/Filter";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
@@ -23,7 +22,6 @@ interface Props {
 
 export default function EventsList({ entityId, datasetId }: Props) {
   const [view, setView] = useState<"grid" | "list">("list");
-  const { type, features, labels, sortBy } = useFilters();
   const [limit, setLimit] = useState(50);
 
   const [filters, setFilters] = useState<EventFilters>(undefined);

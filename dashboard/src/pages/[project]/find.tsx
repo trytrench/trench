@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
 import { EntityCard } from "~/components/EntityCard";
-import { useFilters } from "~/components/Filter";
 import { EntityFilter } from "~/components/ListFilter";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -22,7 +21,6 @@ const Page: NextPageWithLayout = () => {
     () => project?.prodDatasetId?.toString(),
     [project]
   );
-  const { type, labels, features, sortBy } = useFilters();
 
   const [filters, setFilters] = useState<EntityFilters>(undefined);
 
@@ -37,7 +35,7 @@ const Page: NextPageWithLayout = () => {
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
       entityFilters: filters,
-      sortBy,
+      // sortBy,
       limit,
       datasetId: datasetId ?? "",
     },
