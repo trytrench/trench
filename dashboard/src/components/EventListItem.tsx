@@ -9,7 +9,7 @@ function truncateObject(obj: Object, maxLength: number) {
   function traverse(o: Object) {
     if (typeof o === "object" && o !== null) {
       let str = JSON.stringify(o);
-      return str.length > maxLength ? str.slice(0, maxLength) + "…" : str;
+      return str.length > maxLength ? str.slice(0, maxLength) + "… }" : str;
     } else if (typeof o === "string") {
       return o; // return string value without quotes
     } else {

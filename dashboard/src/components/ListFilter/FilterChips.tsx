@@ -3,6 +3,8 @@ import { Badge } from "../ui/badge";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { JsonFilter } from "~/shared/jsonFilter";
 import { getAvailableOps, getParamSchema } from "./helpers";
+import type { DateRange } from "react-day-picker";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +62,41 @@ const LabelChip = ({
       className={cn("flex pr-2 animate-in zoom-in-95 fade-in-20", className)}
     >
       {label}
+      <button
+        className="ml-1 rounded-full flex items-center"
+        onClick={onDelete}
+      >
+        <X className="h-3 w-3 my-auto" />
+      </button>
+    </Badge>
+  );
+};
+
+// Date Range
+
+interface DateRangeChipProps extends React.ComponentPropsWithoutRef<"div"> {
+  dateRange: DateRange;
+  onDelete?: () => void;
+}
+
+const DateRangeChip = ({
+  dateRange,
+  onDelete,
+  className,
+  ...props
+}: DateRangeChipProps) => {
+  let dateRangeString = "--";
+
+  if (dateRange.from && dateRange.to) {
+    dateRangeString = `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`;
+  }
+
+  return (
+    <Badge
+      variant="default"
+      className={cn("flex pr-2 animate-in zoom-in-95 fade-in-20", className)}
+    >
+      Date Range: {dateRangeString}
       <button
         className="ml-1 rounded-full flex items-center"
         onClick={onDelete}
@@ -261,4 +298,4 @@ const ValuePicker = (props: ValuePickerProps) => {
   }
 };
 
-export { TypeChip, LabelChip, JsonFilterChip };
+export { TypeChip, LabelChip, DateRangeChip, JsonFilterChip };

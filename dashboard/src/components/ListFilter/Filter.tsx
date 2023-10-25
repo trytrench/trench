@@ -36,7 +36,12 @@ import { GenericFilters } from "~/shared/validation";
 import { JsonFilter, JsonFilterOp } from "~/shared/jsonFilter";
 
 import { ulid } from "ulid";
-import { JsonFilterChip, LabelChip, TypeChip } from "./FilterChips";
+import {
+  DateRangeChip,
+  JsonFilterChip,
+  LabelChip,
+  TypeChip,
+} from "./FilterChips";
 
 const dataTypeToIcon = {
   number: Hash,
@@ -67,8 +72,18 @@ function Filter(props: Props) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
+    // A bit of extra work to avoid typescript errors.
+    // GenericFilters expects daterange to have both values if not undefined,
+    // while react-day-picker's DateRange type allows for undefined from / to.
+    const dateFrom = dateRange?.from?.getTime();
+    const dateTo = dateRange?.to?.getTime();
+    const theDateRange =
+      dateFrom && dateTo
+        ? { from: dateFrom / 1000, to: dateTo / 1000 } // ms -> s
+        : undefined;
+
     onChange({
-      dateRange: undefined,
+      dateRange: theDateRange,
       type: selectedType ?? undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       features: jsonFilters.map((e) => e.filter),
@@ -198,10 +213,10 @@ function Filter(props: Props) {
                 <Calendar
                   initialFocus
                   mode="range"
-                  // defaultMonth={dateRange?.from}
+                  defaultMonth={dateRange?.from}
                   selected={dateRange}
                   onSelect={setDateRange}
-                  // numberOfMonths={2}
+                  numberOfMonths={2}
                 />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
@@ -225,6 +240,12 @@ function Filter(props: Props) {
             }}
           />
         ))}
+        {dateRange && dateRange.from && dateRange.to && (
+          <DateRangeChip
+            dateRange={dateRange}
+            onDelete={() => setDateRange(undefined)}
+          />
+        )}
         {jsonFilters.map((entry) => (
           <JsonFilterChip
             key={entry.id}

@@ -58,7 +58,7 @@ function toEventFilters(filters: GenericFilters): EventFilters {
     eventType: filters.type,
     eventLabels: filters.labels,
     eventFeatures: filters.features,
-    // todo: daterange
+    dateRange: filters.dateRange,
   };
 }
 
@@ -68,7 +68,6 @@ function toEntityFilters(filters: GenericFilters): EntityFilters {
     entityType: filters.type,
     entityLabels: filters.labels,
     entityFeatures: filters.features,
-    // todo: daterange
   };
 }
 
