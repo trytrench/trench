@@ -111,7 +111,7 @@ const Page: NextPageWithLayout = () => {
         </Badge>
       </div>
       <div className="grid grid-cols-4 flex-1">
-        <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
+        <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
           <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">
               Entity Information

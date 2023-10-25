@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { api } from "../utils/api";
+import { ThemeToggle } from "./ui/custom/theme-toggle";
 
 interface Props {
   href: string;
@@ -28,8 +29,9 @@ const NavItem = ({ href, children, ...props }: Props) => {
     <NextLink
       href={href}
       className={clsx({
-        "text-gray-500 hover:text-black": !active,
-        "text-black": active,
+        transition: true,
+        "text-muted-foreground hover:text-emphasis-foreground": !active,
+        "text-emphasis-foreground": active,
       })}
       {...props}
     >
@@ -97,6 +99,8 @@ export const Navbar = () => {
         </div>
 
         <div className="grow" />
+
+        <ThemeToggle />
 
         <div className="flex gap-4 text-sm">
           <NavItem href="/changelog">Changelog</NavItem>

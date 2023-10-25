@@ -37,7 +37,10 @@ export const EntityChip = ({ entity, href }: Props) => {
             e.stopPropagation();
           }}
         >
-          <BoxIcon className="my-auto text-gray-500 shrink-0" size={18} />
+          <BoxIcon
+            className="my-auto text-muted-foreground shrink-0"
+            size={18}
+          />
           <div className="grow min-w-0">
             <div className="truncate font-semibold">
               {entity.type}: {entity.name}
@@ -50,12 +53,14 @@ export const EntityChip = ({ entity, href }: Props) => {
           className="pointer-events-none"
           align="start"
           side="bottom"
-          sideOffset={0}
+          sideOffset={2}
           arrowPadding={10}
         >
           <Panel className="w-[24rem] shadow-none drop-shadow-lg bg-card p-4 mr-4">
             <div className="">
-              <div className="font-semibold text-black">{entity.name}</div>
+              <div className="font-semibold text-emphasis-foreground">
+                {entity.name}
+              </div>
               <div className="text-xs">Last seen {"--"}</div>
               <div className="mt-1">
                 {entityLabels.length > 0 ? (
@@ -89,7 +94,7 @@ export const EntityChip = ({ entity, href }: Props) => {
                   </div>
                 ))
               ) : (
-                <div className="text-gray-400 italic">No features</div>
+                <div className="text-muted-foreground italic">No features</div>
               )}
             </div>
           </Panel>
@@ -98,9 +103,8 @@ export const EntityChip = ({ entity, href }: Props) => {
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 12 6"
-              fill="white"
               stroke="currentColor"
-              className="w-[12px] h-[6px] text-gray-200 z-100"
+              className="w-[12px] h-[6px] fill-card text-border z-100 my-[-1px]"
               fillRule="evenodd"
             >
               <path

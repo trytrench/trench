@@ -3,13 +3,13 @@ import { format } from "date-fns";
 import { RouterOutputs, api } from "~/utils/api";
 import { Badge } from "./ui/badge";
 
-function truncateObject(obj, maxLength) {
+function truncateObject(obj: Object, maxLength: number) {
   let result = {};
 
-  function traverse(o) {
+  function traverse(o: Object) {
     if (typeof o === "object" && o !== null) {
       let str = JSON.stringify(o);
-      return str.length > maxLength ? str.substr(0, maxLength) + "..." : str;
+      return str.length > maxLength ? str.slice(0, maxLength) + "…" : str;
     } else if (typeof o === "string") {
       return o; // return string value without quotes
     } else {
@@ -35,14 +35,14 @@ export function EventListItem({ event, selected, ...rest }: EventCardProps) {
   return (
     <button
       className={clsx({
-        "px-8 w-full flex items-center text-xs  font-mono cursor-pointer text-left":
+        "px-8 py-1.5 w-full flex items-start text-xs font-mono cursor-pointer text-left border-b":
           true,
         "hover:bg-muted": !selected,
         "bg-muted": selected,
       })}
       {...rest}
     >
-      <span className="w-32 mr-4 whitespace-nowrap shrink-0 py-1">
+      <span className="w-32 mr-4 whitespace-nowrap shrink-0">
         {format(event.timestamp, "MMM d, HH:mm:ss")}
       </span>
       <span className="w-28 mr-4 whitespace-nowrap shrink-0 truncate">
@@ -58,13 +58,14 @@ export function EventListItem({ event, selected, ...rest }: EventCardProps) {
           ))}
       </span>
 
-      <span className="truncate flex-1 w-0 text-xs">
+      <div className="line-clamp-3 flex-1 w-0 text-xs">
         {Object.entries(truncateObject(event.data, 100)).map(([key, value]) => (
-          <span key={key}>
-            <b>{key}: </b> {value as string}{" "}
+          <span>
+            <b className="text-emphasis-foreground">{key}: </b>{" "}
+            {value as string}{" "}
           </span>
         ))}
-      </span>
+      </div>
     </button>
   );
 }

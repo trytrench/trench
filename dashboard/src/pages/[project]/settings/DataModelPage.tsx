@@ -167,7 +167,7 @@ function DataModelPage() {
       <Separator className="my-8" />
 
       <div className="flex gap-4">
-        <div className="w-[14rem] pl-2 text-sm text-gray-700">
+        <div className="w-[14rem] pl-2 text-sm">
           {/* Entity List */}
           <div className="font-semibold mb-2">Entities</div>
           <div className="">
@@ -176,7 +176,7 @@ function DataModelPage() {
                 <button
                   key={type}
                   className={clsx({
-                    "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
+                    "px-4 py-1 w-full text-left rounded-md transition flex justify-between items-center":
                       true,
                     "bg-accent text-accent-foreground":
                       selectedItem === ENTITY_PREFIX + type,

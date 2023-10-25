@@ -62,7 +62,7 @@ export function EventDrawer(props: {
         <div className="flex items-center gap-4">
           <div className="text-sm">Data</div>
           <button
-            className="px-2 py-0.5 bg-gray-300 hover:bg-gray-200"
+            className="px-2 py-0.5 bg-muted opacity-50 hover:opacity-60 transition"
             onClick={() => {
               setExpandData((prev) => !prev);
             }}

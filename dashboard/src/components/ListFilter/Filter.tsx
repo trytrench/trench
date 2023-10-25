@@ -139,10 +139,7 @@ function Filter(props: Props) {
                             <Check className="absolute w-4 h-4 left-2 top-2" />
                           )}
 
-                          <LabelChip
-                            label={label}
-                            className="shadow-sm  border border-blue-200"
-                          />
+                          <LabelChip label={label} className="shadow-sm" />
                         </CommandItem>
                       ))}
                     </CommandGroup>
