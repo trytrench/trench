@@ -174,15 +174,15 @@ if (isMainThread) {
       LIMIT 1
     `)
       : await client.query(`
-      SELECT "id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
+      SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
       FROM "Dataset"
       JOIN "DatasetJob" ON "DatasetJob"."datasetId" = "Dataset"."id"
       WHERE "Dataset"."id" > 0
       AND NOT EXISTS (
-        SELECT 1
-        FROM "ProductionDatasetLog"
+        SELECT FROM "ProductionDatasetLog"
         WHERE "ProductionDatasetLog"."datasetId" = "Dataset"."id"
       )
+      ORDER BY RANDOM()
       FOR UPDATE OF "DatasetJob" 
       SKIP LOCKED
       LIMIT 1;
@@ -191,6 +191,7 @@ if (isMainThread) {
     if (res.rows.length === 0) {
       return null;
     }
+
     const numDatasets = res.rows.length;
     const randomIndex = Math.floor(Math.random() * numDatasets);
     const dataset = res.rows[randomIndex];
@@ -211,7 +212,7 @@ if (isMainThread) {
       while (true) {
         // Sleep for 1 second
         await new Promise((resolve) =>
-          setTimeout(resolve, IS_PRODUCTION_WORKER ? 100 : 1000)
+          setTimeout(resolve, IS_PRODUCTION_WORKER ? 1000 : 1000)
         );
 
         // Start a transaction
@@ -275,16 +276,16 @@ if (isMainThread) {
         `,
           [newLastEventId, datasetId]
         );
-        if (IS_PRODUCTION_WORKER) {
-          await client.query(
-            `
-            UPDATE "DatasetJob"
-            SET "lastProductionEventLogId" = $1
-            WHERE "datasetId" = 0;
-          `,
-            [newLastEventId, datasetId]
-          );
-        }
+        // if (IS_PRODUCTION_WORKER) {
+        //   await client.query(
+        //     `
+        //     UPDATE "DatasetJob"
+        //     SET "lastProductionEventLogId" = $1
+        //     WHERE "datasetId" = 0;
+        //   `,
+        //     [newLastEventId, datasetId]
+        //   );
+        // }
 
         // Commit the transaction
         await client.query("COMMIT");

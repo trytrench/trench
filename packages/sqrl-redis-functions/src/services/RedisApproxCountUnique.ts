@@ -18,7 +18,10 @@ import { RedisInterface, createRedisKey } from "./RedisInterface";
 const NUM_BUCKETS = 10;
 
 export class RedisApproxCountUniqueService implements CountUniqueService {
-  constructor(private redis: RedisInterface, private prefix: string) {}
+  constructor(
+    private redis: RedisInterface,
+    private prefix: string
+  ) {}
 
   private async bumpTotal(ctx: Context, key: SqrlKey, sortedHashes: string[]) {
     const redisKey = createRedisKey(

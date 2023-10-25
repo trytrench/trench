@@ -4,18 +4,8 @@
     "composite": true,
     "rootDir": "./src",
     "outDir": "./lib",
+    "esModuleInterop": true,
     "tsBuildInfoFile": "lib/cache.tsbuildinfo"
   },
-  "include": ["src/**/*"],
-  "references": [
-    {
-      "path": "../sqrl"
-    },
-    {
-      "path": "../sqrl-common"
-    },
-    {
-      "path": "../sqrl-test-utils"
-    }
-  ]
+  "include": ["src/**/*"]
 }

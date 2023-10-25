@@ -6,7 +6,7 @@
 // tslint:disable:no-submodule-imports (@TODO)
 
 import { addressToHostPort } from "../addressToHostPort";
-import * as Redis from "ioredis";
+import Redis from "ioredis";
 import { Context } from "sqrl";
 import { invariant } from "sqrl-common";
 import { rateLimitFetchLua } from "../lua/rateLimitFetchLua";

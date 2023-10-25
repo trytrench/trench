@@ -13,7 +13,10 @@ type CountUniqueData = {
 }[];
 
 export class RedisCountUniqueService implements CountUniqueService {
-  constructor(private redis: RedisInterface, private prefix: string) {
+  constructor(
+    private redis: RedisInterface,
+    private prefix: string
+  ) {
     /* nothing else */
   }
   async bump(
