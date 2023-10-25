@@ -1,5 +1,4 @@
-import { Box, SimpleGrid } from "@chakra-ui/react";
-import { Badge, Card, Text, Title } from "@tremor/react";
+import { Badge } from "~/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
 import { type RouterOutputs } from "~/utils/api";
@@ -7,57 +6,62 @@ import { type RouterOutputs } from "~/utils/api";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
+  href: string;
 }
 
-export const EntityCard = ({ entity, relation }: Props) => {
+export const EntityCard = ({ entity, relation, href }: Props) => {
+  const entityFeatures = entity.features ?? {};
+
+  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
+
   return (
-    <Card>
+    <div className="border rounded-lg shadow-sm p-8 bg-card">
       <div className="">
-        <Link href={`/entity/${entity.id}`}>
+        <Link href={href}>
           <div className="flex">
-            <Title className="text-sm">
+            <h1 className="text-lg text-emphasis-foreground">
               {entity.type}: {entity.name}
-            </Title>
+            </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
           </div>
         </Link>
         {entity.lastSeenAt && (
-          <Text>
+          <div className="text-muted-foreground text-sm">
             Last seen:{" "}
             {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
-          </Text>
+          </div>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entity.labels.length > 0 ? (
-            entity.labels.map((label) => {
+          {entityLabels.length > 0 ? (
+            entityLabels.map((label) => {
               return (
-                <Badge key={label} size="xs">
+                <Badge key={label} variant="default">
                   {label}
                 </Badge>
               );
             })
           ) : (
-            <Badge color="neutral">No labels</Badge>
+            <div className="italic text-sm">No labels</div>
           )}
         </div>
         <div className="h-4"></div>
-        <SimpleGrid columns={5} spacing={2}>
-          {Object.entries(entity.features).map(([key, value], idx) => (
-            <Box key={key}>
-              <Text className="font-semibold">{key}</Text>
-              <Text className="truncate">
+        <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
+          {Object.entries(entityFeatures).map(([key, value], idx) => (
+            <div key={key}>
+              <div className="font-semibold">{key}</div>
+              <div className="truncate">
                 {value === 0
-                  ? 0
+                  ? "0"
                   : value === true
                   ? "True"
                   : value === false
                   ? "False"
-                  : value || "-"}
-              </Text>
-            </Box>
+                  : (value as string) || "-"}
+              </div>
+            </div>
           ))}
-        </SimpleGrid>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 };

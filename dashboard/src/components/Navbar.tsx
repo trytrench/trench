@@ -1,29 +1,19 @@
-import {
-  Box,
-  Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  DrawerOverlay,
-  Flex,
-  HStack,
-  Link,
-  Spacer,
-  Text,
-  VStack,
-  useBreakpointValue,
-  useDisclosure,
-} from "@chakra-ui/react";
-import { Select, SelectItem, Tab, TabGroup, TabList } from "@tremor/react";
+import clsx from "clsx";
 import { Menu } from "lucide-react";
-import { signOut } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
-import { api } from "../utils/api";
+import { Button } from "~/components/ui/button";
 import { handleError } from "../lib/handleError";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
+import {
+  Select,
+  SelectItem,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { api } from "../utils/api";
 
 interface Props {
   href: string;
@@ -35,136 +25,104 @@ const NavItem = ({ href, children, ...props }: Props) => {
   const active = router.pathname.split("/")[1] === href.split("/")[1];
 
   return (
-    <Link
-      as={NextLink}
+    <NextLink
       href={href}
-      color={active ? "black" : "gray.500"}
-      textShadow={active ? "0 0 0.5px black" : "none"}
-      // fontWeight="medium"
-      _hover={{ color: "black" }}
+      className={clsx({
+        "text-gray-500 hover:text-black": !active,
+        "text-black": active,
+      })}
       {...props}
     >
       {children}
-    </Link>
+    </NextLink>
   );
 };
 
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Info", path: "info" },
-  { name: "Data Explorer", path: "dashboard" },
+  { name: "Rules", path: "rules" },
+  { name: "Explore", path: "explore" },
+  { name: "Settings", path: "settings" },
 ];
 
 export const Navbar = () => {
-  const isDesktop = useBreakpointValue({ base: false, lg: true });
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  // const isDesktop = useBreakpointValue({ base: false, lg: true });
+  const isDesktop = true;
   const btnRef = useRef(null);
 
   const router = useRouter();
+  const { data: projects } = api.project.list.useQuery();
 
-  const datasetId = router.query.datasetId as string | undefined;
-
-  const isCreatePage = router.pathname === "/create";
-
-  const { data: datasets } = api.datasets.list.useQuery();
-
-  const pathEnd = router.pathname.split("/").pop();
-  const selectedTabIndex = TABS.findIndex((tab) => tab.path === pathEnd);
+  const project = router.query.project as string;
 
   return (
-    <Box
-      width="100%"
-      px={isDesktop ? 8 : 4}
-      justify="start"
-      align={"center"}
-      as="nav"
-      shrink={0}
-      flexShrink={0}
+    <nav
+      className={clsx({
+        "w-full self-center shrink-0 flex flex-col justify-start p-0": true,
+      })}
     >
-      <Box
-        display="flex"
-        mt={2}
-        alignItems="center"
-        justifyItems="flex-start"
-        gap={4}
-      >
+      <div className="flex mt-2 px-4 items-center justify-start gap-4">
         {!isDesktop && (
-          <Box as="button" m={-3} p={3} ref={btnRef} onClick={onOpen}>
+          // missing onclick
+          <button className="-m-3 p-3" ref={btnRef}>
             <Menu height={24} width={24} />
-          </Box>
+          </button>
         )}
         <NextLink href="/">
-          <Text fontSize="lg" fontWeight="bold" mr={12}>
-            Trench
-          </Text>
+          <h1 className="text-lg font-bold text-black mr-12">Trench</h1>
         </NextLink>
-        {isCreatePage ? (
-          <>
-            <Text>Create new dataset</Text>
-          </>
-        ) : (
-          <>
-            <div>
-              <Select
-                value={datasetId}
-                placeholder="Select dataset..."
-                className="w-64"
-                onValueChange={(value) => {
-                  router.push(`/datasets/${value}/events`).catch(handleError);
-                }}
-              >
-                {datasets?.map((dataset) => {
-                  return (
-                    <SelectItem key={dataset.id} value={dataset.id}>
-                      {dataset.name}
-                    </SelectItem>
-                  );
-                }) ?? []}
-              </Select>
-            </div>
-
-            <Link href="/create">
-              <Button>Create</Button>
-            </Link>
-            <Link href={`/create?forkFrom=${datasetId}`}>
-              <Button>Fork</Button>
-            </Link>
-            <Box flex={1} />
-
-            <HStack spacing={4} fontSize="sm">
-              <NavItem href="/changelog">Changelog</NavItem>
-              <NavItem href="/help">Help</NavItem>
-              <NavItem href="/docs">Docs</NavItem>
-              <Spacer />
-              {/* <UserButton afterSignOutUrl="/" /> */}
-            </HStack>
-          </>
-        )}
-      </Box>
-      {datasetId ? (
-        <Box flex={1} flexDirection="row" display="flex">
-          <TabGroup
-            index={selectedTabIndex}
-            onIndexChange={(index) => {
-              const tab = TABS[index];
-              router
-                .push(`/datasets/${datasetId}/${tab?.path}`)
-                .catch(handleError);
+        <div>
+          <Select
+            value={project}
+            onValueChange={(value) => {
+              router.push(`/${value}/events`).catch(handleError);
             }}
           >
-            <TabList>
-              {TABS.map((tab, idx) => {
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Select project..." />
+            </SelectTrigger>
+            <SelectContent>
+              {projects?.map((project) => {
                 return (
-                  <Tab key={idx} value={tab.path}>
-                    {tab.name}
-                  </Tab>
+                  <SelectItem key={project.name} value={project.name}>
+                    {project.name}
+                  </SelectItem>
                 );
-              })}
-            </TabList>
-          </TabGroup>
-        </Box>
-      ) : null}
+              }) ?? []}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grow" />
+
+        <div className="flex gap-4 text-sm">
+          <NavItem href="/changelog">Changelog</NavItem>
+          <NavItem href="/help">Help</NavItem>
+          <NavItem href="/docs">Docs</NavItem>
+          <div className="grow" />
+          {/* <UserButton afterSignOutUrl="/" /> */}
+        </div>
+      </div>
+
+      <div className="sticky">
+        <Tabs
+          value={router.pathname.split("/").pop()}
+          onValueChange={(tab) => {
+            router.push(`/${project}/${tab}`).catch(handleError);
+          }}
+        >
+          <TabsList className="pl-2">
+            {TABS.map((tab) => {
+              return (
+                <TabsTrigger key={tab.path} value={tab.path}>
+                  {tab.name}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
@@ -183,6 +141,6 @@ export const Navbar = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer> */}
-    </Box>
+    </nav>
   );
 };

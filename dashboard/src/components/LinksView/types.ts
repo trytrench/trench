@@ -1,28 +1,68 @@
-export interface EntityData {
+// Query output
+
+export type RawLeft = {
   id: string;
   type: string;
   name: string;
-  count?: number;
-}
-export type Link = {
-  from: string;
-  to: string;
-  weight?: number;
-};
+}[];
+export type RawLinks = {
+  from_id: string;
+  from_type: string;
+  to_id: string;
+  to_type: string;
+  to_name: string;
+}[];
 
-// for v2
+// Left
 
-export type DisplayEntityData = {
+export type LeftEntity = {
+  itemType: "entity";
   id: string;
-  name: string;
   type: string;
   linkCount: number;
+  name: string;
+  isHidden: boolean;
 };
 
-export type DisplayLink = {
+export type LeftGroup = {
+  itemType: "group";
+  id: string;
+  type: string;
+  linkCount: number;
+  entityCount: number;
+};
+
+export type LeftItem = LeftEntity | LeftGroup;
+
+// Links
+
+export type SingleLink = {
+  itemType: "link";
+  from: string;
+  to: string;
+};
+
+export type HiddenLink = {
+  itemType: "hiddenLink";
+  from: string;
+  to: string;
+};
+
+export type WeightedLink = {
+  itemType: "weightedLink";
   from: string;
   to: string;
   weight: number;
+  reference: number;
 };
 
-//
+export type LinkItem = SingleLink | HiddenLink | WeightedLink;
+
+// Right
+
+export type RightItem = {
+  itemType: "entity";
+  id: string;
+  name: string;
+  type: string;
+};

@@ -2,19 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* html,
-body {
-  padding: 0;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 8.9% 46.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 8.9% 46.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 8.9% 46.1%;
+    --primary: 214.3 94.6% 92.7%;
+    --primary-foreground: 217.2 91.2% 59.8%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 220 13% 91%;
+    --muted: 210 20% 98%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 214.3 94.6% 92.7%;
+    --accent-foreground: 217.2 91.2% 59.8%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 73.7% 41.8%;
+    --border: 220, 13%, 91%;
+    --input: 220, 13%, 91%;
+    --ring: 213.8, 100%, 96.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
-
-* {
-  box-sizing: border-box;
-} */

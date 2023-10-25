@@ -1,26 +1,23 @@
-import {
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Radio,
-  RadioGroup,
-  VStack,
-} from "@chakra-ui/react";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
   onPublish: (version: string, description?: string) => void;
   initialVersion: string;
+  button: React.ReactNode;
 }
 
 function updateSemver(version: string, type: "major" | "minor" | "patch") {
@@ -40,71 +37,70 @@ function updateSemver(version: string, type: "major" | "minor" | "patch") {
   }
 }
 
-export const PublishModal = ({
-  isOpen,
-  onClose,
-  onPublish,
-  initialVersion,
-}: Props) => {
+export const PublishModal = ({ onPublish, initialVersion, button }: Props) => {
   const [description, setDescription] = useState("");
   const [version, setVersion] = useState<"major" | "minor" | "patch">("patch");
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Publish</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={2}>
-            <FormControl>
-              <FormLabel>Description</FormLabel>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add a description"
-              />
-            </FormControl>
-            <FormControl as="fieldset">
-              <FormLabel as="legend">Version</FormLabel>
-              <RadioGroup
-                value={version}
-                onChange={(value) => setVersion(value)}
-              >
-                <VStack spacing={2} alignItems="flex-start">
-                  <Radio value="major">
-                    Major ({updateSemver(initialVersion, "major")})
-                  </Radio>
-                  <Radio value="minor">
-                    Minor ({updateSemver(initialVersion, "minor")})
-                  </Radio>
-                  <Radio value="patch">
-                    Patch ({updateSemver(initialVersion, "patch")})
-                  </Radio>
-                </VStack>
-              </RadioGroup>
-            </FormControl>
-          </VStack>
-        </ModalBody>
+    <Dialog>
+      <DialogTrigger asChild>{button}</DialogTrigger>
 
-        <ModalFooter>
-          <Button
-            colorScheme="blue"
-            mr={1}
-            onClick={() => {
-              onPublish(updateSemver(initialVersion, version), description);
-              setVersion("patch");
-              setDescription("");
-            }}
-            size="sm"
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Publish</DialogTitle>
+
+          <DialogDescription></DialogDescription>
+        </DialogHeader>
+        <div>
+          <div className="grid w-full max-w-sm items-center gap-1.5 mb-4">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              id="description"
+            />
+          </div>
+
+          <RadioGroup
+            defaultValue="minor"
+            value={version}
+            onValueChange={setVersion}
           >
-            Publish
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="major" id="major" />
+              <Label htmlFor="major">
+                Major ({updateSemver(initialVersion, "major")})
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="minor" id="minor" />
+              <Label htmlFor="minor">
+                Minor ({updateSemver(initialVersion, "minor")})
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="patch" id="patch" />
+              <Label htmlFor="patch">
+                Patch ({updateSemver(initialVersion, "patch")})
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="secondary">Cancel</Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button
+              onClick={() =>
+                onPublish(updateSemver(initialVersion, version), description)
+              }
+            >
+              Publish
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

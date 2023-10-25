@@ -1,93 +1,49 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "..";
+import { readdir, readFile } from "fs/promises";
+import path from "path";
 
-import * as fs from "fs";
-import * as path from "path";
+async function readFiles(dirPath: string) {
+  try {
+    const filenames = await readdir(dirPath);
+    const filesData = await Promise.all(
+      filenames.map(async (filename) => {
+        const filePath = path.join(dirPath, filename);
+        const data = await readFile(filePath, "utf8");
+        return [filename, data];
+      })
+    );
 
-interface FileData {
-  name: string;
-  code: string;
-}
-
-async function readTextAndSqrlFiles(directory: string): Promise<FileData[]> {
-  return new Promise((resolve, reject) => {
-    fs.readdir(directory, (err, files) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      const textAndSqrlFiles = files.filter((file) => {
-        const ext = path.extname(file);
-        return ext === ".txt" || ext === ".sqrl";
-      });
-
-      const fileDataArray: FileData[] = [];
-
-      let remainingFiles = textAndSqrlFiles.length;
-      if (remainingFiles === 0) {
-        resolve(fileDataArray); // Resolve early if there are no text or sqrl files
-      } else {
-        textAndSqrlFiles.forEach((file) => {
-          fs.readFile(path.join(directory, file), "utf8", (err, data) => {
-            if (err) {
-              reject(err); // Reject the promise if there's an error reading a file
-              return;
-            }
-
-            const fileData: FileData = {
-              name: path.basename(file),
-              code: data,
-            };
-
-            fileDataArray.push(fileData);
-            remainingFiles -= 1;
-
-            if (remainingFiles === 0) {
-              resolve(fileDataArray); // Resolve the promise once all files have been read
-            }
-          });
-        });
-      }
-    });
-  });
+    return Object.fromEntries(filesData);
+  } catch (err) {
+    console.error("Error reading files:", err);
+    throw err;
+  }
 }
 
 async function main() {
-  const fileData = await readTextAndSqrlFiles(__dirname + "/rules");
+  const fileData = await readFiles(__dirname + "/rules");
 
-  // ID 0 is reserved for the readonly dataset
-  await prisma.dataset.create({
+  const project = await prisma.project.create({
     data: {
-      id: 0,
-      name: "Production (Readonly) Dataset",
-      description: "Click here to access the event feed!",
-      rules: {},
-      isProduction: true,
-    },
-  });
-
-  const firstDataset = await prisma.dataset.create({
-    data: {
-      name: "Starter Dataset",
-      description: "Click here to access the event feed!",
-      rules: fileData as any,
-      isProduction: true,
-      datasetJob: {
-        create: {},
+      name: "production",
+      releases: {
+        create: [
+          {
+            version: "0.0.0",
+            description: "Initial release",
+            code: fileData,
+          },
+        ],
       },
     },
+    include: { releases: true },
   });
 
-  await prisma.productionDatasetLog.create({
+  const prodDataset = await prisma.dataset.create({
     data: {
-      datasetId: firstDataset.id,
-    },
-  });
-
-  await prisma.outputLogCursor.create({
-    data: {
-      latestOutputLogId: null,
+      description: "Production",
+      release: { connect: { id: project.releases[0].id } },
+      prodProject: { connect: { id: project.id } },
     },
   });
 }

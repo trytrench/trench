@@ -1,9 +1,11 @@
-import { createSimpleContext, getGlobalLogger, type Executable } from "sqrl";
+import { type Executable } from "sqrl";
 import { createContext } from "./createContext";
 import { SqrlManipulator } from "../SqrlManipulator";
 import { Event } from "../types";
 
 export type EventOutput = Awaited<ReturnType<typeof runEvent>>;
+
+const EXCLUDED_FEATURES = ["EventData"];
 
 export async function runEvent(
   event: Event,
@@ -35,33 +37,21 @@ export async function runEvent(
   await completePromise;
   await manipulator.mutate(ctx);
 
-  const eventFeatures: Record<string, unknown> = {};
-  manipulator.eventFeatures.forEach((feature) => {
-    eventFeatures[feature.name] = feature.value;
-  });
-
-  const entityIdToFeatures: Record<string, Record<string, unknown>> = {};
-  manipulator.entityFeatures.forEach((feature) => {
-    if (!entityIdToFeatures[feature.entityId])
-      entityIdToFeatures[feature.entityId] = {};
-
-    entityIdToFeatures[feature.entityId]![feature.name] = feature.value;
-  });
-
   return {
     id: event.id,
     datasetId: datasetId.toString(),
     type: event.type,
     timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
     data: event.data,
-    features: eventFeatures,
-    labels: manipulator.eventLabels,
-    entities: manipulator.entities.map((entity) => ({
-      ...entity,
-      labels: manipulator.entityLabels.filter(
-        (label) => label.entityId === entity.id
-      ),
-      features: entityIdToFeatures[entity.id] ?? {},
-    })),
+    features: allFeatures.reduce(
+      (acc, name) => {
+        if (!EXCLUDED_FEATURES.includes(name) && !name.startsWith("Sqrl")) {
+          acc[name] = features[name];
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    ),
+    entities: manipulator.entities,
   };
 }

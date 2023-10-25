@@ -218,15 +218,27 @@ if (isMainThread) {
         // Start a transaction
         await client.query("BEGIN");
 
-        const dataset = await getDatasetMetadata();
-
-        if (!dataset) {
-          // No datasets to process, commit the transaction and continue
+        const res = await client.query(`
+        SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "Release"."code"
+        FROM "Dataset"
+        JOIN "Release" ON "Release"."id" = "Dataset"."releaseId"
+        FOR UPDATE SKIP LOCKED
+        LIMIT 1;
+      `);
+        if (res.rows.length === 0) {
           await client.query("COMMIT");
           continue;
         }
 
-        const { id: datasetId, lastEventLogId, rules } = dataset;
+        const {
+          id: datasetId,
+          lastEventLogId,
+          code,
+        } = dataset as {
+          id: bigint;
+          lastEventLogId: number;
+          code: Record<string, string>;
+        };
 
         const eventsRes = await client.query(
           `
@@ -240,7 +252,10 @@ if (isMainThread) {
           [lastEventLogId]
         );
 
-        const events = eventsRes.rows as Event[];
+        const events = (eventsRes.rows as Event[]).map((row) => ({
+          ...row,
+          timestamp: row.timestamp.toISOString(),
+        }));
 
         if (events.length === 0) {
           // No events to process, commit the transaction and continue
@@ -248,21 +263,7 @@ if (isMainThread) {
           continue;
         }
 
-        const files =
-          rules.reduce(
-            (acc, file) => {
-              acc[file.name] = file.code;
-              return acc;
-            },
-            {} as Record<string, string>
-          ) || {};
-
-        await processEvents({
-          events,
-          files,
-          datasetId,
-          isProductionWorker: IS_PRODUCTION_WORKER,
-        });
+        await processEvents(events, code, datasetId);
 
         const newLastEventId = events.length
           ? events[events.length - 1]!.id

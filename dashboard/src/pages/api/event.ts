@@ -35,14 +35,21 @@ export default async function handler(
   }
   const event = result.data;
 
+<<<<<<< HEAD
   const eventId = ulid(event.timestamp.getTime());
   await prisma.eventLog.create({
     data: {
       id: eventId,
+=======
+  await prisma.eventLog.create({
+    data: {
+      id: ulid(event.timestamp.getTime()),
+>>>>>>> origin/micwu/shadcn-switch
       timestamp: event.timestamp,
       type: event.type,
       data: event.data as Prisma.JsonObject,
     },
+<<<<<<< HEAD
   });
 
   if (result.data.options?.sync) {
@@ -74,4 +81,11 @@ export default async function handler(
       success: true,
     });
   }
+=======
+  });
+
+  res.status(200).json({
+    success: true,
+  });
+>>>>>>> origin/micwu/shadcn-switch
 }

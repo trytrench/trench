@@ -13,6 +13,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -25,7 +26,8 @@ export const eventsRouter = createTRPCRouter({
           FROM 
               event_entity
           WHERE 
-              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              dataset_id = '${input.datasetId}'
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
               time,
@@ -33,15 +35,19 @@ export const eventsRouter = createTRPCRouter({
           ORDER BY 
               time ASC
           WITH FILL
-          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
-          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          FROM toStartOfInterval(parseDateTimeBestEffort('${input.start.toISOString()}'), INTERVAL 1 day)
+          TO toStartOfInterval(parseDateTimeBestEffort('${input.end.toISOString()}'), INTERVAL 1 day)
           STEP INTERVAL 1 day;
         `,
         format: "JSONEachRow",
       });
 
-      const data =
-        await result.json<{ time: string; label: string; count: number }[]>();
+      const rawData =
+        await result.json<{ time: string; label: string; count: string }[]>();
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
 
       return {
         bins: getBins(data),
@@ -75,15 +81,20 @@ export const eventsRouter = createTRPCRouter({
           ORDER BY 
               time ASC
           WITH FILL
-          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
-          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          FROM toStartOfInterval(parseDateTimeBestEffort('${input.start.toISOString()}'), INTERVAL 1 day)
+          TO toStartOfInterval(parseDateTimeBestEffort('${input.end.toISOString()}'), INTERVAL 1 day)
           STEP INTERVAL 1 day;
         `,
         format: "JSONEachRow",
       });
 
-      const data =
-        await result.json<{ time: string; label: string; count: number }[]>();
+      const rawData =
+        await result.json<{ time: string; label: string; count: string }[]>();
+
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
 
       return {
         bins: getBins(data),
@@ -98,6 +109,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -111,7 +123,8 @@ export const eventsRouter = createTRPCRouter({
           FROM 
               event_entity_event_labels
           WHERE 
-              event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
+              dataset_id = '${input.datasetId}'
+              AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
               time,
@@ -120,17 +133,21 @@ export const eventsRouter = createTRPCRouter({
           ORDER BY 
               time ASC
           WITH FILL
-          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
-          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          FROM toStartOfInterval(parseDateTimeBestEffort('${input.start.toISOString()}'), INTERVAL 1 day)
+          TO toStartOfInterval(parseDateTimeBestEffort('${input.end.toISOString()}'), INTERVAL 1 day)
           STEP INTERVAL 1 day;
         `,
         format: "JSONEachRow",
       });
 
-      const data =
+      const rawData =
         await result.json<
-          { time: string; label: string; event_type: string; count: number }[]
+          { time: string; label: string; event_type: string; count: string }[]
         >();
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
 
       const eventTypes = uniq(data.map((bin) => bin.event_type)).filter(
         Boolean
@@ -182,17 +199,21 @@ export const eventsRouter = createTRPCRouter({
           ORDER BY 
               time ASC
           WITH FILL
-          FROM parseDateTimeBestEffort('${input.start.toISOString()}')
-          TO parseDateTimeBestEffort('${input.end.toISOString()}')
+          FROM toStartOfInterval(parseDateTimeBestEffort('${input.start.toISOString()}'), INTERVAL 1 day)
+          TO toStartOfInterval(parseDateTimeBestEffort('${input.end.toISOString()}'), INTERVAL 1 day)
           STEP INTERVAL 1 day;
         `,
         format: "JSONEachRow",
       });
 
-      const data =
+      const rawData =
         await result.json<
-          { time: string; label: string; entity_type: string; count: number }[]
+          { time: string; label: string; entity_type: string; count: string }[]
         >();
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
 
       const entityTypes = uniq(data.map((bin) => bin.entity_type)).filter(
         Boolean
@@ -225,6 +246,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -236,7 +258,7 @@ export const eventsRouter = createTRPCRouter({
               COUNT(DISTINCT event_id) AS count
           FROM 
               event_entity_event_labels
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
               AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
@@ -248,13 +270,16 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      return result.json<
-        {
-          label: string;
-          event_type: string;
-          count: number;
-        }[]
-      >();
+      const rawData =
+        await result.json<
+          { label: string; event_type: string; count: string }[]
+        >();
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
+
+      return data;
     }),
 
   getEntityLabelDistributions: publicProcedure
@@ -284,13 +309,20 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      return result.json<
+      const rawData = await result.json<
         {
           label: string;
           entity_type: string;
-          count: number;
+          count: string;
         }[]
       >();
+
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
+
+      return data;
     }),
 
   getEntityTypeDistributions: publicProcedure
@@ -318,12 +350,19 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      return result.json<
+      const rawData = await result.json<
         {
           entity_type: string;
-          count: number;
+          count: string;
         }[]
       >();
+
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
+
+      return data;
     }),
 
   getEventTypeDistributions: publicProcedure
@@ -332,6 +371,7 @@ export const eventsRouter = createTRPCRouter({
         start: z.date(),
         end: z.date(),
         entityId: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -342,7 +382,7 @@ export const eventsRouter = createTRPCRouter({
               COUNT(DISTINCT event_id) AS count
           FROM 
               event_entity
-          WHERE 1=1
+          WHERE dataset_id = '${input.datasetId}'
               AND event_timestamp BETWEEN parseDateTimeBestEffort('${input.start.toISOString()}') AND parseDateTimeBestEffort('${input.end.toISOString()}')
               ${input.entityId ? `AND entity_id = '${input.entityId}'` : ""}
           GROUP BY 
@@ -353,12 +393,18 @@ export const eventsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      return result.json<
+      const rawData = await result.json<
         {
           event_type: string;
           count: number;
         }[]
       >();
+      const data = rawData.map((datum) => ({
+        ...datum,
+        count: Number(datum.count),
+      }));
+
+      return data;
     }),
 
   findMany: publicProcedure

@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { jsonFilterZod } from "./jsonFilter";
 
+export const genericFiltersZod = z
+  .object({
+    dateRange: z
+      .object({
+        from: z.number(),
+        to: z.number(),
+      })
+      .optional(),
+    type: z.string().optional(),
+    labels: z.array(z.string()).optional(),
+    features: z.array(jsonFilterZod).optional(),
+  })
+  .optional();
+
+export type GenericFilters = z.infer<typeof genericFiltersZod>;
+
 export const eventFiltersZod = z
   .object({
     dateRange: z

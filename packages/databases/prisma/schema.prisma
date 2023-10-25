@@ -3,7 +3,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["views", "fullTextSearch", "filteredRelationCount", "tracing"]
+  previewFeatures = ["views", "fullTextSearch"]
 }
 
 datasource db {
@@ -18,72 +18,9 @@ model EventLog {
   data      Json     @default("{}")
 
   // Datasets that currently have this event as its last processed event
-  datasets Dataset[] 
+  datasets Dataset[]
 
   @@index([timestamp])
-
-}
-
-model OutputLog {
-  id       BigInt @id @default(autoincrement())
-  eventId   String
-  datasetId BigInt
-  data     Json
-
-  cursor OutputLogCursor?
-
-  @@unique([eventId, datasetId])
-}
-
-
-// Single row that represents the latest processed output log
-model OutputLogCursor {
-  id String @id @default(dbgenerated("nanoid()"))
-
-  latestOutputLog OutputLog? @relation(fields: [latestOutputLogId], references: [id])
-  latestOutputLogId BigInt? @unique
-}
-
-model EventType {
-  id   String @id
-  name String
-
-  events      Event[]
-  eventLabels EventLabel[]
-
-  features EventFeature[]
-}
-
-model Event {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  timestamp DateTime
-  data      Json     @default("{}")
-
-  eventType EventType @relation(fields: [type], references: [id])
-  type      String
-
-  entityLinks EventToEntityLink[]
-  eventLabels EventLabel[]
-
-  features Json @default("{}")
-
-  @@index([data(ops: JsonbPathOps)], type: Gin)
-  @@index([type, id])
-  @@index([timestamp])
-  @@index([type, timestamp, id])
-  @@index([id, timestamp, type])
-}
-
-model EventFeature {
-  eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType    String
-
-  dataType String @default("string")
-
-  name        String
-  description String?
-
-  @@id([eventType, name])
 }
 
 model FeatureMetadata {
@@ -93,164 +30,52 @@ model FeatureMetadata {
   dataType String @default("string")
 }
 
-model EntityFeature {
-  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType    String
-
-  name        String
-  description String?
-
-  dataType String @default("string")
-
-  @@id([entityType, name])
-}
-
-model EntityType {
-  id   String @id
-  name String
-
-  entityLabels EntityLabel[]
-  entities     Entity[]
-
-  entityFeatures EntityFeature[]
-}
-
-model Entity {
-  id       String @id @default(dbgenerated("nanoid()"))
-  name     String
-  features Json   @default("{}")
-
-  entityType EntityType @relation(fields: [type], references: [id])
-  type       String
-
-  eventLinks   EventToEntityLink[]
-  entityLabels EntityLabel[]
-
-  @@index([features(ops: JsonbPathOps)], type: Gin)
-  @@index([type, id])
-}
-
-model LinkType {
-  id   String @id
-  name String
-
-  entitySnapshot Json @default("{}")
-
-  eventToEntityLink EventToEntityLink[]
-}
-
-model EventToEntityLink {
+model Project {
   id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-
-  linkType LinkType @relation(fields: [type], references: [id])
-  type     String
-  data     Json     @default("{}")
-
-  event   Event  @relation(fields: [eventId], references: [id])
-  eventId String
-
-  entity   Entity @relation(fields: [entityId], references: [id])
-  entityId String
-
-  @@index([eventId])
-  @@index([entityId])
-  @@index([entityId, eventId])
-  @@index([type, eventId, entityId])
-  @@index([type, entityId, eventId])
-}
-
-// Each row represents a time that the prod dataset was updated
-model ProductionDatasetLog {
-  id String @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-
-  dataset Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
-}
-
-model Dataset {
-  id BigInt @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name       String 
+  name String @unique
+
+  prodDataset   Dataset? @relation(fields: [prodDatasetId], references: [id])
+  prodDatasetId BigInt?  @unique
+
+  releases Release[]
+}
+
+model Release {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  description String?
+  code        Json
+  version     String
+  isDraft     Boolean @default(true)
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  datasets Dataset[]
+}
+
+model Dataset {
+  id        BigInt   @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   description String?
 
   backfillFrom DateTime? // If null, backfill from the beginning of time
   backfillTo   DateTime? // If null, backfill to now plus all incoming events
 
-  lastEventLog EventLog? @relation(fields: [lastEventLogId], references: [id])
+  lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
   lastEventLogId String?
 
-  isProduction Boolean @default(false)
+  release   Release @relation(fields: [releaseId], references: [id])
+  releaseId String
 
-  productionDatasetLogs ProductionDatasetLog[]
-
-  rules Json @default("[]")
-
-  datasetJob DatasetJob?
-}
-
-model DatasetJob {
-  dataset Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt @id
-}
-
-
-
-model EntityLabelType {
-  id          String   @id @default(dbgenerated("nanoid()"))
-  name        String
-  createdAt   DateTime @default(now())
-  description String
-
-  entityLabels EntityLabel[]
-}
-
-model EntityLabel {
-  id          String   @id @default(dbgenerated("nanoid()"))
-  name        String
-  createdAt   DateTime @default(now())
-  color       String
-  description String
-
-  entityTypeObj EntityType @relation(fields: [entityType], references: [id])
-  entityType    String
-
-  labelTypeObj EntityLabelType @relation(fields: [labelType], references: [id])
-  labelType    String
-
-  entities Entity[]
-
-  @@unique([name, entityType, labelType])
-}
-
-model EventLabelType {
-  id          String   @id @default(dbgenerated("nanoid()"))
-  name        String
-  createdAt   DateTime @default(now())
-  description String
-
-  eventLabels EventLabel[]
-}
-
-model EventLabel {
-  id          String   @id @default(dbgenerated("nanoid()"))
-  name        String
-  createdAt   DateTime @default(now())
-  color       String
-  description String
-
-  eventTypeObj EventType @relation(fields: [eventType], references: [id])
-  eventType    String
-
-  labelTypeObj EventLabelType @relation(fields: [labelType], references: [id])
-  labelType    String
-
-  events Event[]
-
-  @@unique([name, eventType, labelType])
+  prodProject Project?
 }
 
 // Necessary for Next auth

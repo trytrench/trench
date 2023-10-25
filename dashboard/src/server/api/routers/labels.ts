@@ -4,21 +4,11 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 
 export const labelsRouter = createTRPCRouter({
-  getAllLabels: publicProcedure.query(async ({ ctx, input }) => {
-    const [eventLabels, entityLabels] = await ctx.prisma.$transaction([
-      ctx.prisma.eventLabel.findMany(),
-      ctx.prisma.entityLabel.findMany(),
-    ]);
-
-    return {
-      eventLabels,
-      entityLabels,
-    };
-  }),
   getEventLabels: publicProcedure
     .input(
       z.object({
         eventType: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ input }) => {
@@ -26,7 +16,8 @@ export const labelsRouter = createTRPCRouter({
         query: `
           SELECT DISTINCT label
           FROM event_labels
-          WHERE event_type = '${input.eventType}' OR 1=1;
+          WHERE dataset_id = '${input.datasetId}'
+            AND event_type = '${input.eventType}' OR 1=1;
         `,
         format: "JSONEachRow",
       });
@@ -37,6 +28,7 @@ export const labelsRouter = createTRPCRouter({
     .input(
       z.object({
         entityType: z.string().optional(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -44,46 +36,60 @@ export const labelsRouter = createTRPCRouter({
         query: `
           SELECT DISTINCT label
           FROM entity_labels
-          ${input.entityType ? `WHERE entity_type = '${input.entityType}'` : ""}
+          WHERE dataset_id = '${input.datasetId}'
+          ${input.entityType ? `AND entity_type = '${input.entityType}'` : ""}
         `,
         format: "JSONEachRow",
       });
       const data = await result.json<{ label: string }[]>();
       return data.map((row) => row.label);
     }),
-  getEventTypes: publicProcedure.query(async ({ ctx }) => {
-    const result = await db.query({
-      query: `
+  getEventTypes: publicProcedure
+    .input(z.object({ datasetId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
           SELECT DISTINCT event_type
-          FROM event_entity;
+          FROM event_entity
+          WHERE dataset_id = '${input.datasetId}'
+          ORDER BY event_type ASC
         `,
-      format: "JSONEachRow",
-    });
-    const types = await result.json<{ event_type: string }[]>();
-    return types.map((type) => type.event_type);
-  }),
-  getEntityTypes: publicProcedure.query(async ({ ctx }) => {
-    const result = await db.query({
-      query: `
+        format: "JSONEachRow",
+      });
+      const types = await result.json<{ event_type: string }[]>();
+      return types.map((type) => type.event_type);
+    }),
+  getEntityTypes: publicProcedure
+    .input(z.object({ datasetId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const result = await db.query({
+        query: `
           SELECT DISTINCT entity_type
-          FROM event_entity;
+          FROM event_entity
+          WHERE dataset_id = '${input.datasetId}'
+          ORDER BY entity_type ASC
         `,
-      format: "JSONEachRow",
-    });
-    const types = await result.json<{ entity_type: string }[]>();
-    return types.map((type) => type.entity_type);
-  }),
-  getLinkTypes: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.linkType.findMany();
-  }),
+        format: "JSONEachRow",
+      });
+      const types = await result.json<{ entity_type: string }[]>();
+      return types.map((type) => type.entity_type);
+    }),
+  getLinkTypes: publicProcedure
+    .input(z.object({ datasetId: z.string() }))
+    .query(async ({ ctx }) => {
+      return ctx.prisma.linkType.findMany();
+    }),
   getEntityFeatures: publicProcedure
-    .input(z.object({ entityType: z.string().optional() }))
+    .input(
+      z.object({ entityType: z.string().optional(), datasetId: z.string() })
+    )
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
           SELECT DISTINCT feature
           FROM event_entity
-          ARRAY JOIN JSONExtractKeys(ifNull(entity_features, '{}')) AS feature;
+          ARRAY JOIN JSONExtractKeys(ifNull(entity_features, '{}')) AS feature
+          WHERE dataset_id = '${input.datasetId}'
         `,
         format: "JSONEachRow",
       });
@@ -91,13 +97,16 @@ export const labelsRouter = createTRPCRouter({
       return features.flatMap((feature) => feature.feature);
     }),
   getEventFeatures: publicProcedure
-    .input(z.object({ eventType: z.string().optional() }))
+    .input(
+      z.object({ eventType: z.string().optional(), datasetId: z.string() })
+    )
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
           SELECT DISTINCT feature
           FROM event_entity
-          ARRAY JOIN JSONExtractKeys(event_features) AS feature;
+          ARRAY JOIN JSONExtractKeys(event_features) AS feature
+          WHERE dataset_id = '${input.datasetId}'
         `,
         format: "JSONEachRow",
       });
@@ -105,39 +114,48 @@ export const labelsRouter = createTRPCRouter({
       return features.flatMap((feature) => feature.feature);
     }),
 
-  allFeatures: publicProcedure.query(async ({}) => {
-    const entityQuery = `
+  allFeatures: publicProcedure
+    .input(z.object({ datasetId: z.string() }))
+    .query(async ({ input }) => {
+      const entityQuery = `
       SELECT DISTINCT feature, entity_type
       FROM event_entity
-      ARRAY JOIN JSONExtractKeys(entity_features) AS feature;
+      ARRAY JOIN JSONExtractKeys(assumeNotNull(entity_features)) AS feature
+      WHERE dataset_id = '${input.datasetId}' AND entity_features IS NOT NULL
+      ORDER BY entity_type ASC
     `;
-    const eventQuery = `
+      const eventQuery = `
       SELECT DISTINCT feature, event_type
       FROM event_entity
-      ARRAY JOIN JSONExtractKeys(event_features) AS feature;
+      ARRAY JOIN JSONExtractKeys(assumeNotNull(event_features)) AS feature
+      WHERE dataset_id = '${input.datasetId}' AND event_features IS NOT NULL
+      ORDER BY event_type ASC
     `;
 
-    const [entityResult, eventResult] = await Promise.all([
-      db.query({ query: entityQuery, format: "JSONEachRow" }),
-      db.query({ query: eventQuery, format: "JSONEachRow" }),
-    ]);
+      console.log(entityQuery);
+      console.log(eventQuery);
 
-    const entityFeatures = await entityResult.json<
-      {
-        feature: string;
-        entity_type: string;
-      }[]
-    >();
-    const eventFeatures = await eventResult.json<
-      {
-        feature: string;
-        event_type: string;
-      }[]
-    >();
+      const [entityResult, eventResult] = await Promise.all([
+        db.query({ query: entityQuery, format: "JSONEachRow" }),
+        db.query({ query: eventQuery, format: "JSONEachRow" }),
+      ]);
 
-    return {
-      entities: groupBy(entityFeatures, (f) => f.entity_type),
-      events: groupBy(eventFeatures, (f) => f.event_type),
-    };
-  }),
+      const entityFeatures = await entityResult.json<
+        {
+          feature: string;
+          entity_type: string;
+        }[]
+      >();
+      const eventFeatures = await eventResult.json<
+        {
+          feature: string;
+          event_type: string;
+        }[]
+      >();
+
+      return {
+        entities: groupBy(entityFeatures, (f) => f.entity_type),
+        events: groupBy(eventFeatures, (f) => f.event_type),
+      };
+    }),
 });
