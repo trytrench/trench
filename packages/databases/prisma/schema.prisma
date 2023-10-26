@@ -25,10 +25,16 @@ model EventLog {
 }
 
 model FeatureMetadata {
-  id   String @id
-  name String
+  id      String  @id @default(dbgenerated("nanoid()"))
+  feature String  @unique
+  name    String?
+  color   String?
+  isRule  Boolean
+  hidden  Boolean @default(false)
 
-  dataType String @default("string")
+  dataType  String  @default("text")
+  version   Version @relation(fields: [versionId], references: [id])
+  versionId String
 }
 
 model Project {
@@ -72,7 +78,9 @@ model Version {
   projectId String
 
   backtests Backtest[]
-  releases Release[]
+  releases  Release[]
+  features     FeatureMetadata[]
+  featureOrder String[]
 }
 
 model Dataset {

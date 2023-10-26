@@ -8,26 +8,48 @@ export const featuresRouter = createTRPCRouter({
   saveFeatureMetadata: publicProcedure
     .input(
       z.object({
-        id: z.string(),
-        name: z.string(),
+        feature: z.string(),
+        name: z.string().optional(),
         dataType: z.enum(["text", "number", "boolean", "json"]),
+        releaseId: z.string(),
+        hidden: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const feature = await ctx.prisma.featureMetadata.upsert({
         where: {
-          id: input.id,
+          feature: input.feature,
         },
         create: {
-          id: input.id,
+          feature: input.feature,
+          releaseId: input.releaseId,
           name: input.name,
           dataType: input.dataType,
+          isRule: false,
         },
         update: {
           name: input.name,
           dataType: input.dataType,
+          hidden: input.hidden,
         },
       });
       return feature;
+    }),
+
+  saveFeatureOrder: publicProcedure
+    .input(
+      z.object({
+        features: z.string().array(),
+        releaseId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const release = await ctx.prisma.release.update({
+        where: { id: input.releaseId },
+        data: {
+          featureOrder: input.features,
+        },
+      });
+      return release;
     }),
 });

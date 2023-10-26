@@ -1,3 +1,4 @@
+import { compileSqrl, createSqrlInstance } from "sqrl-helpers";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -51,6 +52,12 @@ export const releasesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { description, version, code } = input;
 
+      const instance = await createSqrlInstance({
+        config: { "state.allow-in-memory": true },
+      });
+
+      const { compiled } = await compileSqrl(instance, code);
+
       const release = await ctx.prisma.release.create({
         data: {
           description,
@@ -58,6 +65,14 @@ export const releasesRouter = createTRPCRouter({
           code,
           projectId: input.projectId,
         },
+      });
+
+      await ctx.prisma.featureMetadata.createMany({
+        data: Object.keys(compiled.getRuleSpecs()).map((ruleName) => ({
+          feature: ruleName,
+          releaseId: release.id,
+          isRule: true,
+        })),
       });
 
       const project = await ctx.prisma.project.findUniqueOrThrow({

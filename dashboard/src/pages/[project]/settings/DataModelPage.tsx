@@ -1,41 +1,35 @@
 import clsx from "clsx";
+import { keyBy } from "lodash";
 import {
   Asterisk,
+  EyeIcon,
   Hash,
   Loader2Icon,
   LucideIcon,
+  PencilIcon,
   ToggleLeft,
   Type,
 } from "lucide-react";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { FeatureList } from "~/components/FeatureList";
+import { FeatureListItem } from "~/components/FeatureListItem";
 import {
   Command,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "~/components/ui/command";
 import { Panel } from "~/components/ui/custom/panel";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { api } from "~/utils/api";
 
-interface FeatureCardProps {
-  feature: string;
-  dataType: string;
-  onChange: (value: string) => void;
-}
-
-const FeatureCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
-  const { mutateAsync } = api.features.saveFeatureMetadata.useMutation();
+const RuleCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
   const [value, setValue] = useState(dataType);
 
   const dataTypeToIcon = {
@@ -50,8 +44,8 @@ const FeatureCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
     <div className="flex items-center w-full justify-between gap-2 px-2 pt-1.5">
       <div className="mr-auto">{feature}</div>
 
-      <Icon className="w-4 h-4" />
-      <Select
+      {/* <Icon className="w-4 h-4" /> */}
+      {/* <Select
         value={value}
         onValueChange={(value) => {
           setValue(value);
@@ -67,13 +61,20 @@ const FeatureCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
           <SelectItem value="number">Number</SelectItem>
           <SelectItem value="boolean">Boolean</SelectItem>
         </SelectContent>
-      </Select>
+      </Select> */}
+      <PencilIcon className="w-4 h-4 cursor-pointer" />
+      <EyeIcon className="w-4 h-4 cursor-pointer" />
     </div>
   );
 };
 
+const EVENT_PREFIX = "EVENT-";
+const ENTITY_PREFIX = "ENTITY-";
+
 function DataModelPage() {
   const router = useRouter();
+  const { mutateAsync } = api.features.saveFeatureMetadata.useMutation();
+
   const { data: project } = api.project.getByName.useQuery(
     { name: router.query.project as string },
     { enabled: !!router.query.project }
@@ -83,34 +84,34 @@ function DataModelPage() {
     [project]
   );
 
+  const { data: dataset } = api.datasets.get.useQuery(
+    { id: datasetId! },
+    { enabled: !!datasetId }
+  );
+
   const { data: allEntities } = api.labels.getEntityTypes.useQuery(
-    { datasetId },
+    { datasetId: datasetId! },
     { enabled: !!datasetId }
   );
   const { data: allEvents } = api.labels.getEventTypes.useQuery(
-    { datasetId },
+    { datasetId: datasetId! },
     { enabled: !!datasetId }
   );
 
-  const { data: allFeatures, isLoading: allFeaturesLoading } =
-    api.labels.allFeatures.useQuery({ datasetId }, { enabled: !!datasetId });
-
-  const [selectedItemType, setSelectedItemType] = useState<string | null>(null);
-
-  const entityFeatures = allFeatures?.entities;
-  const eventFeatures = allFeatures?.events;
-
-  // unused
-  const itemName = selectedItemType?.substring(
-    selectedItemType.indexOf("-") + 1
+  const { data: features } = api.labels.getFeatures.useQuery(
+    { datasetId: datasetId! },
+    { enabled: !!datasetId }
   );
 
-  // when the page loads, select the first entity type
-  useEffect(() => {
-    if (Object.keys(entityFeatures ?? {})[0] && !selectedItemType) {
-      setSelectedItemType(`ENTITY-${Object.keys(entityFeatures ?? {})[0]}`);
-    }
-  }, [allFeaturesLoading]);
+  const { data: eventFeatures } = api.labels.getFeatures.useQuery(
+    { datasetId: datasetId! },
+    { enabled: !!datasetId }
+  );
+
+  // const { data: allFeatures, isLoading: allFeaturesLoading } =
+  //   api.labels.allFeatures.useQuery({ datasetId }, { enabled: !!datasetId });
+
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   const {
     data: featureMetadata,
@@ -118,20 +119,42 @@ function DataModelPage() {
     refetch,
   } = api.features.getFeatureMetadata.useQuery();
 
-  const featureList = useMemo(() => {
-    if (!selectedItemType) return [];
-    const comparator = (a: { feature: string }, b: { feature: string }) => {
-      return a.feature.localeCompare(b.feature);
-    };
+  const featureToMetadata = useMemo(
+    () => keyBy(featureMetadata, "feature"),
+    [featureMetadata]
+  );
 
-    if (selectedItemType.startsWith("ENTITY-")) {
-      const entityName = selectedItemType.substring("ENTITY-".length);
-      return entityFeatures?.[entityName]?.sort(comparator) ?? [];
-    } else {
-      const eventName = selectedItemType.substring("EVENT-".length);
-      return eventFeatures?.[eventName]?.sort(comparator) ?? [];
-    }
-  }, [selectedItemType, entityFeatures, eventFeatures]);
+  const sortedFeatures = useMemo(
+    () =>
+      dataset?.release.featureOrder
+        .map((feature) => ({
+          id: feature,
+          metadata: featureToMetadata[feature],
+        }))
+        .filter(({ metadata }) => !metadata?.isRule && !metadata?.hidden) ?? [],
+    [featureToMetadata, dataset]
+  );
+
+  const sortedHiddenFeatures = useMemo(
+    () =>
+      dataset?.release.featureOrder
+        .map((feature) => ({
+          id: feature,
+          metadata: featureToMetadata[feature],
+        }))
+        .filter(({ metadata }) => !metadata?.isRule && metadata?.hidden) ?? [],
+    [featureToMetadata, dataset]
+  );
+
+  // when the page loads, select the first entity type
+  // useEffect(() => {
+  //   if (Object.keys(entityFeatures ?? {})[0] && !selectedItemType) {
+  //     setSelectedItemType(`ENTITY-${Object.keys(entityFeatures ?? {})[0]}`);
+  //   }
+  // }, [allFeaturesLoading]);
+
+  const { mutateAsync: saveFeatureOrder } =
+    api.features.saveFeatureOrder.useMutation();
 
   const [searchValue, setSearchValue] = useState("");
 
@@ -149,21 +172,22 @@ function DataModelPage() {
             {allEntities ? (
               allEntities.map((type) => (
                 <button
+                  key={type}
                   className={clsx({
                     "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
                       true,
                     "bg-accent text-accent-foreground":
-                      selectedItemType === `ENTITY-${type}`,
-                    "hover:bg-muted": selectedItemType !== `ENTITY-${type}`,
+                      selectedItem === ENTITY_PREFIX + type,
+                    "hover:bg-muted": selectedItem !== ENTITY_PREFIX + type,
                   })}
                   onClick={() => {
-                    setSelectedItemType(`ENTITY-${type}`);
+                    setSelectedItem(ENTITY_PREFIX + type);
                     setSearchValue("");
                   }}
                 >
                   {type}
                   <span className="text-xs text-muted-foreground">
-                    {entityFeatures?.[type]?.length ?? 0}
+                    {/* {entityFeatures?.[type]?.length ?? 0} */}
                   </span>
                 </button>
               ))
@@ -178,15 +202,16 @@ function DataModelPage() {
             {allEvents ? (
               allEvents.map((type) => (
                 <button
+                  key={type}
                   className={clsx({
                     "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
                       true,
                     "bg-accent text-accent-foreground":
-                      selectedItemType === `EVENT-${type}`,
-                    "hover:bg-muted": selectedItemType !== `EVENT-${type}`,
+                      selectedItem === EVENT_PREFIX + type,
+                    "hover:bg-muted": selectedItem !== EVENT_PREFIX + type,
                   })}
                   onClick={() => {
-                    setSelectedItemType(`EVENT-${type}`);
+                    setSelectedItem(EVENT_PREFIX + type);
                     setSearchValue("");
                   }}
                 >
@@ -202,41 +227,134 @@ function DataModelPage() {
           </div>
         </div>
         <div className="grow">
-          <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
-            <Command className="relative">
-              <CommandInput
-                placeholder="Search features..."
-                value={searchValue}
-                onValueChange={setSearchValue}
-              />
-              <ScrollArea className="pr-1">
-                {/* 1000rem so the CommandList doesn't create its own scrollbar */}
-                <CommandList className="max-h-[1000rem]">
-                  {featureList.map(({ feature: feature }) => (
-                    <CommandItem className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4">
-                      <FeatureCard
-                        key={feature}
-                        feature={feature}
-                        dataType={
-                          featureMetadata?.find((f) => f.id === feature)
-                            ?.dataType ?? "text"
-                        }
-                        onChange={() => {
-                          refetch();
-                        }}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              </ScrollArea>
-              <CommandEmpty>
-                No features found for this entity type.
-              </CommandEmpty>
+          <Tabs defaultValue="features">
+            <TabsList>
+              <TabsTrigger value="features">Features</TabsTrigger>
+              <TabsTrigger value="rules">Rules</TabsTrigger>
+            </TabsList>
+            <TabsContent value="features">
+              <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
+                <Command className="relative">
+                  <CommandInput
+                    placeholder="Search features..."
+                    value={searchValue}
+                    onValueChange={setSearchValue}
+                  />
+                  <ScrollArea className="pr-1">
+                    {/* 1000rem so the CommandList doesn't create its own scrollbar */}
+                    <CommandList className="max-h-none">
+                      <CommandGroup>
+                        <FeatureList
+                          features={sortedFeatures}
+                          onFeatureChange={(value, item) => {
+                            mutateAsync({
+                              feature: item.id,
+                              name: item.metadata?.name ?? undefined,
+                              dataType: item.metadata?.dataType ?? "text",
+                              ...value,
+                              releaseId: dataset?.releaseId,
+                            })
+                              .then(() => refetch())
+                              .catch((error) => console.log(error));
+                          }}
+                          onOrderChange={(features) => {
+                            saveFeatureOrder({
+                              features: features.concat(
+                                sortedHiddenFeatures.map((f) => f.id)
+                              ),
+                              releaseId: dataset?.releaseId,
+                            }).catch((error) => console.log(error));
+                          }}
+                        />
+                      </CommandGroup>
+                      <CommandSeparator />
+                      <CommandGroup heading="Hidden">
+                        <FeatureList
+                          features={sortedHiddenFeatures}
+                          onFeatureChange={(value, item) => {
+                            mutateAsync({
+                              feature: item.id,
+                              name: item.metadata?.name ?? undefined,
+                              dataType: item.metadata?.dataType ?? "text",
+                              ...value,
+                              releaseId: dataset?.releaseId,
+                            })
+                              .then(() => refetch())
+                              .catch((error) => console.log(error));
+                          }}
+                          onOrderChange={(features) => {
+                            saveFeatureOrder({
+                              features: sortedFeatures
+                                .map((f) => f.id)
+                                .concat(features),
+                              releaseId: dataset?.releaseId,
+                            }).catch((error) => console.log(error));
+                          }}
+                        />
+                      </CommandGroup>
+                    </CommandList>
+                  </ScrollArea>
+                  {/* <CommandEmpty>
+                    No features found for this entity type.
+                  </CommandEmpty> */}
 
-              {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
-              <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
-            </Command>
-          </Panel>
+                  {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
+                  <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
+                </Command>
+              </Panel>
+            </TabsContent>
+            <TabsContent value="rules">
+              <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
+                <Command className="relative">
+                  <CommandInput
+                    placeholder="Search features..."
+                    value={searchValue}
+                    onValueChange={setSearchValue}
+                  />
+                  <ScrollArea className="pr-1">
+                    {/* 1000rem so the CommandList doesn't create its own scrollbar */}
+                    <CommandList className="max-h-none">
+                      {features && !featureMetadataLoading ? (
+                        features
+                          .filter(
+                            (feature) =>
+                              featureMetadata?.find(
+                                (f) => f.feature === feature
+                              )?.isRule
+                          )
+                          .map((feature) => (
+                            <CommandItem
+                              key={feature}
+                              className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4"
+                            >
+                              <RuleCard
+                                key={feature}
+                                feature={feature}
+                                dataType={
+                                  featureMetadata?.find((f) => f.id === feature)
+                                    ?.dataType ?? "text"
+                                }
+                                onChange={() => {
+                                  refetch();
+                                }}
+                              />
+                            </CommandItem>
+                          ))
+                      ) : (
+                        <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
+                      )}
+                    </CommandList>
+                  </ScrollArea>
+                  <CommandEmpty>
+                    No features found for this entity type.
+                  </CommandEmpty>
+
+                  {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
+                  <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
+                </Command>
+              </Panel>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </>
