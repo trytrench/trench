@@ -58,20 +58,37 @@ export const releasesRouter = createTRPCRouter({
 
       const { compiled } = await compileSqrl(instance, code);
 
+      const features = Object.keys(compiled.getFeatureDocs()).filter(
+        (feature) =>
+          !feature.startsWith("Sqrl") &&
+          !Object.keys(compiled.getRuleSpecs()).includes(feature)
+      );
+
       const release = await ctx.prisma.release.create({
         data: {
           description,
           version,
           code,
           projectId: input.projectId,
+          featureOrder: features,
         },
       });
 
       await ctx.prisma.featureMetadata.createMany({
-        data: Object.keys(compiled.getRuleSpecs()).map((ruleName) => ({
-          feature: ruleName,
+        data: Object.keys(compiled.getRuleSpecs()).map((feature) => ({
+          feature,
           releaseId: release.id,
           isRule: true,
+          dataType: "boolean",
+        })),
+      });
+
+      await ctx.prisma.featureMetadata.createMany({
+        data: features.map((feature) => ({
+          feature,
+          releaseId: release.id,
+          dataType: "text",
+          isRule: false,
         })),
       });
 

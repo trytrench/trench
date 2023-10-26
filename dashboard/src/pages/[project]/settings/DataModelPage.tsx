@@ -242,6 +242,9 @@ function DataModelPage() {
                   />
                   <ScrollArea className="pr-1">
                     {/* 1000rem so the CommandList doesn't create its own scrollbar */}
+                    {!sortedFeatures.length && !sortedHiddenFeatures.length && (
+                      <CommandEmpty>No features</CommandEmpty>
+                    )}
                     <CommandList className="max-h-none">
                       <CommandGroup>
                         <FeatureList
@@ -267,31 +270,35 @@ function DataModelPage() {
                           }}
                         />
                       </CommandGroup>
-                      <CommandSeparator />
-                      <CommandGroup heading="Hidden">
-                        <FeatureList
-                          features={sortedHiddenFeatures}
-                          onFeatureChange={(value, item) => {
-                            mutateAsync({
-                              feature: item.id,
-                              name: item.metadata?.name ?? undefined,
-                              dataType: item.metadata?.dataType ?? "text",
-                              ...value,
-                              releaseId: dataset?.releaseId,
-                            })
-                              .then(() => refetch())
-                              .catch((error) => console.log(error));
-                          }}
-                          onOrderChange={(features) => {
-                            saveFeatureOrder({
-                              features: sortedFeatures
-                                .map((f) => f.id)
-                                .concat(features),
-                              releaseId: dataset?.releaseId,
-                            }).catch((error) => console.log(error));
-                          }}
-                        />
-                      </CommandGroup>
+                      {sortedHiddenFeatures.length > 0 && (
+                        <>
+                          <CommandSeparator />
+                          <CommandGroup heading="Hidden">
+                            <FeatureList
+                              features={sortedHiddenFeatures}
+                              onFeatureChange={(value, item) => {
+                                mutateAsync({
+                                  feature: item.id,
+                                  name: item.metadata?.name ?? undefined,
+                                  dataType: item.metadata?.dataType ?? "text",
+                                  ...value,
+                                  releaseId: dataset?.releaseId,
+                                })
+                                  .then(() => refetch())
+                                  .catch((error) => console.log(error));
+                              }}
+                              onOrderChange={(features) => {
+                                saveFeatureOrder({
+                                  features: sortedFeatures
+                                    .map((f) => f.id)
+                                    .concat(features),
+                                  releaseId: dataset?.releaseId,
+                                }).catch((error) => console.log(error));
+                              }}
+                            />
+                          </CommandGroup>
+                        </>
+                      )}
                     </CommandList>
                   </ScrollArea>
                   {/* <CommandEmpty>
