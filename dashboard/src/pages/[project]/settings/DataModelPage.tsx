@@ -131,8 +131,19 @@ function DataModelPage() {
           id: feature,
           metadata: featureToMetadata[feature],
         }))
-        .filter(({ metadata }) => !metadata?.isRule && !metadata?.hidden),
-    [features, featureToMetadata, dataset]
+        .filter(({ metadata }) => !metadata?.isRule && !metadata?.hidden) ?? [],
+    [featureToMetadata, dataset]
+  );
+
+  const sortedHiddenFeatures = useMemo(
+    () =>
+      dataset?.release.featureOrder
+        .map((feature) => ({
+          id: feature,
+          metadata: featureToMetadata[feature],
+        }))
+        .filter(({ metadata }) => !metadata?.isRule && metadata?.hidden) ?? [],
+    [featureToMetadata, dataset]
   );
 
   // when the page loads, select the first entity type
@@ -233,66 +244,53 @@ function DataModelPage() {
                     {/* 1000rem so the CommandList doesn't create its own scrollbar */}
                     <CommandList className="max-h-none">
                       <CommandGroup>
-                        {features?.length > 0 && (
-                          <FeatureList
-                            onFeatureChange={(value, item) => {
-                              mutateAsync({
-                                feature: item.id,
-                                ...item.metadata,
-                                ...value,
-                                releaseId: dataset?.releaseId,
-                              })
-                                .then(() => refetch())
-                                .catch((error) => console.log(error));
-                            }}
-                            onOrderChange={(features) => {
-                              saveFeatureOrder({
-                                features,
-                                releaseId: dataset?.releaseId,
-                              }).catch((error) => console.log(error));
-                            }}
-                            items={sortedFeatures}
-                          />
-                        )}
-                        {/* {features && !featureMetadataLoading ? (
-                          features
-                            .filter(
-                              (feature) =>
-                                !featureToMetadata[feature]?.isRule &&
-                                !featureToMetadata[feature]?.hidden
-                            )
-                            .map((feature) => (
-                              <CommandItem
-                                key={feature}
-                                className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4"
-                              >
-                                {getFeature(feature)}
-                              </CommandItem>
-                            ))
-                        ) : (
-                          <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
-                        )} */}
+                        <FeatureList
+                          features={sortedFeatures}
+                          onFeatureChange={(value, item) => {
+                            mutateAsync({
+                              feature: item.id,
+                              name: item.metadata?.name ?? undefined,
+                              dataType: item.metadata?.dataType ?? "text",
+                              ...value,
+                              releaseId: dataset?.releaseId,
+                            })
+                              .then(() => refetch())
+                              .catch((error) => console.log(error));
+                          }}
+                          onOrderChange={(features) => {
+                            saveFeatureOrder({
+                              features: features.concat(
+                                sortedHiddenFeatures.map((f) => f.id)
+                              ),
+                              releaseId: dataset?.releaseId,
+                            }).catch((error) => console.log(error));
+                          }}
+                        />
                       </CommandGroup>
                       <CommandSeparator />
                       <CommandGroup heading="Hidden">
-                        {/* {features && !featureMetadataLoading ? (
-                          features
-                            .filter(
-                              (feature) =>
-                                !featureToMetadata[feature]?.isRule &&
-                                featureToMetadata[feature]?.hidden
-                            )
-                            .map((feature) => (
-                              <CommandItem
-                                key={feature}
-                                className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4"
-                              >
-                                {getFeature(feature)}
-                              </CommandItem>
-                            ))
-                        ) : (
-                          <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
-                        )} */}
+                        <FeatureList
+                          features={sortedHiddenFeatures}
+                          onFeatureChange={(value, item) => {
+                            mutateAsync({
+                              feature: item.id,
+                              name: item.metadata?.name ?? undefined,
+                              dataType: item.metadata?.dataType ?? "text",
+                              ...value,
+                              releaseId: dataset?.releaseId,
+                            })
+                              .then(() => refetch())
+                              .catch((error) => console.log(error));
+                          }}
+                          onOrderChange={(features) => {
+                            saveFeatureOrder({
+                              features: sortedFeatures
+                                .map((f) => f.id)
+                                .concat(features),
+                              releaseId: dataset?.releaseId,
+                            }).catch((error) => console.log(error));
+                          }}
+                        />
                       </CommandGroup>
                     </CommandList>
                   </ScrollArea>
