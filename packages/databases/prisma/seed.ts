@@ -1,3 +1,4 @@
+import { ConsumerJobStatus, ConsumerJobType } from "@prisma/client";
 import { prisma } from "..";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
@@ -23,27 +24,40 @@ async function readFiles(dirPath: string) {
 async function main() {
   const fileData = await readFiles(__dirname + "/rules");
 
+  const dataset = await prisma.dataset.create({
+    data: {},
+  });
   const project = await prisma.project.create({
     data: {
       name: "production",
-      releases: {
-        create: [
-          {
-            version: "0.0.0",
-            description: "Initial release",
-            code: fileData,
-          },
-        ],
+      prodDatasetId: dataset.id,
+      versions: {
+        create: {
+          version: "0.0.0",
+          description: "Initial release",
+          code: fileData,
+        },
       },
     },
-    include: { releases: true },
+    include: {
+      versions: true,
+    },
   });
 
-  const prodDataset = await prisma.dataset.create({
+  const version = project.versions[0]!;
+
+  const release = await prisma.release.create({
     data: {
-      description: "Production",
-      release: { connect: { id: project.releases[0].id } },
-      prodProject: { connect: { id: project.id } },
+      projectId: project.id,
+      versionId: version.id,
+    },
+  });
+
+  const consumerJob = await prisma.consumerJob.create({
+    data: {
+      projectId: project.id,
+      type: ConsumerJobType.LIVE,
+      status: ConsumerJobStatus.RUNNING,
     },
   });
 }

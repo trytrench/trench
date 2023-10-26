@@ -1,4 +1,4 @@
-import { Release } from "@prisma/client";
+import { Version } from "@prisma/client";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
@@ -23,18 +23,18 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!datasetId }
   );
 
-  const [currentRelease, setCurrentRelease] = useState<Release | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<Version | null>(null);
 
   useEffect(() => {
-    if (dataset) setCurrentRelease(dataset.release);
+    if (dataset) setCurrentVersion(dataset.release);
   }, [dataset]);
 
-  if (!currentRelease) return null;
+  if (!currentVersion) return null;
   return (
     <RuleEditor
-      release={currentRelease}
-      onPreviewRelease={setCurrentRelease}
-      key={currentRelease.id}
+      release={currentVersion}
+      onPreviewRelease={setCurrentVersion}
+      key={currentVersion.id}
     />
   );
 };

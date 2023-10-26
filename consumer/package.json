@@ -16,6 +16,7 @@
     "databases": "workspace:*",
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
+    "event-processing": "workspace:*",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
     "sqrl-helpers": "workspace:*",

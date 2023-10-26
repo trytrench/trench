@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
-export const datasetsRouter = createTRPCRouter({
+export const backtestsRouter = createTRPCRouter({
   list: publicProcedure.query(async ({ ctx }) => {
     return ctx.prisma.dataset.findMany();
   }),

@@ -1,8 +1,9 @@
 import { type Prisma } from "@prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
-import { z } from "zod";
-import { prisma } from "~/server/db";
+import { bigint, z } from "zod";
+import { db, prisma } from "~/server/db";
+import { batchInsertEvents, processEvents } from "event-processing";
 
 const eventSchema = z.object({
   timestamp: z
@@ -15,7 +16,6 @@ const eventSchema = z.object({
   options: z
     .object({
       sync: z.boolean().optional(),
-      syncTimeoutMs: z.number().optional(),
     })
     .optional(),
 });
@@ -29,63 +29,70 @@ export default async function handler(
     return res.status(405).end("Method Not Allowed");
   }
 
-  const result = eventSchema.safeParse(req.body);
-  if (!result.success) {
-    return res.status(400).json({ error: result.error.message });
-  }
-  const event = result.data;
+  const parsedResult = eventSchema.safeParse(req.body);
 
-<<<<<<< HEAD
+  if (!parsedResult.success) {
+    return res.status(400).json({ error: parsedResult.error.message });
+  }
+  const event = parsedResult.data;
+
   const eventId = ulid(event.timestamp.getTime());
+
   await prisma.eventLog.create({
     data: {
       id: eventId,
-=======
-  await prisma.eventLog.create({
-    data: {
-      id: ulid(event.timestamp.getTime()),
->>>>>>> origin/micwu/shadcn-switch
       timestamp: event.timestamp,
       type: event.type,
       data: event.data as Prisma.JsonObject,
+      options: event.options,
     },
-<<<<<<< HEAD
   });
 
-  if (result.data.options?.sync) {
-    const syncTimeoutMs = result.data.options?.syncTimeoutMs ?? 2000;
-    // Poll for the event to be processed by the consumer
-    const start = Date.now();
-    while (Date.now() - start < syncTimeoutMs) {
-      const event = await prisma.outputLog.findFirst({
-        where: {
-          datasetId: 0,
-          eventId,
-        },
-      });
-      if (event) {
-        res.status(200).json({
-          success: true,
-          event: event.data,
-        });
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  if (event.options?.sync) {
+    // Get result immediately, then add to output log.
+
+    const items = await prisma.$queryRaw<
+      {
+        datasetId: bigint;
+        code: Record<string, string>;
+      }[]
+    >`
+      SELECT
+        "Project"."prodDatasetId" AS "datasetId",
+        "Version"."code" AS "code"
+      FROM "Project"
+      JOIN "Release" ON "Release"."projectId" = "Project"."id"
+      JOIN "Version" ON "Version"."id" = "Release"."versionId"
+      ORDER BY "Release"."createdAt" DESC
+      LIMIT 1;
+    `;
+    if (!items[0]) {
+      throw new Error("No datasets found");
     }
-    res.status(200).json({
-      success: false,
-      error: "Timeout",
+    const { datasetId, code } = items[0];
+
+    const result = await processEvents({
+      events: [{ ...event, id: eventId }],
+      files: code,
+      datasetId: datasetId,
     });
-  } else {
-    res.status(200).json({
-      success: true,
+
+    await batchInsertEvents({
+      events: result,
+      clickhouseClient: db,
+    });
+
+    const output = result[0]!;
+
+    console.log(output);
+    return res.status(200).json({
+      output: {
+        ...output,
+        datasetId: Number(output.datasetId),
+      },
     });
   }
-=======
-  });
-
   res.status(200).json({
     success: true,
   });
->>>>>>> origin/micwu/shadcn-switch
 }

@@ -1,27 +1,6 @@
-# Basic event set up. Read in EventData, and set the current clock time
-# [NOTE] Features do not need to be defined in order (Timestamp is set lower down)
 LET EventData := input();
 LET SqrlClock := Timestamp;
 
-# In production we used data sets to seperate counters and other variables
-# from seperate runs. By changing the dataset number it automatically resets
-# all counters to zero. Can be used for reprocessing and backtesting.
-LET DatasetId := 1;
-
-LET Type := jsonValue(EventData, '$.type');
 LET Timestamp := jsonValue(EventData, '$.timestamp');
-LET Version := '1';
 
-LET IpAddress := jsonValue(EventData, '$.data.deviceSnapshot.ipAddress.ipAddress');
-LET Ip := entity('Ip Address', IpAddress);
-
-CREATE RULE IsVpn WHERE jsonValue(EventData, '$.data.deviceSnapshot.ipAddress.metadata.isAnonymous') WITH REASON 'VPN';
-WHEN IsVpn THEN addEventLabel('warning', 'VPN session'), addEntityLabel(Ip, 'warning', 'VPN');
-
-CREATE RULE IsIpBlocklist WHERE patternMatches('ip_blocklist.txt', IpAddress);
-WHEN IsIpBlocklist THEN addEntityLabel(Ip, 'bad', 'Blocklisted');
-
-INCLUDE 'device.sqrl' WHERE Type = 'create-session';
-INCLUDE 'payment.sqrl' WHERE Type = 'payment-attempt';
-INCLUDE 'outcome.sqrl' WHERE Type = 'payment-outcome';
-INCLUDE 'kyc.sqrl' WHERE Type = 'kyc-attempt';
+INCLUDE "event.sqrl";

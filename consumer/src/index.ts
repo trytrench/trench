@@ -2,102 +2,24 @@ import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
 import { Client } from "pg";
 import { env } from "./env";
 import { Event, compileSqrl, createSqrlInstance, runEvent } from "sqrl-helpers";
-import { batchInsertEvents } from "./batchInsertEvents";
 import format from "pg-format";
+import { batchInsertEvents, processEvents } from "event-processing";
+import { db } from "databases";
 
 if (isMainThread) {
-  for (let i = 0; i < 4; i++) {
-    const worker = new Worker(__filename, {
-      workerData: {
-        isProductionWorker: i === 0,
-        index: i,
-      },
-    });
-  }
-  const writerWorker = new Worker(__filename, {
+  const prodWorker = new Worker(__filename, {
     workerData: {
-      isClickhouseWriter: true,
+      isProductionWorker: true,
     },
   });
 
-  console.log("Restarted consumers");
-} else if (workerData.isClickhouseWriter) {
-  console.log("Starting clickhouse writer");
-  const client = new Client({
-    connectionString: env.POSTGRES_URL,
-  });
-
-  async function writeEvents() {
-    try {
-      await client.connect();
-
-      while (true) {
-        // Sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const resCursor = await client.query(
-          `
-          SELECT "latestOutputLogId"
-          FROM "OutputLogCursor"
-          LIMIT 1;
-        `
-        );
-
-        const latestOutputLogId = resCursor.rows[0]?.latestOutputLogId || null;
-
-        const resOutputs = await client.query(
-          `
-          SELECT "id", "eventId", "datasetId", "data"
-          FROM "OutputLog"
-          WHERE "id" > $1
-          OR $1 IS NULL
-          ORDER BY "id" ASC
-          LIMIT 1000;
-        `,
-          [latestOutputLogId]
-        );
-
-        const outputs = resOutputs.rows as {
-          id: bigint;
-          eventId: string;
-          datasetId: bigint;
-          data: any;
-        }[];
-
-        if (outputs.length === 0) {
-          // No events to process, continue
-          continue;
-        }
-
-        const eventData = outputs.map((event) => ({
-          ...event.data,
-          timestamp: new Date(event.data.timestamp),
-        }));
-        await batchInsertEvents(eventData);
-
-        const newLastOutputId = outputs[outputs.length - 1]!.id;
-
-        await client.query(
-          `
-          UPDATE "OutputLogCursor"
-          SET "latestOutputLogId" = $1
-        `,
-          [newLastOutputId]
-        );
-
-        console.log(`Wrote ${outputs.length} events to Clickhouse`);
-      }
-    } catch (err) {
-      console.error(err);
-      // If an error occurs, rollback the transaction
-    } finally {
-      await client.end();
-    }
+  for (let i = 0; i < 4; i++) {
+    const backfillWorker = new Worker(__filename);
   }
 
-  writeEvents();
+  console.log("Restarted consumers");
 } else {
-  const IS_PRODUCTION_WORKER = workerData.isProductionWorker;
+  const IS_PRODUCTION_WORKER = workerData?.isProductionWorker;
 
   if (IS_PRODUCTION_WORKER) {
     console.log("Starting production worker");
@@ -109,100 +31,109 @@ if (isMainThread) {
     connectionString: env.POSTGRES_URL,
   });
 
-  async function processEvents(props: {
-    events: Event[];
-    files: Record<string, string>;
+  async function getJobData(props: {
+    isProduction: boolean;
+    postgresClient: Client;
+  }): Promise<{
+    jobId: string;
     datasetId: bigint;
-    isProductionWorker: boolean;
-  }) {
-    const { events, files, datasetId, isProductionWorker } = props;
+    code: Record<string, string>;
+    lastEventLogId: string;
+    backfillFrom?: Date;
+    backfillTo?: Date;
+  } | null> {
+    const { isProduction, postgresClient } = props;
+    if (isProduction) {
+      /**
+       * datasetId: production dataset ID
+       * code: code of latest release version
+       */
+      const res = await postgresClient.query(`
+          SELECT 
+            "ConsumerJob"."id" as "jobId",
+            "Project"."prodDatasetId" as "datasetId", 
+            "ConsumerJob"."lastEventLogId", 
+            "Version"."code" as "code"
+          FROM "ConsumerJob"
+          JOIN "Project" ON "Project"."id" = "ConsumerJob"."projectId"
+          JOIN "Release" ON "Release"."projectId" = "Project"."id"
+          JOIN "Version" ON "Version"."id" = "Release"."versionId"
+          WHERE "ConsumerJob"."type" = 'LIVE'
+          AND "ConsumerJob"."status" = 'RUNNING'
+          ORDER BY "Release"."createdAt" DESC
+          FOR UPDATE OF "ConsumerJob"
+          SKIP LOCKED
+          LIMIT 1;
+        `);
 
-    const results: Awaited<ReturnType<typeof runEvent>>[] = [];
-    const instance = await createSqrlInstance({
-      config: {
-        "redis.address": process.env.REDIS_URL,
-      },
-    });
+      return res.rows[0] ?? null;
+    } else {
+      /**
+       * datasetId and code are from the backfill configuration
+       */
+      const res = await postgresClient.query(`
+          SELECT 
+            "ConsumerJob"."id" as "jobId",
+            "Backtest"."datasetId" as "datasetId",
+            "ConsumerJob"."lastEventLogId" as "lastEventLogId",
+            "Version"."code" as "code",
+            "Backtest"."backfillFrom" as "backfillFrom",
+            "Backtest"."backfillTo" as "backfillTo"
+          FROM "ConsumerJob"
+          JOIN "Backtest" ON "Backtest"."id" = "ConsumerJob"."backtestId"
+          JOIN "Version" ON "Version"."id" = "Backtest"."versionId"
+          WHERE "ConsumerJob"."type" = 'BACKFILL'
+          AND "ConsumerJob"."status" = 'RUNNING'
+          FOR UPDATE OF "ConsumerJob"
+          SKIP LOCKED
+          LIMIT 1;
+        `);
 
-    const { executable } = await compileSqrl(instance, files);
-
-    for (const event of events) {
-      results.push(await runEvent(event, executable, datasetId));
+      return res.rows[0] ?? null;
     }
-
-    const pushToDb = results.map((result) => ({
-      eventId: result.id,
-      datasetId: BigInt(result.datasetId),
-      data: result,
-    }));
-    if (isProductionWorker) {
-      pushToDb.push(
-        ...results.map((result) => ({
-          eventId: result.id,
-          datasetId: BigInt(0),
-          data: {
-            ...result,
-            datasetId: "0",
-          },
-        }))
-      );
-    }
-    await client.query(
-      format(
-        `
-      INSERT INTO "OutputLog" ("eventId", "datasetId", "data") VALUES %L
-    `,
-        pushToDb.map(({ eventId, datasetId, data }) => [
-          eventId,
-          datasetId,
-          data,
-        ])
-      )
-    );
   }
 
-  async function getDatasetMetadata() {
-    const res = IS_PRODUCTION_WORKER
-      ? await client.query(`
-      SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
-      FROM "Dataset"
-      JOIN "DatasetJob" ON "DatasetJob"."datasetId" = "Dataset"."id"
-      JOIN "ProductionDatasetLog" ON "ProductionDatasetLog"."datasetId" = "Dataset"."id"
-      ORDER BY "ProductionDatasetLog"."createdAt" DESC
-      FOR UPDATE OF "DatasetJob"
-      SKIP LOCKED
-      LIMIT 1
-    `)
-      : await client.query(`
-      SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "rules"
-      FROM "Dataset"
-      JOIN "DatasetJob" ON "DatasetJob"."datasetId" = "Dataset"."id"
-      WHERE "Dataset"."id" > 0
-      AND NOT EXISTS (
-        SELECT FROM "ProductionDatasetLog"
-        WHERE "ProductionDatasetLog"."datasetId" = "Dataset"."id"
-      )
-      ORDER BY RANDOM()
-      FOR UPDATE OF "DatasetJob" 
-      SKIP LOCKED
-      LIMIT 1;
-    `);
+  async function getEvents(props: {
+    lastEventLogId: string;
+    isProduction: boolean;
+    postgresClient: Client;
+  }): Promise<Event[]> {
+    const { lastEventLogId, isProduction, postgresClient } = props;
 
-    if (res.rows.length === 0) {
-      return null;
+    if (isProduction) {
+      const res = await postgresClient.query(
+        `
+        SELECT "id", "type", "data", "timestamp"
+        FROM "EventLog"
+        WHERE (
+          "id" > $1
+          OR $1 IS NULL
+        )
+        AND (
+          NOT ("EventLog"."options" ? 'sync') -- The key 'sync' does not exist
+          OR "EventLog"."options"->>'sync' = 'false' -- The key 'sync' exists and its value is 'false'
+        )
+        ORDER BY "id" ASC
+        LIMIT 1000;
+      `,
+        [lastEventLogId]
+      );
+
+      return res.rows as Event[];
+    } else {
+      const res = await postgresClient.query(
+        `
+        SELECT "id", "type", "data", "timestamp"
+        FROM "EventLog"
+        WHERE "id" > $1
+        OR $1 IS NULL
+        ORDER BY "id" ASC
+        LIMIT 1000;
+      `,
+        [lastEventLogId]
+      );
+      return res.rows as Event[];
     }
-
-    const numDatasets = res.rows.length;
-    const randomIndex = Math.floor(Math.random() * numDatasets);
-    const dataset = res.rows[randomIndex];
-
-    type FileRow = { name: string; code: string };
-
-    return dataset as {
-      id: bigint;
-      lastEventLogId: number;
-      rules: FileRow[];
-    };
   }
 
   async function initConsumer() {
@@ -218,27 +149,18 @@ if (isMainThread) {
         // Start a transaction
         await client.query("BEGIN");
 
-        const res = await client.query(`
-        SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "Release"."code"
-        FROM "Dataset"
-        JOIN "Release" ON "Release"."id" = "Dataset"."releaseId"
-        FOR UPDATE SKIP LOCKED
-        LIMIT 1;
-      `);
-        if (res.rows.length === 0) {
+        const jobData = await getJobData({
+          postgresClient: client,
+          isProduction: IS_PRODUCTION_WORKER,
+        });
+
+        if (!jobData) {
+          // No jobs to process, commit the transaction and continue
           await client.query("COMMIT");
           continue;
         }
 
-        const {
-          id: datasetId,
-          lastEventLogId,
-          code,
-        } = dataset as {
-          id: bigint;
-          lastEventLogId: number;
-          code: Record<string, string>;
-        };
+        const { datasetId, lastEventLogId, code, jobId } = jobData;
 
         const eventsRes = await client.query(
           `
@@ -252,10 +174,11 @@ if (isMainThread) {
           [lastEventLogId]
         );
 
-        const events = (eventsRes.rows as Event[]).map((row) => ({
-          ...row,
-          timestamp: row.timestamp.toISOString(),
-        }));
+        const events = await getEvents({
+          lastEventLogId,
+          isProduction: IS_PRODUCTION_WORKER,
+          postgresClient: client,
+        });
 
         if (events.length === 0) {
           // No events to process, commit the transaction and continue
@@ -263,7 +186,16 @@ if (isMainThread) {
           continue;
         }
 
-        await processEvents(events, code, datasetId);
+        const results = await processEvents({
+          events,
+          files: code,
+          datasetId,
+        });
+
+        await batchInsertEvents({
+          events: results,
+          clickhouseClient: db,
+        });
 
         const newLastEventId = events.length
           ? events[events.length - 1]!.id
@@ -271,22 +203,12 @@ if (isMainThread) {
 
         await client.query(
           `
-          UPDATE "Dataset"
+          UPDATE "ConsumerJob"
           SET "lastEventLogId" = $1
           WHERE id = $2;
         `,
-          [newLastEventId, datasetId]
+          [newLastEventId, jobId]
         );
-        // if (IS_PRODUCTION_WORKER) {
-        //   await client.query(
-        //     `
-        //     UPDATE "DatasetJob"
-        //     SET "lastProductionEventLogId" = $1
-        //     WHERE "datasetId" = 0;
-        //   `,
-        //     [newLastEventId, datasetId]
-        //   );
-        // }
 
         // Commit the transaction
         await client.query("COMMIT");

@@ -2,16 +2,20 @@ import { type Executable } from "sqrl";
 import { createContext } from "./createContext";
 import { SqrlManipulator } from "../SqrlManipulator";
 import { Event } from "../types";
+import { getUnixTime } from "date-fns";
 
 export type EventOutput = Awaited<ReturnType<typeof runEvent>>;
 
 const EXCLUDED_FEATURES = ["EventData"];
 
-export async function runEvent(
-  event: Event,
-  executable: Executable,
-  datasetId: bigint
-) {
+export async function runEvent(props: {
+  event: Event;
+  executable: Executable;
+  datasetId: bigint;
+  updateState?: boolean;
+}) {
+  const { event, executable, datasetId, updateState = true } = props;
+
   const ctx = createContext(datasetId);
   const manipulator = new SqrlManipulator();
 
@@ -35,11 +39,14 @@ export async function runEvent(
   );
 
   await completePromise;
-  await manipulator.mutate(ctx);
+
+  if (updateState) {
+    await manipulator.mutate(ctx);
+  }
 
   return {
     id: event.id,
-    datasetId: datasetId.toString(),
+    datasetId: datasetId,
     type: event.type,
     timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
     data: event.data,

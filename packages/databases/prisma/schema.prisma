@@ -16,9 +16,10 @@ model EventLog {
   timestamp DateTime
   type      String
   data      Json     @default("{}")
+  options  Json     @default("{}")
 
   // Datasets that currently have this event as its last processed event
-  datasets Dataset[]
+  jobs ConsumerJob[]
 
   @@index([timestamp])
 }
@@ -41,9 +42,23 @@ model Project {
   prodDatasetId BigInt?  @unique
 
   releases Release[]
+  versions Version[]
+  jobs     ConsumerJob[]
 }
 
 model Release {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versionId String
+  version   Version @relation(fields: [versionId], references: [id])
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+}
+
+model Version {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,7 +71,8 @@ model Release {
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
 
-  datasets Dataset[]
+  backtests Backtest[]
+  releases Release[]
 }
 
 model Dataset {
@@ -64,18 +80,54 @@ model Dataset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  prodProject Project?
+  backtests  Backtest[]
+}
+
+model Backtest {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  datasetId BigInt
+  dataset  Dataset @relation(fields: [datasetId], references: [id])
+
   description String?
 
   backfillFrom DateTime? // If null, backfill from the beginning of time
   backfillTo   DateTime? // If null, backfill to now plus all incoming events
 
+  version   Version @relation(fields: [versionId], references: [id])
+  versionId String
+
+  job ConsumerJob?
+}
+
+enum ConsumerJobType {
+  BACKFILL
+  LIVE
+}
+
+enum ConsumerJobStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model ConsumerJob {
+  id        String   @id @default(dbgenerated("nanoid()"))
+
   lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
   lastEventLogId String?
 
-  release   Release @relation(fields: [releaseId], references: [id])
-  releaseId String
+  type ConsumerJobType
+  status ConsumerJobStatus
 
-  prodProject Project?
+  backtestId String? @unique
+  backtest Backtest? @relation(fields: [backtestId], references: [id])
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
 }
 
 // Necessary for Next auth
