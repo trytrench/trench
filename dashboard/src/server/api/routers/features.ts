@@ -35,4 +35,21 @@ export const featuresRouter = createTRPCRouter({
       });
       return feature;
     }),
+
+  saveFeatureOrder: publicProcedure
+    .input(
+      z.object({
+        features: z.string().array(),
+        releaseId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const release = await ctx.prisma.release.update({
+        where: { id: input.releaseId },
+        data: {
+          featureOrder: input.features,
+        },
+      });
+      return release;
+    }),
 });

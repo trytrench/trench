@@ -62,8 +62,9 @@ model Release {
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
 
-  datasets Dataset[]
-  features FeatureMetadata[]
+  datasets     Dataset[]
+  features     FeatureMetadata[]
+  featureOrder String[]
 }
 
 model Dataset {

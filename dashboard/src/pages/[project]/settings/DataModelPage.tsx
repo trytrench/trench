@@ -113,13 +113,6 @@ function DataModelPage() {
 
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
-  // when the page loads, select the first entity type
-  // useEffect(() => {
-  //   if (Object.keys(entityFeatures ?? {})[0] && !selectedItemType) {
-  //     setSelectedItemType(`ENTITY-${Object.keys(entityFeatures ?? {})[0]}`);
-  //   }
-  // }, [allFeaturesLoading]);
-
   const {
     data: featureMetadata,
     isLoading: featureMetadataLoading,
@@ -130,6 +123,27 @@ function DataModelPage() {
     () => keyBy(featureMetadata, "feature"),
     [featureMetadata]
   );
+
+  const sortedFeatures = useMemo(
+    () =>
+      dataset?.release.featureOrder
+        .map((feature) => ({
+          id: feature,
+          metadata: featureToMetadata[feature],
+        }))
+        .filter(({ metadata }) => !metadata?.isRule && !metadata?.hidden),
+    [features, featureToMetadata, dataset]
+  );
+
+  // when the page loads, select the first entity type
+  // useEffect(() => {
+  //   if (Object.keys(entityFeatures ?? {})[0] && !selectedItemType) {
+  //     setSelectedItemType(`ENTITY-${Object.keys(entityFeatures ?? {})[0]}`);
+  //   }
+  // }, [allFeaturesLoading]);
+
+  const { mutateAsync: saveFeatureOrder } =
+    api.features.saveFeatureOrder.useMutation();
 
   const [searchValue, setSearchValue] = useState("");
 
@@ -222,7 +236,6 @@ function DataModelPage() {
                         {features?.length > 0 && (
                           <FeatureList
                             onFeatureChange={(value, item) => {
-                              console.log(value, item);
                               mutateAsync({
                                 feature: item.id,
                                 ...item.metadata,
@@ -232,15 +245,13 @@ function DataModelPage() {
                                 .then(() => refetch())
                                 .catch((error) => console.log(error));
                             }}
-                            items={features
-                              .map((feature) => ({
-                                id: feature,
-                                metadata: featureToMetadata[feature],
-                              }))
-                              .filter(
-                                ({ metadata }) =>
-                                  !metadata?.isRule && !metadata?.hidden
-                              )}
+                            onOrderChange={(features) => {
+                              saveFeatureOrder({
+                                features,
+                                releaseId: dataset?.releaseId,
+                              }).catch((error) => console.log(error));
+                            }}
+                            items={sortedFeatures}
                           />
                         )}
                         {/* {features && !featureMetadataLoading ? (
