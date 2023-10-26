@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -21,11 +21,20 @@ import { FeatureMetadata } from "@prisma/client";
 interface Props {
   features: { id: string; feature: string; metadata?: FeatureMetadata }[];
   onFeatureChange: (value: any, item: any) => void;
+  onOrderChange: (features: string[]) => void;
 }
 
-export function FeatureList({ items: initialItems, onFeatureChange }: Props) {
+export function FeatureList({
+  features,
+  onFeatureChange,
+  onOrderChange,
+}: Props) {
   const [activeId, setActiveId] = useState(null);
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState(features);
+
+  useEffect(() => {
+    setItems(features);
+  }, [features]);
 
   const activeItem = useMemo(
     () => items.find((item) => item.id === activeId),
@@ -54,6 +63,7 @@ export function FeatureList({ items: initialItems, onFeatureChange }: Props) {
             feature={item.id}
             name={item.metadata?.name}
             dataType={item.metadata?.dataType ?? "text"}
+            hidden={item.metadata?.hidden ?? false}
             onFeatureChange={(value) => onFeatureChange(value, item)}
           />
         ))}
@@ -80,12 +90,12 @@ export function FeatureList({ items: initialItems, onFeatureChange }: Props) {
     const { active, over } = event;
 
     if (active.id !== over.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      const newItems = arrayMove(items, oldIndex, newIndex);
+      onOrderChange(newItems.map((item) => item.id));
 
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      setItems(newItems);
     }
 
     setActiveId(null);
