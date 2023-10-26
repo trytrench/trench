@@ -24,10 +24,16 @@ model EventLog {
 }
 
 model FeatureMetadata {
-  id   String @id
-  name String
+  id      String  @id @default(dbgenerated("nanoid()"))
+  feature String  @unique
+  name    String?
+  color   String?
+  isRule  Boolean
+  hidden  Boolean @default(false)
 
-  dataType String @default("string")
+  dataType  String  @default("text")
+  release   Release @relation(fields: [releaseId], references: [id])
+  releaseId String
 }
 
 model Project {
@@ -57,6 +63,7 @@ model Release {
   projectId String
 
   datasets Dataset[]
+  features FeatureMetadata[]
 }
 
 model Dataset {

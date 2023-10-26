@@ -1,126 +1,89 @@
 # Basic event set up. Read in EventData, and set the current clock time
 # [NOTE] Features do not need to be defined in order (Timestamp is set lower down)
 LET EventData := input();
-LET SqrlClock := Timestamp;
+LET SqrlClock := jsonValue(EventData, '$.timestamp');
 
-# In production we used data sets to seperate counters and other variables
-# from seperate runs. By changing the dataset number it automatically resets
-# all counters to zero. Can be used for reprocessing and backtesting.
-LET DatasetId := 1;
+LET User := entity('User', jsonValue(EventData, '$.data.actor.id'));
+LET UserName := jsonValue(EventData, '$.data.actor.login');
+LET UserAvatarUrl := jsonValue(EventData, '$.data.actor.avatar_url');
 
-LET Type := jsonValue(EventData, '$.type');
-LET Timestamp := jsonValue(EventData, '$.timestamp');
-LET Version := '1';
+LET UserData := getUserData(UserName);
 
-LET Actor := entity('User', jsonValue(EventData, '$.data.actor.id'), 'Actor');
-LET Username := jsonValue(EventData, '$.data.actor.login');
-addEntityFeature(Actor, 'Name', Username);
-addEntityFeature(Actor, 'Display Login', jsonValue(EventData, '$.data.actor.display_login'));
-addEntityFeature(Actor, 'Avatar URL', jsonValue(EventData, '$.data.actor.avatar_url'));
+LET UserCreatedDate := jsonValue(UserData, '$.createdDate');
+LET UserCreatedYear := jsonValue(UserData, '$.createdYear');
+LET UserAchievements := jsonValue(UserData, '$.achievements');
+LET UserNumContribsPastYear := jsonValue(UserData, '$.contributionsPastYear');
+LET UserSponsors := jsonValue(UserData, '$.sponsors');
+LET UserSponsorees := jsonValue(UserData, '$.sponsorees');
+LET UserNumRepos := jsonValue(UserData, '$.repositories');
+LET UserOrgs := jsonValue(UserData, '$.organizations');
+LET UserPinnedRepos := jsonValue(UserData, '$.pinnedRepos');
+LET UserBio := jsonValue(UserData, '$.bio');
+LET UserReadme := jsonValue(UserData, '$.readmeContent');
+LET UserWebsiteUrl := jsonValue(UserData, '$.websiteUrl');
+LET UserCompany := jsonValue(UserData, '$.company');
+LET UserLocation := jsonValue(UserData, '$.location');
+LET UserSocialLinks := jsonValue(UserData, '$.socialLinks');
 
-LET Org := entity('Org', jsonValue(EventData, '$.data.org.id'), 'Target');
-addEntityFeature(Org, 'Name', jsonValue(EventData, '$.data.org.login'));
-addEntityFeature(Org, 'Avatar URL', jsonValue(EventData, '$.data.org.avatar_url'));
 
-LET Repo := entity('Repo', jsonValue(EventData, '$.data.repo.id'), 'Target');
-addEntityFeature(Repo, 'Name', jsonValue(EventData, '$.data.repo.name'));
+LET Org := entity('Org', jsonValue(EventData, '$.data.org.id'));
+LET OrgName := jsonValue(EventData, '$.data.org.login');
+LET OrgAvatarUrl := jsonValue(EventData, '$.data.org.avatar_url');
 
-LET UserData := getUserData(Username);
-LET ContribsPastYear := jsonValue(UserData, '$.contributionsPastYear');
-LET CreatedDate := jsonValue(UserData, '$.createdDate');
-LET Bio := jsonValue(UserData, '$.bio');
-LET Readme := jsonValue(UserData, '$.readmeContent');
-LET PinnedRepos := jsonValue(UserData, '$.pinnedRepos');
+LET Repo := entity('Repo', jsonValue(EventData, '$.data.repo.id'));
+LET RepoName := jsonValue(EventData, '$.data.repo.name');
 
-LET BioSimhash := simhash(Bio);
-LET ReadmeSimhash := simhash(Readme);
-LET ReposSimhash := simhash(PinnedRepos);
-LET CreatedDateSimhash := if (CreatedDate, simhash(CreatedDate));
 
-# Good labels
-CREATE RULE HasGithubPro WHERE jsonValue(UserData, '$.isPro');
-CREATE RULE HasOldAccount WHERE jsonValue(UserData, '$.createdYear') < 2020;
-CREATE RULE HasManyAchievements WHERE length(jsonValue(UserData, '$.achievements')) >= 3;
-CREATE RULE HasSponsors WHERE length(jsonValue(UserData, '$.sponsors')) > 0;
-CREATE RULE HasSponsorees WHERE jsonValue(UserData, '$.sponsoring') > 0;
-CREATE RULE HasManyContributions WHERE ContribsPastYear >= 100;
+LET BioSimhash := simhash(UserBio);
+LET ReadmeSimhash := simhash(UserReadme);
+LET ReposSimhash := simhash(UserPinnedRepos);
+LET CreatedDateSimhash := if(UserCreatedDate, simhash(UserCreatedDate));
 
-WHEN HasGithubPro THEN addEntityLabel(Actor, 'GOOD', 'github_pro');
-WHEN HasOldAccount THEN addEntityLabel(Actor, 'GOOD', 'old_account');
-WHEN HasManyAchievements THEN addEntityLabel(Actor, 'GOOD', 'many_achievements');
-WHEN HasSponsors THEN addEntityLabel(Actor, 'GOOD', 'sponsored');
-WHEN HasSponsorees THEN addEntityLabel(Actor, 'GOOD', 'sponsoring');
-WHEN HasManyContributions THEN addEntityLabel(Actor, 'GOOD', 'many_contribs');
+# Good features
+CREATE RULE UserHasGithubPro WHERE jsonValue(UserData, '$.isPro');
+CREATE RULE UserHasOldAccount WHERE jsonValue(UserData, '$.createdYear') < 2020;
+CREATE RULE UserHasManyAchievements WHERE length(jsonValue(UserData, '$.achievements')) >= 3;
+CREATE RULE UserHasSponsors WHERE length(jsonValue(UserData, '$.sponsors')) > 0;
+CREATE RULE UserHasSponsorees WHERE jsonValue(UserData, '$.sponsoring') > 0;
+CREATE RULE UserHasManyContribsPastYear WHERE UserNumContribsPastYear >= 100;
 
-CREATE RULE IsGoodUser WHERE HasGithubPro OR HasOldAccount OR HasManyAchievements OR HasSponsors OR HasSponsorees OR HasManyContributions;
+LET UserNumReposStarred := countUnique(Repo BY User);
+
+LET RepoNumStargazers := countUnique(User BY Repo);
+LET RepoNumBadStargazers := countUnique(User BY Repo WHERE IsBadUser);
+
+CREATE RULE IsGoodUser WHERE UserHasGithubPro OR UserHasOldAccount OR UserHasManyAchievements OR UserHasSponsors OR UserHasSponsorees OR UserHasManyContribsPastYear;
 
 # Bad labels
-LET DaysSinceUserCreated := if (CreatedDate, dateDiff('DAY', date(CreatedDate)));
+LET DaysSinceUserCreated := if(UserCreatedDate, dateDiff('DAY', date(UserCreatedDate)));
 CREATE RULE NewAccount WHERE DaysSinceUserCreated < 60;
 
-LET ProfileFields := [
-  jsonValue(UserData, '$.repositories'),
-  length(jsonValue(UserData, '$.achievements')),
-  length(jsonValue(UserData, '$.organizations')),
-  Readme,
-  jsonValue(UserData, '$.websiteUrl'),
-  Bio,
-  jsonValue(UserData, '$.company'),
-  jsonValue(UserData, '$.location'),
-  length(jsonValue(UserData, '$.socialLinks')),
-];
+LET UserNumProfileFields := length(filter([
+  UserNumRepos,
+  length(UserAchievements),
+  length(UserOrgs),
+  UserReadme,
+  UserWebsiteUrl,
+  UserBio,
+  UserCompany,
+  UserLocation,
+  length(UserSocialLinks),
+]));
 
-CREATE RULE HasEmptyProfile WHERE length(filter(ProfileFields)) = 0;
-CREATE RULE HasMostlyEmptyProfile WHERE NOT HasEmptyProfile AND length(filter(ProfileFields)) <= 2 AND ContribsPastYear < 10;
+# Bad features
+CREATE RULE UserHasEmptyProfile WHERE UserNumProfileFields = 0;
+CREATE RULE UserHasMostlyEmptyProfile WHERE NOT UserHasEmptyProfile AND UserNumProfileFields <= 2 AND UserNumContribsPastYear < 10;
+CREATE RULE ManyUsersWithSameBioPastWeek WHERE length(split(UserBio, ' ')) >= 3 AND countUnique(User By BioSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameReadmePastWeek WHERE length(split(UserReadme, ' ') >= 4) AND countUnique(User By ReadmeSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameReposPastWeek WHERE length(UserPinnedRepos) > 0 AND countUnique(User By ReposSimhash LAST WEEK) > 5;
+CREATE RULE ManyUsersWithSameCreatedDatePastWeek WHERE UserCreatedDate AND countUnique(User By CreatedDateSimhash LAST WEEK) > 5;
 
-CREATE RULE ManyUsersWithSameBioPastWeek WHERE length(split(Bio, ' ')) >= 3 AND countUnique(Actor By BioSimhash LAST WEEK) > 5;
-CREATE RULE ManyUsersWithSameReadmePastWeek WHERE length(split(Readme, ' ') >= 4) AND countUnique(Actor By ReadmeSimhash LAST WEEK) > 5;
-CREATE RULE ManyUsersWithSameReposPastWeek WHERE length(PinnedRepos) > 0 AND countUnique(Actor By ReposSimhash LAST WEEK) > 5;
-CREATE RULE ManyUsersWithSameCreatedDatePastWeek WHERE CreatedDate AND countUnique(Actor By CreatedDateSimhash LAST WEEK) > 5;
-
-WHEN NewAccount THEN addEntityLabel(Actor, 'BAD', 'new_account');
-WHEN HasEmptyProfile THEN addEntityLabel(Actor, 'BAD', 'empty_profile');
-WHEN HasMostlyEmptyProfile THEN addEntityLabel(Actor, 'BAD', 'mostly_empty_profile');
-WHEN ManyUsersWithSameBioPastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_bio');
-WHEN ManyUsersWithSameReadmePastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_readme'); 
-WHEN ManyUsersWithSameReposPastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_repos');
-WHEN ManyUsersWithSameCreatedDatePastWeek THEN addEntityLabel(Actor, 'BAD', 'duplicate_created_date');
-
-CREATE RULE IsBadUser WHERE NOT IsGoodUser AND (NewAccount OR HasEmptyProfile OR HasMostlyEmptyProfile OR ManyUsersWithSameBioPastWeek OR ManyUsersWithSameCreatedDatePastWeek
+CREATE RULE IsBadUser WHERE NOT IsGoodUser AND (NewAccount OR UserHasEmptyProfile OR UserHasMostlyEmptyProfile OR ManyUsersWithSameBioPastWeek OR ManyUsersWithSameCreatedDatePastWeek
   OR ManyUsersWithSameReadmePastWeek OR ManyUsersWithSameReposPastWeek);
 
-WHEN IsGoodUser THEN addEventLabel('GOOD', 'good_user');
-WHEN IsBadUser THEN addEventLabel('BAD', 'bad_user');
+LET NumUsersByRepo := countUnique(User BY Repo LAST WEEK);
+LET NumBadUsersByRepo := countUnique(User BY Repo WHERE IsBadUser LAST WEEK);
 
-LET NumActorsByRepo := countUnique(Actor BY Repo LAST WEEK);
-LET NumBadUsersByRepo := countUnique(Actor BY Repo WHERE IsBadUser LAST WEEK);
+CREATE RULE RepoHasManyBadUsersPastWeek WHERE NumBadUsersByRepo > 10 AND NumBadUsersByRepo / NumUsersByRepo > 0.8;
 
-LET RepoName := jsonValue(EventData, '$.data.repo.name');
-CREATE RULE RepoHasManyBadUsersPastWeek WHERE NumBadUsersByRepo > 10 AND NumBadUsersByRepo / NumActorsByRepo > 0.8 
-  WITH REASON 'Repo ${RepoName} has ${NumBadUsersByRepo} bad users out of ${NumActorsByRepo} users';
-WHEN RepoHasManyBadUsersPastWeek THEN addEntityLabel(Repo, 'BAD', 'bad_users');
 
-addEntityFeature(Actor, 'Github Pro', HasGithubPro);
-addEntityFeature(Actor, 'Created Date', CreatedDate);
-addEntityFeature(Actor, 'Created Year', jsonValue(UserData, '$.createdYear'));
-addEntityFeature(Actor, 'Achievements', length(jsonValue(UserData, '$.achievements')));
-addEntityFeature(Actor, 'Sponsors', length(jsonValue(UserData, '$.sponsors')));
-addEntityFeature(Actor, 'Sponsors', length(jsonValue(UserData, '$.sponsorees')));
-addEntityFeature(Actor, 'Contributions', ContribsPastYear);
-addEntityFeature(Actor, 'Repositories', jsonValue(UserData, '$.repositories'));
-addEntityFeature(Actor, 'Organizations', length(jsonValue(UserData, '$.organizations')));
-addEntityFeature(Actor, 'Pinned Repos', length(PinnedRepos));
-addEntityFeature(Actor, 'Bio', Bio);
-addEntityFeature(Actor, 'Readme', Readme);
-addEntityFeature(Actor, 'Website', jsonValue(UserData, '$.websiteUrl'));
-addEntityFeature(Actor, 'Company', jsonValue(UserData, '$.company'));
-addEntityFeature(Actor, 'Location', jsonValue(UserData, '$.location'));
-addEntityFeature(Actor, 'Socials', length(jsonValue(UserData, '$.socialLinks')));
-addEntityFeature(Actor, 'Repos Starred', countUnique(Repo BY Actor));
-addEntityFeature(Repo, 'Stargazers', countUnique(Actor BY Repo));
-addEntityFeature(Repo, 'Bad Stargazers', countUnique(Actor BY Repo WHERE IsBadUser));
-addEntityFeature(Org, 'Stargazers', countUnique(Actor BY Org));
-addEntityFeature(Org, 'Bad Stargazers', countUnique(Actor BY Org WHERE IsBadUser));
-addEventFeature('User', Username);
-addEventFeature('Repo', RepoName);
-addEventFeature('Org', jsonValue(EventData, '$.data.org.login'));

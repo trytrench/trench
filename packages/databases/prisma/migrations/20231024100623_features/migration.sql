@@ -10,9 +10,13 @@ CREATE TABLE "EventLog" (
 
 -- CreateTable
 CREATE TABLE "FeatureMetadata" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "dataType" TEXT NOT NULL DEFAULT 'string',
+    "id" TEXT NOT NULL DEFAULT nanoid(),
+    "feature" TEXT NOT NULL,
+    "name" TEXT,
+    "color" TEXT,
+    "isRule" BOOLEAN NOT NULL,
+    "dataType" TEXT NOT NULL DEFAULT 'text',
+    "releaseId" TEXT NOT NULL,
 
     CONSTRAINT "FeatureMetadata_pkey" PRIMARY KEY ("id")
 );
@@ -125,6 +129,9 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+
+-- AddForeignKey
+ALTER TABLE "FeatureMetadata" ADD CONSTRAINT "FeatureMetadata_releaseId_fkey" FOREIGN KEY ("releaseId") REFERENCES "Release"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_prodDatasetId_fkey" FOREIGN KEY ("prodDatasetId") REFERENCES "Dataset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
