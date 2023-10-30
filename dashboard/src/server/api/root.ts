@@ -19,12 +19,12 @@ export const appRouter = createTRPCRouter({
   events: eventsRouter,
   entities: entitiesRouter,
   labels: labelsRouter,
-  datasets: datasetsRouter,
   lists: listsRouter,
   dashboard: dashboardRouter,
-  features: featuresRouter,
   links: linksRouter,
+  datasets: datasetsRouter,
   releases: releasesRouter,
+  features: featuresRouter,
   project: projectRouter,
 });
 

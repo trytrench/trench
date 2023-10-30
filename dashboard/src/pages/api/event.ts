@@ -1,8 +1,9 @@
 import { type Prisma } from "@prisma/client";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
-import { z } from "zod";
-import { prisma } from "~/server/db";
+import { bigint, z } from "zod";
+import { db, prisma } from "~/server/db";
+import { batchInsertEvents, processEvents } from "event-processing";
 
 const eventSchema = z.object({
   timestamp: z
@@ -12,6 +13,11 @@ const eventSchema = z.object({
     .transform((x) => (x ? new Date(x) : new Date())),
   type: z.string(),
   data: z.record(z.unknown()),
+  options: z
+    .object({
+      sync: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export default async function handler(
@@ -23,21 +29,69 @@ export default async function handler(
     return res.status(405).end("Method Not Allowed");
   }
 
-  const result = eventSchema.safeParse(req.body);
-  if (!result.success) {
-    return res.status(400).json({ error: result.error.message });
+  const parsedResult = eventSchema.safeParse(req.body);
+
+  if (!parsedResult.success) {
+    return res.status(400).json({ error: parsedResult.error.message });
   }
-  const event = result.data;
+  const event = parsedResult.data;
+
+  const eventId = ulid(event.timestamp.getTime());
 
   await prisma.eventLog.create({
     data: {
-      id: ulid(event.timestamp.getTime()),
+      id: eventId,
       timestamp: event.timestamp,
       type: event.type,
       data: event.data as Prisma.JsonObject,
+      options: event.options,
     },
   });
 
+  if (event.options?.sync) {
+    // Get result immediately, then add to output log.
+
+    const items = await prisma.$queryRaw<
+      {
+        datasetId: bigint;
+        code: Record<string, string>;
+      }[]
+    >`
+      SELECT
+        "Project"."prodDatasetId" AS "datasetId",
+        "Version"."code" AS "code"
+      FROM "Project"
+      JOIN "Release" ON "Release"."projectId" = "Project"."id"
+      JOIN "Version" ON "Version"."id" = "Release"."versionId"
+      ORDER BY "Release"."createdAt" DESC
+      LIMIT 1;
+    `;
+    if (!items[0]) {
+      throw new Error("No datasets found");
+    }
+    const { datasetId, code } = items[0];
+
+    const result = await processEvents({
+      events: [{ ...event, id: eventId }],
+      files: code,
+      datasetId: datasetId,
+    });
+
+    await batchInsertEvents({
+      events: result,
+      clickhouseClient: db,
+    });
+
+    const output = result[0]!;
+
+    console.log(output);
+    return res.status(200).json({
+      output: {
+        ...output,
+        datasetId: Number(output.datasetId),
+      },
+    });
+  }
   res.status(200).json({
     success: true,
   });

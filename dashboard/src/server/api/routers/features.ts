@@ -11,7 +11,7 @@ export const featuresRouter = createTRPCRouter({
         feature: z.string(),
         name: z.string().optional(),
         dataType: z.enum(["text", "number", "boolean", "json"]),
-        releaseId: z.string(),
+        datasetId: z.bigint(),
         hidden: z.boolean().optional(),
       })
     )
@@ -22,7 +22,7 @@ export const featuresRouter = createTRPCRouter({
         },
         create: {
           feature: input.feature,
-          releaseId: input.releaseId,
+          datasetId: input.datasetId,
           name: input.name,
           dataType: input.dataType,
           isRule: false,
@@ -40,12 +40,12 @@ export const featuresRouter = createTRPCRouter({
     .input(
       z.object({
         features: z.string().array(),
-        releaseId: z.string(),
+        datasetId: z.bigint(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const release = await ctx.prisma.release.update({
-        where: { id: input.releaseId },
+      const release = await ctx.prisma.dataset.update({
+        where: { id: input.datasetId },
         data: {
           featureOrder: input.features,
         },

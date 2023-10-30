@@ -6,13 +6,13 @@
     "axios": "^1.4.0",
     "axios-retry": "^3.8.0",
     "cheerio": "^1.0.0-rc.12",
-    "databases": "workspace:*",
     "date-fns": "^2.30.0",
+    "jsonpath": "^1.1.1",
     "p-limit": "^4.0.0",
     "sqrl": "^0.6.10",
     "sqrl-jsonpath": "^0.6.10",
     "sqrl-load-functions": "^0.6.10",
-    "sqrl-redis-functions": "^0.6.10",
+    "sqrl-redis-functions": "workspace:*",
     "sqrl-text-functions": "^0.6.10",
     "typescript": "latest"
   }

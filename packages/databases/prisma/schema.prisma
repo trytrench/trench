@@ -16,8 +16,8 @@ model EventLog {
   timestamp DateTime
   type      String
   data      Json     @default("{}")
+  options   Json     @default("{}")
 
-  // Datasets that currently have this event as its last processed event
   datasets Dataset[]
 
   @@index([timestamp])
@@ -100,48 +100,80 @@ model Project {
 
   name String @unique
 
-  prodDataset   Dataset? @relation(fields: [prodDatasetId], references: [id])
-  prodDatasetId BigInt?  @unique
+  productionDatasetId BigInt?  @unique
+  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
 
-  releases Release[]
+  eventHandlers EventHandler[]
+  datasets      Dataset[]
 }
 
-model Release {
+model EventHandler {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  description String?
-  code        Json
-  version     String
-  isDraft     Boolean @default(true)
+  code    Json
+  version String
+  isDraft Boolean @default(true)
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
 
-  datasets Dataset[]
+  assignments EventHandlerAssignment[]
 }
 
+model EventHandlerAssignment {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventHandlerId String
+  eventHandler   EventHandler @relation(fields: [eventHandlerId], references: [id])
+
+  datasetId BigInt
+  dataset   Dataset @relation("datasetAssignments", fields: [datasetId], references: [id])
+
+  currentDataset Dataset? @relation("currentDatasetAssignment")
+}
+
+enum DatasetType {
+  PRODUCTION
+  BACKTEST
+}
+
+// Each Dataset has at most 1 DatasetWriter
 model Dataset {
   id        BigInt   @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  type     DatasetType
+  isActive Boolean     @default(true)
+
+  name        String
   description String?
 
-  backfillFrom DateTime? // If null, backfill from the beginning of time
-  backfillTo   DateTime? // If null, backfill to now plus all incoming events
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  featureMetadata FeatureMetadata[]
+  featureOrder    String[]
+
+  // Below: Event processing configuration and status
 
   lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
   lastEventLogId String?
 
-  release   Release @relation(fields: [releaseId], references: [id])
-  releaseId String
+  currentEventHandlerAssignmentId String?                 @unique
+  currentEventHandlerAssignment   EventHandlerAssignment? @relation("currentDatasetAssignment", fields: [currentEventHandlerAssignmentId], references: [id])
 
-  prodProject Project?
   features    Feature[]
   eventTypes  EventType[]
   entityTypes EntityType[]
+
+  eventHandlerAssignments EventHandlerAssignment[] @relation("datasetAssignments")
+
+  productionProject Project? @relation("productionDatasetProject")
 }
 
 // Necessary for Next auth

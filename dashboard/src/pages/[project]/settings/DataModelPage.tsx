@@ -5,7 +5,7 @@ import {
   EyeIcon,
   Hash,
   Loader2Icon,
-  LucideIcon,
+  type LucideIcon,
   PencilIcon,
   ToggleLeft,
   Type,
@@ -73,38 +73,36 @@ const ENTITY_PREFIX = "ENTITY-";
 
 function DataModelPage() {
   const router = useRouter();
-  const { mutateAsync } = api.features.saveFeatureMetadata.useMutation();
+  const { mutateAsync: saveFeatureMetadata } =
+    api.features.saveFeatureMetadata.useMutation();
 
   const { data: project } = api.project.getByName.useQuery(
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+  const datasetId = useMemo(() => project?.productionDatasetId, [project]);
 
   const { data: dataset } = api.datasets.get.useQuery(
-    { id: datasetId! },
+    { id: datasetId as bigint },
     { enabled: !!datasetId }
   );
 
   const { data: allEntities } = api.labels.getEntityTypes.useQuery(
-    { datasetId: datasetId! },
+    { datasetId: datasetId as bigint },
     { enabled: !!datasetId }
   );
   const { data: allEvents } = api.labels.getEventTypes.useQuery(
-    { datasetId: datasetId! },
+    { datasetId: datasetId as bigint },
     { enabled: !!datasetId }
   );
 
-  const { data: features } = api.labels.getFeatures.useQuery(
-    { datasetId: datasetId! },
+  const { data: features } = api.labels.getEntityFeatures.useQuery(
+    { datasetId: datasetId as bigint },
     { enabled: !!datasetId }
   );
 
-  const { data: eventFeatures } = api.labels.getFeatures.useQuery(
-    { datasetId: datasetId! },
+  const { data: eventFeatures } = api.labels.getEventFeatures.useQuery(
+    { datasetId: datasetId as bigint },
     { enabled: !!datasetId }
   );
 
@@ -126,7 +124,7 @@ function DataModelPage() {
 
   const sortedFeatures = useMemo(
     () =>
-      dataset?.release.featureOrder
+      dataset?.featureOrder
         .map((feature) => ({
           id: feature,
           metadata: featureToMetadata[feature],
@@ -137,7 +135,7 @@ function DataModelPage() {
 
   const sortedHiddenFeatures = useMemo(
     () =>
-      dataset?.release.featureOrder
+      dataset?.featureOrder
         .map((feature) => ({
           id: feature,
           metadata: featureToMetadata[feature],
@@ -157,6 +155,10 @@ function DataModelPage() {
     api.features.saveFeatureOrder.useMutation();
 
   const [searchValue, setSearchValue] = useState("");
+
+  if (!dataset) {
+    return null;
+  }
 
   return (
     <>
@@ -250,12 +252,12 @@ function DataModelPage() {
                         <FeatureList
                           features={sortedFeatures}
                           onFeatureChange={(value, item) => {
-                            mutateAsync({
+                            saveFeatureMetadata({
                               feature: item.id,
                               name: item.metadata?.name ?? undefined,
                               dataType: item.metadata?.dataType ?? "text",
-                              ...value,
-                              releaseId: dataset?.releaseId,
+                              // ...value,
+                              datasetId: dataset?.id,
                             })
                               .then(() => refetch())
                               .catch((error) => console.log(error));
@@ -265,7 +267,7 @@ function DataModelPage() {
                               features: features.concat(
                                 sortedHiddenFeatures.map((f) => f.id)
                               ),
-                              releaseId: dataset?.releaseId,
+                              versionId: dataset?.versionId,
                             }).catch((error) => console.log(error));
                           }}
                         />
@@ -277,12 +279,12 @@ function DataModelPage() {
                             <FeatureList
                               features={sortedHiddenFeatures}
                               onFeatureChange={(value, item) => {
-                                mutateAsync({
+                                saveFeatureMetadata({
                                   feature: item.id,
                                   name: item.metadata?.name ?? undefined,
                                   dataType: item.metadata?.dataType ?? "text",
                                   ...value,
-                                  releaseId: dataset?.releaseId,
+                                  versionId: dataset?.versionId,
                                 })
                                   .then(() => refetch())
                                   .catch((error) => console.log(error));
@@ -292,7 +294,7 @@ function DataModelPage() {
                                   features: sortedFeatures
                                     .map((f) => f.id)
                                     .concat(features),
-                                  releaseId: dataset?.releaseId,
+                                  versionId: dataset?.versionId,
                                 }).catch((error) => console.log(error));
                               }}
                             />

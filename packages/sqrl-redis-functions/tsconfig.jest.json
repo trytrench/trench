@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": ["**/__tests__/**/*.spec.ts", "**/__tests__/**/*.spec.tsx"]
+}

@@ -1,7 +1,7 @@
 import { useToast } from "~/components/ui/use-toast";
 
 import { ClassNames } from "@emotion/react";
-import { type Release } from "@prisma/client";
+import { type Version } from "@prisma/client";
 import {
   CheckIcon,
   HistoryIcon,
@@ -31,8 +31,8 @@ import { useRouter } from "next/router";
 // import { sortBy } from "lodash";
 
 interface Props {
-  release: Release;
-  onPreviewRelease: (release: Release) => void;
+  release: Version;
+  onPreviewRelease: (release: Version) => void;
 }
 
 const UNSAVED_CHANGES_MESSAGE =
@@ -46,7 +46,7 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
     { enabled: !!router.query.project }
   );
 
-  const { mutateAsync: createDataset } = api.datasets.create.useMutation();
+  // const { mutateAsync: createBacktest } = api.backtests.create.useMutation();
   const { mutateAsync: createRelease } = api.releases.create.useMutation();
   const { mutateAsync: publish } = api.releases.publish.useMutation();
   const { data: releases, refetch: refetchReleases } =
@@ -145,20 +145,20 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
           isOpen={backfillModalOpen}
           onOpenChange={setBackfillModalOpen}
           onConfirm={(dateRange) => {
-            createDataset({
-              name: "test",
-              description: "test",
-              backfillFrom: dateRange.from,
-              backfillTo: dateRange.to,
-              rules: files,
-            })
-              .then(() => {
-                toast({ title: "success", description: "Dataset created" });
-                setBackfillModalOpen(false);
-              })
-              .catch((error) => {
-                toast({ title: "error", description: error.message });
-              });
+            // createBacktest({
+            //   name: "test",
+            //   description: "test",
+            //   backfillFrom: dateRange.from,
+            //   backfillTo: dateRange.to,
+            //   rules: files,
+            // })
+            //   .then(() => {
+            //     toast({ title: "success", description: "Dataset created" });
+            //     setBackfillModalOpen(false);
+            //   })
+            //   .catch((error) => {
+            //     toast({ title: "error", description: error.message });
+            //   });
           }}
         />
 

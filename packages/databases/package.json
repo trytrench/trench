@@ -10,7 +10,7 @@
     "db:seed": "npx prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "build": "tsc",
-    "dev": "npx tsx watch src/index.ts"
+    "dev": "npx tsc --watch"
   },
   "devDependencies": {
     "dbmate": "^2.6.0",

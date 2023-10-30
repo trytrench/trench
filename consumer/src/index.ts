@@ -1,131 +1,131 @@
-import { Worker, isMainThread, parentPort } from "worker_threads";
-import { Client } from "pg";
-import { env } from "./env";
-import { Event, compileSqrl, createSqrlInstance, runEvent } from "sqrl-helpers";
-import { batchInsertEvents } from "./batchInsertEvents";
+import { Worker, isMainThread, workerData } from "worker_threads";
+import { batchInsertEvents, processEvents } from "event-processing";
+import { DatasetType, db, prisma } from "databases";
+import { getDatasetData, getEvents } from "./helpers";
 
-if (!isMainThread) {
-  const client = new Client({
-    // Your PostgreSQL connection config
-    connectionString: env.POSTGRES_URL,
-  });
+if (isMainThread) {
+  const runningThreads = new Map<bigint, Worker>();
 
-  async function processEvents(
-    events: Event[],
-    files: Record<string, string>,
-    datasetId: bigint
-  ) {
-    const results: Awaited<ReturnType<typeof runEvent>>[] = [];
-    const instance = await createSqrlInstance({
-      // config: {
-      //   "state.allow-in-memory": true,
-      // },
-      config: {
-        "redis.address": process.env.REDIS_URL,
-      },
-    });
+  setInterval(manageThreads, 1000);
 
-    const { executable } = await compileSqrl(instance, files);
+  async function manageThreads() {
+    const datasets = await prisma.dataset.findMany();
 
-    for (const event of events) {
-      results.push(await runEvent(event, executable, datasetId));
+    for (const dataset of datasets) {
+      const isRunning = !!runningThreads.get(dataset.id);
+      const desiredRunStatus = dataset.isActive;
+
+      if (isRunning === desiredRunStatus) {
+        continue;
+      }
+
+      if (!isRunning) {
+        // Start the worker
+        const worker = new Worker(__filename, {
+          workerData: {
+            datasetId: dataset.id,
+            isProductionWorker: dataset.type === DatasetType.PRODUCTION,
+          },
+        });
+
+        runningThreads.set(dataset.id, worker);
+
+        worker.on("exit", (code) => {
+          if (code !== 0) {
+            console.error(`Worker stopped with exit code ${code}`);
+          }
+          runningThreads.delete(dataset.id);
+        });
+      } else {
+        runningThreads.get(dataset.id)?.terminate();
+      }
     }
-    await batchInsertEvents(results, datasetId);
+  }
+
+  console.log("Restarted consumers");
+} else {
+  const WORKER_DATA = workerData as {
+    datasetId: bigint;
+    isProductionWorker: boolean;
+  };
+
+  if (WORKER_DATA.isProductionWorker) {
+    console.log("Starting production worker");
+  } else {
+    console.log("Starting backfill worker");
   }
 
   async function initConsumer() {
     try {
-      await client.connect();
-
       while (true) {
         // Sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Start a transaction
-        await client.query("BEGIN");
-
-        const res = await client.query(`
-        SELECT "Dataset"."id", "lastEventLogId", "backfillFrom", "backfillTo", "Release"."code"
-        FROM "Dataset"
-        JOIN "Release" ON "Release"."id" = "Dataset"."releaseId"
-        FOR UPDATE SKIP LOCKED
-        LIMIT 1;
-      `);
-        if (res.rows.length === 0) {
-          await client.query("COMMIT");
-          continue;
-        }
-        const numDatasets = res.rows.length;
-        const randomIndex = Math.floor(Math.random() * numDatasets);
-        const dataset = res.rows[randomIndex];
-
-        const {
-          id: datasetId,
-          lastEventLogId,
-          code,
-        } = dataset as {
-          id: bigint;
-          lastEventLogId: number;
-          code: Record<string, string>;
-        };
-
-        const eventsRes = await client.query(
-          `
-        SELECT "id", "type", "data", "timestamp"
-        FROM "EventLog"
-        WHERE "id" > $1
-        OR $1 IS NULL
-        ORDER BY "id" ASC
-        LIMIT 1000;
-      `,
-          [lastEventLogId]
+        await new Promise((resolve) =>
+          setTimeout(resolve, WORKER_DATA.isProductionWorker ? 1000 : 1000)
         );
 
-        const events = (eventsRes.rows as Event[]).map((row) => ({
-          ...row,
-          timestamp: row.timestamp.toISOString(),
-        }));
+        // Start a transaction
+        await prisma.$queryRaw`BEGIN`;
+
+        const jobData = await getDatasetData({
+          datasetId: WORKER_DATA.datasetId,
+        });
+
+        if (!jobData) {
+          // No jobs to process, commit the transaction and continue
+          await prisma.$queryRaw`COMMIT`;
+          continue;
+        }
+
+        const { datasetId, lastEventLogId, code } = jobData;
+
+        const events = await getEvents({
+          lastEventLogId,
+          isProduction: WORKER_DATA.isProductionWorker,
+        });
 
         if (events.length === 0) {
           // No events to process, commit the transaction and continue
-          await client.query("COMMIT");
+          await prisma.$queryRaw`COMMIT`;
           continue;
         }
 
-        await processEvents(events, code, datasetId);
+        const results = await processEvents({
+          events,
+          files: code,
+          datasetId,
+        });
+
+        await batchInsertEvents({
+          events: results,
+          clickhouseClient: db,
+        });
 
         const newLastEventId = events.length
           ? events[events.length - 1]!.id
           : lastEventLogId;
 
-        await client.query(
-          `
-        UPDATE "Dataset"
-        SET "lastEventLogId" = $1
-        WHERE id = $2;
-      `,
-          [newLastEventId, datasetId]
-        );
+        await prisma.$queryRaw`
+          UPDATE "DatasetWriter"
+          SET "lastEventLogId" = ${newLastEventId}
+          WHERE "datasetId" = ${datasetId}
+        `;
 
         // Commit the transaction
-        await client.query("COMMIT");
+        await prisma.$queryRaw`COMMIT`;
 
         console.log(
-          `Processed ${events.length} events for dataset ${datasetId}`
+          `Processed ${events.length} events for dataset ${datasetId}`,
+          WORKER_DATA.isProductionWorker ? "(prod)" : "(backfill)"
         );
       }
     } catch (err) {
       console.error(err);
       // If an error occurs, rollback the transaction
-      await client.query("ROLLBACK");
+      await prisma.$queryRaw`ROLLBACK`;
     } finally {
-      await client.end();
+      // client.end();
     }
   }
 
   initConsumer();
-} else {
-  for (let i = 0; i < 4; i++) {
-    const worker = new Worker(__filename);
-  }
 }
