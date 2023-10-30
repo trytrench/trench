@@ -156,9 +156,6 @@ model Dataset {
   projectId String
   project   Project @relation(fields: [projectId], references: [id])
 
-  featureMetadata FeatureMetadata[]
-  featureOrder    String[]
-
   // Below: Event processing configuration and status
 
   lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
