@@ -23,17 +23,74 @@ model EventLog {
   @@index([timestamp])
 }
 
-model FeatureMetadata {
-  id      String  @id @default(dbgenerated("nanoid()"))
-  feature String  @unique
-  name    String?
-  color   String?
-  isRule  Boolean
-  hidden  Boolean @default(false)
+model EntityType {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  dataType  String  @default("text")
-  release   Release @relation(fields: [releaseId], references: [id])
-  releaseId String
+  type String
+
+  featureOrder String[]
+  features     EntityFeature[]
+
+  dataset   Dataset @relation(fields: [datasetId], references: [id])
+  datasetId BigInt
+}
+
+model EventType {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type String
+
+  featureOrder String[]
+  features     EventFeature[]
+
+  dataset   Dataset @relation(fields: [datasetId], references: [id])
+  datasetId BigInt
+}
+
+model EntityFeature {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
+  entityTypeId String
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String
+
+  name String?
+  // color  String?
+}
+
+model EventFeature {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId String
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String
+
+  name String?
+  // color  String?
+}
+
+model Feature {
+  id       String  @id @default(dbgenerated("nanoid()"))
+  feature  String
+  isRule   Boolean
+  dataType String  @default("text")
+  // name    String?
+  // color   String?
+  // hidden  Boolean @default(false)
+
+  dataset   Dataset @relation(fields: [datasetId], references: [id])
+  datasetId BigInt
+
+  eventFeatures  EventFeature[]
+  entityFeatures EntityFeature[]
 }
 
 model Project {
@@ -62,9 +119,7 @@ model Release {
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
 
-  datasets     Dataset[]
-  features     FeatureMetadata[]
-  featureOrder String[]
+  datasets Dataset[]
 }
 
 model Dataset {
@@ -84,6 +139,9 @@ model Dataset {
   releaseId String
 
   prodProject Project?
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
 }
 
 // Necessary for Next auth
