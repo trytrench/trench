@@ -2,9 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   closestCenter,
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -16,11 +19,17 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableFeatureListItem } from "./SortableFeatureListItem";
 import { FeatureListItem } from "./FeatureListItem";
-import { FeatureMetadata } from "@prisma/client";
+import { type FeatureMetadata } from "@prisma/client";
+
+export type FeatureItem = {
+  id: string;
+  feature: string;
+  metadata?: FeatureMetadata;
+};
 
 interface Props {
-  features: { id: string; feature: string; metadata?: FeatureMetadata }[];
-  onFeatureChange: (value: any, item: any) => void;
+  features: FeatureItem[];
+  onFeatureChange: (featureItem: FeatureItem, changes: FeatureItem) => void;
   onOrderChange: (features: string[]) => void;
 }
 
@@ -29,7 +38,7 @@ export function FeatureList({
   onFeatureChange,
   onOrderChange,
 }: Props) {
-  const [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [items, setItems] = useState(features);
 
   useEffect(() => {
@@ -61,37 +70,38 @@ export function FeatureList({
             key={item.id}
             id={item.id}
             feature={item.id}
-            name={item.metadata?.name}
+            name={item.metadata?.name ?? ""}
             dataType={item.metadata?.dataType ?? "text"}
             hidden={item.metadata?.hidden ?? false}
-            onFeatureChange={(value) => onFeatureChange(value, item)}
+            onFeatureChange={(changes) => onFeatureChange(item, changes)}
           />
         ))}
       </SortableContext>
       <DragOverlay>
-        {activeId ? (
+        {activeItem ? (
           <FeatureListItem
             feature={activeItem.id}
-            name={activeItem.metadata?.name}
+            name={activeItem.metadata?.name ?? ""}
             dataType={activeItem.metadata?.dataType ?? "text"}
+            hidden={activeItem.metadata?.hidden ?? false}
           />
         ) : null}
       </DragOverlay>
     </DndContext>
   );
 
-  function handleDragStart(event) {
+  function handleDragStart(event: DragStartEvent) {
     const { active } = event;
 
     setActiveId(active.id);
   }
 
-  function handleDragEnd(event) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (active.id !== over?.id) {
       const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
+      const newIndex = items.findIndex((item) => item.id === over?.id);
       const newItems = arrayMove(items, oldIndex, newIndex);
       onOrderChange(newItems.map((item) => item.id));
 

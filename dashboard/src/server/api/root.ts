@@ -1,6 +1,6 @@
 import { createTRPCRouter } from "~/server/api/trpc";
 import { dashboardRouter } from "./routers/dashboard";
-import { backtestsRouter } from "./routers/datasets";
+import { datasetsRouter } from "./routers/datasets";
 import { entitiesRouter } from "./routers/entities";
 import { eventsRouter } from "./routers/events";
 import { featuresRouter } from "./routers/features";
@@ -19,12 +19,12 @@ export const appRouter = createTRPCRouter({
   events: eventsRouter,
   entities: entitiesRouter,
   labels: labelsRouter,
-  backtests: backtestsRouter,
   lists: listsRouter,
   dashboard: dashboardRouter,
-  features: featuresRouter,
   links: linksRouter,
+  datasets: datasetsRouter,
   releases: releasesRouter,
+  features: featuresRouter,
   project: projectRouter,
 });
 

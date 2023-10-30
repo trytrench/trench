@@ -45,7 +45,7 @@ export const labelsRouter = createTRPCRouter({
       return data.map((row) => row.label);
     }),
   getEventTypes: publicProcedure
-    .input(z.object({ datasetId: z.string() }))
+    .input(z.object({ datasetId: z.bigint() }))
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
@@ -60,7 +60,7 @@ export const labelsRouter = createTRPCRouter({
       return types.map((type) => type.event_type);
     }),
   getEntityTypes: publicProcedure
-    .input(z.object({ datasetId: z.string() }))
+    .input(z.object({ datasetId: z.bigint() }))
     .query(async ({ ctx, input }) => {
       const result = await db.query({
         query: `
@@ -74,14 +74,14 @@ export const labelsRouter = createTRPCRouter({
       const types = await result.json<{ entity_type: string }[]>();
       return types.map((type) => type.entity_type);
     }),
-  getLinkTypes: publicProcedure
-    .input(z.object({ datasetId: z.string() }))
-    .query(async ({ ctx }) => {
-      return ctx.prisma.linkType.findMany();
-    }),
+  // getLinkTypes: publicProcedure
+  //   .input(z.object({ datasetId: z.bigint() }))
+  //   .query(async ({ ctx }) => {
+  //     return ctx.prisma.linkType.findMany();
+  //   }),
   getEntityFeatures: publicProcedure
     .input(
-      z.object({ entityType: z.string().optional(), datasetId: z.string() })
+      z.object({ entityType: z.string().optional(), datasetId: z.bigint() })
     )
     .query(async ({ ctx, input }) => {
       const result = await db.query({
@@ -98,7 +98,7 @@ export const labelsRouter = createTRPCRouter({
     }),
   getEventFeatures: publicProcedure
     .input(
-      z.object({ eventType: z.string().optional(), datasetId: z.string() })
+      z.object({ eventType: z.string().optional(), datasetId: z.bigint() })
     )
     .query(async ({ ctx, input }) => {
       const result = await db.query({
@@ -115,7 +115,7 @@ export const labelsRouter = createTRPCRouter({
     }),
 
   allFeatures: publicProcedure
-    .input(z.object({ datasetId: z.string() }))
+    .input(z.object({ datasetId: z.bigint() }))
     .query(async ({ input }) => {
       const entityQuery = `
       SELECT DISTINCT feature, entity_type

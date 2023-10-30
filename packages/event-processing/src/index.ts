@@ -1,5 +1,6 @@
 import { ClickHouseClient } from "@clickhouse/client";
 import { getUnixTime } from "date-fns";
+import { Client } from "pg";
 import { compileSqrl, createSqrlInstance, type Event } from "sqrl-helpers";
 import { EventOutput, runEvent } from "sqrl-helpers/src/utils/runEvent";
 

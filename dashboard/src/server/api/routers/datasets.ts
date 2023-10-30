@@ -1,47 +1,37 @@
+import { DatasetType } from "databases";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
-export const backtestsRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
+export const datasetsRouter = createTRPCRouter({
+  list: publicProcedure.query(({ ctx }) => {
     return ctx.prisma.dataset.findMany();
   }),
   get: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
+    .input(z.object({ id: z.bigint() }))
+    .query(({ ctx, input }) => {
       return ctx.prisma.dataset.findUnique({
         where: { id: input.id },
-        include: {
-          release: true,
-        },
+        include: {},
       });
     }),
   create: publicProcedure
     .input(
       z.object({
+        projectId: z.string(),
         name: z.string(),
         description: z.string().optional(),
-        backfillFrom: z.string().optional(),
-        backfillTo: z.string().optional(),
-        rules: z.array(
-          z.object({
-            name: z.string(),
-            code: z.string(),
-          })
-        ),
+        type: z.nativeEnum(DatasetType),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { rules, name, description, backfillFrom, backfillTo } = input;
-      const dataset = await ctx.prisma.dataset.create({
+      const { name, description, type, projectId } = input;
+      return ctx.prisma.dataset.create({
         data: {
           name,
           description,
-          rules: rules,
-          backfillFrom,
-          backfillTo,
+          type,
+          projectId: projectId,
         },
       });
-
-      return dataset;
     }),
 });

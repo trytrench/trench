@@ -1,188 +1,91 @@
-import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
-import { Client } from "pg";
-import { env } from "./env";
-import { Event, compileSqrl, createSqrlInstance, runEvent } from "sqrl-helpers";
-import format from "pg-format";
+import { Worker, isMainThread, workerData } from "worker_threads";
 import { batchInsertEvents, processEvents } from "event-processing";
-import { db } from "databases";
+import { DatasetType, db, prisma } from "databases";
+import { getDatasetData, getEvents } from "./helpers";
 
 if (isMainThread) {
-  const prodWorker = new Worker(__filename, {
-    workerData: {
-      isProductionWorker: true,
-    },
-  });
+  const runningThreads = new Map<bigint, Worker>();
 
-  for (let i = 0; i < 4; i++) {
-    const backfillWorker = new Worker(__filename);
+  setInterval(manageThreads, 1000);
+
+  async function manageThreads() {
+    const datasets = await prisma.dataset.findMany();
+
+    for (const dataset of datasets) {
+      const isRunning = !!runningThreads.get(dataset.id);
+      const desiredRunStatus = dataset.isActive;
+
+      if (isRunning === desiredRunStatus) {
+        continue;
+      }
+
+      if (!isRunning) {
+        // Start the worker
+        const worker = new Worker(__filename, {
+          workerData: {
+            datasetId: dataset.id,
+            isProductionWorker: dataset.type === DatasetType.PRODUCTION,
+          },
+        });
+
+        runningThreads.set(dataset.id, worker);
+
+        worker.on("exit", (code) => {
+          if (code !== 0) {
+            console.error(`Worker stopped with exit code ${code}`);
+          }
+          runningThreads.delete(dataset.id);
+        });
+      } else {
+        runningThreads.get(dataset.id)?.terminate();
+      }
+    }
   }
 
   console.log("Restarted consumers");
 } else {
-  const IS_PRODUCTION_WORKER = workerData?.isProductionWorker;
+  const WORKER_DATA = workerData as {
+    datasetId: bigint;
+    isProductionWorker: boolean;
+  };
 
-  if (IS_PRODUCTION_WORKER) {
+  if (WORKER_DATA.isProductionWorker) {
     console.log("Starting production worker");
   } else {
     console.log("Starting backfill worker");
   }
 
-  const client = new Client({
-    connectionString: env.POSTGRES_URL,
-  });
-
-  async function getJobData(props: {
-    isProduction: boolean;
-    postgresClient: Client;
-  }): Promise<{
-    jobId: string;
-    datasetId: bigint;
-    code: Record<string, string>;
-    lastEventLogId: string;
-    backfillFrom?: Date;
-    backfillTo?: Date;
-  } | null> {
-    const { isProduction, postgresClient } = props;
-    if (isProduction) {
-      /**
-       * datasetId: production dataset ID
-       * code: code of latest release version
-       */
-      const res = await postgresClient.query(`
-          SELECT 
-            "ConsumerJob"."id" as "jobId",
-            "Project"."prodDatasetId" as "datasetId", 
-            "ConsumerJob"."lastEventLogId", 
-            "Version"."code" as "code"
-          FROM "ConsumerJob"
-          JOIN "Project" ON "Project"."id" = "ConsumerJob"."projectId"
-          JOIN "Release" ON "Release"."projectId" = "Project"."id"
-          JOIN "Version" ON "Version"."id" = "Release"."versionId"
-          WHERE "ConsumerJob"."type" = 'LIVE'
-          AND "ConsumerJob"."status" = 'RUNNING'
-          ORDER BY "Release"."createdAt" DESC
-          FOR UPDATE OF "ConsumerJob"
-          SKIP LOCKED
-          LIMIT 1;
-        `);
-
-      return res.rows[0] ?? null;
-    } else {
-      /**
-       * datasetId and code are from the backfill configuration
-       */
-      const res = await postgresClient.query(`
-          SELECT 
-            "ConsumerJob"."id" as "jobId",
-            "Backtest"."datasetId" as "datasetId",
-            "ConsumerJob"."lastEventLogId" as "lastEventLogId",
-            "Version"."code" as "code",
-            "Backtest"."backfillFrom" as "backfillFrom",
-            "Backtest"."backfillTo" as "backfillTo"
-          FROM "ConsumerJob"
-          JOIN "Backtest" ON "Backtest"."id" = "ConsumerJob"."backtestId"
-          JOIN "Version" ON "Version"."id" = "Backtest"."versionId"
-          WHERE "ConsumerJob"."type" = 'BACKFILL'
-          AND "ConsumerJob"."status" = 'RUNNING'
-          FOR UPDATE OF "ConsumerJob"
-          SKIP LOCKED
-          LIMIT 1;
-        `);
-
-      return res.rows[0] ?? null;
-    }
-  }
-
-  async function getEvents(props: {
-    lastEventLogId: string;
-    isProduction: boolean;
-    postgresClient: Client;
-  }): Promise<Event[]> {
-    const { lastEventLogId, isProduction, postgresClient } = props;
-
-    if (isProduction) {
-      const res = await postgresClient.query(
-        `
-        SELECT "id", "type", "data", "timestamp"
-        FROM "EventLog"
-        WHERE (
-          "id" > $1
-          OR $1 IS NULL
-        )
-        AND (
-          NOT ("EventLog"."options" ? 'sync') -- The key 'sync' does not exist
-          OR "EventLog"."options"->>'sync' = 'false' -- The key 'sync' exists and its value is 'false'
-        )
-        ORDER BY "id" ASC
-        LIMIT 1000;
-      `,
-        [lastEventLogId]
-      );
-
-      return res.rows as Event[];
-    } else {
-      const res = await postgresClient.query(
-        `
-        SELECT "id", "type", "data", "timestamp"
-        FROM "EventLog"
-        WHERE "id" > $1
-        OR $1 IS NULL
-        ORDER BY "id" ASC
-        LIMIT 1000;
-      `,
-        [lastEventLogId]
-      );
-      return res.rows as Event[];
-    }
-  }
-
   async function initConsumer() {
     try {
-      await client.connect();
-
       while (true) {
         // Sleep for 1 second
         await new Promise((resolve) =>
-          setTimeout(resolve, IS_PRODUCTION_WORKER ? 1000 : 1000)
+          setTimeout(resolve, WORKER_DATA.isProductionWorker ? 1000 : 1000)
         );
 
         // Start a transaction
-        await client.query("BEGIN");
+        await prisma.$queryRaw`BEGIN`;
 
-        const jobData = await getJobData({
-          postgresClient: client,
-          isProduction: IS_PRODUCTION_WORKER,
+        const jobData = await getDatasetData({
+          datasetId: WORKER_DATA.datasetId,
         });
 
         if (!jobData) {
           // No jobs to process, commit the transaction and continue
-          await client.query("COMMIT");
+          await prisma.$queryRaw`COMMIT`;
           continue;
         }
 
-        const { datasetId, lastEventLogId, code, jobId } = jobData;
-
-        const eventsRes = await client.query(
-          `
-          SELECT "id", "type", "data", "timestamp"
-          FROM "EventLog"
-          WHERE "id" > $1
-          OR $1 IS NULL
-          ORDER BY "id" ASC
-          LIMIT 1000;
-        `,
-          [lastEventLogId]
-        );
+        const { datasetId, lastEventLogId, code } = jobData;
 
         const events = await getEvents({
           lastEventLogId,
-          isProduction: IS_PRODUCTION_WORKER,
-          postgresClient: client,
+          isProduction: WORKER_DATA.isProductionWorker,
         });
 
         if (events.length === 0) {
           // No events to process, commit the transaction and continue
-          await client.query("COMMIT");
+          await prisma.$queryRaw`COMMIT`;
           continue;
         }
 
@@ -201,29 +104,26 @@ if (isMainThread) {
           ? events[events.length - 1]!.id
           : lastEventLogId;
 
-        await client.query(
-          `
-          UPDATE "ConsumerJob"
-          SET "lastEventLogId" = $1
-          WHERE id = $2;
-        `,
-          [newLastEventId, jobId]
-        );
+        await prisma.$queryRaw`
+          UPDATE "DatasetWriter"
+          SET "lastEventLogId" = ${newLastEventId}
+          WHERE "datasetId" = ${datasetId}
+        `;
 
         // Commit the transaction
-        await client.query("COMMIT");
+        await prisma.$queryRaw`COMMIT`;
 
         console.log(
           `Processed ${events.length} events for dataset ${datasetId}`,
-          IS_PRODUCTION_WORKER ? "(prod)" : "(backfill)"
+          WORKER_DATA.isProductionWorker ? "(prod)" : "(backfill)"
         );
       }
     } catch (err) {
       console.error(err);
       // If an error occurs, rollback the transaction
-      await client.query("ROLLBACK");
+      await prisma.$queryRaw`ROLLBACK`;
     } finally {
-      await client.end();
+      // client.end();
     }
   }
 

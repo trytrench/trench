@@ -1,14 +1,16 @@
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FeatureListItem } from "./FeatureListItem";
+import { FeatureListItem, type FeatureListItemProps } from "./FeatureListItem";
 
-interface Props {
-  Item: React.ComponentType<any>;
+export interface SortableFeatureListItemProps extends FeatureListItemProps {
   id: string;
 }
 
-export function SortableFeatureListItem({ id, ...props }: Props) {
+export function SortableFeatureListItem({
+  id,
+  ...props
+}: SortableFeatureListItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
@@ -19,11 +21,11 @@ export function SortableFeatureListItem({ id, ...props }: Props) {
 
   return (
     <FeatureListItem
-      ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
       {...props}
+      ref={setNodeRef}
+      style={style}
     />
   );
 }
