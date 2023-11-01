@@ -23,7 +23,7 @@ import { useConfirmPageLeave } from "~/hooks/useBeforeUnload";
 import { api } from "~/utils/api";
 import BackfillModal from "./BackfillModal";
 import { PublishModal } from "./PublishModal";
-import { ReleasesSidebar } from "./ReleasesSidebar";
+import { EventHandlersSidebar } from "./EventHandlersSidebar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/router";
@@ -34,7 +34,7 @@ import { usePrevious } from "react-use";
 
 interface Props {
   initialEventHandler: EventHandler;
-  onPreviewRelease: (eventHandler: EventHandler) => void;
+  onPreviewEventHandler: (eventHandler: EventHandler) => void;
 }
 
 const UNSAVED_CHANGES_MESSAGE =
@@ -42,7 +42,7 @@ const UNSAVED_CHANGES_MESSAGE =
 
 export const EventHandlerEditor = ({
   initialEventHandler,
-  onPreviewRelease,
+  onPreviewEventHandler: onPreviewEventHandler,
 }: Props) => {
   const router = useRouter();
 
@@ -54,7 +54,7 @@ export const EventHandlerEditor = ({
   // const { mutateAsync: createBacktest } = api.backtests.create.useMutation();
   const { mutateAsync: createRelease } = api.eventHandlers.create.useMutation();
   // const { mutateAsync: publish } = api.eventHandlers.publish.useMutation();
-  const { data: releases, refetch: refetchReleases } =
+  const { data: eventHandlers, refetch: refetchEventHandlers } =
     api.eventHandlers.list.useQuery();
 
   const [compileStatus, setCompileStatus] = useState<{
@@ -67,7 +67,7 @@ export const EventHandlerEditor = ({
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const [releasesSidebarOpen, setReleasesSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [backfillModalOpen, setBackfillModalOpen] = useState(false);
 
   // const { toast } = useToast();
@@ -166,11 +166,11 @@ export const EventHandlerEditor = ({
           }}
         />
 
-        <ReleasesSidebar
-          eventHandlers={releases ?? []}
-          onPreviewRelease={onPreviewRelease}
-          open={releasesSidebarOpen}
-          onOpenChange={setReleasesSidebarOpen}
+        <EventHandlersSidebar
+          eventHandlers={eventHandlers ?? []}
+          onPreviewEventHandler={onPreviewEventHandler}
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
         />
 
         <div className="w-72">
@@ -298,7 +298,7 @@ export const EventHandlerEditor = ({
                   size="icon"
                   variant="ghost"
                   onClick={() => {
-                    setReleasesSidebarOpen(true);
+                    setSidebarOpen(true);
                   }}
                 >
                   <HistoryIcon className="w-4 h-4" />

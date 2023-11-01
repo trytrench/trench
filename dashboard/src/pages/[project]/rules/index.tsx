@@ -34,7 +34,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <EventHandlerEditor
       initialEventHandler={currentEventHandler}
-      onPreviewRelease={setCurrentEventHandler}
+      onPreviewEventHandler={setCurrentEventHandler}
       key={currentEventHandler.id}
     />
   );
