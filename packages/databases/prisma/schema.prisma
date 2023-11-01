@@ -33,8 +33,12 @@ model EntityType {
   featureOrder String[]
   features     EntityFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([type, projectId])
 }
 
 model EventType {
@@ -47,8 +51,12 @@ model EventType {
   featureOrder String[]
   features     EventFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([type, projectId])
 }
 
 model EntityFeature {
@@ -86,11 +94,15 @@ model Feature {
   // color   String?
   // hidden  Boolean @default(false)
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
-
   eventFeatures  EventFeature[]
   entityFeatures EntityFeature[]
+
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([feature, projectId])
 }
 
 model Project {
@@ -105,6 +117,10 @@ model Project {
 
   eventHandlers EventHandler[]
   datasets      Dataset[]
+
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
 }
 
 model EventHandler {
