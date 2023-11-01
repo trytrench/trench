@@ -30,6 +30,8 @@
     "./src/services/RedisService.ts": "./src/browser/RedisService.ts"
   },
   "scripts": {
+    "dev": "npm run build -- --watch",
+    "build": "tsc",
     "clean": "rimraf lib && rimraf coverage",
     "generate-parser": "ts-node ./src/parser/generateSqrlRedisParser.ts > ./src/parser/sqrlRedisParser.ts && ../../scripts/clean-pegjs-ts src/parser/sqrlRedisParser.ts",
     "test": "jest",
