@@ -1,7 +1,6 @@
 import { useToast } from "~/components/ui/use-toast";
 
 import { ClassNames } from "@emotion/react";
-import { type Version } from "@prisma/client";
 import {
   CheckIcon,
   HistoryIcon,
@@ -28,17 +27,23 @@ import { ReleasesSidebar } from "./ReleasesSidebar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/router";
+import { type EventHandler } from "@prisma/client";
+import { handleError } from "../lib/handleError";
+import { usePrevious } from "react-use";
 // import { sortBy } from "lodash";
 
 interface Props {
-  release: Version;
-  onPreviewRelease: (release: Version) => void;
+  initialEventHandler: EventHandler;
+  onPreviewRelease: (eventHandler: EventHandler) => void;
 }
 
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
-export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
+export const EventHandlerEditor = ({
+  initialEventHandler,
+  onPreviewRelease,
+}: Props) => {
   const router = useRouter();
 
   const { data: project } = api.project.getByName.useQuery(
@@ -47,16 +52,17 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
   );
 
   // const { mutateAsync: createBacktest } = api.backtests.create.useMutation();
-  const { mutateAsync: createRelease } = api.releases.create.useMutation();
-  const { mutateAsync: publish } = api.releases.publish.useMutation();
+  const { mutateAsync: createRelease } = api.eventHandlers.create.useMutation();
+  // const { mutateAsync: publish } = api.eventHandlers.publish.useMutation();
   const { data: releases, refetch: refetchReleases } =
-    api.releases.list.useQuery();
+    api.eventHandlers.list.useQuery();
 
-  const lastSourcesRef = useRef();
   const [compileStatus, setCompileStatus] = useState<{
     status: "error" | "success" | "pending";
     message: string;
-    errorMarker?: editor.IMarkerData;
+    errorMarker?: editor.IMarkerData & {
+      filename: string;
+    };
   }>({ status: "pending", message: "Requesting initial compilation…" });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -64,30 +70,30 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
   const [releasesSidebarOpen, setReleasesSidebarOpen] = useState(false);
   const [backfillModalOpen, setBackfillModalOpen] = useState(false);
 
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
-  const files = useMemo(
-    () => release.code as Record<string, string>,
-    [release]
+  const initialCode = useMemo(
+    () => initialEventHandler.code as Record<string, string>,
+    [initialEventHandler]
   );
-  const [sources, setSources] = useState(files);
+  const [code, setCode] = useState(initialCode);
+  const previousCode = usePrevious(code);
 
   useEffect(() => {
-    setSources(files);
-    setCurrentFileName(Object.keys(files)[0] ?? "");
-  }, [files]);
+    setCode(initialCode);
+    setCurrentFileName(Object.keys(initialCode)[0] ?? "");
+  }, [initialCode]);
 
   const hasUnsavedChanges = useMemo(
-    () => Object.keys(files).some((file) => files[file] !== sources[file]),
-    [files, sources]
+    () =>
+      Object.keys(initialCode).some((file) => initialCode[file] !== code[file]),
+    [initialCode, code]
   );
   useConfirmPageLeave(hasUnsavedChanges, UNSAVED_CHANGES_MESSAGE);
 
   const [currentFileName, setCurrentFileName] = useState<string>(
-    Object.keys(files)[0] ?? ""
+    Object.keys(initialCode)[0] ?? ""
   );
-
-  const [sqrlFunctions, setFunctions] = useState<FunctionInfoMap | null>(null);
 
   const recompile = useCallback(async () => {
     setCompileStatus({ status: "pending", message: "Recompiling…" });
@@ -99,7 +105,7 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
     });
 
     try {
-      await compileSqrl(instance, sources);
+      await compileSqrl(instance, code);
       setCompileStatus({
         status: "success",
         message: "Compiled successfully",
@@ -111,7 +117,7 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
           message: error.message,
           errorMarker: error.location
             ? {
-                fileName: error.location.filename,
+                filename: error.location.filename ?? "unknown file",
                 message: error.message,
                 severity: 8,
                 startColumn: error.location.start.column,
@@ -124,19 +130,17 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
       } else {
         setCompileStatus({
           status: "error",
-          message: error.message,
+          message: (error as Error).message,
         });
       }
     }
-
-    lastSourcesRef.current = sources;
-  }, [sources]);
+  }, [code]);
 
   useEffect(() => {
-    if (lastSourcesRef.current !== sources) {
-      recompile();
+    if (code !== previousCode) {
+      recompile().catch(handleError);
     }
-  }, [sources, recompile]);
+  }, [code, previousCode, recompile]);
 
   return (
     <>
@@ -163,7 +167,7 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
         />
 
         <ReleasesSidebar
-          releases={releases ?? []}
+          eventHandlers={releases ?? []}
           onPreviewRelease={onPreviewRelease}
           open={releasesSidebarOpen}
           onOpenChange={setReleasesSidebarOpen}
@@ -177,9 +181,9 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  setSources({
-                    ...sources,
-                    [`Untitled-${Object.keys(sources).length}.sqrl`]: "",
+                  setCode({
+                    ...code,
+                    [`Untitled-${Object.keys(code).length}.sqrl`]: "",
                   });
                 }}
               >
@@ -187,29 +191,34 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
               </Button>
             </div>
 
-            {Object.keys(sources).map((source, index) => (
+            {Object.keys(code).map((filename, index) => (
               <FileListItem
                 key={index}
-                active={currentFileName === source}
+                active={currentFileName === filename}
                 onClick={() => {
-                  setCurrentFileName(source);
+                  setCurrentFileName(filename);
                 }}
-                onRename={(name) => {
-                  const newSources = { ...sources };
-                  newSources[name] = sources[source];
-                  delete newSources[source];
-                  setSources(newSources);
+                onRename={(newFilename) => {
+                  setCode((prev) => {
+                    const oldFileContent = prev[filename];
+                    if (!oldFileContent) {
+                      return prev;
+                    }
+
+                    prev[newFilename] = oldFileContent;
+                    delete prev[filename];
+                    return prev;
+                  });
                 }}
-                name={source}
+                name={filename}
                 onDelete={() => {
-                  const newSources = { ...sources };
-                  delete newSources[source];
-                  setSources(newSources);
+                  setCode((prev) => {
+                    delete prev[filename];
+                    return prev;
+                  });
                 }}
-                hasError={compileStatus.errorMarker?.fileName === source}
-                // hasUnsavedChanges={
-                //   file.currentFileSnapshot.code !== sources[file.id]
-                // }
+                hasError={compileStatus.errorMarker?.filename === filename}
+                hasUnsavedChanges={code[filename] !== initialCode[filename]}
               />
             ))}
           </div>
@@ -233,7 +242,7 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                   size="sm"
                   className="mr-2"
                   onClick={() => {
-                    setSources(files);
+                    setCode(initialCode);
                     setIsEditing(false);
                   }}
                 >
@@ -241,32 +250,33 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
                 </Button>
                 <PublishModal
                   onPublish={(version, description) => {
-                    publish({
-                      version,
-                      description,
-                      code: sources,
-                      projectId: project?.id,
-                    })
-                      .then(() => {
-                        setIsEditing(false);
-                        refetchReleases();
-                        toast({
-                          title: "Success",
-                          description: "Release Created",
-                        });
-                      })
-                      .catch((error) => {
-                        toast({ title: "Error", description: error.message });
-                      });
+                    // publish({
+                    //   version,
+                    //   description,
+                    //   code: sources,
+                    //   projectId: project?.id,
+                    // })
+                    //   .then(() => {
+                    //     setIsEditing(false);
+                    //     refetchReleases();
+                    //     toast({
+                    //       title: "Success",
+                    //       description: "Release Created",
+                    //     });
+                    //   })
+                    //   .catch((error) => {
+                    //     toast({ title: "Error", description: error.message });
+                    //   });
                   }}
-                  initialVersion={release.version}
+                  initialVersion={initialEventHandler.version}
                   button={<Button>Publish</Button>}
                 />
               </>
             ) : (
               <>
                 <Button>
-                  <TagIcon className="mr-2 w-4 h-4" />v{release.version}
+                  <TagIcon className="mr-2 w-4 h-4" />v
+                  {initialEventHandler.version}
                 </Button>
                 <div className="flex-1" />
                 <Button
@@ -303,20 +313,17 @@ export const RuleEditor = ({ release, onPreviewRelease }: Props) => {
           <ClassNames>
             {({ css }) => (
               <MonacoEditor
-                className={css({
-                  height: "100%",
-                  width: "100%",
-                })}
+                className={css({ height: "100%", width: "100%" })}
                 key={currentFileName + isEditing}
-                value={sources[currentFileName] ?? ""}
+                value={code[currentFileName] ?? ""}
                 markers={
                   compileStatus.errorMarker
                     ? [compileStatus.errorMarker]
                     : undefined
                 }
-                sqrlFunctions={sqrlFunctions}
+                sqrlFunctions={null}
                 onChange={(newSource) => {
-                  setSources((prev) => ({
+                  setCode((prev) => ({
                     ...prev,
                     [currentFileName]: newSource,
                   }));

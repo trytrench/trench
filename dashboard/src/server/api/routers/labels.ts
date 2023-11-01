@@ -8,7 +8,7 @@ export const labelsRouter = createTRPCRouter({
     .input(
       z.object({
         eventType: z.string().optional(),
-        datasetId: z.string(),
+        datasetId: z.bigint(),
       })
     )
     .query(async ({ input }) => {
@@ -28,7 +28,7 @@ export const labelsRouter = createTRPCRouter({
     .input(
       z.object({
         entityType: z.string().optional(),
-        datasetId: z.string(),
+        datasetId: z.bigint(),
       })
     )
     .query(async ({ ctx, input }) => {

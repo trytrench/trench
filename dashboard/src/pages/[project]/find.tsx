@@ -17,10 +17,7 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+  const datasetId = useMemo(() => project?.productionDatasetId, [project]);
 
   const [filters, setFilters] = useState<EntityFilters>(undefined);
 

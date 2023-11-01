@@ -3,27 +3,27 @@ import Filter from "./Filter";
 import { useMemo } from "react";
 import { toEntityFilters, toEventFilters } from "./helpers";
 
-interface Props {
-  datasetId: string;
+interface EntityFilterProps {
+  datasetId: bigint;
   onChange: (value: any) => void; // shouldn't be any (TODO)
 }
 
-const EntityFilter = ({ datasetId, onChange }: Props) => {
+const EntityFilter = ({ datasetId, onChange }: EntityFilterProps) => {
   const { data: entityTypes, isLoading: entityTypesLoading } =
     api.labels.getEntityTypes.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 
   const { data: entityLabels, isLoading: entityLabelsLoading } =
     api.labels.getEntityLabels.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 
   const { data: entityFeatures, isLoading: entityFeaturesLoading } =
     api.labels.getEntityFeatures.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 
@@ -61,22 +61,27 @@ const EntityFilter = ({ datasetId, onChange }: Props) => {
   );
 };
 
-const EventFilter = ({ datasetId, onChange }: Props) => {
+interface EventFilterProps {
+  datasetId: bigint;
+  onChange: (value: any) => void; // shouldn't be any (TODO)
+}
+
+const EventFilter = ({ datasetId, onChange }: EventFilterProps) => {
   const { data: eventTypes, isLoading: eventTypesLoading } =
     api.labels.getEventTypes.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 
   const { data: eventLabels, isLoading: eventLabelsLoading } =
     api.labels.getEventLabels.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 
   const { data: eventFeatures, isLoading: eventFeaturesLoading } =
     api.labels.getEventFeatures.useQuery(
-      { datasetId: datasetId! },
+      { datasetId: datasetId },
       { enabled: !!datasetId }
     );
 

@@ -12,10 +12,10 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+  const datasetId = project?.productionDatasetId;
+
+  console.log(project);
+  if (!datasetId) return null;
 
   return (
     <div className="flex-1 overflow-hidden flex items-stretch">

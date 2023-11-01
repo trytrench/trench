@@ -1,4 +1,3 @@
-import { ConsumerJobStatus, ConsumerJobType } from "@prisma/client";
 import { prisma } from "..";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
@@ -22,42 +21,49 @@ async function readFiles(dirPath: string) {
 }
 
 async function main() {
-  const fileData = await readFiles(__dirname + "/rules");
+  const code = await readFiles(__dirname + "/rules");
 
-  const dataset = await prisma.dataset.create({
-    data: {},
-  });
   const project = await prisma.project.create({
     data: {
       name: "production",
-      prodDatasetId: dataset.id,
-      versions: {
-        create: {
-          version: "0.0.0",
-          description: "Initial release",
-          code: fileData,
-        },
-      },
-    },
-    include: {
-      versions: true,
     },
   });
 
-  const version = project.versions[0]!;
-
-  const release = await prisma.release.create({
+  const eventHandler = await prisma.eventHandler.create({
     data: {
+      description: "Initial event handler",
+      version: "1",
+      code: code,
       projectId: project.id,
-      versionId: version.id,
     },
   });
 
-  const consumerJob = await prisma.consumerJob.create({
+  const prodDataset = await prisma.dataset.create({
     data: {
+      name: "production",
+      type: "PRODUCTION",
       projectId: project.id,
-      type: ConsumerJobType.LIVE,
-      status: ConsumerJobStatus.RUNNING,
+    },
+  });
+
+  const assignment = await prisma.eventHandlerAssignment.create({
+    data: {
+      datasetId: prodDataset.id,
+      eventHandlerId: eventHandler.id,
+    },
+  });
+
+  await prisma.dataset.update({
+    where: { id: prodDataset.id },
+    data: {
+      currentEventHandlerAssignmentId: assignment.id,
+    },
+  });
+
+  await prisma.project.update({
+    where: { id: project.id },
+    data: {
+      productionDatasetId: prodDataset.id,
     },
   });
 }

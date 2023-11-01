@@ -1,4 +1,4 @@
-import { type Release } from "@prisma/client";
+import { type EventHandler } from "@prisma/client";
 import { format } from "date-fns";
 import { MoreHorizontalIcon } from "lucide-react";
 import pluralize from "pluralize";
@@ -15,30 +15,31 @@ import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "./ui/sheet";
 interface Props {
   open: boolean;
   onOpenChange: (val: boolean) => void;
-  releases: Release[];
-  onPreviewRelease: (release: Release) => void;
+  eventHandlers: EventHandler[];
+  onPreviewEventHandler: (EventHandler: EventHandler) => void;
 }
 
-export const ReleasesSidebar = ({
-  releases,
-  onPreviewRelease,
+export const EventHandlersSidebar = ({
+  eventHandlers,
+  onPreviewEventHandler,
   open,
   onOpenChange,
 }: Props) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
-        <SheetHeader>Releases</SheetHeader>
+        <SheetHeader>EventHandlers</SheetHeader>
         <div>
           <div>
-            {releases.length} {pluralize("release", releases.length)}
+            {eventHandlers.length}{" "}
+            {pluralize("EventHandler", eventHandlers.length)}
           </div>
           <div>
-            {releases.map((release) => (
-              <div key={release.id}>
+            {eventHandlers.map((evHandler) => (
+              <div key={evHandler.id}>
                 <div className="flex justify-between items-center">
                   <div>
-                    v{release.version} {release.description}
+                    v{evHandler.version} {evHandler.description}
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -48,7 +49,7 @@ export const ReleasesSidebar = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem
-                        onClick={() => onPreviewRelease(release)}
+                        onClick={() => onPreviewEventHandler(evHandler)}
                       >
                         Preview
                       </DropdownMenuItem>
@@ -59,7 +60,9 @@ export const ReleasesSidebar = ({
                   <Avatar>
                     <AvatarFallback>BX</AvatarFallback>
                   </Avatar>
-                  <div>Published on {format(release.createdAt, "MMM dd")}</div>
+                  <div>
+                    Published on {format(evHandler.createdAt, "MMM dd")}
+                  </div>
                 </div>
               </div>
             ))}

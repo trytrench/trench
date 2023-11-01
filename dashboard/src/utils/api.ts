@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 /**
  * This is the client-side entrypoint for your tRPC API. It is used to create the `api` object which
  * contains the Next.js App-wrapper, as well as your type-safe React Query hooks.
@@ -26,6 +27,15 @@ export const api = createTRPCNext<AppRouter>({
        * @see https://trpc.io/docs/data-transformers
        */
       transformer: superjson,
+      queryClientConfig: {
+        defaultOptions: {
+          queries: {
+            queryKeyHashFn(queryKey) {
+              return superjson.stringify(queryKey);
+            },
+          },
+        },
+      },
 
       /**
        * Links used to determine request flow from client to server.

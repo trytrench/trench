@@ -1,7 +1,11 @@
 import { Worker, isMainThread, workerData } from "worker_threads";
-import { batchInsertEvents, processEvents } from "event-processing";
+import {
+  batchInsertEvents,
+  getDatasetData,
+  getEvents,
+  processEvents,
+} from "event-processing";
 import { DatasetType, db, prisma } from "databases";
-import { getDatasetData, getEvents } from "./helpers";
 
 if (isMainThread) {
   const runningThreads = new Map<bigint, Worker>();
@@ -105,9 +109,9 @@ if (isMainThread) {
           : lastEventLogId;
 
         await prisma.$queryRaw`
-          UPDATE "DatasetWriter"
+          UPDATE "Dataset"
           SET "lastEventLogId" = ${newLastEventId}
-          WHERE "datasetId" = ${datasetId}
+          WHERE "id" = ${datasetId}
         `;
 
         // Commit the transaction

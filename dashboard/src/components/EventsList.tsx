@@ -14,18 +14,20 @@ import { SpinnerButton } from "./ui/custom/spinner-button";
 import { useRouter } from "next/router";
 import { EventFilter } from "./ListFilter";
 import { EventFilters } from "~/shared/validation";
+import SuperJSON from "superjson";
 
-interface Props {
+interface EventsListProps {
   entityId?: string;
-  datasetId: string;
+  datasetId: bigint;
 }
 
-export default function EventsList({ entityId, datasetId }: Props) {
+export default function EventsList({ entityId, datasetId }: EventsListProps) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
   const [filters, setFilters] = useState<EventFilters>(undefined);
 
+  console.log(datasetId);
   const {
     data: events,
     fetchNextPage,

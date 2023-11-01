@@ -3,7 +3,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
 import { bigint, z } from "zod";
 import { db, prisma } from "~/server/db";
-import { batchInsertEvents, processEvents } from "event-processing";
+import {
+  batchInsertEvents,
+  getDatasetData,
+  processEvents,
+} from "event-processing";
+import { errorIfFalse } from "../../lib/throwIfFalse";
 
 const eventSchema = z.object({
   timestamp: z
@@ -51,25 +56,14 @@ export default async function handler(
   if (event.options?.sync) {
     // Get result immediately, then add to output log.
 
-    const items = await prisma.$queryRaw<
-      {
-        datasetId: bigint;
-        code: Record<string, string>;
-      }[]
-    >`
-      SELECT
-        "Project"."prodDatasetId" AS "datasetId",
-        "Version"."code" AS "code"
-      FROM "Project"
-      JOIN "Release" ON "Release"."projectId" = "Project"."id"
-      JOIN "Version" ON "Version"."id" = "Release"."versionId"
-      ORDER BY "Release"."createdAt" DESC
-      LIMIT 1;
-    `;
-    if (!items[0]) {
-      throw new Error("No datasets found");
-    }
-    const { datasetId, code } = items[0];
+    const project = await prisma.project.findFirst();
+
+    errorIfFalse(!!project, "No project found");
+    errorIfFalse(!!project?.productionDatasetId, "No prod dataset Id");
+
+    const { datasetId, code } = await getDatasetData({
+      datasetId: project.productionDatasetId,
+    });
 
     const result = await processEvents({
       events: [{ ...event, id: eventId }],
@@ -84,7 +78,6 @@ export default async function handler(
 
     const output = result[0]!;
 
-    console.log(output);
     return res.status(200).json({
       output: {
         ...output,

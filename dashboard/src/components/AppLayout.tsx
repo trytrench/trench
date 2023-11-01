@@ -9,7 +9,6 @@ interface Props {
 }
 
 export default function AppLayout({ children }: Props) {
-  const { data: releases } = api.releases.list.useQuery();
   const [isReleasesModalOpen, setIsReleasesModalOpen] = useState(false);
 
   // TODO: Show the current dataset

@@ -19,7 +19,7 @@ export const listsRouter = createTRPCRouter({
           .optional(),
         limit: z.number().optional(),
         cursor: z.number().optional(),
-        datasetId: z.string(),
+        datasetId: z.bigint(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -93,7 +93,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
-        datasetId: z.string(),
+        datasetId: z.bigint(),
       })
     )
     .query(async ({ ctx, input }) => {

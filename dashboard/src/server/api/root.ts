@@ -8,7 +8,7 @@ import { labelsRouter } from "./routers/labels";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
 import { projectRouter } from "./routers/project";
-import { releasesRouter } from "./routers/release";
+import { eventHandlersRouter } from "./routers/eventHandlers";
 
 /**
  * This is the primary router for your server.
@@ -23,7 +23,7 @@ export const appRouter = createTRPCRouter({
   dashboard: dashboardRouter,
   links: linksRouter,
   datasets: datasetsRouter,
-  releases: releasesRouter,
+  eventHandlers: eventHandlersRouter,
   features: featuresRouter,
   project: projectRouter,
 });

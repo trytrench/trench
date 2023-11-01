@@ -1,8 +1,8 @@
-import { Version } from "@prisma/client";
+import { EventHandler } from "@prisma/client";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
-import { RuleEditor } from "~/components/RuleEditor";
+import { EventHandlerEditor } from "~/components/EventHandlerEditor";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
@@ -13,28 +13,29 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+  const datasetId = useMemo(() => project?.productionDatasetId, [project]);
 
   const { data: dataset } = api.datasets.get.useQuery(
     { id: datasetId! },
     { enabled: !!datasetId }
   );
 
-  const [currentVersion, setCurrentVersion] = useState<Version | null>(null);
+  const [currentEventHandler, setCurrentEventHandler] =
+    useState<EventHandler | null>(null);
 
   useEffect(() => {
-    if (dataset) setCurrentVersion(dataset.release);
+    const eventHandler = dataset?.currentEventHandlerAssignment?.eventHandler;
+    if (eventHandler) {
+      setCurrentEventHandler(eventHandler);
+    }
   }, [dataset]);
 
-  if (!currentVersion) return null;
+  if (!currentEventHandler) return null;
   return (
-    <RuleEditor
-      release={currentVersion}
-      onPreviewRelease={setCurrentVersion}
-      key={currentVersion.id}
+    <EventHandlerEditor
+      initialEventHandler={currentEventHandler}
+      onPreviewRelease={setCurrentEventHandler}
+      key={currentEventHandler.id}
     />
   );
 };

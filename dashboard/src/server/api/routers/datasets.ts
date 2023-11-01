@@ -11,7 +11,13 @@ export const datasetsRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       return ctx.prisma.dataset.findUnique({
         where: { id: input.id },
-        include: {},
+        include: {
+          currentEventHandlerAssignment: {
+            include: {
+              eventHandler: true,
+            },
+          },
+        },
       });
     }),
   create: publicProcedure

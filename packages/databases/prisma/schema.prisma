@@ -23,6 +23,90 @@ model EventLog {
   @@index([timestamp])
 }
 
+
+model Project {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String @unique
+
+  productionDatasetId BigInt?  @unique
+  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
+
+  eventHandlers EventHandler[]
+  datasets      Dataset[]
+}
+
+model EventHandler {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  code    Json
+  description String?
+  version String
+  isDraft Boolean @default(true)
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  assignments EventHandlerAssignment[]
+}
+
+model EventHandlerAssignment {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventHandlerId String
+  eventHandler   EventHandler @relation(fields: [eventHandlerId], references: [id])
+
+  datasetId BigInt
+  dataset   Dataset @relation("datasetAssignments", fields: [datasetId], references: [id])
+
+  currentDataset Dataset? @relation("currentDatasetAssignment")
+}
+
+
+// Below tables all belong to a dataset
+
+enum DatasetType {
+  PRODUCTION
+  BACKTEST
+}
+
+model Dataset {
+  id        BigInt   @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type     DatasetType
+  isActive Boolean     @default(true)
+
+  name        String
+  description String?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  // Below: Event processing configuration and status
+
+  lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
+  lastEventLogId String?
+
+  currentEventHandlerAssignmentId String?                 @unique
+  currentEventHandlerAssignment   EventHandlerAssignment? @relation("currentDatasetAssignment", fields: [currentEventHandlerAssignmentId], references: [id])
+
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
+
+  eventHandlerAssignments EventHandlerAssignment[] @relation("datasetAssignments")
+
+  productionProject Project? @relation("productionDatasetProject")
+}
+
 model EntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -93,88 +177,6 @@ model Feature {
   entityFeatures EntityFeature[]
 }
 
-model Project {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name String @unique
-
-  productionDatasetId BigInt?  @unique
-  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
-
-  eventHandlers EventHandler[]
-  datasets      Dataset[]
-}
-
-model EventHandler {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  code    Json
-  version String
-  isDraft Boolean @default(true)
-
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  assignments EventHandlerAssignment[]
-}
-
-model EventHandlerAssignment {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  eventHandlerId String
-  eventHandler   EventHandler @relation(fields: [eventHandlerId], references: [id])
-
-  datasetId BigInt
-  dataset   Dataset @relation("datasetAssignments", fields: [datasetId], references: [id])
-
-  currentDataset Dataset? @relation("currentDatasetAssignment")
-}
-
-enum DatasetType {
-  PRODUCTION
-  BACKTEST
-}
-
-// Each Dataset has at most 1 DatasetWriter
-model Dataset {
-  id        BigInt   @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  type     DatasetType
-  isActive Boolean     @default(true)
-
-  name        String
-  description String?
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id])
-
-  featureMetadata FeatureMetadata[]
-  featureOrder    String[]
-
-  // Below: Event processing configuration and status
-
-  lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
-  lastEventLogId String?
-
-  currentEventHandlerAssignmentId String?                 @unique
-  currentEventHandlerAssignment   EventHandlerAssignment? @relation("currentDatasetAssignment", fields: [currentEventHandlerAssignmentId], references: [id])
-
-  features    Feature[]
-  eventTypes  EventType[]
-  entityTypes EntityType[]
-
-  eventHandlerAssignments EventHandlerAssignment[] @relation("datasetAssignments")
-
-  productionProject Project? @relation("productionDatasetProject")
-}
 
 // Necessary for Next auth
 model Account {
