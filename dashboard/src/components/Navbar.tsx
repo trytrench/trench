@@ -40,10 +40,15 @@ const NavItem = ({ href, children, ...props }: Props) => {
   );
 };
 
+const RULES_TABS = [
+  { name: "Editor", path: "" },
+  { name: "Decisions", path: "decisions" },
+];
+
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Rules", path: "rules" },
+  { name: "Rules", path: "rules", children: RULES_TABS },
   { name: "Explore", path: "explore" },
   { name: "Settings", path: "settings" },
 ];
@@ -57,6 +62,11 @@ export const Navbar = () => {
   const { data: projects } = api.project.list.useQuery();
 
   const project = router.query.project as string;
+
+  const activeTab = router.pathname.split("/")[2];
+  const activeTabChildren = TABS.find((tab) => tab.path === activeTab)
+    ?.children;
+  const activeChildTab = router.pathname.split("/")[3] ?? "";
 
   return (
     <nav
@@ -111,9 +121,9 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="sticky">
+      <div>
         <Tabs
-          value={router.pathname.split("/").pop()}
+          value={activeTab}
           onValueChange={(tab) => {
             router.push(`/${project}/${tab}`).catch(handleError);
           }}
@@ -126,6 +136,30 @@ export const Navbar = () => {
                 </TabsTrigger>
               );
             })}
+
+            {activeTabChildren && (
+              <div className="flex animate-in fade-in-60">
+                <div className="border-r my-2 mx-4 rotate-12" />
+                <Tabs
+                  value={activeChildTab}
+                  onValueChange={(tab) => {
+                    router
+                      .push(`/${project}/${activeTab}/${tab}`)
+                      .catch(handleError);
+                  }}
+                >
+                  <TabsList>
+                    {activeTabChildren.map((childTab) => {
+                      return (
+                        <TabsTrigger key={childTab.path} value={childTab.path}>
+                          {childTab.name}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
           </TabsList>
         </Tabs>
       </div>

@@ -54,6 +54,7 @@ interface Props {
     types: string[];
     labels: string[];
     features: { feature: string; dataType: string }[];
+    enableDateRange: boolean;
   };
   onChange: (filter: GenericFilters) => void;
 }
@@ -207,19 +208,21 @@ function Filter(props: Props) {
             </DropdownMenuSub>
 
             {/* Date Range */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Date Range</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            {options.enableDateRange && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Date Range</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

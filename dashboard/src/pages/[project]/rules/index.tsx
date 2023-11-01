@@ -3,6 +3,9 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
 import { EventHandlerEditor } from "~/components/EventHandlerEditor";
+// import { Navbar } from "~/components/Navbar";
+// import { RuleEditor } from "~/components/RuleEditor";
+// import { Toaster } from "~/components/ui/toaster";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 

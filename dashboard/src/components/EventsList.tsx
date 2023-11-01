@@ -15,6 +15,8 @@ import { useRouter } from "next/router";
 import { EventFilter } from "./ListFilter";
 import { EventFilters } from "~/shared/validation";
 import SuperJSON from "superjson";
+import { LabelList } from "./ui/custom/label-list";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 
 interface EventsListProps {
   entityId?: string;
@@ -159,7 +161,6 @@ export default function EventsList({ entityId, datasetId }: EventsListProps) {
                     item.type === "event" ? (
                       <EventCard
                         key={item.event.id}
-                        datasetId={datasetId}
                         event={item.event}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
@@ -283,10 +284,6 @@ function EventCard(props: EventCardProps) {
   const { event, isFirst, isLast } = props;
   const router = useRouter();
 
-  const eventLabels = uniq(event.labels?.filter((label) => label !== ""));
-  const eventFeatures = Object.entries(event.features);
-  const hasFeatures = eventFeatures.length > 0;
-
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
@@ -306,43 +303,16 @@ function EventCard(props: EventCardProps) {
         <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
         </div>
-        <div className="flex flex-wrap gap-1 mt-3">
-          {eventLabels.length > 0 ? (
-            eventLabels.map((label, idx) => {
-              return (
-                <Badge key={idx} variant="default">
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <></>
-          )}
-        </div>
+
+        <LabelList
+          labels={event.labels}
+          showPlaceholder={false}
+          className="mt-3"
+        />
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {hasFeatures ? (
-          <>
-            <div className="grid grid-cols-5 gap-4">
-              {eventFeatures.map(([key, value], idx) => (
-                <div key={key}>
-                  <div className="font-semibold">{key}</div>
-                  <div className="truncate">
-                    {value === 0
-                      ? "0"
-                      : value === true
-                      ? "True"
-                      : value === false
-                      ? "False"
-                      : (value as string) || "-"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="italic text-muted-foreground">No features</div>
-        )}
+        <FeatureGrid features={event.features} className="gap-4" />
+
         <div className="h-2"></div>
 
         <div className="flex gap-1.5 flex-wrap mt-2">

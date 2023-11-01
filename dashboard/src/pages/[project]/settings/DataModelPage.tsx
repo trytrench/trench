@@ -41,7 +41,7 @@ const RuleCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
   const Icon = dataTypeToIcon[value] ?? Asterisk;
 
   return (
-    <div className="flex items-center w-full justify-between gap-2 px-2 pt-1.5">
+    <div className="flex items-center w-full justify-between gap-2 px-2 pt-1.5 select-text">
       <div className="mr-auto">{feature}</div>
 
       {/* <Icon className="w-4 h-4" /> */}

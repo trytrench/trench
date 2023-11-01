@@ -5,6 +5,8 @@ import { useState } from "react";
 import { type RouterOutputs } from "~/utils/api";
 import { Badge } from "./ui/badge";
 import { Panel } from "./ui/custom/panel";
+import { LabelList } from "./ui/custom/label-list";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -62,41 +64,15 @@ export const EntityChip = ({ entity, href }: Props) => {
                 {entity.name}
               </div>
               <div className="text-xs">Last seen {"--"}</div>
-              <div className="mt-1">
-                {entityLabels.length > 0 ? (
-                  entityLabels.map((label) => {
-                    return (
-                      <Badge key={label} className="cursor-pointer">
-                        {label}
-                      </Badge>
-                    );
-                  })
-                ) : (
-                  <></>
-                )}
-              </div>
+
+              <LabelList labels={entity.labels} className="mt-2" />
             </div>
-            <div className="h-1"></div>
-            <div className="grid grid-cols-3 gap-x-4 gap-y-4 mt-2">
-              {hasFeatures ? (
-                entityFeatures.map(([key, value], idx) => (
-                  <div key={key}>
-                    <div className="font-semibold text-xs">{key}</div>
-                    <div className="truncate text-xs">
-                      {value === 0
-                        ? "0"
-                        : value === true
-                        ? "True"
-                        : value === false
-                        ? "False"
-                        : (value as string) || "-"}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-muted-foreground italic">No features</div>
-              )}
-            </div>
+            <div className="h-3"></div>
+            <FeatureGrid
+              features={entity.features}
+              className="text-xs gap-x-4"
+              cols={3}
+            />
           </Panel>
           <HoverCard.Arrow asChild>
             {/* Triangle svg */}
