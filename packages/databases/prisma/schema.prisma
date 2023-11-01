@@ -24,20 +24,6 @@ model EventLog {
 }
 
 
-model Project {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name String @unique
-
-  productionDatasetId BigInt?  @unique
-  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
-
-  eventHandlers EventHandler[]
-  datasets      Dataset[]
-}
-
 model EventHandler {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -117,8 +103,12 @@ model EntityType {
   featureOrder String[]
   features     EntityFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([type, projectId])
 }
 
 model EventType {
@@ -131,8 +121,12 @@ model EventType {
   featureOrder String[]
   features     EventFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([type, projectId])
 }
 
 model EntityFeature {
@@ -170,11 +164,33 @@ model Feature {
   // color   String?
   // hidden  Boolean @default(false)
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
-
   eventFeatures  EventFeature[]
   entityFeatures EntityFeature[]
+
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
+  datasetId BigInt?
+
+  @@unique([feature, projectId])
+}
+
+model Project {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String @unique
+
+  productionDatasetId BigInt?  @unique
+  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
+
+  eventHandlers EventHandler[]
+  datasets      Dataset[]
+
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
 }
 
 
