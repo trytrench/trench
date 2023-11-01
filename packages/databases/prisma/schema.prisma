@@ -33,8 +33,10 @@ model EntityType {
   featureOrder String[]
   features     EntityFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@unique([type, projectId])
 }
 
 model EventType {
@@ -47,8 +49,8 @@ model EventType {
   featureOrder String[]
   features     EventFeature[]
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
 }
 
 model EntityFeature {
@@ -86,11 +88,13 @@ model Feature {
   // color   String?
   // hidden  Boolean @default(false)
 
-  dataset   Dataset @relation(fields: [datasetId], references: [id])
-  datasetId BigInt
-
   eventFeatures  EventFeature[]
   entityFeatures EntityFeature[]
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@unique([feature, projectId])
 }
 
 model Project {
@@ -104,6 +108,10 @@ model Project {
   prodDatasetId BigInt?  @unique
 
   releases Release[]
+
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
 }
 
 model Release {
@@ -139,9 +147,6 @@ model Dataset {
   releaseId String
 
   prodProject Project?
-  features    Feature[]
-  eventTypes  EventType[]
-  entityTypes EntityType[]
 }
 
 // Necessary for Next auth
