@@ -65,7 +65,7 @@ export function FeatureList({
             key={item.id}
             id={item.id}
             feature={item.feature}
-            name={item.feature}
+            name={item.name}
             dataType={item.dataType ?? "text"}
             hidden={item.hidden ?? false}
             onDataTypeChange={
@@ -84,8 +84,8 @@ export function FeatureList({
       <DragOverlay>
         {activeId ? (
           <FeatureListItem
-            feature={activeItem.id}
-            name={activeItem.feature}
+            feature={activeItem.feature}
+            name={activeItem.name}
             dataType={activeItem.dataType ?? "text"}
             draggable={!onOrderChange}
           />

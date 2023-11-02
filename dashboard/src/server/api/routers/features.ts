@@ -106,14 +106,19 @@ export const featuresRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.eventType.update({
+      return ctx.prisma.eventType.upsert({
         where: {
           type_projectId: {
             type: input.eventType,
             projectId: input.projectId,
           },
         },
-        data: {
+        create: {
+          featureOrder: input.features,
+          type: input.eventType,
+          projectId: input.projectId,
+        },
+        update: {
           featureOrder: input.features,
         },
       });

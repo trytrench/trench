@@ -29,8 +29,12 @@ function DataModelPage({ projectId }: Props) {
   const { mutateAsync: saveFeature } = api.features.saveFeature.useMutation();
   const { mutateAsync: saveEntityFeature } =
     api.features.saveEntityFeature.useMutation();
+  const { mutateAsync: saveEventFeature } =
+    api.features.saveEventFeature.useMutation();
+  const { mutateAsync: saveEventType } = api.labels.saveEventType.useMutation();
 
-  const { data: eventTypes } = api.labels.getEventTypes.useQuery({ projectId });
+  const { data: eventTypes, refetch: refetchEventTypes } =
+    api.labels.getEventTypes.useQuery({ projectId });
 
   const { data: entityTypes, refetch: refetchEntityTypes } =
     api.labels.getEntityTypes.useQuery({
@@ -76,24 +80,34 @@ function DataModelPage({ projectId }: Props) {
     }
 
     if (selectedItem.startsWith(EVENT_PREFIX)) {
-      const eventType = entityTypes.find(
+      const eventType = eventTypes.find(
         (eventType) => eventType.type === selectedItem.split("-")[1]
       );
-      return features.map((feature) => {
-        const entityFeature = entityFeatures.find(
-          (entityFeature) => entityFeature.featureId === feature.id
-        );
+      return sortBy(
+        features.map((feature) => {
+          const eventFeature = eventFeatures.find(
+            (eventFeature) => eventFeature.featureId === feature.id
+          );
 
-        return {
-          ...feature,
-          hidden: !eventType?.featureOrder.includes(feature.feature),
-          name: entityFeature?.name ?? feature.feature,
-        };
-      });
+          return {
+            ...feature,
+            hidden: !eventType?.featureOrder.includes(feature.id),
+            name: eventFeature?.name ?? feature.feature,
+          };
+        }),
+        (feature) => eventType?.featureOrder.indexOf(feature.id)
+      );
     }
 
     return [];
-  }, [selectedItem, entityFeatures, entityTypes, features]);
+  }, [
+    selectedItem,
+    entityFeatures,
+    eventFeatures,
+    entityTypes,
+    eventTypes,
+    features,
+  ]);
 
   const shownFeatures = useMemo(() => {
     return allFeatures.filter((feature) => !feature.hidden && !feature.isRule);
@@ -244,41 +258,84 @@ function DataModelPage({ projectId }: Props) {
                             onRename={
                               selectedItem === "all"
                                 ? undefined
-                                : (name, feature) =>
-                                    saveEntityFeature({
-                                      featureId: feature.id,
-                                      entityTypeId: entityTypes?.find(
-                                        (type) =>
-                                          type.type ===
-                                          selectedItem?.split("-")[1]
-                                      ).id,
-                                      name,
-                                    })
+                                : (name, feature) => {
+                                    if (
+                                      selectedItem?.startsWith(EVENT_PREFIX)
+                                    ) {
+                                      saveEventType({
+                                        projectId,
+                                        type: selectedItem?.split("-")[1],
+                                      })
+                                        .then((eventType) =>
+                                          saveEventFeature({
+                                            featureId: feature.id,
+                                            eventTypeId: eventType.id,
+                                            name,
+                                          })
+                                        )
+                                        .then(refetchEventTypes)
+                                        .catch((error) => console.log(error));
+                                    } else {
+                                      saveEntityFeature({
+                                        featureId: feature.id,
+                                        entityTypeId: entityTypes?.find(
+                                          (type) =>
+                                            type.type ===
+                                            selectedItem?.split("-")[1]
+                                        ).id,
+                                        name,
+                                      }).catch((error) => console.log(error));
+                                    }
+                                  }
                             }
                             onOrderChange={
                               selectedItem === "all"
                                 ? undefined
                                 : (features) => {
-                                    saveEntityFeatureOrder({
-                                      features,
-                                      projectId,
-                                      entityType: selectedItem?.split("-")[1],
-                                    }).catch((error) => console.log(error));
+                                    if (
+                                      selectedItem?.startsWith(EVENT_PREFIX)
+                                    ) {
+                                      saveEventFeatureOrder({
+                                        features,
+                                        projectId,
+                                        eventType: selectedItem?.split("-")[1],
+                                      }).catch((error) => console.log(error));
+                                    } else {
+                                      saveEntityFeatureOrder({
+                                        features,
+                                        projectId,
+                                        entityType: selectedItem?.split("-")[1],
+                                      }).catch((error) => console.log(error));
+                                    }
                                   }
                             }
                             onToggleHide={
                               selectedItem === "all"
                                 ? undefined
                                 : (hidden, item) => {
-                                    saveEntityFeatureOrder({
-                                      features: shownFeatures
-                                        .map((f) => f.id)
-                                        .filter((f) => f !== item.id),
-                                      entityType: selectedItem?.split("-")[1],
-                                      projectId,
-                                    })
-                                      .then(refetchEntityTypes)
-                                      .catch((error) => console.log(error));
+                                    if (
+                                      selectedItem?.startsWith(EVENT_PREFIX)
+                                    ) {
+                                      saveEventFeatureOrder({
+                                        features: shownFeatures
+                                          .map((f) => f.id)
+                                          .filter((f) => f !== item.id),
+                                        projectId,
+                                        eventType: selectedItem?.split("-")[1],
+                                      })
+                                        .then(refetchEventTypes)
+                                        .catch((error) => console.log(error));
+                                    } else {
+                                      saveEntityFeatureOrder({
+                                        features: shownFeatures
+                                          .map((f) => f.id)
+                                          .filter((f) => f !== item.id),
+                                        entityType: selectedItem?.split("-")[1],
+                                        projectId,
+                                      })
+                                        .then(refetchEntityTypes)
+                                        .catch((error) => console.log(error));
+                                    }
                                   }
                             }
                           />
@@ -290,41 +347,61 @@ function DataModelPage({ projectId }: Props) {
                           <CommandGroup heading="Hidden">
                             <FeatureList
                               features={hiddenFeatures}
-                              onFeatureChange={(value, item) => {
-                                mutateAsync({
-                                  feature: item.id,
-                                  name: item.metadata?.name ?? undefined,
-                                  dataType: item.metadata?.dataType ?? "text",
-                                  ...value,
-                                  releaseId: dataset?.releaseId,
-                                })
-                                  .then(() => refetch())
-                                  .catch((error) => console.log(error));
-                              }}
                               onRename={
                                 selectedItem === "all"
                                   ? undefined
-                                  : (name, feature) =>
-                                      saveEntityFeature({
-                                        featureId: feature.id,
-                                        entityTypeId: entityTypes?.find(
-                                          (type) =>
-                                            type.type ===
-                                            selectedItem?.split("-")[1]
-                                        ).id,
-                                        name,
-                                      })
+                                  : (name, feature) => {
+                                      if (
+                                        selectedItem?.startsWith(EVENT_PREFIX)
+                                      ) {
+                                        saveEventType({
+                                          projectId,
+                                          type: selectedItem?.split("-")[1],
+                                        })
+                                          .then((eventType) =>
+                                            saveEventFeature({
+                                              featureId: feature.id,
+                                              eventTypeId: eventType.id,
+                                              name,
+                                            })
+                                          )
+                                          .then(refetchEventTypes)
+                                          .catch((error) => console.log(error));
+                                      } else {
+                                        saveEntityFeature({
+                                          featureId: feature.id,
+                                          entityTypeId: entityTypes?.find(
+                                            (type) =>
+                                              type.type ===
+                                              selectedItem?.split("-")[1]
+                                          ).id,
+                                          name,
+                                        }).catch((error) => console.log(error));
+                                      }
+                                    }
                               }
                               onToggleHide={(hidden, item) => {
-                                saveEntityFeatureOrder({
-                                  features: shownFeatures
-                                    .map((f) => f.id)
-                                    .concat(item.id),
-                                  entityType: selectedItem?.split("-")[1],
-                                  projectId,
-                                })
-                                  .then(refetchEntityTypes)
-                                  .catch((error) => console.log(error));
+                                if (selectedItem?.startsWith(EVENT_PREFIX)) {
+                                  saveEventFeatureOrder({
+                                    features: shownFeatures
+                                      .map((f) => f.id)
+                                      .concat(item.id),
+                                    projectId,
+                                    eventType: selectedItem?.split("-")[1],
+                                  })
+                                    .then(refetchEventTypes)
+                                    .catch((error) => console.log(error));
+                                } else {
+                                  saveEntityFeatureOrder({
+                                    features: shownFeatures
+                                      .map((f) => f.id)
+                                      .concat(item.id),
+                                    entityType: selectedItem?.split("-")[1],
+                                    projectId,
+                                  })
+                                    .then(refetchEntityTypes)
+                                    .catch((error) => console.log(error));
+                                }
                               }}
                             />
                           </CommandGroup>

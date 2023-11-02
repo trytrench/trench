@@ -1,3 +1,4 @@
+import { db } from "databases";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -5,11 +6,33 @@ export const labelsRouter = createTRPCRouter({
   getEventTypes: publicProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.eventType.findMany({
-        where: {
-          projectId: input.projectId,
-        },
+      const project = await ctx.prisma.project.findUniqueOrThrow({
+        where: { id: input.projectId },
       });
+
+      const eventTypes = await ctx.prisma.eventType.findMany({
+        where: { projectId: input.projectId },
+      });
+
+      const result = await db.query({
+        query: `
+          SELECT DISTINCT event_type
+          FROM event_entity
+          WHERE dataset_id = '${project.prodDatasetId}'
+          ORDER BY event_type ASC
+        `,
+        format: "JSONEachRow",
+      });
+      const types = await result.json<{ event_type: string }[]>();
+      return types.map(
+        (type) =>
+          eventTypes.find(
+            (eventType) => eventType.type === type.event_type
+          ) ?? {
+            type: type.event_type,
+            featureOrder: [],
+          }
+      );
     }),
   getEntityTypes: publicProcedure
     .input(z.object({ projectId: z.string() }))
@@ -49,6 +72,28 @@ export const labelsRouter = createTRPCRouter({
           entityType: true,
           feature: true,
         },
+      });
+    }),
+  saveEventType: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        type: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.eventType.upsert({
+        where: {
+          type_projectId: {
+            type: input.type,
+            projectId: input.projectId,
+          },
+        },
+        create: {
+          type: input.type,
+          projectId: input.projectId,
+        },
+        update: {},
       });
     }),
 });
