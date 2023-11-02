@@ -35,7 +35,7 @@ const Page: NextPageWithLayout = () => {
 
   if (!currentEventHandler) return null;
   return (
-    <div className="flex flex-1 w-full">
+    <div className="h-full w-full">
       <EventHandlerEditor
         initialValue={currentEventHandler}
         key={currentEventHandler.id}

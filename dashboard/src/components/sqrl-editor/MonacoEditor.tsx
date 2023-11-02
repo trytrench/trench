@@ -326,18 +326,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
     editorRef.current = editor;
 
-    // const resizeObserver = new ResizeObserver((entries) => {
-    //   const containerElement = entries.find(
-    //     (entry) => entry.target === containerRef.current
-    //   );
-    //   // container was resized
-    //   if (containerElement) {
-    //     editor.layout();
-    //   }
-    // });
-
-    // resizeObserver.observe(containerRef.current);
-
     const onChangeModelContentSubscription = editor.onDidChangeModelContent(
       (event) => {
         const value = editor.getValue() || "";
@@ -350,9 +338,26 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       editor.dispose();
       model.dispose();
       onChangeModelContentSubscription.dispose();
-      // resizeObserver.disconnect();
     };
-  }, [monacoEditorObj.state, sqrlFunctions, containerRef.current]);
+  }, [monacoEditorObj.state, containerRef.current]);
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      const containerElement = entries.find(
+        (entry) => entry.target === containerRef.current
+      );
+      // container was resized
+      if (containerElement) {
+        editorRef.current?.layout();
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   return <div style={style} className={className} ref={containerRef} />;
 };

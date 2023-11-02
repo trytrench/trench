@@ -18,11 +18,9 @@ const Page: NextPageWithLayout = () => {
   if (!datasetId) return null;
 
   return (
-    <div className="flex-1 overflow-hidden flex items-stretch">
+    <div className="h-full flex items-stretch">
       <div className="flex-1 w-full flex flex-col items-stretch">
-        <div className="relative flex-1">
-          <EventsList datasetId={datasetId} />
-        </div>
+        <EventsList datasetId={datasetId} />
       </div>
     </div>
   );

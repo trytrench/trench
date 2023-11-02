@@ -244,7 +244,7 @@ export const EventHandlerEditor = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex justify-end items-center h-11">
             {isEditing ? (
               <>
@@ -333,7 +333,7 @@ export const EventHandlerEditor = ({
           </div>
 
           <MonacoEditor
-            className="h-full w-full min-w-0 min-h-0"
+            className="flex-1 w-full"
             key={currentFileName + isEditing}
             value={code[currentFileName] ?? ""}
             markers={

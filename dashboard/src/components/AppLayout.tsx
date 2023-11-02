@@ -8,9 +8,9 @@ interface Props {
 
 export default function AppLayout({ children, tabChildren }: Props) {
   return (
-    <div className="min-h-screen h-0 flex flex-col">
+    <div className="h-0 min-h-screen flex flex-col">
       <Navbar />
-      {children}
+      <div className="flex-1 overflow-auto">{children}</div>
       <Toaster />
     </div>
   );
