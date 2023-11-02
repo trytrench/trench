@@ -23,7 +23,7 @@ export function LinkSVG(props: LinkSVGProps) {
     leftSelection === linkItem.from || rightSelection === linkItem.to;
 
   let opacity = 1;
-  let colorName = "text-gray-500";
+  let colorName = "text-muted-foreground";
 
   if (explicitlySelected) {
   } else if (linkItem.itemType === "hiddenLink") {
@@ -77,7 +77,9 @@ export function FirstLinkSVG({
       fill="transparent"
       stroke="currentColor"
       strokeWidth={1.5}
-      className={`${active ? "text-gray-500" : "text-gray-200"} transition`}
+      className={`${
+        active ? "text-muted-foreground" : "text-muted"
+      } transition`}
     />
   );
 }

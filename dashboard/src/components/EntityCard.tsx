@@ -2,6 +2,8 @@ import { Badge } from "~/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
 import { type RouterOutputs } from "~/utils/api";
+import { LabelList } from "./ui/custom/label-list";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -10,10 +12,6 @@ interface Props {
 }
 
 export const EntityCard = ({ entity, relation, href }: Props) => {
-  const entityFeatures = entity.features ?? {};
-
-  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
-
   return (
     <div className="border rounded-lg shadow-sm p-8 bg-card">
       <div className="">
@@ -31,36 +29,12 @@ export const EntityCard = ({ entity, relation, href }: Props) => {
             {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
           </div>
         )}
-        <div className="flex flex-wrap gap-1 mt-3">
-          {entityLabels.length > 0 ? (
-            entityLabels.map((label) => {
-              return (
-                <Badge key={label} variant="default">
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <div className="italic text-sm">No labels</div>
-          )}
-        </div>
+
+        <LabelList labels={entity.labels} className="mt-3" />
+
         <div className="h-4"></div>
-        <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
-          {Object.entries(entityFeatures).map(([key, value], idx) => (
-            <div key={key}>
-              <div className="font-semibold">{key}</div>
-              <div className="truncate">
-                {value === 0
-                  ? "0"
-                  : value === true
-                  ? "True"
-                  : value === false
-                  ? "False"
-                  : (value as string) || "-"}
-              </div>
-            </div>
-          ))}
-        </div>
+
+        <FeatureGrid features={entity.features} />
       </div>
     </div>
   );

@@ -4,7 +4,8 @@ import { type Event } from "sqrl-helpers/src";
 import { ulid } from "ulid";
 import { getUnixTime } from "date-fns";
 
-const events = data as Event[];
+const allEvents = data as Event[];
+const events = allEvents.slice(0, 1000);
 
 async function main() {
   await prisma.eventLog.createMany({

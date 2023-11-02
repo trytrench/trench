@@ -59,7 +59,7 @@ const Page: NextPageWithLayout = () => {
           <ScrollArea className="h-full">
             <div className="flex flex-col gap-4 px-8 py-4">
               {entitiesLoading ? (
-                <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
+                <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
               ) : (
                 <>
                   {allEntities.map((entity) => {
@@ -91,7 +91,7 @@ const Page: NextPageWithLayout = () => {
             </div>
           </ScrollArea>
         </div>
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </div>
   );

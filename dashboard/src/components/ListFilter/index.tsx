@@ -53,6 +53,7 @@ const EntityFilter = ({ datasetId, onChange }: EntityFilterProps) => {
             feature,
             dataType: featureToMetadata[feature]?.dataType ?? "text",
           })) ?? [],
+        enableDateRange: false,
       }}
       onChange={(value) => {
         onChange(toEntityFilters(value));
@@ -110,6 +111,7 @@ const EventFilter = ({ datasetId, onChange }: EventFilterProps) => {
             feature,
             dataType: featureToMetadata[feature]?.dataType ?? "text",
           })) ?? [],
+        enableDateRange: true,
       }}
       onChange={(value) => {
         onChange(toEventFilters(value));

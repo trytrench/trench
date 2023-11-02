@@ -262,7 +262,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm":
           true,
         "opacity-30": !isActive,
-        "bg-blue-100": isSelected,
+        "bg-accent": isSelected,
       })}
       ref={divRef}
       onClick={onClick}
@@ -271,7 +271,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         <div className="flex gap-4">
           <BoxesIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
-            <div className="text-gray-400 font-semibold italic">
+            <div className="text-muted-foreground font-semibold italic">
               {entityCountStr}
             </div>
           </div>
@@ -280,30 +280,32 @@ function LeftSideCard(props: LeftSideCardProps) {
         <div className="flex gap-4">
           <BoxIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
-            <div className="font-semibold text-black">{item.type}</div>
+            <div className="font-semibold text-emphasis-foreground">
+              {item.type}
+            </div>
             <div className="">{item.name}</div>
           </div>
         </div>
       )}
 
-      <div className="flex gap-3 text-gray-400">
+      <div className="flex gap-3 ">
         {isGroup ? (
           <button onClick={onFilterClick}>
             <ListFilterIcon
-              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
               size={18}
             />
           </button>
         ) : (
           <a
-            className="my-auto text-gray-400"
+            className="my-auto"
             href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
             <ExternalLinkIcon
-              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
               size={18}
             />
           </a>
@@ -314,7 +316,7 @@ function LeftSideCard(props: LeftSideCardProps) {
       <div className="absolute left-[calc(100%+8px)] top-1 pointer-events-none select-none">
         <div
           color="gray"
-          className={`text-xs hover:brightness-[102%]  text-gray-700 ${
+          className={`text-xs  text-muted-foreground ${
             isSelected ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -325,7 +327,7 @@ function LeftSideCard(props: LeftSideCardProps) {
       {!isGroup && item.isHidden && (
         <div className="absolute left-[calc(100%+6px)] top-0 bottom-0 flex items-center">
           <div
-            className="my-auto rounded-[200px] p-1 bg-white flex items-center group/eyeicon relative"
+            className="my-auto rounded-[200px] p-1 bg-background flex items-center group/eyeicon relative"
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -333,7 +335,7 @@ function LeftSideCard(props: LeftSideCardProps) {
           >
             <EyeOffIcon
               size={18}
-              className={`text-gray-500 p-0 m-0 ${
+              className={`text-muted-foreground p-0 m-0 ${
                 isSelected ? "" : "opacity-20"
               }`}
             />
@@ -372,23 +374,25 @@ function RightSideCard(props: RightSideCardProps) {
           "p-2 px-3 cursor-pointer transition rounded-lg border shadow-sm":
             true,
           "opacity-30": !isActive,
-          "bg-blue-100": isSelected,
+          "bg-accent": isSelected,
         })}
         onClick={onClick}
       >
-        <div className="flex justify-between text-gray-400">
+        <div className="flex justify-between">
           <div className="min-w-0 flex gap-2 text-sm">
-            <div className="font-semibold text-black">{item.name}</div>
+            <div className="font-semibold text-emphasis-foreground">
+              {item.name}
+            </div>
           </div>
           <a
-            className="my-auto text-gray-400"
+            className="my-auto"
             href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
             <ExternalLinkIcon
-              className="my-auto text-gray-400 hover:text-gray-500 transition"
+              className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
               size={18}
             />
           </a>

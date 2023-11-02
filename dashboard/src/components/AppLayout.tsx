@@ -1,17 +1,12 @@
 import { Navbar } from "./Navbar";
-import { ReleasesModal } from "./ReleasesModal";
-import { useState } from "react";
-import { api } from "~/utils/api";
 import { Toaster } from "./ui/toaster";
 
 interface Props {
   children: React.ReactNode;
+  tabChildren?: React.ReactNode;
 }
 
-export default function AppLayout({ children }: Props) {
-  const [isReleasesModalOpen, setIsReleasesModalOpen] = useState(false);
-
-  // TODO: Show the current dataset
+export default function AppLayout({ children, tabChildren }: Props) {
   return (
     <div className="min-h-screen h-0 flex flex-col">
       <Navbar />
