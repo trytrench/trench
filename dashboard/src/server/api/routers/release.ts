@@ -1,4 +1,5 @@
 import { compileSqrl, createSqrlInstance } from "sqrl-helpers";
+import { walkExpr } from "sqrl/lib/expr/Expr";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -70,26 +71,50 @@ export const releasesRouter = createTRPCRouter({
           version,
           code,
           projectId: input.projectId,
-          featureOrder: features,
         },
       });
 
-      await ctx.prisma.featureMetadata.createMany({
+      await ctx.prisma.feature.createMany({
         data: Object.keys(compiled.getRuleSpecs()).map((feature) => ({
           feature,
-          releaseId: release.id,
           isRule: true,
           dataType: "boolean",
+          projectId: input.projectId,
         })),
+        skipDuplicates: true,
       });
 
-      await ctx.prisma.featureMetadata.createMany({
+      await ctx.prisma.feature.createMany({
         data: features.map((feature) => ({
           feature,
-          releaseId: release.id,
-          dataType: "text",
           isRule: false,
+          dataType: "text",
+          projectId: input.projectId,
         })),
+        skipDuplicates: true,
+      });
+
+      const entityTypes: string[] = [];
+
+      for (const expr of compiled.getSlotExprs()) {
+        walkExpr(expr, (node) => {
+          if (node.type === "call" && node.func === "_entity") {
+            if (node.exprs?.find((expr) => expr.exprs)) {
+              const entityName = node.exprs?.find(
+                (expr) => expr.type === "constant"
+              )?.value;
+              entityTypes.push(entityName);
+            }
+          }
+        });
+      }
+
+      await ctx.prisma.entityType.createMany({
+        data: entityTypes.map((type) => ({
+          type,
+          projectId: input.projectId,
+        })),
+        skipDuplicates: true,
       });
 
       const project = await ctx.prisma.project.findUniqueOrThrow({

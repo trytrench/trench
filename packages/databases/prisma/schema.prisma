@@ -51,6 +51,8 @@ model EventType {
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
+
+  @@unique([type, projectId])
 }
 
 model EntityFeature {
@@ -63,7 +65,9 @@ model EntityFeature {
   featureId String
 
   name String?
+
   // color  String?
+  @@unique([entityTypeId, featureId])
 }
 
 model EventFeature {
@@ -76,7 +80,9 @@ model EventFeature {
   featureId String
 
   name String?
+
   // color  String?
+  @@unique([eventTypeId, featureId])
 }
 
 model Feature {

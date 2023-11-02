@@ -1,19 +1,8 @@
 import clsx from "clsx";
-import { keyBy } from "lodash";
-import {
-  Asterisk,
-  EyeIcon,
-  Hash,
-  Loader2Icon,
-  LucideIcon,
-  PencilIcon,
-  ToggleLeft,
-  Type,
-} from "lucide-react";
-import { useRouter } from "next/router";
+import { sortBy } from "lodash";
+import { Loader2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FeatureList } from "~/components/FeatureList";
-import { FeatureListItem } from "~/components/FeatureListItem";
 import {
   Command,
   CommandEmpty,
@@ -29,122 +18,90 @@ import { Separator } from "~/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { api } from "~/utils/api";
 
-const RuleCard = ({ feature, dataType, onChange }: FeatureCardProps) => {
-  const [value, setValue] = useState(dataType);
-
-  const dataTypeToIcon = {
-    text: Type,
-    number: Hash,
-    boolean: ToggleLeft,
-  } as Record<string, LucideIcon>;
-
-  const Icon = dataTypeToIcon[value] ?? Asterisk;
-
-  return (
-    <div className="flex items-center w-full justify-between gap-2 px-2 pt-1.5">
-      <div className="mr-auto">{feature}</div>
-
-      {/* <Icon className="w-4 h-4" /> */}
-      {/* <Select
-        value={value}
-        onValueChange={(value) => {
-          setValue(value);
-          mutateAsync({ id: feature, name: feature, dataType: value });
-          onChange(value);
-        }}
-      >
-        <SelectTrigger className="w-36 h-8">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="text">Text</SelectItem>
-          <SelectItem value="number">Number</SelectItem>
-          <SelectItem value="boolean">Boolean</SelectItem>
-        </SelectContent>
-      </Select> */}
-      <PencilIcon className="w-4 h-4 cursor-pointer" />
-      <EyeIcon className="w-4 h-4 cursor-pointer" />
-    </div>
-  );
-};
-
 const EVENT_PREFIX = "EVENT-";
 const ENTITY_PREFIX = "ENTITY-";
 
-function DataModelPage() {
-  const router = useRouter();
-  const { mutateAsync } = api.features.saveFeatureMetadata.useMutation();
+interface Props {
+  projectId: string;
+}
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+function DataModelPage({ projectId }: Props) {
+  const { mutateAsync: saveFeature } = api.features.saveFeature.useMutation();
+  const { mutateAsync: saveEntityFeature } =
+    api.features.saveEntityFeature.useMutation();
 
-  const { data: dataset } = api.datasets.get.useQuery(
-    { id: datasetId! },
-    { enabled: !!datasetId }
-  );
+  const { data: eventTypes } = api.labels.getEventTypes.useQuery({ projectId });
 
-  const { data: allEntities } = api.labels.getEntityTypes.useQuery(
-    { datasetId: datasetId! },
-    { enabled: !!datasetId }
-  );
-  const { data: allEvents } = api.labels.getEventTypes.useQuery(
-    { datasetId: datasetId! },
-    { enabled: !!datasetId }
-  );
+  const { data: entityTypes, refetch: refetchEntityTypes } =
+    api.labels.getEntityTypes.useQuery({
+      projectId,
+    });
 
-  const { data: features } = api.labels.getFeatures.useQuery(
-    { datasetId: datasetId! },
-    { enabled: !!datasetId }
-  );
+  const { data: features, refetch: refetchFeatures } =
+    api.labels.getFeatures.useQuery({ projectId });
 
-  const { data: eventFeatures } = api.labels.getFeatures.useQuery(
-    { datasetId: datasetId! },
-    { enabled: !!datasetId }
-  );
+  const { data: eventFeatures } = api.labels.getEventFeatures.useQuery({
+    projectId,
+  });
 
-  // const { data: allFeatures, isLoading: allFeaturesLoading } =
-  //   api.labels.allFeatures.useQuery({ datasetId }, { enabled: !!datasetId });
+  const { data: entityFeatures } = api.labels.getEntityFeatures.useQuery({
+    projectId,
+  });
 
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
-  const {
-    data: featureMetadata,
-    isLoading: featureMetadataLoading,
-    refetch,
-  } = api.features.getFeatureMetadata.useQuery();
+  const allFeatures = useMemo(() => {
+    if (!selectedItem) return [];
 
-  const featureToMetadata = useMemo(
-    () => keyBy(featureMetadata, "feature"),
-    [featureMetadata]
-  );
+    if (selectedItem === "all") return features;
 
-  const sortedFeatures = useMemo(
-    () =>
-      dataset?.release.featureOrder
-        .map((feature) => ({
-          id: feature,
-          metadata: featureToMetadata[feature],
-        }))
-        .filter(({ metadata }) => !metadata?.isRule && !metadata?.hidden) ?? [],
-    [featureToMetadata, dataset]
-  );
+    if (selectedItem.startsWith(ENTITY_PREFIX)) {
+      const entityType = entityTypes.find(
+        (entityType) => entityType.type === selectedItem.split("-")[1]
+      );
+      return sortBy(
+        features.map((feature) => {
+          const entityFeature = entityFeatures.find(
+            (entityFeature) => entityFeature.featureId === feature.id
+          );
 
-  const sortedHiddenFeatures = useMemo(
-    () =>
-      dataset?.release.featureOrder
-        .map((feature) => ({
-          id: feature,
-          metadata: featureToMetadata[feature],
-        }))
-        .filter(({ metadata }) => !metadata?.isRule && metadata?.hidden) ?? [],
-    [featureToMetadata, dataset]
-  );
+          return {
+            ...feature,
+            hidden: !entityType?.featureOrder.includes(feature.id),
+            name: entityFeature?.name ?? feature.feature,
+          };
+        }),
+        (feature) => entityType?.featureOrder.indexOf(feature.id)
+      );
+    }
+
+    if (selectedItem.startsWith(EVENT_PREFIX)) {
+      const eventType = entityTypes.find(
+        (eventType) => eventType.type === selectedItem.split("-")[1]
+      );
+      return features.map((feature) => {
+        const entityFeature = entityFeatures.find(
+          (entityFeature) => entityFeature.featureId === feature.id
+        );
+
+        return {
+          ...feature,
+          hidden: !eventType?.featureOrder.includes(feature.feature),
+          name: entityFeature?.name ?? feature.feature,
+        };
+      });
+    }
+
+    return [];
+  }, [selectedItem, entityFeatures, entityTypes, features]);
+
+  const shownFeatures = useMemo(() => {
+    return allFeatures.filter((feature) => !feature.hidden && !feature.isRule);
+  }, [allFeatures]);
+
+  const hiddenFeatures = useMemo(() => {
+    return allFeatures.filter((feature) => feature.hidden && !feature.isRule);
+  }, [allFeatures]);
 
   // when the page loads, select the first entity type
   // useEffect(() => {
@@ -153,8 +110,11 @@ function DataModelPage() {
   //   }
   // }, [allFeaturesLoading]);
 
-  const { mutateAsync: saveFeatureOrder } =
-    api.features.saveFeatureOrder.useMutation();
+  const { mutateAsync: saveEntityFeatureOrder } =
+    api.features.saveEntityFeatureOrder.useMutation();
+
+  const { mutateAsync: saveEventFeatureOrder } =
+    api.features.saveEventFeatureOrder.useMutation();
 
   const [searchValue, setSearchValue] = useState("");
 
@@ -166,11 +126,29 @@ function DataModelPage() {
 
       <div className="flex gap-4">
         <div className="w-[14rem] pl-2 text-sm text-gray-700">
+          <div className="font-semibold mb-2">Features</div>
+          <button
+            className={clsx({
+              "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
+                true,
+              "bg-accent text-accent-foreground": selectedItem === "all",
+              "hover:bg-muted": selectedItem !== "all",
+            })}
+            onClick={() => {
+              setSelectedItem("all");
+            }}
+          >
+            All
+            <span className="text-xs text-muted-foreground">
+              {/* {entityFeatures?.[type]?.length ?? 0} */}
+            </span>
+          </button>
+
           {/* Entity List */}
-          <div className="font-semibold mb-2">Entities</div>
+          <div className="font-semibold mb-2 mt-4">Entities</div>
           <div className="">
-            {allEntities ? (
-              allEntities.map((type) => (
+            {entityTypes ? (
+              entityTypes.map(({ type }) => (
                 <button
                   key={type}
                   className={clsx({
@@ -199,8 +177,8 @@ function DataModelPage() {
           {/* Event List */}
           <div className="font-semibold mb-2 mt-4">Events</div>
           <div className="">
-            {allEvents ? (
-              allEvents.map((type) => (
+            {eventTypes ? (
+              eventTypes.map(({ type }) => (
                 <button
                   key={type}
                   className={clsx({
@@ -216,9 +194,9 @@ function DataModelPage() {
                   }}
                 >
                   {type}
-                  <span className="text-xs text-muted-foreground">
+                  {/* <span className="text-xs text-muted-foreground">
                     {eventFeatures?.[type]?.length ?? 0}
-                  </span>
+                  </span> */}
                 </button>
               ))
             ) : (
@@ -242,40 +220,76 @@ function DataModelPage() {
                   />
                   <ScrollArea className="pr-1">
                     {/* 1000rem so the CommandList doesn't create its own scrollbar */}
-                    {!sortedFeatures.length && !sortedHiddenFeatures.length && (
+                    {!features?.length && (
+                      // !sortedHiddenFeatures.length && (
                       <CommandEmpty>No features</CommandEmpty>
                     )}
                     <CommandList className="max-h-none">
                       <CommandGroup>
-                        <FeatureList
-                          features={sortedFeatures}
-                          onFeatureChange={(value, item) => {
-                            mutateAsync({
-                              feature: item.id,
-                              name: item.metadata?.name ?? undefined,
-                              dataType: item.metadata?.dataType ?? "text",
-                              ...value,
-                              releaseId: dataset?.releaseId,
-                            })
-                              .then(() => refetch())
-                              .catch((error) => console.log(error));
-                          }}
-                          onOrderChange={(features) => {
-                            saveFeatureOrder({
-                              features: features.concat(
-                                sortedHiddenFeatures.map((f) => f.id)
-                              ),
-                              releaseId: dataset?.releaseId,
-                            }).catch((error) => console.log(error));
-                          }}
-                        />
+                        {features && (
+                          <FeatureList
+                            features={shownFeatures}
+                            onDataTypeChange={
+                              selectedItem !== "all"
+                                ? undefined
+                                : (dataType, feature) => {
+                                    saveFeature({
+                                      featureId: feature.id,
+                                      dataType,
+                                    })
+                                      .then(refetchFeatures)
+                                      .catch((error) => console.log(error));
+                                  }
+                            }
+                            onRename={
+                              selectedItem === "all"
+                                ? undefined
+                                : (name, feature) =>
+                                    saveEntityFeature({
+                                      featureId: feature.id,
+                                      entityTypeId: entityTypes?.find(
+                                        (type) =>
+                                          type.type ===
+                                          selectedItem?.split("-")[1]
+                                      ).id,
+                                      name,
+                                    })
+                            }
+                            onOrderChange={
+                              selectedItem === "all"
+                                ? undefined
+                                : (features) => {
+                                    saveEntityFeatureOrder({
+                                      features,
+                                      projectId,
+                                      entityType: selectedItem?.split("-")[1],
+                                    }).catch((error) => console.log(error));
+                                  }
+                            }
+                            onToggleHide={
+                              selectedItem === "all"
+                                ? undefined
+                                : (hidden, item) => {
+                                    saveEntityFeatureOrder({
+                                      features: shownFeatures
+                                        .map((f) => f.id)
+                                        .filter((f) => f !== item.id),
+                                      entityType: selectedItem?.split("-")[1],
+                                      projectId,
+                                    })
+                                      .then(refetchEntityTypes)
+                                      .catch((error) => console.log(error));
+                                  }
+                            }
+                          />
+                        )}
                       </CommandGroup>
-                      {sortedHiddenFeatures.length > 0 && (
+                      {hiddenFeatures.length > 0 && (
                         <>
                           <CommandSeparator />
                           <CommandGroup heading="Hidden">
                             <FeatureList
-                              features={sortedHiddenFeatures}
+                              features={hiddenFeatures}
                               onFeatureChange={(value, item) => {
                                 mutateAsync({
                                   feature: item.id,
@@ -287,13 +301,30 @@ function DataModelPage() {
                                   .then(() => refetch())
                                   .catch((error) => console.log(error));
                               }}
-                              onOrderChange={(features) => {
-                                saveFeatureOrder({
-                                  features: sortedFeatures
+                              onRename={
+                                selectedItem === "all"
+                                  ? undefined
+                                  : (name, feature) =>
+                                      saveEntityFeature({
+                                        featureId: feature.id,
+                                        entityTypeId: entityTypes?.find(
+                                          (type) =>
+                                            type.type ===
+                                            selectedItem?.split("-")[1]
+                                        ).id,
+                                        name,
+                                      })
+                              }
+                              onToggleHide={(hidden, item) => {
+                                saveEntityFeatureOrder({
+                                  features: shownFeatures
                                     .map((f) => f.id)
-                                    .concat(features),
-                                  releaseId: dataset?.releaseId,
-                                }).catch((error) => console.log(error));
+                                    .concat(item.id),
+                                  entityType: selectedItem?.split("-")[1],
+                                  projectId,
+                                })
+                                  .then(refetchEntityTypes)
+                                  .catch((error) => console.log(error));
                               }}
                             />
                           </CommandGroup>
@@ -321,20 +352,15 @@ function DataModelPage() {
                   <ScrollArea className="pr-1">
                     {/* 1000rem so the CommandList doesn't create its own scrollbar */}
                     <CommandList className="max-h-none">
-                      {features && !featureMetadataLoading ? (
+                      {features ? (
                         features
-                          .filter(
-                            (feature) =>
-                              featureMetadata?.find(
-                                (f) => f.feature === feature
-                              )?.isRule
-                          )
+                          .filter((feature) => !feature.isRule)
                           .map((feature) => (
                             <CommandItem
                               key={feature}
                               className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4"
                             >
-                              <RuleCard
+                              {/* <RuleCard
                                 key={feature}
                                 feature={feature}
                                 dataType={
@@ -344,7 +370,7 @@ function DataModelPage() {
                                 onChange={() => {
                                   refetch();
                                 }}
-                              />
+                              /> */}
                             </CommandItem>
                           ))
                       ) : (

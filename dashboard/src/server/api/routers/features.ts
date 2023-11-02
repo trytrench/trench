@@ -2,54 +2,120 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const featuresRouter = createTRPCRouter({
-  getFeatureMetadata: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.featureMetadata.findMany();
-  }),
-  saveFeatureMetadata: publicProcedure
+  saveEntityFeature: publicProcedure
     .input(
       z.object({
-        feature: z.string(),
+        featureId: z.string(),
+        entityTypeId: z.string(),
         name: z.string().optional(),
-        dataType: z.enum(["text", "number", "boolean", "json"]),
-        releaseId: z.string(),
-        hidden: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const feature = await ctx.prisma.featureMetadata.upsert({
+      return ctx.prisma.entityFeature.upsert({
         where: {
-          feature: input.feature,
+          entityTypeId_featureId: {
+            entityTypeId: input.entityTypeId,
+            featureId: input.featureId,
+          },
         },
         create: {
-          feature: input.feature,
-          releaseId: input.releaseId,
+          entityTypeId: input.entityTypeId,
+          featureId: input.featureId,
           name: input.name,
-          dataType: input.dataType,
-          isRule: false,
         },
         update: {
           name: input.name,
+        },
+      });
+    }),
+
+  saveEventFeature: publicProcedure
+    .input(
+      z.object({
+        featureId: z.string(),
+        eventTypeId: z.string(),
+        name: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.eventFeature.upsert({
+        where: {
+          eventTypeId_featureId: {
+            eventTypeId: input.eventTypeId,
+            featureId: input.featureId,
+          },
+        },
+        create: {
+          eventTypeId: input.eventTypeId,
+          featureId: input.featureId,
+          name: input.name,
+        },
+        update: {
+          name: input.name,
+        },
+      });
+    }),
+
+  saveFeature: publicProcedure
+    .input(
+      z.object({
+        featureId: z.string(),
+        dataType: z.enum(["text", "number", "boolean", "json"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const feature = await ctx.prisma.feature.update({
+        where: {
+          id: input.featureId,
+        },
+        data: {
           dataType: input.dataType,
-          hidden: input.hidden,
         },
       });
       return feature;
     }),
 
-  saveFeatureOrder: publicProcedure
+  saveEntityFeatureOrder: publicProcedure
     .input(
       z.object({
         features: z.string().array(),
-        releaseId: z.string(),
+        projectId: z.string(),
+        entityType: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const release = await ctx.prisma.release.update({
-        where: { id: input.releaseId },
+      return ctx.prisma.entityType.update({
+        where: {
+          type_projectId: {
+            type: input.entityType,
+            projectId: input.projectId,
+          },
+        },
         data: {
           featureOrder: input.features,
         },
       });
-      return release;
+    }),
+
+  saveEventFeatureOrder: publicProcedure
+    .input(
+      z.object({
+        features: z.string().array(),
+        projectId: z.string(),
+        eventType: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.eventType.update({
+        where: {
+          type_projectId: {
+            type: input.eventType,
+            projectId: input.projectId,
+          },
+        },
+        data: {
+          featureOrder: input.features,
+        },
+      });
     }),
 });

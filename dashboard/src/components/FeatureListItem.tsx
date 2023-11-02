@@ -34,8 +34,10 @@ interface Props {
   dataType: string;
   hidden: boolean;
   onChange: (value: string) => void;
-  onToggleHide: (hidden: boolean) => void;
-  onRename: (newName: string) => void;
+  onToggleHide?: (hidden: boolean) => void;
+  onRename?: (name: string) => void;
+  onDataTypeChange?: (dataType: string) => void;
+  draggable: boolean;
 }
 
 export type Ref = HTMLButtonElement;
@@ -47,8 +49,11 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
     name: initialName,
     dataType,
     hidden: initialHidden,
-    onFeatureChange,
+    onDataTypeChange,
+    onRename,
     style,
+    onToggleHide,
+    draggable,
     ...rest
   } = props;
 
@@ -72,49 +77,58 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
           ref={ref}
           style={style}
         >
-          <GripVerticalIcon className="w-4 h-4 cursor-pointer" {...rest} />
+          {!draggable && (
+            <GripVerticalIcon className="w-4 h-4 cursor-pointer" {...rest} />
+          )}
           <div className="mr-auto text-sm">{name}</div>
 
           <Icon className="w-4 h-4" />
-          <Select
-            value={value}
-            onValueChange={(value) => {
-              setValue(value);
-              onFeatureChange({ dataType: value });
-            }}
-          >
-            <SelectTrigger className="w-36 h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="text">Text</SelectItem>
-              <SelectItem value="number">Number</SelectItem>
-              <SelectItem value="boolean">Boolean</SelectItem>
-            </SelectContent>
-          </Select>
+          {onDataTypeChange && (
+            <Select
+              value={value}
+              onValueChange={(value) => {
+                setValue(value);
+                onDataTypeChange(value);
+              }}
+            >
+              <SelectTrigger className="w-36 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="number">Number</SelectItem>
+                <SelectItem value="boolean">Boolean</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <InfoIcon className="w-4 h-4 cursor-pointer" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <div>
-                  <div className="text-sm font-bold">Feature</div>
-                  <div className="text-sm">{feature}</div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <PopoverTrigger>
-            <PencilIcon className="w-4 h-4 cursor-pointer" />
-          </PopoverTrigger>
-          {hidden ? (
+          {onRename && (
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger>
+                  <InfoIcon className="w-4 h-4 cursor-pointer" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div>
+                    <div className="text-sm font-bold">Feature</div>
+                    <div className="text-sm">{feature}</div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {onRename && (
+            <PopoverTrigger>
+              <PencilIcon className="w-4 h-4 cursor-pointer" />
+            </PopoverTrigger>
+          )}
+          {!onToggleHide ? undefined : hidden ? (
             <EyeOffIcon
               className="w-4 h-4 cursor-pointer"
               onClick={() => {
                 setHidden(false);
-                onFeatureChange({ hidden: false });
+                onToggleHide(false);
               }}
             />
           ) : (
@@ -122,7 +136,7 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
               className="w-4 h-4 cursor-pointer"
               onClick={() => {
                 setHidden(true);
-                onFeatureChange({ hidden: true });
+                onToggleHide(true);
               }}
             />
           )}
@@ -139,7 +153,7 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
               value={name}
               onChange={(event) => {
                 setName(event.target.value);
-                onFeatureChange({ name: event.target.value });
+                onRename(event.target.value);
                 //   debouncedSave(event.target.value || "Untitled");
               }}
             />

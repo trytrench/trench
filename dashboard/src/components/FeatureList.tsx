@@ -16,18 +16,22 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableFeatureListItem } from "./SortableFeatureListItem";
 import { FeatureListItem } from "./FeatureListItem";
-import { FeatureMetadata } from "@prisma/client";
+import { type Feature } from "@prisma/client";
 
 interface Props {
-  features: { id: string; feature: string; metadata?: FeatureMetadata }[];
-  onFeatureChange: (value: any, item: any) => void;
-  onOrderChange: (features: string[]) => void;
+  features: Feature[];
+  onDataTypeChange: (dataType: string, feature: Feature) => void;
+  onRename: (name: string, feature: Feature) => void;
+  onOrderChange?: (features: string[]) => void;
+  onToggleHide: (hidden: boolean, feature: Feature) => void;
 }
 
 export function FeatureList({
   features,
-  onFeatureChange,
+  onDataTypeChange,
+  onRename,
   onOrderChange,
+  onToggleHide,
 }: Props) {
   const [activeId, setActiveId] = useState(null);
   const [items, setItems] = useState(features);
@@ -60,11 +64,20 @@ export function FeatureList({
           <SortableFeatureListItem
             key={item.id}
             id={item.id}
-            feature={item.id}
-            name={item.metadata?.name}
-            dataType={item.metadata?.dataType ?? "text"}
-            hidden={item.metadata?.hidden ?? false}
-            onFeatureChange={(value) => onFeatureChange(value, item)}
+            feature={item.feature}
+            name={item.feature}
+            dataType={item.dataType ?? "text"}
+            hidden={item.hidden ?? false}
+            onDataTypeChange={
+              onDataTypeChange
+                ? (dataType) => onDataTypeChange(dataType, item)
+                : undefined
+            }
+            onRename={onRename ? (name) => onRename(name, item) : undefined}
+            onToggleHide={
+              onToggleHide ? (hidden) => onToggleHide(hidden, item) : undefined
+            }
+            draggable={!onOrderChange}
           />
         ))}
       </SortableContext>
@@ -72,8 +85,9 @@ export function FeatureList({
         {activeId ? (
           <FeatureListItem
             feature={activeItem.id}
-            name={activeItem.metadata?.name}
-            dataType={activeItem.metadata?.dataType ?? "text"}
+            name={activeItem.feature}
+            dataType={activeItem.dataType ?? "text"}
+            draggable={!onOrderChange}
           />
         ) : null}
       </DragOverlay>
