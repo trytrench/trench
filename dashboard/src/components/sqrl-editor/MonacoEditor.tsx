@@ -291,7 +291,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monacoEditorObj.value.editor.setModelMarkers(
       model,
       "monaco editor react",
-      markers || []
+      markers ?? []
     );
   }, [editorRef.current, monacoEditorObj.state, markers]);
 
@@ -304,7 +304,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     // functions will be compiled in so they won't change ever.
     const sqrlLanguage = configureSqrlLanguage(
       monacoEditor,
-      sqrlFunctions || {}
+      sqrlFunctions ?? {}
     );
 
     const model = monacoEditor.editor.createModel(
@@ -326,17 +326,17 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
     editorRef.current = editor;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      const containerElement = entries.find(
-        (entry) => entry.target === containerRef.current
-      );
-      // container was resized
-      if (containerElement) {
-        editor.layout();
-      }
-    });
+    // const resizeObserver = new ResizeObserver((entries) => {
+    //   const containerElement = entries.find(
+    //     (entry) => entry.target === containerRef.current
+    //   );
+    //   // container was resized
+    //   if (containerElement) {
+    //     editor.layout();
+    //   }
+    // });
 
-    resizeObserver.observe(containerRef.current);
+    // resizeObserver.observe(containerRef.current);
 
     const onChangeModelContentSubscription = editor.onDidChangeModelContent(
       (event) => {
@@ -350,7 +350,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       editor.dispose();
       model.dispose();
       onChangeModelContentSubscription.dispose();
-      resizeObserver.disconnect();
+      // resizeObserver.disconnect();
     };
   }, [monacoEditorObj.state, sqrlFunctions, containerRef.current]);
 

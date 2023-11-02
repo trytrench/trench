@@ -158,6 +158,7 @@ export const EventHandlerEditor = ({
 
   useEffect(() => {
     if (code !== previousCode) {
+      console.log("recompiling");
       recompile().catch(handleError);
     }
   }, [code, previousCode, recompile]);
@@ -188,9 +189,6 @@ export const EventHandlerEditor = ({
 
         <EventHandlersSidebar
           eventHandlers={eventHandlers ?? []}
-          onPreviewEventHandler={() => {
-            console.log("noop");
-          }}
           open={sidebarOpen}
           onOpenChange={setSidebarOpen}
         />
@@ -246,7 +244,7 @@ export const EventHandlerEditor = ({
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <div className="flex justify-end items-center h-11">
             {isEditing ? (
               <>
@@ -334,35 +332,33 @@ export const EventHandlerEditor = ({
             )}
           </div>
 
-          <ClassNames>
-            {({ css }) => (
-              <MonacoEditor
-                className={css({ height: "100%", width: "100%" })}
-                key={currentFileName + isEditing}
-                value={code[currentFileName] ?? ""}
-                markers={
-                  compileStatus.errorMarker
-                    ? [compileStatus.errorMarker]
-                    : undefined
-                }
-                sqrlFunctions={null}
-                onChange={(newSource) => {
-                  setCode((prev) => ({
-                    ...prev,
-                    [currentFileName]: newSource,
-                  }));
-                }}
-                options={{
-                  automaticLayout: true,
-                  padding: { top: 16 },
-                  fontSize: 14,
-                }}
-                readOnly={!isEditing}
-              />
-            )}
-          </ClassNames>
+          <MonacoEditor
+            className="h-full w-full min-w-0 min-h-0"
+            key={currentFileName + isEditing}
+            value={code[currentFileName] ?? ""}
+            markers={
+              compileStatus.errorMarker
+                ? [compileStatus.errorMarker]
+                : undefined
+            }
+            sqrlFunctions={null}
+            onChange={(newSource) => {
+              setCode((prev) => ({
+                ...prev,
+                [currentFileName]: newSource,
+              }));
+            }}
+            options={MONACO_OPTIONS}
+            // readOnly={!isEditing}
+          />
         </div>
       </div>
     </>
   );
+};
+
+const MONACO_OPTIONS = {
+  // automaticLayout: true,
+  padding: { top: 16 },
+  fontSize: 14,
 };
