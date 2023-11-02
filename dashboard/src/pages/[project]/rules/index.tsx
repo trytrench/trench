@@ -32,11 +32,12 @@ const Page: NextPageWithLayout = () => {
 
   if (!currentEventHandler) return null;
   return (
-    <EventHandlerEditor
-      initialEventHandler={currentEventHandler}
-      onPreviewEventHandler={setCurrentEventHandler}
-      key={currentEventHandler.id}
-    />
+    <div className="flex flex-1 w-full">
+      <EventHandlerEditor
+        initialValue={currentEventHandler}
+        key={currentEventHandler.id}
+      />
+    </div>
   );
 };
 

@@ -32,18 +32,41 @@ import { handleError } from "../lib/handleError";
 import { usePrevious } from "react-use";
 // import { sortBy } from "lodash";
 
-interface Props {
-  initialEventHandler: EventHandler;
-  onPreviewEventHandler: (eventHandler: EventHandler) => void;
+type CompileStatusObject =
+  | {
+      status: "error";
+      message: string;
+      errorMarker?: editor.IMarkerData & {
+        filename: string;
+      };
+    }
+  | {
+      status: "success";
+      message: string;
+      errorMarker?: undefined;
+    }
+  | {
+      status: "pending";
+      message: string;
+      errorMarker?: undefined;
+    };
+
+export type CompileStatus = CompileStatusObject["status"];
+
+interface EventHandlerEditorProps {
+  initialValue: EventHandler;
+  onCompileStatusChange?: (
+    status: CompileStatus,
+    eventHandler: EventHandler
+  ) => void;
 }
 
 const UNSAVED_CHANGES_MESSAGE =
   "You have unsaved changes, are you sure you want to leave?";
 
 export const EventHandlerEditor = ({
-  initialEventHandler,
-  onPreviewEventHandler: onPreviewEventHandler,
-}: Props) => {
+  initialValue,
+}: EventHandlerEditorProps) => {
   const router = useRouter();
 
   const { data: project } = api.project.getByName.useQuery(
@@ -57,13 +80,10 @@ export const EventHandlerEditor = ({
   const { data: eventHandlers, refetch: refetchEventHandlers } =
     api.eventHandlers.list.useQuery();
 
-  const [compileStatus, setCompileStatus] = useState<{
-    status: "error" | "success" | "pending";
-    message: string;
-    errorMarker?: editor.IMarkerData & {
-      filename: string;
-    };
-  }>({ status: "pending", message: "Requesting initial compilation…" });
+  const [compileStatus, setCompileStatus] = useState<CompileStatusObject>({
+    status: "pending",
+    message: "Requesting initial compilation…",
+  });
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -73,8 +93,8 @@ export const EventHandlerEditor = ({
   // const { toast } = useToast();
 
   const initialCode = useMemo(
-    () => initialEventHandler.code as Record<string, string>,
-    [initialEventHandler]
+    () => initialValue.code as Record<string, string>,
+    [initialValue]
   );
   const [code, setCode] = useState(initialCode);
   const previousCode = usePrevious(code);
@@ -144,7 +164,7 @@ export const EventHandlerEditor = ({
 
   return (
     <>
-      <div className="flex h-full">
+      <div className="flex h-full w-full">
         <BackfillModal
           isOpen={backfillModalOpen}
           onOpenChange={setBackfillModalOpen}
@@ -168,7 +188,9 @@ export const EventHandlerEditor = ({
 
         <EventHandlersSidebar
           eventHandlers={eventHandlers ?? []}
-          onPreviewEventHandler={onPreviewEventHandler}
+          onPreviewEventHandler={() => {
+            console.log("noop");
+          }}
           open={sidebarOpen}
           onOpenChange={setSidebarOpen}
         />
@@ -268,15 +290,14 @@ export const EventHandlerEditor = ({
                     //     toast({ title: "Error", description: error.message });
                     //   });
                   }}
-                  initialVersion={initialEventHandler.version}
+                  initialVersion={initialValue.version}
                   button={<Button>Publish</Button>}
                 />
               </>
             ) : (
               <>
                 <Button>
-                  <TagIcon className="mr-2 w-4 h-4" />v
-                  {initialEventHandler.version}
+                  <TagIcon className="mr-2 w-4 h-4" />v{initialValue.version}
                 </Button>
                 <div className="flex-1" />
                 <Button
@@ -286,6 +307,9 @@ export const EventHandlerEditor = ({
                 >
                   Test
                 </Button>
+                <div>
+                  <Button size="xs">ligma</Button>
+                </div>
                 <Button
                   // size="sm"
                   // colorScheme="blue"
