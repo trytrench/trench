@@ -9,11 +9,7 @@ interface Props {
   href: string;
 }
 
-export const EntityCard = ({ entity, relation, href }: Props) => {
-  const entityFeatures = entity.features ?? {};
-
-  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
-
+export const EntityCard = ({ entity, relation, href, features }: Props) => {
   return (
     <div className="border rounded-lg shadow-sm p-8 bg-card">
       <div className="">
@@ -32,7 +28,7 @@ export const EntityCard = ({ entity, relation, href }: Props) => {
           </div>
         )}
         <div className="flex flex-wrap gap-1 mt-3">
-          {entityLabels.length > 0 ? (
+          {/* {entityLabels.length > 0 ? (
             entityLabels.map((label) => {
               return (
                 <Badge key={label} variant="default">
@@ -42,13 +38,13 @@ export const EntityCard = ({ entity, relation, href }: Props) => {
             })
           ) : (
             <div className="italic text-sm">No labels</div>
-          )}
+          )} */}
         </div>
         <div className="h-4"></div>
         <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
-          {Object.entries(entityFeatures).map(([key, value], idx) => (
-            <div key={key}>
-              <div className="font-semibold">{key}</div>
+          {features.map(({ name, value }, idx) => (
+            <div key={name}>
+              <div className="font-semibold">{name}</div>
               <div className="truncate">
                 {value === 0
                   ? "0"
@@ -56,7 +52,7 @@ export const EntityCard = ({ entity, relation, href }: Props) => {
                   ? "True"
                   : value === false
                   ? "False"
-                  : (value as string) || "-"}
+                  : (JSON.stringify(value) as string) || "-"}
               </div>
             </div>
           ))}

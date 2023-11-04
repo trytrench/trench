@@ -31,11 +31,9 @@ export const listsRouter = createTRPCRouter({
           SELECT 
             entity_id as id,
             entity_type as type,
-            entity_name as name,
             max(event_timestamp) AS lastSeenAt,
-            argMax(entity_features, event_timestamp) AS features,
-            arrayDistinct(groupArray(label)) AS labels
-          FROM event_entity_entity_labels
+            argMax(features, event_timestamp) AS features
+          FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
           ${
             filters?.entityType
@@ -54,7 +52,7 @@ export const listsRouter = createTRPCRouter({
               ?.map((filter) => getFeatureQuery(filter, "entity_features"))
               .join("\n") ?? ""
           }
-          GROUP BY entity_id, entity_type, entity_name
+          GROUP BY entity_id, entity_type
           ORDER BY ${
             input.sortBy
               ? getFeatureSortKey("features", input.sortBy)
@@ -68,22 +66,18 @@ export const listsRouter = createTRPCRouter({
       const entities = await result.json<
         {
           id: string;
-          name: string;
           type: string;
           lastSeenAt: string;
           features: string;
-          labels: string[];
         }[]
       >();
 
       return {
         count: 0,
-        rows: entities
-          .filter((entity) => entity.id)
-          .map((entity) => ({
-            ...entity,
-            features: JSON.parse(entity.features),
-          })),
+        rows: entities.map((entity) => ({
+          ...entity,
+          features: JSON.parse(entity.features),
+        })),
       };
     }),
 
