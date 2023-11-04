@@ -14,17 +14,66 @@ import { SpinnerButton } from "./ui/custom/spinner-button";
 import { useRouter } from "next/router";
 import { EventFilter } from "./ListFilter";
 import { EventFilters } from "~/shared/validation";
+import { EventFeature, EventType, Feature } from "@prisma/client";
 
 interface Props {
   entityId?: string;
   datasetId: string;
+  projectId: string;
 }
 
-export default function EventsList({ entityId, datasetId }: Props) {
+export default function EventsList({ entityId, datasetId, projectId }: Props) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
   const [filters, setFilters] = useState<EventFilters>(undefined);
+
+  const { data: eventTypes } = api.labels.getEventTypes.useQuery({
+    projectId,
+  });
+
+  const { data: allFeatures } = api.labels.getFeatures.useQuery({
+    projectId,
+  });
+
+  const { data: eventFeatures } = api.labels.getEventFeatures.useQuery({
+    projectId,
+  });
+
+  function getOrderedFeaturesForEvent(
+    event,
+    eventTypes: EventType[],
+    eventFeatures: EventFeature[],
+    features: Feature[]
+  ) {
+    // Find the event type for the current event
+    const eventType = eventTypes.find((et) => et.type === event.type);
+
+    // Build a map of feature overrides for this event type
+    const featureOverrides = eventFeatures
+      .filter((ef) => ef.eventType.type === event.type)
+      .reduce((acc, ef) => {
+        acc[ef.featureId] = ef.name;
+        return acc;
+      }, {});
+
+    // Build a map of feature names for quick lookup
+    const featureNameMap = features.reduce((acc, feature) => {
+      acc[feature.id] = feature.feature;
+      return acc;
+    }, {});
+
+    // Get the features for the event with overrides applied
+    const orderedFeatures = eventType?.featureOrder.map((featureId) => {
+      return {
+        id: featureId,
+        name: featureOverrides[featureId] || featureNameMap[featureId],
+        value: event.features[featureNameMap[featureId]],
+      };
+    });
+
+    return orderedFeatures;
+  }
 
   const {
     data: events,
@@ -109,7 +158,7 @@ export default function EventsList({ entityId, datasetId }: Props) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <EventFilter datasetId={datasetId} onChange={setFilters} />
+          {/* <EventFilter datasetId={datasetId} onChange={setFilters} /> */}
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle
@@ -159,6 +208,12 @@ export default function EventsList({ entityId, datasetId }: Props) {
                         key={item.event.id}
                         datasetId={datasetId}
                         event={item.event}
+                        features={getOrderedFeaturesForEvent(
+                          item.event,
+                          eventTypes,
+                          eventFeatures,
+                          allFeatures
+                        )}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
                       />
@@ -274,12 +329,11 @@ interface EventCardProps {
 }
 
 function EventCard(props: EventCardProps) {
-  const { event, isFirst, isLast } = props;
+  const { event, isFirst, isLast, features } = props;
   const router = useRouter();
 
-  const eventLabels = uniq(event.labels.filter((label) => label !== ""));
+  // const eventLabels = uniq(event.labels.filter((label) => label !== ""));
   const eventFeatures = Object.entries(event.features);
-  const hasFeatures = eventFeatures.length > 0;
 
   return (
     <div className="flex">
@@ -301,7 +355,7 @@ function EventCard(props: EventCardProps) {
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
         </div>
         <div className="flex flex-wrap gap-1 mt-3">
-          {eventLabels.length > 0 ? (
+          {/* {eventLabels.length > 0 ? (
             eventLabels.map((label, idx) => {
               return (
                 <Badge key={idx} variant="default">
@@ -311,16 +365,16 @@ function EventCard(props: EventCardProps) {
             })
           ) : (
             <></>
-          )}
+          )} */}
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {hasFeatures ? (
+        {features.length > 0 ? (
           <>
             <div className="grid grid-cols-5 gap-4">
-              {eventFeatures.map(([key, value], idx) => (
-                <div key={key}>
-                  <div className="font-semibold">{key}</div>
+              {features.map(({ name, value }, idx) => (
+                <div key={name}>
+                  <div className="font-semibold">{name}</div>
                   <div className="truncate">
                     {value === 0
                       ? "0"
@@ -328,7 +382,7 @@ function EventCard(props: EventCardProps) {
                       ? "True"
                       : value === false
                       ? "False"
-                      : (value as string) || "-"}
+                      : (JSON.stringify(value) as string) || "-"}
                   </div>
                 </div>
               ))}

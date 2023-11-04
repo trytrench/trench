@@ -21,7 +21,9 @@ const Page: NextPageWithLayout = () => {
     <div className="flex-1 overflow-hidden flex items-stretch">
       <div className="flex-1 w-full flex flex-col items-stretch">
         <div className="relative flex-1">
-          <EventsList datasetId={datasetId} />
+          {project && (
+            <EventsList datasetId={datasetId} projectId={project.id} />
+          )}
         </div>
       </div>
     </div>
