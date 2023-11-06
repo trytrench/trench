@@ -76,7 +76,7 @@ export function RenderCodeHash(props: RenderCodeHashProps) {
           resolvedTheme === "dark" ? darkBackgroundColor : backgroundColor,
       }}
     >
-      hash:{hashHex.slice(0, 8)}
+      code-hash:{hashHex.slice(0, 8)}
     </span>
   );
 }

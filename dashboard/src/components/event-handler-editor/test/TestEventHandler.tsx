@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from "../../ui/tooltip";
 import { RenderCodeHash } from "../RenderCodeHash";
-import { Backtest } from "../Backtest";
+import { Backtest } from "./Backtest";
 
 export function TestEventHandler() {
   const [compileStatus] = useAtom(compileStatusAtom);
@@ -34,7 +34,7 @@ export function TestEventHandler() {
   }
 
   return (
-    <div className="flex w-full">
+    <div className="flex h-full w-full">
       <Backtest />
       <Separator orientation="vertical" />
     </div>

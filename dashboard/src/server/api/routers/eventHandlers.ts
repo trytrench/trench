@@ -7,20 +7,30 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const eventHandlersRouter = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.eventHandler.findMany({
-      include: {
-        assignments: {
-          include: {
-            dataset: true,
+  list: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { projectId } = input;
+      return ctx.prisma.eventHandler.findMany({
+        include: {
+          assignments: {
+            include: {
+              dataset: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  }),
+        where: {
+          projectId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }),
   listForMenubar: publicProcedure
     .input(
       z.object({
