@@ -2,21 +2,21 @@ import { type EventHandler } from "@prisma/client";
 import { format } from "date-fns";
 import { FileText, History, MoreHorizontalIcon } from "lucide-react";
 import pluralize from "pluralize";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { Button } from "../ui/button";
+import { Avatar, AvatarFallback } from "../../ui/avatar";
+import { Button } from "../../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "../ui/sheet";
-import { api } from "../../utils/api";
-import { RenderCodeHash } from "./RenderCodeHash";
+} from "../../ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "../../ui/sheet";
+import { api } from "../../../utils/api";
+import { RenderCodeHash } from "../RenderCodeHash";
 import { Fragment, useState } from "react";
-import { Separator } from "../ui/separator";
+import { Separator } from "../../ui/separator";
 import { useAtom } from "jotai";
-import { editorStateAtom } from "../../global-state/editor";
+import { editorStateAtom } from "../../../global-state/editor";
 
 export const EventHandlersSidebar = () => {
   const { data: eventHandlers } = api.eventHandlers.list.useQuery();

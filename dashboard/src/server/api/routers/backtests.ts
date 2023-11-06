@@ -59,28 +59,13 @@ export const backtestsRouter = createTRPCRouter({
         projectId: z.string(),
         from: z.date(),
         to: z.date(),
-        eventHandler: z.object({
-          description: z.string().optional(),
-          code: z.record(z.string()),
-        }),
+        eventHandlerId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { projectId, eventHandler } = input;
+      const { projectId, eventHandlerId } = input;
 
-      const hash = hashEventHandler({
-        code: eventHandler.code,
-      });
       await ctx.prisma.$transaction(async (tx) => {
-        const handler = await tx.eventHandler.create({
-          data: {
-            code: eventHandler.code,
-            description: eventHandler.description,
-            projectId: projectId,
-            hash: hash,
-          },
-        });
-
         const dataset = await tx.dataset.create({
           data: {
             startTime: input.from,
@@ -90,7 +75,7 @@ export const backtestsRouter = createTRPCRouter({
             projectId: projectId,
             eventHandlerAssignments: {
               create: {
-                eventHandlerId: handler.id,
+                eventHandlerId: eventHandlerId,
               },
             },
           },

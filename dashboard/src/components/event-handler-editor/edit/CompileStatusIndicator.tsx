@@ -1,6 +1,6 @@
 import { CheckIcon, Loader2, XIcon } from "lucide-react";
 import { useAtom } from "jotai";
-import { compileStatusAtom } from "../../global-state/editor";
+import { compileStatusAtom } from "../../../global-state/editor";
 
 export function CompileStatusIndicator() {
   const [compileStatus] = useAtom(compileStatusAtom);

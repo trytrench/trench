@@ -1,7 +1,7 @@
 import { type EventHandler } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
-import { EventHandlerEditor } from "~/components/event-handler-editor/EventHandlerEditor";
+import { EventHandlerEditor } from "~/components/event-handler-editor/edit/EventHandlerEditor";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import {
@@ -38,8 +38,8 @@ import {
 } from "../../../global-state/editor";
 import { Panel } from "../../../components/ui/custom/panel";
 import { Separator } from "../../../components/ui/separator";
-import { EventHandlerPreviewTest } from "../../../components/event-handler-editor/EventHandlerPreviewTest";
-import { CompileStatusIndicator } from "../../../components/event-handler-editor/CompileStatusIndicator";
+import { TestEventHandler } from "../../../components/event-handler-editor/test/TestEventHandler";
+import { CompileStatusIndicator } from "../../../components/event-handler-editor/edit/CompileStatusIndicator";
 
 const MenuBar = (props: {
   onSelect?: (eventHandler: EventHandler) => void;
@@ -155,17 +155,13 @@ const Page: NextPageWithLayout = () => {
   const { data: project } = useProject();
 
   const datasetId = useMemo(() => project?.productionDatasetId, [project]);
-
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [compileStatus] = useAtom(compileStatusAtom);
+  const [editorState, setEditorState] = useAtom(editorStateAtom);
 
   const { data: dataset } = api.datasets.get.useQuery(
     { id: datasetId! },
     { enabled: !!datasetId }
   );
-
-  const [compileStatus] = useAtom(compileStatusAtom);
-
-  const [editorState, setEditorState] = useAtom(editorStateAtom);
 
   useEffect(() => {
     const eventHandler = dataset?.currentEventHandlerAssignment?.eventHandler;
@@ -179,7 +175,7 @@ const Page: NextPageWithLayout = () => {
   const [tabValue, setTabValue] = useState<string>("edit");
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col">
       <div className="flex items-center px-3 h-16">
         <div className="flex-1 flex items-center justify-start">
           <div className="ml-4 font-bold text-lg"></div>
@@ -202,11 +198,9 @@ const Page: NextPageWithLayout = () => {
         <div className="flex-1 flex items-center justify-end"></div>
       </div>
       <Separator />
-      {tabValue === "edit" ? (
-        <EventHandlerEditor />
-      ) : (
-        <EventHandlerPreviewTest />
-      )}
+      <div className="flex-1 overflow-auto">
+        {tabValue === "edit" ? <EventHandlerEditor /> : <TestEventHandler />}
+      </div>
     </div>
   );
 };

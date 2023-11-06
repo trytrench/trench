@@ -40,15 +40,10 @@ const NavItem = ({ href, children, ...props }: Props) => {
   );
 };
 
-const RULES_TABS = [
-  { name: "Editor", path: "" },
-  { name: "Decisions", path: "decisions" },
-];
-
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Rules", path: "rules", children: RULES_TABS },
+  { name: "Code", path: "code" },
   { name: "Explore", path: "explore" },
   { name: "Settings", path: "settings" },
 ];
