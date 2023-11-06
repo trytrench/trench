@@ -3,6 +3,7 @@ import type EditorApi from "monaco-editor/esm/vs/editor/editor.api";
 import { FunctionInfo } from "sqrl";
 import { IDisposable } from "monaco-editor/esm/vs/editor/editor.api";
 import { useMonacoEditor } from "../../hooks/useMonacoEditor";
+import { useTheme } from "next-themes";
 
 export type ChangeHandler = (
   value: string,
@@ -266,7 +267,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   className,
   onChange,
   options = {},
-  isDarkMode = true,
   value,
   style,
   markers,
@@ -276,10 +276,13 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const monacoEditorObj = useMonacoEditor();
   const editorRef = useRef<EditorApi.editor.IStandaloneCodeEditor>();
-  const theme = isDarkMode ? "custom-dark" : "custom";
+
+  const { resolvedTheme } = useTheme();
+
+  const theme = resolvedTheme === "dark" ? "custom-dark" : "custom";
 
   useEffect(() => {
-    editorRef.current?.updateOptions({ theme, readOnly });
+    editorRef.current?.updateOptions({ theme: theme, readOnly });
   }, [editorRef.current, theme]);
 
   useEffect(() => {
@@ -321,7 +324,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       ...options,
       language: "sqrl",
       model,
-      theme,
+      theme: theme,
     });
 
     editorRef.current = editor;

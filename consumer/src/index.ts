@@ -1,11 +1,7 @@
 import { Worker, isMainThread, workerData } from "worker_threads";
-import {
-  batchInsertEvents,
-  getDatasetData,
-  getEvents,
-  processEvents,
-} from "event-processing";
+import { batchInsertEvents, getDatasetData, getEvents } from "event-processing";
 import { DatasetType, db, prisma } from "databases";
+import { processEvents } from "sqrl-helpers";
 
 if (isMainThread) {
   const runningThreads = new Map<bigint, Worker>();

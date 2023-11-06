@@ -1,8 +1,9 @@
 import { prisma } from "..";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { hashEventHandler } from "sqrl-helpers";
 
-async function readFiles(dirPath: string) {
+async function readFiles(dirPath: string): Promise<Record<string, string>> {
   try {
     const filenames = await readdir(dirPath);
     const filesData = await Promise.all(
@@ -32,9 +33,17 @@ async function main() {
   const eventHandler = await prisma.eventHandler.create({
     data: {
       description: "Initial event handler",
-      version: "1.0.0",
       code: code,
-      projectId: project.id,
+      eventHandlerHash: {
+        create: {
+          hash: hashEventHandler({ code }),
+        },
+      },
+      project: {
+        connect: {
+          id: project.id,
+        },
+      },
     },
   });
 

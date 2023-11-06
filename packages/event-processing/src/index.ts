@@ -1,7 +1,7 @@
 import { ClickHouseClient } from "@clickhouse/client";
 import { getUnixTime } from "date-fns";
 import { Client } from "pg";
-import { compileSqrl, createSqrlInstance, type Event } from "sqrl-helpers";
+import { type Event } from "sqrl-helpers";
 import { EventOutput, runEvent } from "sqrl-helpers/src/utils/runEvent";
 
 import { prisma } from "databases";
@@ -34,6 +34,10 @@ export async function getDatasetData(props: {
   return res[0]!;
 }
 
+/**
+ * Get the next 1000 events to process.
+ * If production, only get events that are not marked as sync.
+ */
 export async function getEvents(props: {
   lastEventLogId: string;
   isProduction: boolean;
@@ -67,29 +71,6 @@ export async function getEvents(props: {
         LIMIT 1000;
     `;
   }
-}
-
-export async function processEvents(props: {
-  events: Event[];
-  files: Record<string, string>;
-  datasetId: bigint;
-}): Promise<EventOutput[]> {
-  const { events, files, datasetId } = props;
-
-  const results: Awaited<ReturnType<typeof runEvent>>[] = [];
-  const instance = await createSqrlInstance({
-    config: {
-      "redis.address": process.env.REDIS_URL,
-    },
-  });
-
-  const { executable } = await compileSqrl(instance, files);
-
-  for (const event of events) {
-    results.push(await runEvent({ event, executable, datasetId }));
-  }
-
-  return results;
 }
 
 export async function batchInsertEvents(props: {

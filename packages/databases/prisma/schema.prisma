@@ -24,15 +24,16 @@ model EventLog {
 }
 
 
+// Once an EventHandler is created, it should never be modified
 model EventHandler {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  hash      String
+  
   code    Json
   description String?
-  version String
-  isDraft Boolean @default(true)
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
@@ -72,6 +73,9 @@ model Dataset {
 
   name        String
   description String?
+
+  startTime DateTime?
+  endTime   DateTime?
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id])

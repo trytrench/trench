@@ -1,4 +1,8 @@
-import { compileSqrl, createSqrlInstance } from "sqrl-helpers";
+import {
+  compileSqrl,
+  createSqrlInstance,
+  hashEventHandler,
+} from "sqrl-helpers";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -12,8 +16,54 @@ export const eventHandlersRouter = createTRPCRouter({
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   }),
+  listForMenubar: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { projectId } = input;
+
+      const recents = await ctx.prisma.eventHandler.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+        where: {
+          projectId,
+        },
+        take: 5,
+      });
+
+      const productionProject = await ctx.prisma.project.findUnique({
+        where: {
+          id: projectId,
+        },
+        include: {
+          productionDataset: {
+            include: {
+              currentEventHandlerAssignment: {
+                include: {
+                  eventHandler: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return {
+        recentEventHandlers: recents,
+        productionEventHandler:
+          productionProject?.productionDataset?.currentEventHandlerAssignment
+            ?.eventHandler ?? null,
+      };
+    }),
   get: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -24,21 +74,22 @@ export const eventHandlersRouter = createTRPCRouter({
   create: publicProcedure
     .input(
       z.object({
-        description: z.string().optional(),
-        version: z.string(),
+        message: z.string().optional(),
         code: z.record(z.string()),
         projectId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { description, version, code } = input;
+      const { message, projectId, code } = input;
+
+      const hash = hashEventHandler({ code });
 
       const release = await ctx.prisma.eventHandler.create({
         data: {
-          description,
-          version,
+          description: message,
           code,
-          projectId: input.projectId,
+          hash,
+          projectId: projectId,
         },
       });
 

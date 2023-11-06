@@ -3,12 +3,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
 import { bigint, z } from "zod";
 import { db, prisma } from "~/server/db";
-import {
-  batchInsertEvents,
-  getDatasetData,
-  processEvents,
-} from "event-processing";
-import { errorIfFalse } from "../../lib/throwIfFalse";
+import { batchInsertEvents, getDatasetData } from "event-processing";
+import { errorIfFalse } from "../../server/lib/throwIfFalse";
+import { processEvents } from "sqrl-helpers";
 
 const eventSchema = z.object({
   timestamp: z

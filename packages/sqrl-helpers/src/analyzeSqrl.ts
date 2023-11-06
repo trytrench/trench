@@ -1,5 +1,6 @@
 import type { Ast } from "sqrl/lib/api/ast";
 import { compileSqrl } from "./utils/compileSqrl";
+import { CompiledExecutable } from "sqrl";
 
 interface entityType {
   features: Set<string>;
@@ -8,11 +9,7 @@ interface entityType {
 
 type Params = Parameters<typeof compileSqrl>;
 
-export async function analyzeSqrl(instance: Params[0], fileData: Params[1]) {
-  const { compiled } = await compileSqrl(instance, fileData);
-
-  //
-
+export async function analyzeSqrl(compiled: CompiledExecutable) {
   const eventLabels = new Set<string>();
   const eventFeatures = new Set<string>();
   const entities: Record<string, entityType> = {};

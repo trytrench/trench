@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { createClient } from "@clickhouse/client";
 import { env } from "./env";
+import crypto from "crypto";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
