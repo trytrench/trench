@@ -39,7 +39,7 @@ export function SaveDialog() {
 
   return (
     <Dialog>
-      <DialogTrigger disabled={triggerDisabled}>
+      <DialogTrigger asChild disabled={triggerDisabled}>
         <Button disabled={triggerDisabled}>
           <Save className="h-4 w-4 mr-1.5" />
           Save Snapshot

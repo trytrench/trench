@@ -4,20 +4,24 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const backtestsRouter = createTRPCRouter({
-  list: publicProcedure
+  listIds: publicProcedure
     .input(z.object({ projectId: z.string() }))
-    .query(({ ctx, input }) => {
-      return ctx.prisma.dataset.findMany({
-        where: { projectId: input.projectId, type: "BACKTEST" },
-        include: {
-          lastEventLog: true,
-          currentEventHandlerAssignment: {
-            include: {
-              eventHandler: true,
-            },
-          },
+    .query(async ({ ctx, input }) => {
+      const { projectId } = input;
+      const datasets = await ctx.prisma.dataset.findMany({
+        where: {
+          projectId,
+          type: "BACKTEST",
+        },
+        select: {
+          id: true,
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       });
+
+      return datasets.map((dataset) => dataset.id);
     }),
   get: publicProcedure
     .input(z.object({ id: z.bigint() }))
@@ -38,19 +42,37 @@ export const backtestsRouter = createTRPCRouter({
         throw new Error("Dataset not found");
       }
 
+      const lastEventProcessedTime =
+        data.lastEventLog?.timestamp ?? data.startTime;
+
+      const numEventsProcessed = await ctx.prisma.eventLog.count({
+        where: {
+          timestamp: {
+            gte: data.startTime ?? undefined,
+            lte: lastEventProcessedTime ?? undefined,
+          },
+        },
+      });
+
+      const totalEvents = await ctx.prisma.eventLog.count({
+        where: {
+          timestamp: {
+            gte: data.startTime ?? undefined,
+            lte: data.endTime ?? undefined,
+          },
+        },
+      });
+
       const eventHandler = data.currentEventHandlerAssignment?.eventHandler;
 
       return {
         createdAt: data.createdAt,
-        message: eventHandler?.description,
-        from: data.startTime,
-        to: data.endTime,
-        eventHandler: eventHandler
-          ? {
-              code: eventHandler.code,
-              hash: eventHandler.hash,
-            }
-          : undefined,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        processedEvents: numEventsProcessed,
+        totalEvents,
+        isActive: data.isActive,
+        eventHandler: eventHandler,
       };
     }),
   create: publicProcedure

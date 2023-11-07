@@ -32,13 +32,9 @@ async function main() {
 
   const eventHandler = await prisma.eventHandler.create({
     data: {
-      description: "Initial event handler",
+      message: "Initial event handler",
       code: code,
-      eventHandlerHash: {
-        create: {
-          hash: hashEventHandler({ code }),
-        },
-      },
+      hash: hashEventHandler({ code }),
       project: {
         connect: {
           id: project.id,

@@ -36,7 +36,6 @@ export function TestEventHandler() {
   return (
     <div className="flex h-full w-full">
       <Backtest />
-      <Separator orientation="vertical" />
     </div>
   );
 }

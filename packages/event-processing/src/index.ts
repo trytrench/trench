@@ -1,6 +1,5 @@
 import { ClickHouseClient } from "@clickhouse/client";
 import { getUnixTime } from "date-fns";
-import { Client } from "pg";
 import { type Event } from "sqrl-helpers";
 import { EventOutput, runEvent } from "sqrl-helpers/src/utils/runEvent";
 
@@ -10,6 +9,8 @@ type DatasetData = {
   datasetId: bigint;
   code: Record<string, string>;
   lastEventLogId: string;
+  startTime: Date | null;
+  endTime: Date | null;
 };
 export async function getDatasetData(props: {
   datasetId: bigint;
@@ -18,9 +19,11 @@ export async function getDatasetData(props: {
 
   const res = await prisma.$queryRaw<DatasetData[]>`
         SELECT
-        "Dataset"."id" AS "datasetId",
-        "EventHandler"."code",
-        "Dataset"."lastEventLogId"
+          "Dataset"."id" AS "datasetId",
+          "EventHandler"."code",
+          "Dataset"."lastEventLogId",
+          "Dataset"."startTime",
+          "Dataset"."endTime"
         FROM "Dataset"
         JOIN "EventHandlerAssignment" ON "Dataset"."currentEventHandlerAssignmentId" = "EventHandlerAssignment"."id"
         JOIN "EventHandler" ON "EventHandlerAssignment"."eventHandlerId" = "EventHandler"."id"
@@ -40,9 +43,11 @@ export async function getDatasetData(props: {
  */
 export async function getEvents(props: {
   lastEventLogId: string;
+  startTime: Date | null;
+  endTime: Date | null;
   isProduction: boolean;
 }): Promise<Event[]> {
-  const { lastEventLogId, isProduction } = props;
+  const { lastEventLogId, isProduction, startTime, endTime } = props;
 
   if (isProduction) {
     return prisma.$queryRaw<Event[]>`
@@ -60,6 +65,11 @@ export async function getEvents(props: {
         LIMIT 1000;
     `;
   } else {
+    if (!startTime || !endTime) {
+      throw new Error(
+        `startTime and endTime must be provided when running a backfill worker`
+      );
+    }
     return prisma.$queryRaw<Event[]>`
         SELECT "id", "type", "data", "timestamp"
         FROM "EventLog"
@@ -67,6 +77,8 @@ export async function getEvents(props: {
           ${lastEventLogId}::text IS NULL
           OR "id" > ${lastEventLogId}
         )
+        AND "timestamp" >= ${startTime}
+        AND "timestamp" <= ${endTime}
         ORDER BY "id" ASC
         LIMIT 1000;
     `;

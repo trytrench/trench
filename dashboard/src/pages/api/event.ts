@@ -60,6 +60,7 @@ export default async function handler(
 
     const { datasetId, code } = await getDatasetData({
       datasetId: project.productionDatasetId,
+      dbClient: prisma,
     });
 
     const result = await processEvents({

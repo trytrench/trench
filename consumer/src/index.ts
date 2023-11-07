@@ -6,7 +6,7 @@ import { processEvents } from "sqrl-helpers";
 if (isMainThread) {
   const runningThreads = new Map<bigint, Worker>();
 
-  setInterval(manageThreads, 1000);
+  setInterval(manageThreads, 5000);
 
   async function manageThreads() {
     const datasets = await prisma.dataset.findMany();
@@ -36,8 +36,11 @@ if (isMainThread) {
           }
           runningThreads.delete(dataset.id);
         });
+
+        console.log(`Started worker for dataset ${dataset.id}`);
       } else {
         runningThreads.get(dataset.id)?.terminate();
+        console.log(`Stopped worker for dataset ${dataset.id}`);
       }
     }
   }
@@ -63,29 +66,36 @@ if (isMainThread) {
           setTimeout(resolve, WORKER_DATA.isProductionWorker ? 1000 : 1000)
         );
 
-        // Start a transaction
-        await prisma.$queryRaw`BEGIN`;
-
         const jobData = await getDatasetData({
           datasetId: WORKER_DATA.datasetId,
         });
 
         if (!jobData) {
-          // No jobs to process, commit the transaction and continue
-          await prisma.$queryRaw`COMMIT`;
-          continue;
+          throw new Error(
+            `No job data found for dataset ${WORKER_DATA.datasetId}`
+          );
         }
 
-        const { datasetId, lastEventLogId, code } = jobData;
+        const { datasetId, lastEventLogId, code, startTime, endTime } = jobData;
 
         const events = await getEvents({
           lastEventLogId,
           isProduction: WORKER_DATA.isProductionWorker,
+          startTime,
+          endTime,
         });
 
         if (events.length === 0) {
-          // No events to process, commit the transaction and continue
-          await prisma.$queryRaw`COMMIT`;
+          if (!WORKER_DATA.isProductionWorker) {
+            console.log(
+              `Finished backfill for dataset ${datasetId} (lastEventLogId: ${lastEventLogId})`
+            );
+            await prisma.dataset.update({
+              where: { id: datasetId },
+              data: { isActive: false },
+            });
+          }
+
           continue;
         }
 
@@ -110,9 +120,6 @@ if (isMainThread) {
           WHERE "id" = ${datasetId}
         `;
 
-        // Commit the transaction
-        await prisma.$queryRaw`COMMIT`;
-
         console.log(
           `Processed ${events.length} events for dataset ${datasetId}`,
           WORKER_DATA.isProductionWorker ? "(prod)" : "(backfill)"
@@ -120,8 +127,6 @@ if (isMainThread) {
       }
     } catch (err) {
       console.error(err);
-      // If an error occurs, rollback the transaction
-      await prisma.$queryRaw`ROLLBACK`;
     } finally {
       // client.end();
     }

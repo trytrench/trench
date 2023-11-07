@@ -33,7 +33,7 @@ model EventHandler {
   hash      String
   
   code    Json
-  description String?
+  message String
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String

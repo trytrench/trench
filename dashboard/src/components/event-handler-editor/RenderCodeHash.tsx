@@ -1,4 +1,4 @@
-import { VariantProps, cva } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 import { useTheme } from "next-themes";
 
 export function stringToHSL(str: string) {
@@ -76,7 +76,7 @@ export function RenderCodeHash(props: RenderCodeHashProps) {
           resolvedTheme === "dark" ? darkBackgroundColor : backgroundColor,
       }}
     >
-      code-hash:{hashHex.slice(0, 8)}
+      {hashHex.slice(0, 8)}
     </span>
   );
 }

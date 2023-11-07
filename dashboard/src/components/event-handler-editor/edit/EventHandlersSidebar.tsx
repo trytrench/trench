@@ -27,7 +27,7 @@ export const EventHandlersSidebar = () => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger>
+      <SheetTrigger asChild>
         <Button size="icon" variant="ghost" className="ml-6">
           <History className="h-4 w-4" />
         </Button>

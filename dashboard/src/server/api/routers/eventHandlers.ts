@@ -31,6 +31,45 @@ export const eventHandlersRouter = createTRPCRouter({
         },
       });
     }),
+  listByReleases: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { projectId } = input;
+      const project = await ctx.prisma.project.findUnique({
+        where: {
+          id: projectId,
+        },
+        include: {
+          productionDataset: {
+            include: {
+              eventHandlerAssignments: {
+                include: {
+                  eventHandler: true,
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const assignments = project?.productionDataset?.eventHandlerAssignments;
+      if (!assignments) {
+        throw new Error("No event handler assignments found");
+      }
+
+      return assignments.map((assignment) => ({
+        releaseId: assignment.id,
+        releasedAt: assignment.createdAt,
+        eventHandler: assignment.eventHandler,
+      }));
+    }),
   listForMenubar: publicProcedure
     .input(
       z.object({
@@ -84,7 +123,7 @@ export const eventHandlersRouter = createTRPCRouter({
   create: publicProcedure
     .input(
       z.object({
-        message: z.string().optional(),
+        message: z.string(),
         code: z.record(z.string()),
         projectId: z.string(),
       })
@@ -96,7 +135,7 @@ export const eventHandlersRouter = createTRPCRouter({
 
       const release = await ctx.prisma.eventHandler.create({
         data: {
-          description: message,
+          message,
           code,
           hash,
           projectId: projectId,

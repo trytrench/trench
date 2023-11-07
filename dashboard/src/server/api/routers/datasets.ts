@@ -6,19 +6,7 @@ export const datasetsRouter = createTRPCRouter({
   list: publicProcedure.query(({ ctx }) => {
     return ctx.prisma.dataset.findMany();
   }),
-  listBacktests: publicProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(({ ctx, input }) => {
-      return ctx.prisma.dataset.findMany({
-        where: { projectId: input.projectId, type: "BACKTEST" },
-        select: {
-          id: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-    }),
+
   get: publicProcedure
     .input(z.object({ id: z.bigint() }))
     .query(({ ctx, input }) => {
