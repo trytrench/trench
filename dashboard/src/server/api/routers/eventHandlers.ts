@@ -70,49 +70,6 @@ export const eventHandlersRouter = createTRPCRouter({
         eventHandler: assignment.eventHandler,
       }));
     }),
-  listForMenubar: publicProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const { projectId } = input;
-
-      const recents = await ctx.prisma.eventHandler.findMany({
-        orderBy: {
-          createdAt: "desc",
-        },
-        where: {
-          projectId,
-        },
-        take: 5,
-      });
-
-      const productionProject = await ctx.prisma.project.findUnique({
-        where: {
-          id: projectId,
-        },
-        include: {
-          productionDataset: {
-            include: {
-              currentEventHandlerAssignment: {
-                include: {
-                  eventHandler: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      return {
-        recentEventHandlers: recents,
-        productionEventHandler:
-          productionProject?.productionDataset?.currentEventHandlerAssignment
-            ?.eventHandler ?? null,
-      };
-    }),
   get: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -144,67 +101,60 @@ export const eventHandlersRouter = createTRPCRouter({
 
       return release;
     }),
-  // publish: publicProcedure
-  //   .input(
-  //     z.object({
-  //       description: z.string().optional(),
-  //       version: z.string(),
-  //       code: z.record(z.string()),
-  //       projectId: z.string(),
-  //     })
-  //   )
-  //   .mutation(async ({ ctx, input }) => {
-  //     const { description, version, code } = input;
+  publish: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        eventHandlerId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { projectId, eventHandlerId } = input;
 
-  //     const instance = await createSqrlInstance({
-  //       config: { "state.allow-in-memory": true },
-  //     });
+      const eventHandler = await ctx.prisma.eventHandler.findUniqueOrThrow({
+        where: {
+          id: eventHandlerId,
+        },
+      });
 
-  //     const { compiled } = await compileSqrl(instance, code);
+      const instance = await createSqrlInstance({
+        config: { "state.allow-in-memory": true },
+      });
 
-  //     const features = Object.keys(compiled.getFeatureDocs()).filter(
-  //       (feature) =>
-  //         !feature.startsWith("Sqrl") &&
-  //         !Object.keys(compiled.getRuleSpecs()).includes(feature)
-  //     );
+      const { compiled } = await compileSqrl(
+        instance,
+        eventHandler.code as Record<string, string>
+      );
 
-  //     const release = await ctx.prisma.eventHandler.create({
-  //       data: {
-  //         description,
-  //         version,
-  //         code,
-  //         projectId: input.projectId,
-  //         // featureOrder: features,
-  //       },
-  //     });
+      const features = Object.keys(compiled.getFeatureDocs()).filter(
+        (feature) =>
+          !feature.startsWith("Sqrl") &&
+          !Object.keys(compiled.getRuleSpecs()).includes(feature)
+      );
 
-  //     await ctx.prisma.featureMetadata.createMany({
-  //       data: Object.keys(compiled.getRuleSpecs()).map((feature) => ({
-  //         feature,
-  //         releaseId: release.id,
-  //         isRule: true,
-  //         dataType: "boolean",
-  //       })),
-  //     });
+      // TODO: Upsert feature metadata
 
-  //     await ctx.prisma.featureMetadata.createMany({
-  //       data: features.map((feature) => ({
-  //         feature,
-  //         releaseId: release.id,
-  //         dataType: "text",
-  //         isRule: false,
-  //       })),
-  //     });
+      const project = await ctx.prisma.project.findUniqueOrThrow({
+        where: { id: input.projectId },
+      });
+      const prodDatasetId = project.productionDatasetId;
+      if (!prodDatasetId) {
+        throw new Error("No production dataset found");
+      }
 
-  //     const project = await ctx.prisma.project.findUniqueOrThrow({
-  //       where: { id: input.projectId },
-  //     });
+      await ctx.prisma.$transaction(async (tx) => {
+        const assignment = await tx.eventHandlerAssignment.create({
+          data: {
+            eventHandlerId,
+            datasetId: prodDatasetId,
+          },
+        });
+        await tx.dataset.update({
+          where: { id: prodDatasetId },
+          data: { currentEventHandlerAssignmentId: assignment.id },
+        });
+      });
 
-  //     await ctx.prisma.dataset.update({
-  //       where: { id: project.prodDatasetId! },
-  //       data: { releaseId: release.id },
-  //     });
-
-  //     return release;
-  //   }),
+      return true;
+    }),
 });

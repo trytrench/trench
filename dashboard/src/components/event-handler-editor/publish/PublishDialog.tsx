@@ -20,11 +20,12 @@ import {
   DialogTrigger,
 } from "../../ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
-import { api } from "../../../utils/api";
 import { useProject } from "../../../hooks/useProject";
 import { toast } from "../../ui/use-toast";
 import { EventHandlerLabel } from "../EventHandlerLabel";
 import { EventHandler } from "../types";
+import { api } from "../../../utils/api";
+import { SpinnerButton } from "../../ui/custom/spinner-button";
 
 export function PublishDialog(props: {
   originalEventHandler: EventHandler;
@@ -33,18 +34,29 @@ export function PublishDialog(props: {
 }) {
   const { renderTrigger, originalEventHandler, newEventHandler } = props;
 
-  const { data: project } = useProject();
-  const [editorState, setEditorState] = useAtom(editorStateAtom);
+  const { data: project, refetch: refetchProject } = useProject();
 
   const [compileStatus, setCompileStatus] = useAtom(compileStatusAtom);
 
-  const { mutateAsync: createEventHandler } =
-    api.eventHandlers.create.useMutation({});
+  const { refetch: refetchReleases } =
+    api.eventHandlers.listByReleases.useQuery(
+      { projectId: project?.id ?? "" },
+      { enabled: !!project }
+    );
+
+  const { mutateAsync: publishEventHandler, isLoading: loadingPublish } =
+    api.eventHandlers.publish.useMutation({
+      onSuccess: async () => {
+        await Promise.all([refetchProject(), refetchReleases()]);
+      },
+    });
 
   const triggerDisabled = compileStatus.status !== "success";
 
+  const [open, setOpen] = useState(false);
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild disabled={triggerDisabled}>
         {renderTrigger()}
       </DialogTrigger>
@@ -56,11 +68,14 @@ export function PublishDialog(props: {
             <code>/api/events</code> will be processed by the new code.
           </DialogDescription>
         </DialogHeader>
+
         <div className="flex items-center w-full min-w-0">
-          <EventHandlerLabel eventHandler={originalEventHandler} />
+          <div className="border px-3 py-1 rounded-md border-transparent flex-1 min-w-0">
+            <EventHandlerLabel eventHandler={originalEventHandler} />
+          </div>
           <ArrowRight className="h-4 w-4 mx-4" />
           {newEventHandler ? (
-            <div className="border px-3 py-1 rounded-md border-foreground animate-pulse flex-1 min-w-0">
+            <div className="border px-3 py-1 rounded-md border-foreground flex-1 min-w-0">
               <EventHandlerLabel eventHandler={newEventHandler} />
             </div>
           ) : (
@@ -74,9 +89,32 @@ export function PublishDialog(props: {
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={() => {}}>
+          <SpinnerButton
+            loading={loadingPublish}
+            type="button"
+            onClick={() => {
+              if (!project?.id) {
+                toast({ title: "Project not found" });
+                return;
+              }
+              if (!newEventHandler) {
+                toast({ title: "No event handler selected" });
+                return;
+              }
+
+              publishEventHandler({
+                projectId: project.id,
+                eventHandlerId: newEventHandler.id,
+              })
+                .then(() => {
+                  toast({ title: "Published" });
+                  setOpen(false);
+                })
+                .catch(handleError);
+            }}
+          >
             Publish
-          </Button>
+          </SpinnerButton>
         </DialogFooter>
       </DialogContent>
 
