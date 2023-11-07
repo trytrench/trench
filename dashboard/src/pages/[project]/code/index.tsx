@@ -40,6 +40,7 @@ import { Panel } from "../../../components/ui/custom/panel";
 import { Separator } from "../../../components/ui/separator";
 import { TestEventHandler } from "../../../components/event-handler-editor/test/TestEventHandler";
 import { CompileStatusIndicator } from "../../../components/event-handler-editor/edit/CompileStatusIndicator";
+import { PublishEventHandler } from "../../../components/event-handler-editor/publish/PublishEventHandler";
 
 const MenuBar = (props: {
   onSelect?: (eventHandler: EventHandler) => void;
@@ -186,7 +187,7 @@ const Page: NextPageWithLayout = () => {
               <TabsTrigger value="edit">Edit Code</TabsTrigger>
               <TabsTrigger
                 disabled={compileStatus.status !== "success"}
-                value="preview"
+                value="test"
               >
                 Test
               </TabsTrigger>
@@ -199,7 +200,13 @@ const Page: NextPageWithLayout = () => {
       </div>
       <Separator />
       <div className="flex-1 overflow-auto">
-        {tabValue === "edit" ? <EventHandlerEditor /> : <TestEventHandler />}
+        {tabValue === "edit" ? (
+          <EventHandlerEditor />
+        ) : tabValue === "test" ? (
+          <TestEventHandler />
+        ) : (
+          <PublishEventHandler />
+        )}
       </div>
     </div>
   );

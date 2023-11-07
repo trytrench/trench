@@ -45,7 +45,7 @@ function BacktestStatusRow(props: { backtestDatasetId: bigint }) {
         {formatRelative(new Date(backtestDataset.createdAt), new Date())}
       </TableCell>
 
-      <TableCell className="font-medium">
+      <TableCell className="font-medium max-w-[20rem]">
         <EventHandlerLabel eventHandler={backtestDataset.eventHandler} />
       </TableCell>
       <TableCell>

@@ -112,7 +112,7 @@ export function EmbeddedDatePicker(props: {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="inline text-sm bg-muted rounded-sm px-3 py-1 hover:bg-muted/80">
+        <button className="inline text-sm bg-muted rounded-sm px-3 py-1 hover:brightness-150 data-[state=open]:brightness-150 transition">
           {formatSelectedDates(dateRange?.from, dateRange?.to)}
           <ChevronDown className="inline ml-1.5 -mr-1.5 h-4 w-4" />
         </button>

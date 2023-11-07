@@ -7,7 +7,7 @@ import { TabsContent } from "../ui/tabs";
 import { cn } from "../../lib/utils";
 import { EventHandlerLabel } from "./EventHandlerLabel";
 import { type EventHandler } from "./types";
-import { FileText, Upload } from "lucide-react";
+import { FileText, LucideIcon, Upload } from "lucide-react";
 
 export function SelectEventHandler(props: {
   value: EventHandler | undefined;
@@ -41,7 +41,7 @@ export function SelectEventHandler(props: {
             <button
               key={evHandler.id}
               className={cn({
-                "w-full px-3 py-2 flex items-center": true,
+                "w-full px-3 py-2 flex items-center overflow-hidden": true,
                 "hover:bg-accent/50": !selected,
                 "bg-accent": selected,
               })}
@@ -49,12 +49,14 @@ export function SelectEventHandler(props: {
                 onSelect?.(evHandler);
               }}
             >
-              <FileText className="h-4 w-4 mr-3" />
-              <div className="flex flex-col items-start">
-                <EventHandlerLabel
-                  key={evHandler.id}
-                  eventHandler={evHandler}
-                />
+              <FileText className="h-4 w-4 mr-3 shrink-0" />
+              <div className="flex-1 min-w-0 flex flex-col items-start">
+                <div className="w-full">
+                  <EventHandlerLabel
+                    key={evHandler.id}
+                    eventHandler={evHandler}
+                  />
+                </div>
                 <div className="text-xs text-muted-foreground">
                   saved{" "}
                   {formatRelative(new Date(evHandler.createdAt), new Date())}
@@ -85,7 +87,7 @@ export function SelectEventHandler(props: {
               }}
             >
               <Upload className="h-4 w-4 mr-3" />
-              <div className="flex flex-col items-start">
+              <div className="flex-1 min-w-0 flex flex-col items-start overflow-hidden">
                 <EventHandlerLabel
                   key={evHandler.id}
                   eventHandler={evHandler}

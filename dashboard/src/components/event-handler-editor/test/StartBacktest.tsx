@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, ChevronDown, Play } from "lucide-react";
+import { Calendar, Play } from "lucide-react";
 import { Panel } from "../../ui/custom/panel";
 import { add, endOfDay } from "date-fns";
 import { type DateRange } from "react-day-picker";
@@ -10,52 +10,10 @@ import { toast } from "../../ui/use-toast";
 import { handleError } from "../../../lib/handleError";
 import { useProject } from "../../../hooks/useProject";
 import { SpinnerButton } from "../../ui/custom/spinner-button";
-import {
-  Popover,
-  PopoverClose,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../ui/popover";
+import { PopoverClose } from "../../ui/popover";
 import { Separator } from "@radix-ui/react-select";
-import { SelectEventHandler } from "../SelectEventHandler";
 import { EventHandler } from "../types";
-import { EventHandlerLabel } from "../EventHandlerLabel";
-
-function SelectEventHandlerPopup(props: {
-  value: EventHandler | undefined;
-  onSelect: (handler: EventHandler) => void;
-}) {
-  const { value, onSelect } = props;
-
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button className="inline-flex items-center text-sm bg-muted rounded-sm px-3 py-1 hover:bg-muted/80">
-          {value ? (
-            <span>
-              <EventHandlerLabel eventHandler={value} />
-            </span>
-          ) : (
-            <span className="text-muted-foreground">Select code</span>
-          )}
-          <ChevronDown className="inline ml-1.5 -mr-1.5 h-4 w-4" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 pt-2" align="start">
-        <SelectEventHandler
-          value={value}
-          onSelect={(handler) => {
-            onSelect?.(handler);
-            setOpen(false);
-          }}
-        />
-        <div className="h-4 shrink-0"></div>
-      </PopoverContent>
-    </Popover>
-  );
-}
+import { SelectEventHandlerPopup } from "../SelectEventHandlerPopup";
 
 interface StartBacktestProps {
   onStart?: () => void;
