@@ -53,13 +53,13 @@ export const EntityCard = ({
         </div>
         <div className="h-4"></div>
         <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
-          {features.map(({ name, value, dataType }, idx) => (
+          {features.map(({ name, value, dataType, entityName, entityType }) => (
             <div key={name}>
               <div className="font-semibold">{name}</div>
 
               {dataType === "entity" && value ? (
                 <EntityChip
-                  entity={{ id: value, name: value, type: "Entity" }}
+                  entity={{ id: value, name: entityName, type: entityType }}
                   href={`/${router.query.project as string}/entity/${value}`}
                   datasetId={datasetId}
                 />
