@@ -112,7 +112,7 @@ const Page: NextPageWithLayout = () => {
       </div>
       <div className="grid grid-cols-4 flex-1">
         <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
-          <Panel>
+          {/* <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">
               Entity Information
             </h1>
@@ -123,8 +123,8 @@ const Page: NextPageWithLayout = () => {
                 value: value as string,
               }))}
             />
-          </Panel>
-          <Panel>
+          </Panel> */}
+          {/* <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
 
             {entityLabels.length ? (
@@ -136,16 +136,16 @@ const Page: NextPageWithLayout = () => {
             ) : (
               <span className="italic text-muted-foreground text-sm">None</span>
             )}
-          </Panel>
+          </Panel> */}
           <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
             <PropertyList
-              entries={Object.entries(entityData?.features ?? {}).map(
-                ([key, value]) => ({
-                  label: key,
-                  value: value as string,
-                })
-              )}
+              entries={
+                entityData?.features.map((feature) => ({
+                  label: feature.name,
+                  value: feature.value,
+                })) ?? []
+              }
             />
           </Panel>
         </div>

@@ -43,59 +43,6 @@ const EntityList = ({ project, datasetId }: Props) => {
     }
   );
 
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery({
-    projectId: project.id,
-  });
-
-  const { data: allFeatures } = api.labels.getFeatures.useQuery({
-    projectId: project.id,
-  });
-
-  const { data: entityFeatures } = api.labels.getEntityFeatures.useQuery({
-    projectId: project.id,
-  });
-
-  function getOrderedFeaturesForEntity(
-    entity,
-    entityTypes: EntityType[],
-    entityFeatures: EntityFeature[],
-    features: Feature[]
-  ) {
-    // Find the entity type for the current entity
-    const entityType = entityTypes.find((et) => et.type === entity.type);
-
-    // Build a map of feature overrides for this entity type
-    const featureOverrides = entityFeatures
-      .filter((ef) => ef.entityType.type === entity.type)
-      .reduce((acc, ef) => {
-        acc[ef.featureId] = ef.name;
-        return acc;
-      }, {});
-
-    // Build a map of feature names for quick lookup
-    const featureMap = features.reduce((acc, feature) => {
-      acc[feature.id] = feature;
-      return acc;
-    }, {});
-
-    // Get the features for the entity with overrides applied
-    const orderedFeatures = entityType.featureOrder.map((featureId) => {
-      return {
-        id: featureId,
-        name: featureOverrides[featureId] || featureMap[featureId].feature,
-        value: entity.features[featureMap[featureId].feature],
-        dataType: featureMap[featureId].dataType,
-      };
-    });
-
-    return orderedFeatures;
-  }
-
-  function getEntityName(entity, entityTypes: EntityType[]) {
-    const entityType = entityTypes.find((et) => et.type === entity.type);
-    return entity.features[entityType?.nameFeature?.feature.feature];
-  }
-
   const allEntities = useMemo(() => {
     return entities?.pages.flatMap((page) => page.rows) ?? [];
   }, [entities]);
@@ -119,13 +66,9 @@ const EntityList = ({ project, datasetId }: Props) => {
                         key={entity.id}
                         href={`/${project.name}/entity/${entity.id}`}
                         entity={entity}
-                        features={getOrderedFeaturesForEntity(
-                          entity,
-                          entityTypes,
-                          entityFeatures,
-                          allFeatures
-                        )}
-                        name={getEntityName(entity, entityTypes, allFeatures)}
+                        features={entity.features}
+                        name={entity.name}
+                        datasetId={datasetId}
                       />
                     );
                   })}

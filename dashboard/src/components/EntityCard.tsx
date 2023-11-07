@@ -17,6 +17,7 @@ export const EntityCard = ({
   href,
   features,
   name,
+  datasetId,
 }: Props) => {
   const router = useRouter();
 
@@ -60,6 +61,7 @@ export const EntityCard = ({
                 <EntityChip
                   entity={{ id: value, name: value, type: "Entity" }}
                   href={`/${router.query.project as string}/entity/${value}`}
+                  datasetId={datasetId}
                 />
               ) : (
                 <div className="truncate">

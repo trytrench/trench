@@ -1,20 +1,16 @@
+import { format } from "date-fns";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
+import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
+import { Toggle } from "~/components/ui/toggle";
+import { EventFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
+import { EntityChip } from "./EntityChip";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
-import { format } from "date-fns";
-import { uniq } from "lodash";
-import { EntityChip } from "./EntityChip";
-import { Badge } from "./ui/badge";
 import { Panel } from "./ui/custom/panel";
-import { Toggle } from "~/components/ui/toggle";
-import { ScrollArea } from "./ui/scroll-area";
 import { SpinnerButton } from "./ui/custom/spinner-button";
-import { useRouter } from "next/router";
-import { EventFilter } from "./ListFilter";
-import { EventFilters } from "~/shared/validation";
-import { EventFeature, EventType, Feature } from "@prisma/client";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface Props {
   entityId?: string;
@@ -27,54 +23,6 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
   const [limit, setLimit] = useState(50);
 
   const [filters, setFilters] = useState<EventFilters>(undefined);
-
-  const { data: eventTypes } = api.labels.getEventTypes.useQuery({
-    projectId,
-  });
-
-  const { data: allFeatures } = api.labels.getFeatures.useQuery({
-    projectId,
-  });
-
-  const { data: eventFeatures } = api.labels.getEventFeatures.useQuery({
-    projectId,
-  });
-
-  function getOrderedFeaturesForEvent(
-    event,
-    eventTypes: EventType[],
-    eventFeatures: EventFeature[],
-    features: Feature[]
-  ) {
-    // Find the event type for the current event
-    const eventType = eventTypes.find((et) => et.type === event.type);
-
-    // Build a map of feature overrides for this event type
-    const featureOverrides = eventFeatures
-      .filter((ef) => ef.eventType.type === event.type)
-      .reduce((acc, ef) => {
-        acc[ef.featureId] = ef.name;
-        return acc;
-      }, {});
-
-    // Build a map of feature names for quick lookup
-    const featureMap = features.reduce((acc, feature) => {
-      acc[feature.id] = feature;
-      return acc;
-    }, {});
-
-    // Get the features for the event with overrides applied
-    const orderedFeatures = eventType?.featureOrder.map((featureId) => {
-      return {
-        id: featureId,
-        name: featureOverrides[featureId] || featureMap[featureId].feature,
-        value: event.features[featureMap[featureId].feature],
-        dataType: featureMap[featureId].dataType,
-      };
-    });
-
-    return orderedFeatures;
-  }
 
   const {
     data: events,
@@ -209,12 +157,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                         key={item.event.id}
                         datasetId={datasetId}
                         event={item.event}
-                        features={getOrderedFeaturesForEvent(
-                          item.event,
-                          eventTypes,
-                          eventFeatures,
-                          allFeatures
-                        )}
+                        features={item.event.features ?? []}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
                       />
@@ -327,14 +270,24 @@ interface EventCardProps {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isFirst: boolean;
   isLast: boolean;
+  features: {
+    id: string;
+    name: string;
+    value: string;
+    dataType: string;
+  }[];
 }
 
-function EventCard(props: EventCardProps) {
-  const { event, isFirst, isLast, features } = props;
+function EventCard({
+  event,
+  isFirst,
+  isLast,
+  features,
+  datasetId,
+}: EventCardProps) {
   const router = useRouter();
 
   // const eventLabels = uniq(event.labels.filter((label) => label !== ""));
-  const eventFeatures = Object.entries(event.features);
 
   return (
     <div className="flex">
@@ -373,29 +326,36 @@ function EventCard(props: EventCardProps) {
         {features.length > 0 ? (
           <>
             <div className="grid grid-cols-5 gap-4">
-              {features.map(({ name, value, dataType }, idx) => (
-                <div key={name}>
-                  <div className="font-semibold">{name}</div>
-                  {dataType === "entity" && value ? (
-                    <EntityChip
-                      entity={{ id: value, name: value, type: "Entity" }}
-                      href={`/${
-                        router.query.project as string
-                      }/entity/${value}`}
-                    />
-                  ) : (
-                    <div className="truncate">
-                      {value === 0
-                        ? "0"
-                        : value === true
-                        ? "True"
-                        : value === false
-                        ? "False"
-                        : (JSON.stringify(value) as string) || "-"}
-                    </div>
-                  )}
-                </div>
-              ))}
+              {features.map(
+                ({ name, value, dataType, entityName, entityType }, idx) => (
+                  <div key={name}>
+                    <div className="font-semibold">{name}</div>
+                    {dataType === "entity" && value ? (
+                      <EntityChip
+                        entity={{
+                          id: value,
+                          name: entityName,
+                          type: entityType,
+                        }}
+                        datasetId={datasetId}
+                        href={`/${
+                          router.query.project as string
+                        }/entity/${value}`}
+                      />
+                    ) : (
+                      <div className="truncate">
+                        {value === 0
+                          ? "0"
+                          : value === true
+                          ? "True"
+                          : value === false
+                          ? "False"
+                          : (JSON.stringify(value) as string) || "-"}
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           </>
         ) : (
