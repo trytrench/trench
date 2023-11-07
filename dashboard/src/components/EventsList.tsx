@@ -58,8 +58,8 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
       }, {});
 
     // Build a map of feature names for quick lookup
-    const featureNameMap = features.reduce((acc, feature) => {
-      acc[feature.id] = feature.feature;
+    const featureMap = features.reduce((acc, feature) => {
+      acc[feature.id] = feature;
       return acc;
     }, {});
 
@@ -67,8 +67,9 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
     const orderedFeatures = eventType?.featureOrder.map((featureId) => {
       return {
         id: featureId,
-        name: featureOverrides[featureId] || featureNameMap[featureId],
-        value: event.features[featureNameMap[featureId]],
+        name: featureOverrides[featureId] || featureMap[featureId].feature,
+        value: event.features[featureMap[featureId].feature],
+        dataType: featureMap[featureId].dataType,
       };
     });
 
@@ -372,18 +373,27 @@ function EventCard(props: EventCardProps) {
         {features.length > 0 ? (
           <>
             <div className="grid grid-cols-5 gap-4">
-              {features.map(({ name, value }, idx) => (
+              {features.map(({ name, value, dataType }, idx) => (
                 <div key={name}>
                   <div className="font-semibold">{name}</div>
-                  <div className="truncate">
-                    {value === 0
-                      ? "0"
-                      : value === true
-                      ? "True"
-                      : value === false
-                      ? "False"
-                      : (JSON.stringify(value) as string) || "-"}
-                  </div>
+                  {dataType === "entity" && value ? (
+                    <EntityChip
+                      entity={{ id: value, name: value, type: "Entity" }}
+                      href={`/${
+                        router.query.project as string
+                      }/entity/${value}`}
+                    />
+                  ) : (
+                    <div className="truncate">
+                      {value === 0
+                        ? "0"
+                        : value === true
+                        ? "True"
+                        : value === false
+                        ? "False"
+                        : (JSON.stringify(value) as string) || "-"}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -393,7 +403,7 @@ function EventCard(props: EventCardProps) {
         )}
         <div className="h-2"></div>
 
-        <div className="flex gap-1.5 flex-wrap mt-2">
+        {/* <div className="flex gap-1.5 flex-wrap mt-2">
           {event.entities.map((entity) => {
             return (
               <EntityChip
@@ -403,7 +413,7 @@ function EventCard(props: EventCardProps) {
               />
             );
           })}
-        </div>
+        </div> */}
       </Panel>
     </div>
   );

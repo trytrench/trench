@@ -16,7 +16,7 @@ function PropertyList({ className, entries, ...props }: PropertyListProps) {
             className="flex justify-between text-muted-foreground text-sm py-2"
           >
             <span>{label}</span>
-            <span className="ml-4 truncate">{value}</span>
+            <span className="ml-4 truncate">{JSON.stringify(value)}</span>
           </li>
         ))
       ) : (

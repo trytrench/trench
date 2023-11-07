@@ -41,6 +41,13 @@ export const labelsRouter = createTRPCRouter({
         where: {
           projectId: input.projectId,
         },
+        include: {
+          nameFeature: {
+            include: {
+              feature: true,
+            },
+          },
+        },
       });
     }),
   getFeatures: publicProcedure

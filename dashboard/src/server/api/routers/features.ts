@@ -60,7 +60,7 @@ export const featuresRouter = createTRPCRouter({
     .input(
       z.object({
         featureId: z.string(),
-        dataType: z.enum(["text", "number", "boolean", "json"]),
+        dataType: z.enum(["text", "number", "boolean", "entity"]),
       })
     )
     .mutation(async ({ ctx, input }) => {

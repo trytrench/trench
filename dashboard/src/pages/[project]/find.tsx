@@ -73,22 +73,27 @@ const EntityList = ({ project, datasetId }: Props) => {
       }, {});
 
     // Build a map of feature names for quick lookup
-    const featureNameMap = features.reduce((acc, feature) => {
-      acc[feature.id] = feature.feature;
+    const featureMap = features.reduce((acc, feature) => {
+      acc[feature.id] = feature;
       return acc;
     }, {});
-    console.log(entity);
 
     // Get the features for the entity with overrides applied
     const orderedFeatures = entityType.featureOrder.map((featureId) => {
       return {
         id: featureId,
-        name: featureOverrides[featureId] || featureNameMap[featureId],
-        value: entity.features[featureNameMap[featureId]],
+        name: featureOverrides[featureId] || featureMap[featureId].feature,
+        value: entity.features[featureMap[featureId].feature],
+        dataType: featureMap[featureId].dataType,
       };
     });
 
     return orderedFeatures;
+  }
+
+  function getEntityName(entity, entityTypes: EntityType[]) {
+    const entityType = entityTypes.find((et) => et.type === entity.type);
+    return entity.features[entityType?.nameFeature?.feature.feature];
   }
 
   const allEntities = useMemo(() => {
@@ -120,6 +125,7 @@ const EntityList = ({ project, datasetId }: Props) => {
                           entityFeatures,
                           allFeatures
                         )}
+                        name={getEntityName(entity, entityTypes, allFeatures)}
                       />
                     );
                   })}

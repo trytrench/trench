@@ -98,6 +98,7 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
                 <SelectItem value="text">Text</SelectItem>
                 <SelectItem value="number">Number</SelectItem>
                 <SelectItem value="boolean">Boolean</SelectItem>
+                <SelectItem value="entity">Entity</SelectItem>
               </SelectContent>
             </Select>
           )}
