@@ -31,6 +31,7 @@ model EntityType {
   type String
 
   featureOrder String[]
+  ruleOrder    String[]
   features     EntityFeature[]
 
   nameFeature   EntityFeature? @relation("NameFeature", fields: [nameFeatureId], references: [id])
@@ -50,6 +51,7 @@ model EventType {
   type String
 
   featureOrder String[]
+  ruleOrder    String[]
   features     EventFeature[]
 
   project   Project @relation(fields: [projectId], references: [id])
@@ -67,7 +69,8 @@ model EntityFeature {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String
 
-  name String?
+  name  String?
+  color String?
 
   nameFeatureEntityType EntityType? @relation("NameFeature")
 
@@ -84,7 +87,8 @@ model EventFeature {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String
 
-  name String?
+  name  String?
+  color String?
 
   // color  String?
   @@unique([eventTypeId, featureId])

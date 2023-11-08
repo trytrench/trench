@@ -1,4 +1,4 @@
-import {
+import type {
   EntityFeature,
   EntityType,
   EventFeature,
@@ -55,11 +55,11 @@ export function getOrderedFeaturesForEvent(
     if (featureData.dataType === "entity") {
       const entityId = event.features[featureData.feature];
       const entityData = entities.find((e) => e.id === entityId);
-      if (!entityData)
+      if (!entityData || !entityId)
         return {
           id: featureId,
           name: featureOverrides[featureId] ?? featureData.feature,
-          value: null,
+          value: undefined,
           dataType: featureData.dataType,
         };
 
@@ -135,6 +135,13 @@ export function getOrderedFeaturesForEntity(
     if (featureData.dataType === "entity") {
       const entityId = entity[featureData.feature];
       const entityData = entityNames.find((e) => e.id === entityId);
+      if (!entityData || !entityId)
+        return {
+          id: featureId,
+          name: featureOverrides[featureId] ?? featureData.feature,
+          value: undefined,
+          dataType: featureData.dataType,
+        };
 
       const entityName = entityData[entityTypeToName[entityData.type]];
 

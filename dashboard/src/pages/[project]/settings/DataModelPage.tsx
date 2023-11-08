@@ -32,6 +32,7 @@ function DataModelPage({ projectId }: Props) {
   const { mutateAsync: saveEventFeature } =
     api.features.saveEventFeature.useMutation();
   const { mutateAsync: saveEventType } = api.labels.saveEventType.useMutation();
+  const [tab, setTab] = useState("features");
 
   const { data: eventTypes, refetch: refetchEventTypes } =
     api.labels.getEventTypes.useQuery({ projectId });
@@ -66,16 +67,24 @@ function DataModelPage({ projectId }: Props) {
       return sortBy(
         features.map((feature) => {
           const entityFeature = entityFeatures.find(
-            (entityFeature) => entityFeature.featureId === feature.id
+            (entityFeature) =>
+              entityFeature.featureId === feature.id &&
+              entityFeature.entityType.type === selectedItem.split("-")[1]
           );
 
           return {
             ...feature,
-            hidden: !entityType?.featureOrder.includes(feature.id),
+            hidden: !entityType?.[
+              tab === "rules" ? "ruleOrder" : "featureOrder"
+            ].includes(feature.id),
             name: entityFeature?.name ?? feature.feature,
+            color: entityFeature?.color,
           };
         }),
-        (feature) => entityType?.featureOrder.indexOf(feature.id)
+        (feature) =>
+          entityType?.[tab === "rules" ? "ruleOrder" : "featureOrder"].indexOf(
+            feature.id
+          )
       );
     }
 
@@ -86,16 +95,24 @@ function DataModelPage({ projectId }: Props) {
       return sortBy(
         features.map((feature) => {
           const eventFeature = eventFeatures.find(
-            (eventFeature) => eventFeature.featureId === feature.id
+            (eventFeature) =>
+              eventFeature.featureId === feature.id &&
+              eventFeature.eventType.type === selectedItem.split("-")[1]
           );
 
           return {
             ...feature,
-            hidden: !eventType?.featureOrder.includes(feature.id),
+            hidden: !eventType?.[
+              tab === "rules" ? "ruleOrder" : "featureOrder"
+            ].includes(feature.id),
             name: eventFeature?.name ?? feature.feature,
+            color: eventFeature?.color,
           };
         }),
-        (feature) => eventType?.featureOrder.indexOf(feature.id)
+        (feature) =>
+          eventType?.[tab === "rules" ? "ruleOrder" : "featureOrder"].indexOf(
+            feature.id
+          )
       );
     }
 
@@ -107,15 +124,24 @@ function DataModelPage({ projectId }: Props) {
     entityTypes,
     eventTypes,
     features,
+    tab,
   ]);
 
   const shownFeatures = useMemo(() => {
-    return allFeatures.filter((feature) => !feature.hidden && !feature.isRule);
-  }, [allFeatures]);
+    return allFeatures.filter(
+      (feature) =>
+        !feature.hidden &&
+        (tab === "features" ? !feature.isRule : feature.isRule)
+    );
+  }, [allFeatures, tab]);
 
   const hiddenFeatures = useMemo(() => {
-    return allFeatures.filter((feature) => feature.hidden && !feature.isRule);
-  }, [allFeatures]);
+    return allFeatures.filter(
+      (feature) =>
+        feature.hidden &&
+        (tab === "features" ? !feature.isRule : feature.isRule)
+    );
+  }, [allFeatures, tab]);
 
   // when the page loads, select the first entity type
   // useEffect(() => {
@@ -219,12 +245,12 @@ function DataModelPage({ projectId }: Props) {
           </div>
         </div>
         <div className="grow">
-          <Tabs defaultValue="features">
+          <Tabs defaultValue="features" value={tab} onValueChange={setTab}>
             <TabsList>
               <TabsTrigger value="features">Features</TabsTrigger>
               <TabsTrigger value="rules">Rules</TabsTrigger>
             </TabsList>
-            <TabsContent value="features">
+            <div className="mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
                 <Command className="relative">
                   <CommandInput
@@ -243,6 +269,39 @@ function DataModelPage({ projectId }: Props) {
                         {features && (
                           <FeatureList
                             features={shownFeatures}
+                            onColorChange={
+                              selectedItem === "all" || tab === "features"
+                                ? undefined
+                                : (color, feature) => {
+                                    if (
+                                      selectedItem?.startsWith(EVENT_PREFIX)
+                                    ) {
+                                      saveEventType({
+                                        projectId,
+                                        type: selectedItem?.split("-")[1],
+                                      })
+                                        .then((eventType) =>
+                                          saveEventFeature({
+                                            featureId: feature.id,
+                                            eventTypeId: eventType.id,
+                                            color,
+                                          })
+                                        )
+                                        .then(refetchEventTypes)
+                                        .catch((error) => console.log(error));
+                                    } else {
+                                      saveEntityFeature({
+                                        featureId: feature.id,
+                                        entityTypeId: entityTypes?.find(
+                                          (type) =>
+                                            type.type ===
+                                            selectedItem?.split("-")[1]
+                                        ).id,
+                                        color,
+                                      }).catch((error) => console.log(error));
+                                    }
+                                  }
+                            }
                             onDataTypeChange={
                               selectedItem !== "all"
                                 ? undefined
@@ -299,12 +358,14 @@ function DataModelPage({ projectId }: Props) {
                                         features,
                                         projectId,
                                         eventType: selectedItem?.split("-")[1],
+                                        isRule: tab === "rules",
                                       }).catch((error) => console.log(error));
                                     } else {
                                       saveEntityFeatureOrder({
                                         features,
                                         projectId,
                                         entityType: selectedItem?.split("-")[1],
+                                        isRule: tab === "rules",
                                       }).catch((error) => console.log(error));
                                     }
                                   }
@@ -347,6 +408,39 @@ function DataModelPage({ projectId }: Props) {
                           <CommandGroup heading="Hidden">
                             <FeatureList
                               features={hiddenFeatures}
+                              onColorChange={
+                                selectedItem === "all" || tab === "features"
+                                  ? undefined
+                                  : (color, feature) => {
+                                      if (
+                                        selectedItem?.startsWith(EVENT_PREFIX)
+                                      ) {
+                                        saveEventType({
+                                          projectId,
+                                          type: selectedItem?.split("-")[1],
+                                        })
+                                          .then((eventType) =>
+                                            saveEventFeature({
+                                              featureId: feature.id,
+                                              eventTypeId: eventType.id,
+                                              color,
+                                            })
+                                          )
+                                          .then(refetchEventTypes)
+                                          .catch((error) => console.log(error));
+                                      } else {
+                                        saveEntityFeature({
+                                          featureId: feature.id,
+                                          entityTypeId: entityTypes?.find(
+                                            (type) =>
+                                              type.type ===
+                                              selectedItem?.split("-")[1]
+                                          ).id,
+                                          color,
+                                        }).catch((error) => console.log(error));
+                                      }
+                                    }
+                              }
                               onRename={
                                 selectedItem === "all"
                                   ? undefined
@@ -388,6 +482,7 @@ function DataModelPage({ projectId }: Props) {
                                       .concat(item.id),
                                     projectId,
                                     eventType: selectedItem?.split("-")[1],
+                                    isRule: tab === "rules",
                                   })
                                     .then(refetchEventTypes)
                                     .catch((error) => console.log(error));
@@ -398,6 +493,7 @@ function DataModelPage({ projectId }: Props) {
                                       .concat(item.id),
                                     entityType: selectedItem?.split("-")[1],
                                     projectId,
+                                    isRule: tab === "rules",
                                   })
                                     .then(refetchEntityTypes)
                                     .catch((error) => console.log(error));
@@ -417,53 +513,7 @@ function DataModelPage({ projectId }: Props) {
                   <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
                 </Command>
               </Panel>
-            </TabsContent>
-            <TabsContent value="rules">
-              <Panel className=" h-[30rem] flex flex-col p-4 pt-2">
-                <Command className="relative">
-                  <CommandInput
-                    placeholder="Search features..."
-                    value={searchValue}
-                    onValueChange={setSearchValue}
-                  />
-                  <ScrollArea className="pr-1">
-                    {/* 1000rem so the CommandList doesn't create its own scrollbar */}
-                    <CommandList className="max-h-none">
-                      {features ? (
-                        features
-                          .filter((feature) => !feature.isRule)
-                          .map((feature) => (
-                            <CommandItem
-                              key={feature}
-                              className="aria-selected:bg-card aria-selected:text-card-foreground p-0 last:mb-4"
-                            >
-                              {/* <RuleCard
-                                key={feature}
-                                feature={feature}
-                                dataType={
-                                  featureMetadata?.find((f) => f.id === feature)
-                                    ?.dataType ?? "text"
-                                }
-                                onChange={() => {
-                                  refetch();
-                                }}
-                              /> */}
-                            </CommandItem>
-                          ))
-                      ) : (
-                        <Loader2Icon className="animate-spin w-4 h-4 text-muted-foreground mx-auto opacity-50" />
-                      )}
-                    </CommandList>
-                  </ScrollArea>
-                  <CommandEmpty>
-                    No features found for this entity type.
-                  </CommandEmpty>
-
-                  {/* Bottom gradient; right-2 so we don't cover the scrollbar. */}
-                  <div className="absolute bottom-0 left-0 right-2 bg-gradient-to-t from-card h-4"></div>
-                </Command>
-              </Panel>
-            </TabsContent>
+            </div>
           </Tabs>
         </div>
       </div>

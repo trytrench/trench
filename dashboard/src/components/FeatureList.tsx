@@ -24,6 +24,7 @@ interface Props {
   onRename: (name: string, feature: Feature) => void;
   onOrderChange?: (features: string[]) => void;
   onToggleHide: (hidden: boolean, feature: Feature) => void;
+  onColorChange?: (color: string, feature: Feature) => void;
 }
 
 export function FeatureList({
@@ -32,6 +33,7 @@ export function FeatureList({
   onRename,
   onOrderChange,
   onToggleHide,
+  onColorChange,
 }: Props) {
   const [activeId, setActiveId] = useState(null);
   const [items, setItems] = useState(features);
@@ -66,12 +68,16 @@ export function FeatureList({
             id={item.id}
             feature={item.feature}
             name={item.name}
+            color={item.color}
             dataType={item.dataType ?? "text"}
             hidden={item.hidden ?? false}
             onDataTypeChange={
               onDataTypeChange
                 ? (dataType) => onDataTypeChange(dataType, item)
                 : undefined
+            }
+            onColorChange={
+              onColorChange ? (color) => onColorChange(color, item) : undefined
             }
             onRename={onRename ? (name) => onRename(name, item) : undefined}
             onToggleHide={

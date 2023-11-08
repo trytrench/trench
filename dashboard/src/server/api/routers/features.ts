@@ -8,6 +8,7 @@ export const featuresRouter = createTRPCRouter({
         featureId: z.string(),
         entityTypeId: z.string(),
         name: z.string().optional(),
+        color: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -22,9 +23,11 @@ export const featuresRouter = createTRPCRouter({
           entityTypeId: input.entityTypeId,
           featureId: input.featureId,
           name: input.name,
+          color: input.color,
         },
         update: {
           name: input.name,
+          color: input.color,
         },
       });
     }),
@@ -35,6 +38,7 @@ export const featuresRouter = createTRPCRouter({
         featureId: z.string(),
         eventTypeId: z.string(),
         name: z.string().optional(),
+        color: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -49,9 +53,11 @@ export const featuresRouter = createTRPCRouter({
           eventTypeId: input.eventTypeId,
           featureId: input.featureId,
           name: input.name,
+          color: input.color,
         },
         update: {
           name: input.name,
+          color: input.color,
         },
       });
     }),
@@ -81,6 +87,7 @@ export const featuresRouter = createTRPCRouter({
         features: z.string().array(),
         projectId: z.string(),
         entityType: z.string(),
+        isRule: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -91,9 +98,9 @@ export const featuresRouter = createTRPCRouter({
             projectId: input.projectId,
           },
         },
-        data: {
-          featureOrder: input.features,
-        },
+        data: input.isRule
+          ? { ruleOrder: input.features }
+          : { featureOrder: input.features },
       });
     }),
 
@@ -103,6 +110,7 @@ export const featuresRouter = createTRPCRouter({
         features: z.string().array(),
         projectId: z.string(),
         eventType: z.string(),
+        isRule: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -114,13 +122,15 @@ export const featuresRouter = createTRPCRouter({
           },
         },
         create: {
-          featureOrder: input.features,
+          ...(input.isRule
+            ? { ruleOrder: input.features }
+            : { featureOrder: input.features }),
           type: input.eventType,
           projectId: input.projectId,
         },
-        update: {
-          featureOrder: input.features,
-        },
+        update: input.isRule
+          ? { ruleOrder: input.features }
+          : { featureOrder: input.features },
       });
     }),
 });

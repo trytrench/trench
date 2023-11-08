@@ -38,6 +38,7 @@ interface Props {
   onRename?: (name: string) => void;
   onDataTypeChange?: (dataType: string) => void;
   draggable: boolean;
+  color?: string;
 }
 
 export type Ref = HTMLButtonElement;
@@ -53,13 +54,16 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
     onRename,
     style,
     onToggleHide,
+    onColorChange,
     draggable,
+    color: initialColor,
     ...rest
   } = props;
 
   const [value, setValue] = useState(dataType);
   const [hidden, setHidden] = useState(initialHidden);
   const [name, setName] = useState(initialName || feature);
+  const [color, setColor] = useState(initialColor || "bg-gray-400");
 
   const dataTypeToIcon = {
     text: Type,
@@ -81,6 +85,34 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
             <GripVerticalIcon className="w-4 h-4 cursor-pointer" {...rest} />
           )}
           <div className="mr-auto text-sm">{name}</div>
+
+          {onColorChange && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className={`rounded-full ${color} w-2 h-2`}></div>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="flex space-x-2">
+                  {[
+                    "bg-gray-400",
+                    "bg-green-600",
+                    "bg-yellow-300",
+                    "bg-orange-400",
+                    "bg-red-500",
+                  ].map((color) => (
+                    <div
+                      key={color}
+                      onClick={() => {
+                        setColor(color);
+                        onColorChange(color);
+                      }}
+                      className={`rounded-full ${color} w-4 h-4`}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
 
           <Icon className="w-4 h-4" />
           {onDataTypeChange && (
