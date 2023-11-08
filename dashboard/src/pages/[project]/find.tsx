@@ -67,6 +67,7 @@ const EntityList = ({ project, datasetId }: Props) => {
                         href={`/${project.name}/entity/${entity.id}`}
                         entity={entity}
                         features={entity.features}
+                        rules={entity.rules}
                         name={entity.name}
                         datasetId={datasetId}
                       />

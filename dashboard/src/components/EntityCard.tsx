@@ -16,6 +16,7 @@ export const EntityCard = ({
   relation,
   href,
   features,
+  rules,
   name,
   datasetId,
 }: Props) => {
@@ -51,7 +52,19 @@ export const EntityCard = ({
             <div className="italic text-sm">No labels</div>
           )} */}
         </div>
-        <div className="h-4"></div>
+        <div className="h-2"></div>
+        {rules.length > 0 && (
+          <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground mb-4">
+            {rules.map(({ name, color }) => (
+              <div key={name} className="flex space-x-1 items-center">
+                <div
+                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
+                ></div>
+                <div className="font-semibold">{name}</div>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
           {features.map(({ name, value, dataType, entityName, entityType }) => (
             <div key={name}>

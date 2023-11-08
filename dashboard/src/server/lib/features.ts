@@ -14,7 +14,8 @@ export function getOrderedFeaturesForEvent(
   entityTypes: (EntityType & {
     nameFeature: (EntityFeature & { feature: Feature }) | null;
   })[],
-  entities: { id: string; type: string }[]
+  entities: { id: string; type: string }[],
+  isRule?: boolean
 ) {
   // Find the event type for the current event
   const eventType = eventTypes.find((et) => et.type === event.type);
@@ -24,7 +25,7 @@ export function getOrderedFeaturesForEvent(
     .filter((ef) => ef.eventType.type === event.type)
     .reduce(
       (acc, ef) => {
-        acc[ef.featureId] = ef.name;
+        acc[ef.featureId] = ef;
         return acc;
       },
       {} as Record<string, string>
@@ -48,40 +49,43 @@ export function getOrderedFeaturesForEvent(
   );
 
   // Get the features for the event with overrides applied
-  const orderedFeatures = eventType.featureOrder.map((featureId) => {
-    const featureData = featureMap[featureId];
-    if (!featureData) throw new Error(`Feature ${featureId} not found`);
+  const orderedFeatures = eventType[isRule ? "ruleOrder" : "featureOrder"].map(
+    (featureId) => {
+      const featureData = featureMap[featureId];
+      if (!featureData) throw new Error(`Feature ${featureId} not found`);
 
-    if (featureData.dataType === "entity") {
-      const entityId = event.features[featureData.feature];
-      const entityData = entities.find((e) => e.id === entityId);
-      if (!entityData || !entityId)
+      if (featureData.dataType === "entity") {
+        const entityId = event.features[featureData.feature];
+        const entityData = entities.find((e) => e.id === entityId);
+        if (!entityData || !entityId)
+          return {
+            id: featureId,
+            name: featureOverrides[featureId]?.name ?? featureData.feature,
+            value: undefined,
+            dataType: featureData.dataType,
+          };
+
+        const entityName = entityData[entityTypeToName[entityData.type]];
+
         return {
           id: featureId,
-          name: featureOverrides[featureId] ?? featureData.feature,
-          value: undefined,
+          name: featureOverrides[featureId]?.name ?? featureData.feature,
+          value: event.features[featureData.feature],
           dataType: featureData.dataType,
+          entityName,
+          entityType: entityData.type,
         };
-
-      const entityName = entityData[entityTypeToName[entityData.type]];
+      }
 
       return {
         id: featureId,
-        name: featureOverrides[featureId] ?? featureData.feature,
+        name: featureOverrides[featureId]?.name ?? featureData.feature,
         value: event.features[featureData.feature],
         dataType: featureData.dataType,
-        entityName,
-        entityType: entityData.type,
+        color: featureOverrides[featureId]?.color,
       };
     }
-
-    return {
-      id: featureId,
-      name: featureOverrides[featureId] ?? featureData.feature,
-      value: event.features[featureData.feature],
-      dataType: featureData.dataType,
-    };
-  });
+  );
 
   return orderedFeatures;
 }
@@ -93,7 +97,8 @@ export function getOrderedFeaturesForEntity(
   })[],
   entityFeatures: (EntityFeature & { entityType: EntityType })[],
   features: Feature[],
-  entityNames: { id: string; type: string }[]
+  entityNames: { id: string; type: string }[],
+  isRule?: boolean
 ) {
   // Find the entity type for the current entity
   const entityType = entityTypes.find((et) => et.type === entity.type);
@@ -104,7 +109,7 @@ export function getOrderedFeaturesForEntity(
     .filter((ef) => ef.entityType.type === entity.type)
     .reduce(
       (acc, ef) => {
-        acc[ef.featureId] = ef.name;
+        acc[ef.featureId] = ef;
         return acc;
       },
       {} as Record<string, string>
@@ -128,40 +133,43 @@ export function getOrderedFeaturesForEntity(
   );
 
   // Get the features for the entity with overrides applied
-  const orderedFeatures = entityType.featureOrder.map((featureId) => {
-    const featureData = featureMap[featureId];
-    if (!featureData) throw new Error(`Feature ${featureId} not found`);
+  const orderedFeatures = entityType[isRule ? "ruleOrder" : "featureOrder"].map(
+    (featureId) => {
+      const featureData = featureMap[featureId];
+      if (!featureData) throw new Error(`Feature ${featureId} not found`);
 
-    if (featureData.dataType === "entity") {
-      const entityId = entity[featureData.feature];
-      const entityData = entityNames.find((e) => e.id === entityId);
-      if (!entityData || !entityId)
+      if (featureData.dataType === "entity") {
+        const entityId = entity[featureData.feature];
+        const entityData = entityNames.find((e) => e.id === entityId);
+        if (!entityData || !entityId)
+          return {
+            id: featureId,
+            name: featureOverrides[featureId]?.name ?? featureData.feature,
+            value: undefined,
+            dataType: featureData.dataType,
+          };
+
+        const entityName = entityData[entityTypeToName[entityData.type]];
+
         return {
           id: featureId,
-          name: featureOverrides[featureId] ?? featureData.feature,
-          value: undefined,
+          name: featureOverrides[featureId]?.name ?? featureData.feature,
+          value: entity[featureData.feature],
           dataType: featureData.dataType,
+          entityName,
+          entityType: entityData.type,
         };
-
-      const entityName = entityData[entityTypeToName[entityData.type]];
+      }
 
       return {
         id: featureId,
-        name: featureOverrides[featureId] ?? featureData.feature,
+        name: featureOverrides[featureId]?.name ?? featureData.feature,
         value: entity[featureData.feature],
         dataType: featureData.dataType,
-        entityName,
-        entityType: entityData.type,
+        color: featureOverrides[featureId]?.color,
       };
     }
-
-    return {
-      id: featureId,
-      name: featureOverrides[featureId] ?? featureData.feature,
-      value: entity[featureData.feature],
-      dataType: featureData.dataType,
-    };
-  });
+  );
 
   return orderedFeatures;
 }

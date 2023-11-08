@@ -158,6 +158,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                         datasetId={datasetId}
                         event={item.event}
                         features={item.event.features ?? []}
+                        rules={item.event.rules}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
                       />
@@ -276,6 +277,7 @@ interface EventCardProps {
     value: string;
     dataType: string;
   }[];
+  rules: any[];
 }
 
 function EventCard({
@@ -283,6 +285,7 @@ function EventCard({
   isFirst,
   isLast,
   features,
+  rules,
   datasetId,
 }: EventCardProps) {
   const router = useRouter();
@@ -323,9 +326,22 @@ function EventCard({
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
+        {rules.length > 0 && (
+          <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
+            {rules.map(({ name, color }) => (
+              <div key={name} className="flex space-x-1 items-center">
+                <div
+                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
+                ></div>
+                <div className="font-semibold">{name}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {features.length > 0 ? (
           <>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
               {features.map(
                 ({ name, value, dataType, entityName, entityType }, idx) => (
                   <div key={name}>

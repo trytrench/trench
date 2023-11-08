@@ -383,6 +383,7 @@ function DataModelPage({ projectId }: Props) {
                                           .filter((f) => f !== item.id),
                                         projectId,
                                         eventType: selectedItem?.split("-")[1],
+                                        isRule: tab === "rules",
                                       })
                                         .then(refetchEventTypes)
                                         .catch((error) => console.log(error));
@@ -393,6 +394,7 @@ function DataModelPage({ projectId }: Props) {
                                           .filter((f) => f !== item.id),
                                         entityType: selectedItem?.split("-")[1],
                                         projectId,
+                                        isRule: tab === "rules",
                                       })
                                         .then(refetchEntityTypes)
                                         .catch((error) => console.log(error));

@@ -130,6 +130,14 @@ export const listsRouter = createTRPCRouter({
             features,
             entities
           ),
+          rules: getOrderedFeaturesForEntity(
+            entity,
+            entityTypes,
+            entityFeatures,
+            features,
+            entities,
+            true
+          ).filter((feature) => feature.value === "true"),
           name: entities.find((e) => e.id === entity.id)?.[
             entityTypeToName[entity.type]
           ],
@@ -262,6 +270,18 @@ export const listsRouter = createTRPCRouter({
             entityTypes,
             entityNames
           ),
+          rules: getOrderedFeaturesForEvent(
+            {
+              type: event.event_type,
+              features: JSON.parse(event.features),
+            },
+            eventTypes,
+            eventFeatures,
+            features,
+            entityTypes,
+            entityNames,
+            true
+          ).filter((feature) => feature.value),
           timestamp: new Date(event.event_timestamp),
         })),
       };
