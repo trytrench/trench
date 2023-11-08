@@ -55,6 +55,12 @@ export function EventDrawer(props: {
               label: "Type",
               value: selectedEvent?.type ?? "--",
             },
+            ...Object.entries(selectedEvent?.features ?? {}).map(
+              ([key, value]) => ({
+                label: key,
+                value: value as string,
+              })
+            ),
           ]}
         />
 

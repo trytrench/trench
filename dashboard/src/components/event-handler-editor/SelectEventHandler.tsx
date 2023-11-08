@@ -28,12 +28,12 @@ export function SelectEventHandler(props: {
     );
 
   return (
-    <Tabs defaultValue="recent" className="w-96">
+    <Tabs defaultValue="saved" className="w-96">
       <TabsList className="flex justify-center">
-        <TabsTrigger value="recent">Recently Saved</TabsTrigger>
+        <TabsTrigger value="saved">Saved Snapshots</TabsTrigger>
         <TabsTrigger value="releases">Releases</TabsTrigger>
       </TabsList>
-      <TabsContent value="recent">
+      <TabsContent value="saved">
         {savedEventHandlers?.map((evHandler) => {
           const selected = false;
 

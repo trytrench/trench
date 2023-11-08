@@ -65,12 +65,12 @@ export function PublishEventHandler() {
         <div className="h-6"></div>
         <div className="flex items-stretch">
           <div className="flex-1 min-w-0">
-            <div className="px-3 py-2 flex items-center h-20 border rounded-md">
-              <FileText className="h-6 w-6 mr-3" />
+            <div className="px-3 py-2 flex items-center h-20 border border-muted rounded-md">
+              <FileText className="h-6 w-6 mr-3 shrink-0" />
               <div className="flex-1 min-w-0 flex flex-col items-start">
                 <div className="w-full flex whitespace-nowrap items-center">
                   <RenderCodeHash hashHex={prodEventHandler.hash} size="sm" />
-                  <span className="ml-1 mb-0.5">
+                  <span className="ml-1 mb-0.5 truncate">
                     {prodEventHandler.message}
                   </span>
                 </div>
@@ -94,7 +94,7 @@ export function PublishEventHandler() {
               renderTrigger={({ selectedEventHandler }) => {
                 if (!selectedEventHandler) {
                   return (
-                    <button className="h-20 p-3 w-full flex items-center justify-center border rounded-md hover:bg-secondary data-[state=open]:bg-secondary transition">
+                    <button className="h-20 p-3 w-full flex items-center justify-center border border-foreground rounded-md hover:bg-secondary data-[state=open]:bg-secondary transition">
                       <span className="font-bold">Select code to publish</span>
                       <ChevronDown className="h-4 w-4 ml-2" />
                     </button>
@@ -103,7 +103,7 @@ export function PublishEventHandler() {
                 return (
                   <button
                     className={cn({
-                      "w-full px-3 py-2 flex items-center h-20 border rounded-md hover:bg-secondary data-[state=open]:bg-secondary min-w-0":
+                      "w-full px-3 py-2 flex items-center h-20 border border-foreground rounded-md hover:bg-secondary data-[state=open]:bg-secondary min-w-0":
                         true,
                     })}
                   >
@@ -136,7 +136,7 @@ export function PublishEventHandler() {
         <div className="h-8"></div>
       </div>
 
-      <h1 className="text-lg p-4">Backtests</h1>
+      <h1 className="text-lg p-4">Releases</h1>
       <PublishTable />
     </div>
   );

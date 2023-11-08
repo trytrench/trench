@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Calendar, Play } from "lucide-react";
 import { Panel } from "../../ui/custom/panel";
-import { add, endOfDay } from "date-fns";
+import { add, endOfDay, max } from "date-fns";
 import { type DateRange } from "react-day-picker";
 import { EmbeddedDatePicker, formatSelectedDates } from "./EmbeddedDatePicker";
 import { RenderCodeHash } from "../RenderCodeHash";
@@ -83,7 +83,7 @@ export function StartBacktest(props: StartBacktestProps) {
               }
               createBacktest({
                 from: backtestDateRange.from,
-                to: endOfDay(backtestDateRange.to),
+                to: max([endOfDay(backtestDateRange.to), new Date()]),
                 eventHandlerId: selectedEventHandler.id,
                 projectId: project.id,
               })

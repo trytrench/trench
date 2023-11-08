@@ -66,6 +66,7 @@ export const backtestsRouter = createTRPCRouter({
       const eventHandler = data.currentEventHandlerAssignment?.eventHandler;
 
       return {
+        datasetId: data.id,
         createdAt: data.createdAt,
         startTime: data.startTime,
         endTime: data.endTime,

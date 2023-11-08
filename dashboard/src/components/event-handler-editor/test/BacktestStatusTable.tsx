@@ -1,5 +1,5 @@
 import { formatRelative } from "date-fns";
-import { api } from "../../../utils/api";
+import { RouterOutputs, api } from "../../../utils/api";
 import { cn } from "../../../lib/utils";
 import { Progress } from "../../ui/progress";
 import { BacktestStatusIndicator } from "./BacktestStatusIndicator";
@@ -16,14 +16,53 @@ import { EventHandlerLabel } from "../EventHandlerLabel";
 import { Button } from "../../ui/button";
 import { formatSelectedDates } from "./EmbeddedDatePicker";
 import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../ui/dialog";
+import { InfoIcon, Save } from "lucide-react";
+import EventsList from "../../EventsList";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../../ui/tooltip";
+
+type BacktestDataset = RouterOutputs["backtests"]["get"];
+
+function BacktestResultsDialog(props: { backtest: BacktestDataset }) {
+  const { backtest } = props;
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>Results</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-[calc(100%-8rem)] h-[calc(100%-4rem)] px-0 flex flex-col justify-stretch">
+        <DialogHeader className="px-6">
+          <DialogTitle>Backtest</DialogTitle>
+          <DialogDescription>Backtest results</DialogDescription>
+        </DialogHeader>
+        {isOpen && <EventsList datasetId={backtest.datasetId} />}
+        <DialogFooter className=""></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function BacktestStatusRow(props: { backtestDatasetId: bigint }) {
   const { backtestDatasetId } = props;
 
   const { data: backtestDataset } = api.backtests.get.useQuery(
-    {
-      id: backtestDatasetId,
-    },
+    { id: backtestDatasetId },
     {
       refetchInterval: (data) => {
         return data?.isActive ? 1000 : false;
@@ -39,22 +78,47 @@ function BacktestStatusRow(props: { backtestDatasetId: bigint }) {
     backtestDataset.totalEvents === 0
       ? 0
       : (backtestDataset.processedEvents / backtestDataset.totalEvents) * 100;
+
   return (
     <TableRow>
       <TableCell className="font-medium">
-        {formatRelative(new Date(backtestDataset.createdAt), new Date())}
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger>
+              {formatRelative(new Date(backtestDataset.createdAt), new Date())}
+            </TooltipTrigger>
+            <TooltipContent>
+              {new Date(backtestDataset.createdAt).toLocaleString()}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </TableCell>
 
       <TableCell className="font-medium max-w-[20rem]">
         <EventHandlerLabel eventHandler={backtestDataset.eventHandler} />
       </TableCell>
       <TableCell>
-        <span>
-          {formatSelectedDates(
-            backtestDataset.startTime ?? undefined,
-            backtestDataset.endTime ?? undefined
-          )}
-        </span>
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger>
+              <span>
+                {formatSelectedDates(
+                  backtestDataset.startTime ?? undefined,
+                  backtestDataset.endTime ?? undefined
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {backtestDataset.startTime &&
+                backtestDataset.endTime &&
+                `${new Date(
+                  backtestDataset.startTime
+                ).toLocaleString()} - ${new Date(
+                  backtestDataset.endTime
+                ).toLocaleString()}`}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </TableCell>
       <TableCell>
         <BacktestStatusIndicator isActive={backtestDataset.isActive} />
@@ -68,7 +132,7 @@ function BacktestStatusRow(props: { backtestDatasetId: bigint }) {
         </div>
       </TableCell>
       <TableCell>
-        <Button>Inspect</Button>
+        <BacktestResultsDialog backtest={backtestDataset} />
       </TableCell>
     </TableRow>
   );
