@@ -50,7 +50,7 @@ const EntityList = ({ project, datasetId }: Props) => {
   return (
     <div className="flex flex-col overflow-hidden grow">
       <div className="flex p-3 px-8 border-b">
-        {/* <EntityFilter datasetId={datasetId!} onChange={setFilters} /> */}
+        <EntityFilter projectId={project.id} onChange={setFilters} />
       </div>
       <div className="grow relative">
         <div className="absolute inset-0">

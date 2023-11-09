@@ -11,6 +11,7 @@ import { EventListItem } from "./EventListItem";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
+import { EventFilter } from "./ListFilter";
 
 interface Props {
   entityId?: string;
@@ -107,7 +108,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          {/* <EventFilter datasetId={datasetId} onChange={setFilters} /> */}
+          <EventFilter projectId={projectId} onChange={setFilters} />
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle
