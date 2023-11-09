@@ -23,15 +23,14 @@ model EventLog {
   @@index([timestamp])
 }
 
-
 // Once an EventHandler is created, it should never be modified
 model EventHandler {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hash      String
-  
+  hash String
+
   code    Json
   message String
 
@@ -54,7 +53,6 @@ model EventHandlerAssignment {
 
   currentDataset Dataset? @relation("currentDatasetAssignment")
 }
-
 
 // Below tables all belong to a dataset
 
@@ -88,10 +86,6 @@ model Dataset {
   currentEventHandlerAssignmentId String?                 @unique
   currentEventHandlerAssignment   EventHandlerAssignment? @relation("currentDatasetAssignment", fields: [currentEventHandlerAssignmentId], references: [id])
 
-  features    Feature[]
-  eventTypes  EventType[]
-  entityTypes EntityType[]
-
   eventHandlerAssignments EventHandlerAssignment[] @relation("datasetAssignments")
 
   productionProject Project? @relation("productionDatasetProject")
@@ -105,12 +99,14 @@ model EntityType {
   type String
 
   featureOrder String[]
+  ruleOrder    String[]
   features     EntityFeature[]
 
-  project   Project  @relation(fields: [projectId], references: [id])
+  nameFeature   EntityFeature? @relation("NameFeature", fields: [nameFeatureId], references: [id])
+  nameFeatureId String?        @unique
+
+  project   Project @relation(fields: [projectId], references: [id])
   projectId String
-  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
-  datasetId BigInt?
 
   @@unique([type, projectId])
 }
@@ -123,12 +119,11 @@ model EventType {
   type String
 
   featureOrder String[]
+  ruleOrder    String[]
   features     EventFeature[]
 
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
   projectId String
-  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
-  datasetId BigInt?
 
   @@unique([type, projectId])
 }
@@ -142,8 +137,12 @@ model EntityFeature {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String
 
-  name String?
-  // color  String?
+  name  String?
+  color String?
+
+  nameFeatureEntityType EntityType? @relation("NameFeature")
+
+  @@unique([entityTypeId, featureId])
 }
 
 model EventFeature {
@@ -155,8 +154,10 @@ model EventFeature {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String
 
-  name String?
-  // color  String?
+  name  String?
+  color String?
+
+  @@unique([eventTypeId, featureId])
 }
 
 model Feature {
@@ -171,10 +172,8 @@ model Feature {
   eventFeatures  EventFeature[]
   entityFeatures EntityFeature[]
 
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
   projectId String
-  Dataset   Dataset? @relation(fields: [datasetId], references: [id])
-  datasetId BigInt?
 
   @@unique([feature, projectId])
 }
@@ -196,7 +195,6 @@ model Project {
   eventTypes  EventType[]
   entityTypes EntityType[]
 }
-
 
 // Necessary for Next auth
 model Account {

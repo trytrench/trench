@@ -1,3 +1,4 @@
+import { EntityFeature, EntityType, Feature, Project } from "@prisma/client";
 import { Loader2Icon } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -10,15 +11,12 @@ import type { NextPageWithLayout } from "~/pages/_app";
 import { EntityFilters } from "~/shared/validation";
 import { api } from "~/utils/api";
 
-const Page: NextPageWithLayout = () => {
-  const router = useRouter();
+interface Props {
+  project: Project;
+  datasetId: string;
+}
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = useMemo(() => project?.productionDatasetId, [project]);
-
+const EntityList = ({ project, datasetId }: Props) => {
   const [filters, setFilters] = useState<EntityFilters>(undefined);
 
   const limit = 10;
@@ -52,7 +50,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <div className="flex flex-col overflow-hidden grow">
       <div className="flex p-3 px-8 border-b">
-        <EntityFilter datasetId={datasetId!} onChange={setFilters} />
+        <EntityFilter projectId={project.id} onChange={setFilters} />
       </div>
       <div className="grow relative">
         <div className="absolute inset-0">
@@ -66,8 +64,12 @@ const Page: NextPageWithLayout = () => {
                     return (
                       <EntityCard
                         key={entity.id}
-                        href={`/${project?.name}/entity/${entity.id}`}
+                        href={`/${project.name}/entity/${entity.id}`}
                         entity={entity}
+                        features={entity.features}
+                        rules={entity.rules}
+                        name={entity.name}
+                        datasetId={datasetId}
                       />
                     );
                   })}
@@ -95,6 +97,23 @@ const Page: NextPageWithLayout = () => {
       </div>
     </div>
   );
+};
+
+const Page: NextPageWithLayout = () => {
+  const router = useRouter();
+
+  const { data: project } = api.project.getByName.useQuery(
+    { name: router.query.project as string },
+    { enabled: !!router.query.project }
+  );
+  const datasetId = useMemo(
+    () => project?.prodDatasetId?.toString(),
+    [project]
+  );
+
+  if (!project || !datasetId) return null;
+
+  return <EntityList datasetId={datasetId} project={project} />;
 };
 
 Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
