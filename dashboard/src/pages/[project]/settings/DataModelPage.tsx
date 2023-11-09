@@ -53,12 +53,12 @@ function DataModelPage({ projectId }: Props) {
     projectId,
   });
 
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<string | null>("all");
 
   const allFeatures = useMemo(() => {
     if (!selectedItem) return [];
 
-    if (selectedItem === "all") return features;
+    if (selectedItem === "all") return features ?? [];
 
     if (selectedItem.startsWith(ENTITY_PREFIX)) {
       const entityType = entityTypes.find(
