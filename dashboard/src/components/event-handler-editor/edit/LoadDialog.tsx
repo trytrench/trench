@@ -1,5 +1,5 @@
 import { FileText, FolderOpen, InfoIcon, Save } from "lucide-react";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { handleError } from "../../../lib/handleError";
@@ -25,6 +25,7 @@ import { useProject } from "../../../hooks/useProject";
 import { toast } from "../../ui/use-toast";
 import { SelectEventHandler } from "../SelectEventHandler";
 import { EventHandler } from "../types";
+import { EventHandlerLabel } from "../EventHandlerLabel";
 
 export function LoadDialog() {
   const { data: project } = useProject();
@@ -55,7 +56,7 @@ export function LoadDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Load code snapshot</DialogTitle>
-          <DialogDescription>Load yeet.</DialogDescription>
+          {/* <DialogDescription>Load.</DialogDescription> */}
         </DialogHeader>
 
         <SelectEventHandler
@@ -80,6 +81,16 @@ export function LoadDialog() {
                 code: selectedEventHandler.code,
               });
               setOpen(false);
+              toast({
+                description: (
+                  <div className="w-80 flex items-center gap-2">
+                    Loaded:{" "}
+                    <div className="flex-1 min-w-0">
+                      <EventHandlerLabel eventHandler={selectedEventHandler} />
+                    </div>
+                  </div>
+                ),
+              });
             }}
           >
             Load

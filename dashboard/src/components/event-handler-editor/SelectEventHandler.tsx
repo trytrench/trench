@@ -33,7 +33,7 @@ export function SelectEventHandler(props: {
         <TabsTrigger value="saved">Saved Snapshots</TabsTrigger>
         <TabsTrigger value="releases">Releases</TabsTrigger>
       </TabsList>
-      <TabsContent value="saved">
+      <TabsContent value="saved" className="max-h-72 overflow-y-auto">
         {savedEventHandlers?.map((evHandler) => {
           const selected = value?.id === evHandler.id;
 
@@ -69,7 +69,7 @@ export function SelectEventHandler(props: {
           );
         })}
       </TabsContent>
-      <TabsContent value="releases">
+      <TabsContent value="releases" className="max-h-72 overflow-y-auto">
         {releasedEventHandlers?.map((release) => {
           const { eventHandler: evHandler, releasedAt } = release;
 

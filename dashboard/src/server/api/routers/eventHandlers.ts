@@ -119,7 +119,6 @@ export const eventHandlersRouter = createTRPCRouter({
           feature: feature.name,
           projectId,
           isRule: feature.isRule,
-          eventHandlerId: eventHandler.id,
         })),
         skipDuplicates: true,
       });

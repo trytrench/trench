@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { api } from "../../../utils/api";
 import { useProject } from "../../../hooks/useProject";
 import { toast } from "../../ui/use-toast";
+import { EventHandlerLabel } from "../EventHandlerLabel";
 
 export function SaveDialog() {
   const { data: project } = useProject();
@@ -109,8 +110,18 @@ export function SaveDialog() {
                 code: compileStatus.code,
                 message,
               })
-                .then(() => {
-                  toast({ title: "Saved" });
+                .then((newEventHandler) => {
+                  toast({
+                    description: (
+                      <div className="w-80 flex items-center gap-2">
+                        Saved:{" "}
+                        <div className="flex-1 min-w-0">
+                          <EventHandlerLabel eventHandler={newEventHandler} />
+                        </div>
+                      </div>
+                    ),
+                  });
+                  setMessage("");
                   setOpen(false);
                 })
                 .catch(handleError);
