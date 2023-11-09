@@ -23,11 +23,93 @@ model EventLog {
   @@index([timestamp])
 }
 
-model FeatureMetadata {
-  id   String @id
-  name String
+model EntityType {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  dataType String @default("string")
+  type String
+
+  featureOrder String[]
+  ruleOrder    String[]
+  features     EntityFeature[]
+
+  nameFeature   EntityFeature? @relation("NameFeature", fields: [nameFeatureId], references: [id])
+  nameFeatureId String?        @unique
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@unique([type, projectId])
+}
+
+model EventType {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type String
+
+  featureOrder String[]
+  ruleOrder    String[]
+  features     EventFeature[]
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@unique([type, projectId])
+}
+
+model EntityFeature {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
+  entityTypeId String
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String
+
+  name  String?
+  color String?
+
+  nameFeatureEntityType EntityType? @relation("NameFeature")
+
+  // color  String?
+  @@unique([entityTypeId, featureId])
+}
+
+model EventFeature {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId String
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String
+
+  name  String?
+  color String?
+
+  // color  String?
+  @@unique([eventTypeId, featureId])
+}
+
+model Feature {
+  id       String  @id @default(dbgenerated("nanoid()"))
+  feature  String
+  isRule   Boolean
+  dataType String  @default("text")
+  // name    String?
+  // color   String?
+  // hidden  Boolean @default(false)
+
+  eventFeatures  EventFeature[]
+  entityFeatures EntityFeature[]
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@unique([feature, projectId])
 }
 
 model Project {
@@ -35,12 +117,16 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name String
+  name String @unique
 
   prodDataset   Dataset? @relation(fields: [prodDatasetId], references: [id])
   prodDatasetId BigInt?  @unique
 
   releases Release[]
+
+  features    Feature[]
+  eventTypes  EventType[]
+  entityTypes EntityType[]
 }
 
 model Release {

@@ -1,29 +1,20 @@
-import {
-  Avatar,
-  Box,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  type DrawerProps,
-  Flex,
-  HStack,
-  Icon,
-  IconButton,
-  Text,
-  VStack,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-} from "@chakra-ui/react";
 import { type Release } from "@prisma/client";
 import { format } from "date-fns";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontalIcon } from "lucide-react";
 import pluralize from "pluralize";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "./ui/sheet";
 
-interface Props extends DrawerProps {
+interface Props {
+  open: boolean;
+  onOpenChange: (val: boolean) => void;
   releases: Release[];
   onPreviewRelease: (release: Release) => void;
 }
@@ -31,53 +22,50 @@ interface Props extends DrawerProps {
 export const ReleasesSidebar = ({
   releases,
   onPreviewRelease,
-  ...props
+  open,
+  onOpenChange,
 }: Props) => {
   return (
-    <Drawer placement="right" {...props}>
-      <DrawerContent>
-        <DrawerHeader>Releases</DrawerHeader>
-        <DrawerCloseButton />
-        <DrawerBody>
-          <Text fontSize="xs" color="gray.500">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent>
+        <SheetHeader>Releases</SheetHeader>
+        <div>
+          <div>
             {releases.length} {pluralize("release", releases.length)}
-          </Text>
-          <VStack spacing={2} align="stretch">
+          </div>
+          <div>
             {releases.map((release) => (
-              <Box key={release.id}>
-                <Flex justify="space-between" align="center">
-                  <Text fontSize="sm">
+              <div key={release.id}>
+                <div className="flex justify-between items-center">
+                  <div>
                     v{release.version} {release.description}
-                  </Text>
-
-                  <Menu>
-                    <MenuButton
-                      as={IconButton}
-                      icon={<Icon as={MoreHorizontal} fontSize="sm" />}
-                      size="xs"
-                      variant="unstyled"
-                      aria-label="More"
-                    >
-                      Actions
-                    </MenuButton>
-                    <MenuList fontSize="sm">
-                      <MenuItem onClick={() => onPreviewRelease(release)}>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontalIcon className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => onPreviewRelease(release)}
+                      >
                         Preview
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                </Flex>
-                <HStack spacing={2} mt={1}>
-                  <Avatar name="Bowen Xue" size="xs"></Avatar>
-                  <Text fontSize="xs" color="gray.500">
-                    Published on {format(release.createdAt, "MMM dd")}
-                  </Text>
-                </HStack>
-              </Box>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Avatar>
+                    <AvatarFallback>BX</AvatarFallback>
+                  </Avatar>
+                  <div>Published on {format(release.createdAt, "MMM dd")}</div>
+                </div>
+              </div>
             ))}
-          </VStack>
-        </DrawerBody>
-      </DrawerContent>
-    </Drawer>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

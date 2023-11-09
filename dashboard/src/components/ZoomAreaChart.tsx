@@ -1,4 +1,4 @@
-import { AreaChart, type AreaChartProps } from "@trytrench/tremor";
+import { AreaChart, type AreaChartProps } from "./charts/AreaChart";
 import { useCallback, useState } from "react";
 import { ReferenceArea } from "recharts";
 import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
@@ -10,7 +10,6 @@ interface Props extends AreaChartProps {
 export const ZoomAreaChart = ({ onZoom, ...props }: Props) => {
   const [firstX, setFirstX] = useState<string | undefined>(undefined);
   const [secondX, setSecondX] = useState<string | undefined>(undefined);
-
   const handleMouseDown = useCallback(
     (e: CategoricalChartState) => {
       setFirstX(e.activeLabel);

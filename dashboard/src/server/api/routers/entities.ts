@@ -8,9 +8,10 @@ import {
 import {
   buildEntityExistsQuery,
   buildEventExistsQuery,
-  getFiltersWhereQuery,
 } from "../../lib/filters";
 import { db } from "~/server/db";
+import { getOrderedFeaturesForEntity } from "~/server/lib/features";
+import { uniqBy } from "lodash";
 
 export const entitiesRouter = createTRPCRouter({
   findIds: publicProcedure
@@ -271,19 +272,39 @@ export const entitiesRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
+      const features = await ctx.prisma.feature.findMany();
+      const entityTypes = await ctx.prisma.entityType.findMany({
+        include: {
+          nameFeature: {
+            include: {
+              feature: true,
+            },
+          },
+        },
+      });
+      const entityFeatures = await ctx.prisma.entityFeature.findMany({
+        include: {
+          entityType: true,
+          feature: true,
+        },
+      });
+
       const result = await db.query({
         query: `
           SELECT 
             entity_id as id,
             entity_type as type,
-            entity_name as name,
             max(event_timestamp) AS lastSeenAt,
-            argMax(entity_features, event_timestamp) AS features,
-            arrayDistinct(groupArray(label)) AS labels
-          FROM event_entity_entity_labels
+            ${features
+              .map(
+                (feature) =>
+                  `argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}\n`
+              )
+              .join(",")}
+          FROM event_entity
           WHERE id = '${input.id}'
             AND dataset_id = '${input.datasetId}'
-          GROUP BY entity_id, entity_type, entity_name;
+          GROUP BY entity_id, entity_type;
         `,
         format: "JSONEachRow",
       });
@@ -291,7 +312,6 @@ export const entitiesRouter = createTRPCRouter({
       const entities = await result.json<
         {
           id: string;
-          name: string;
           type: string;
           lastSeenAt: string;
           features: string;
@@ -299,9 +319,59 @@ export const entitiesRouter = createTRPCRouter({
         }[]
       >();
 
+      const entity = entities[0];
+      if (!entity) throw new Error("Entity not found");
+
+      const nameFeatures = uniqBy(
+        entityTypes.map((type) => type.nameFeature?.feature).filter(Boolean),
+        (feature) => feature?.feature
+      );
+
+      const entityFeatureNames = features
+        .filter((feature) => feature.dataType === "entity")
+        .map((feature) => feature.feature);
+
+      const entityIds = entities.map((entity) => entity.id);
+      for (const entity of entities) {
+        for (const [feature, value] of Object.entries(entity)) {
+          if (value && entityFeatureNames.includes(feature)) {
+            entityIds.push(value);
+          }
+        }
+      }
+
+      const data = await db.query({
+        query: `
+          SELECT 
+            entity_id as id,
+            entity_type as type,
+            ${nameFeatures
+              .map(
+                (feature) =>
+                  `argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
+              )
+              .join(",")}
+          FROM event_entity
+          WHERE dataset_id = '${input.datasetId}'
+          AND entity_id IN (${entityIds.join(",")})
+          GROUP BY 
+            entity_id,
+            entity_type;
+        `,
+        format: "JSONEachRow",
+      });
+
+      const entityNames = await data.json<{ id: string; type: string }[]>();
+
       return {
         ...entities[0],
-        features: JSON.parse(entities[0]?.features),
+        features: getOrderedFeaturesForEntity(
+          entity,
+          entityTypes,
+          entityFeatures,
+          features,
+          entityNames
+        ),
       };
     }),
 

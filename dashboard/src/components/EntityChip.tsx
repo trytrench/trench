@@ -1,21 +1,24 @@
 import * as HoverCard from "@radix-ui/react-hover-card";
-import { Badge, Card, Text } from "@tremor/react";
 import clsx from "clsx";
 import { BoxIcon } from "lucide-react";
 import { useState } from "react";
-import { type RouterOutputs } from "~/utils/api";
+import { api, type RouterOutputs } from "~/utils/api";
+import { Badge } from "./ui/badge";
+import { Panel } from "./ui/custom/panel";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
+  href: string;
   datasetId: string;
 }
 
-export const EntityChip = ({ entity, datasetId }: Props) => {
-  const entityFeatures = Object.entries(entity.features ?? {});
-  const hasFeatures = entityFeatures.length > 0;
-  const entityLabels = entity.labels.filter((v) => v !== "") ?? [];
-
+export const EntityChip = ({ entity, href, datasetId }: Props) => {
   const [open, setOpen] = useState(false);
+
+  const { data: entityData } = api.entities.get.useQuery(
+    { id: entity.id, datasetId },
+    { enabled: !!entity.id && open }
+  );
 
   return (
     <HoverCard.Root
@@ -31,16 +34,16 @@ export const EntityChip = ({ entity, datasetId }: Props) => {
               true,
           })}
           key={entity.id}
-          href={`/datasets/${datasetId}/entity/${entity.id}`}
+          href={href}
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
           <BoxIcon className="my-auto text-gray-500 shrink-0" size={18} />
           <div className="grow min-w-0">
-            <Text className="truncate font-semibold">
+            <div className="truncate font-semibold">
               {entity.type}: {entity.name}
-            </Text>
+            </div>
           </div>
         </a>
       </HoverCard.Trigger>
@@ -52,12 +55,12 @@ export const EntityChip = ({ entity, datasetId }: Props) => {
           sideOffset={0}
           arrowPadding={10}
         >
-          <Card className="w-[24rem] drop-shadow-lg bg-white p-4 mr-4">
+          <Panel className="w-[24rem] shadow-none drop-shadow-lg bg-white p-4 mr-4">
             <div className="">
-              <Text className="font-semibold text-black">{entity.name}</Text>
-              <Text className="text-xs">Last seen {"--"}</Text>
+              <div className="font-semibold text-black">{entity.name}</div>
+              <div className="text-xs">Last seen {"--"}</div>
               <div className="mt-1">
-                {entityLabels.length > 0 ? (
+                {/* {entityLabels.length > 0 ? (
                   entityLabels.map((label) => {
                     return (
                       <Badge key={label} className="cursor-pointer">
@@ -67,31 +70,38 @@ export const EntityChip = ({ entity, datasetId }: Props) => {
                   })
                 ) : (
                   <></>
-                )}
+                )} */}
               </div>
             </div>
             <div className="h-1"></div>
             <div className="grid grid-cols-3 gap-x-4 gap-y-4 mt-2">
-              {hasFeatures ? (
-                entityFeatures.map(([key, value], idx) => (
-                  <div key={key}>
-                    <Text className="font-semibold text-xs">{key}</Text>
-                    <Text className="truncate text-xs">
-                      {value === 0
-                        ? "0"
-                        : value === true
-                        ? "True"
-                        : value === false
-                        ? "False"
-                        : (value as string) || "-"}
-                    </Text>
+              {entityData ? (
+                entityData.features.map((feature, idx) => (
+                  <div key={feature.name}>
+                    <div className="font-semibold text-xs">{feature.name}</div>
+
+                    {feature.dataType === "entity" && feature.value ? (
+                      <div className="truncate text-xs">
+                        {feature.entityName}: {feature.entityType}
+                      </div>
+                    ) : (
+                      <div className="truncate text-xs">
+                        {feature.value === 0
+                          ? "0"
+                          : feature.value === true
+                          ? "True"
+                          : feature.value === false
+                          ? "False"
+                          : (feature.value as string) || "-"}
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
-                <Text className="text-gray-400 italic">No features</Text>
+                <div className="text-gray-400 italic">No features</div>
               )}
             </div>
-          </Card>
+          </Panel>
           <HoverCard.Arrow asChild>
             {/* Triangle svg */}
             <svg

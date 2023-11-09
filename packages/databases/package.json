@@ -3,12 +3,12 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "db:generate": "npx prisma generate",
+    "db:generate": "prisma generate",
     "db:migrate": "pnpm run db:prisma:migrate && pnpm run db:clickhouse:migrate",
-    "db:prisma:migrate": "npx prisma migrate dev",
-    "db:clickhouse:migrate": "npx dbmate --url clickhouse://default:@localhost:19000/default --migrations-dir clickhouse/migrations --no-dump-schema up",
+    "db:prisma:migrate": "prisma migrate dev",
+    "db:clickhouse:migrate": "npx dbmate -e \"CLICKHOUSE_URL\" --migrations-dir clickhouse/migrations --no-dump-schema up",
     "db:seed": "npx prisma db seed",
-    "db:reset": "npx prisma migrate reset --force",
+    "db:reset": "prisma migrate reset --force",
     "build": "tsc",
     "dev": "npx tsx watch src/index.ts"
   },

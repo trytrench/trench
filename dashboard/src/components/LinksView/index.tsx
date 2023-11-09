@@ -1,5 +1,4 @@
 import useResizeObserver from "@react-hook/resize-observer";
-import { Card, Icon, Text } from "@tremor/react";
 import clsx from "clsx";
 import {
   BoxesIcon,
@@ -13,7 +12,8 @@ import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
 import { api } from "~/utils/api";
 import pluralize from "pluralize";
-import { LeftItem, RightItem } from "./types";
+import type { LeftItem, RightItem } from "./types";
+import { useRouter } from "next/router";
 
 interface LinksViewProps {
   entityId: string;
@@ -28,6 +28,7 @@ function LinksView({
   onLeftTypeFilterChange,
   datasetId,
 }: LinksViewProps) {
+  const router = useRouter();
   const { data } = api.links.relatedEntities.useQuery(
     {
       datasetId: datasetId,
@@ -141,6 +142,7 @@ function LinksView({
             const isActive = !selectionExists || activeIds.has(item.id);
             return (
               <LeftSideCard
+                key={item.id}
                 item={item}
                 isActive={isActive}
                 isSelected={isSelected}
@@ -153,7 +155,9 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                datasetId={datasetId}
+                href={`/${router.query.project as string}/entity/${
+                  item.id
+                }?tab=links`}
               />
             );
           })}
@@ -181,6 +185,7 @@ function LinksView({
           const isActive = !selectionExists || activeIds.has(item.id); // TODO: active when linked to right selection.
           return (
             <RightSideCard
+              key={item.id}
               item={item}
               isActive={isActive}
               isSelected={isSelected}
@@ -189,7 +194,9 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              datasetId={datasetId}
+              href={`/${router.query.project as string}/entity/${
+                item.id
+              }?tab=links`}
             />
           );
         })}
@@ -224,12 +231,12 @@ interface LeftSideCardProps {
   onClick: () => void;
   onFilterClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
-  datasetId: string;
+  href: string;
 }
 
 function LeftSideCard(props: LeftSideCardProps) {
-  const { item, isActive, isSelected, onClick, onFilterClick, divRef } = props;
-  const { datasetId } = props;
+  const { item, isActive, isSelected, onClick, onFilterClick, divRef, href } =
+    props;
 
   const isGroup = item.itemType === "group";
 
@@ -250,9 +257,9 @@ function LeftSideCard(props: LeftSideCardProps) {
   }
 
   return (
-    <Card
+    <div
       className={clsx({
-        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2":
+        "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm":
           true,
         "opacity-30": !isActive,
         "bg-blue-100": isSelected,
@@ -262,19 +269,19 @@ function LeftSideCard(props: LeftSideCardProps) {
     >
       {isGroup ? (
         <div className="flex gap-4">
-          <BoxesIcon className="my-auto text-blue-400" size={18} />
-          <div className="min-w-0">
-            <Text className="text-gray-400 font-semibold italic">
+          <BoxesIcon className="my-auto text-accent-foreground" size={18} />
+          <div className="min-w-0 text-sm">
+            <div className="text-gray-400 font-semibold italic">
               {entityCountStr}
-            </Text>
+            </div>
           </div>
         </div>
       ) : (
         <div className="flex gap-4">
-          <BoxIcon className="my-auto text-blue-400" size={18} />
-          <div className="min-w-0">
-            <Text className="font-semibold text-black">{item.type}</Text>
-            <Text className="">{item.name}</Text>
+          <BoxIcon className="my-auto text-accent-foreground" size={18} />
+          <div className="min-w-0 text-sm">
+            <div className="font-semibold text-black">{item.type}</div>
+            <div className="">{item.name}</div>
           </div>
         </div>
       )}
@@ -290,7 +297,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         ) : (
           <a
             className="my-auto text-gray-400"
-            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -324,12 +331,13 @@ function LeftSideCard(props: LeftSideCardProps) {
               e.preventDefault();
             }}
           >
-            <Icon
-              icon={EyeOffIcon}
-              size="md"
-              color="gray"
-              className={`p-0 m-0 ${isSelected ? "" : "opacity-30"}`}
+            <EyeOffIcon
+              size={18}
+              className={`text-gray-500 p-0 m-0 ${
+                isSelected ? "" : "opacity-20"
+              }`}
             />
+
             <div
               className="absolute text-xs w-[8rem] text-center text-white font-semibold bg-[rgba(0,0,0,0.7)] rounded-md 
                 p-0.5 bottom-full left-1/2 -translate-x-1/2 opacity-0 group-hover/eyeicon:opacity-100 transition-opacity pointer-events-none"
@@ -339,7 +347,7 @@ function LeftSideCard(props: LeftSideCardProps) {
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -351,30 +359,30 @@ interface RightSideCardProps {
   isSelected: boolean;
   onClick: () => void;
   divRef: React.Ref<HTMLDivElement>;
-  datasetId: string;
+  href: string;
 }
 
 function RightSideCard(props: RightSideCardProps) {
-  const { item, isActive, isSelected, onClick, divRef } = props;
-  const { datasetId } = props;
+  const { item, isActive, isSelected, onClick, divRef, href } = props;
 
   return (
     <div key={item.id} ref={divRef}>
-      <Card
+      <div
         className={clsx({
-          "p-2 px-3 cursor-pointer transition": true,
+          "p-2 px-3 cursor-pointer transition rounded-lg border shadow-sm":
+            true,
           "opacity-30": !isActive,
           "bg-blue-100": isSelected,
         })}
         onClick={onClick}
       >
         <div className="flex justify-between text-gray-400">
-          <div className="min-w-0 flex gap-2">
-            <Text className="font-semibold text-black">{item.name}</Text>
+          <div className="min-w-0 flex gap-2 text-sm">
+            <div className="font-semibold text-black">{item.name}</div>
           </div>
           <a
             className="my-auto text-gray-400"
-            href={`/datasets/${datasetId}/entity/${item.id}?tab=2`}
+            href={href}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -385,7 +393,7 @@ function RightSideCard(props: RightSideCardProps) {
             />
           </a>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

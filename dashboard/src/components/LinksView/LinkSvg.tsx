@@ -76,7 +76,7 @@ export function FirstLinkSVG({
         `}
       fill="transparent"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={1.5}
       className={`${active ? "text-gray-500" : "text-gray-200"} transition`}
     />
   );
