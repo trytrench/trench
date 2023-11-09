@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "../../ui/tabs";
 import { EventHandlersSidebar } from "./EventHandlersSidebar";
 import { Tooltip, TooltipProvider, TooltipTrigger } from "../../ui/tooltip";
 import { SaveDialog } from "./SaveDialog";
+import { LoadDialog } from "./LoadDialog";
 
 export type EventHandlerDef = {
   code: Record<string, string>;
@@ -117,7 +118,8 @@ export const EventHandlerEditor = () => {
             }
           /> */}
 
-          <EventHandlersSidebar />
+          <div className="w-4"></div>
+          <LoadDialog />
           <div className="w-2 shrink-0"></div>
 
           {/* <Button size="xs" variant="outline" className="ml-6">

@@ -90,7 +90,13 @@ export const eventHandlersRouter = createTRPCRouter({
 
       const hash = hashEventHandler({ code });
 
-      const release = await ctx.prisma.eventHandler.create({
+      // Try to compile the code to make sure it's valid
+      const instance = await createSqrlInstance({
+        config: { "state.allow-in-memory": true },
+      });
+      const { compiled } = await compileSqrl(instance, code);
+
+      const eventHandler = await ctx.prisma.eventHandler.create({
         data: {
           message,
           code,
@@ -99,7 +105,26 @@ export const eventHandlersRouter = createTRPCRouter({
         },
       });
 
-      return release;
+      // Add new features
+      const rules = new Set(Object.keys(compiled.getRuleSpecs()));
+      const features = Object.keys(compiled.getFeatureDocs())
+        .filter((feature) => !feature.startsWith("Sqrl"))
+        .map((name) => ({
+          name,
+          isRule: rules.has(name),
+        }));
+
+      await ctx.prisma.feature.createMany({
+        data: features.map((feature) => ({
+          feature: feature.name,
+          projectId,
+          isRule: feature.isRule,
+          eventHandlerId: eventHandler.id,
+        })),
+        skipDuplicates: true,
+      });
+
+      return eventHandler;
     }),
   publish: publicProcedure
     .input(
@@ -111,31 +136,8 @@ export const eventHandlersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { projectId, eventHandlerId } = input;
 
-      const eventHandler = await ctx.prisma.eventHandler.findUniqueOrThrow({
-        where: {
-          id: eventHandlerId,
-        },
-      });
-
-      const instance = await createSqrlInstance({
-        config: { "state.allow-in-memory": true },
-      });
-
-      const { compiled } = await compileSqrl(
-        instance,
-        eventHandler.code as Record<string, string>
-      );
-
-      const features = Object.keys(compiled.getFeatureDocs()).filter(
-        (feature) =>
-          !feature.startsWith("Sqrl") &&
-          !Object.keys(compiled.getRuleSpecs()).includes(feature)
-      );
-
-      // TODO: Upsert feature metadata
-
       const project = await ctx.prisma.project.findUniqueOrThrow({
-        where: { id: input.projectId },
+        where: { id: projectId },
       });
       const prodDatasetId = project.productionDatasetId;
       if (!prodDatasetId) {

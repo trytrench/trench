@@ -26,6 +26,8 @@ import { toast } from "../../ui/use-toast";
 
 export function SaveDialog() {
   const { data: project } = useProject();
+  const [open, setOpen] = useState(false);
+
   const [editorState, setEditorState] = useAtom(editorStateAtom);
 
   const [compileStatus, setCompileStatus] = useAtom(compileStatusAtom);
@@ -38,7 +40,7 @@ export function SaveDialog() {
   const triggerDisabled = compileStatus.status !== "success";
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild disabled={triggerDisabled}>
         <Button disabled={triggerDisabled}>
           <Save className="h-4 w-4 mr-1.5" />
@@ -109,6 +111,7 @@ export function SaveDialog() {
               })
                 .then(() => {
                   toast({ title: "Saved" });
+                  setOpen(false);
                 })
                 .catch(handleError);
             }}

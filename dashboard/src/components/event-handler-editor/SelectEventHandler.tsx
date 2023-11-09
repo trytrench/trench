@@ -28,14 +28,14 @@ export function SelectEventHandler(props: {
     );
 
   return (
-    <Tabs defaultValue="saved" className="w-96">
+    <Tabs defaultValue="saved" className="min-w-0 w-full">
       <TabsList className="flex justify-center">
         <TabsTrigger value="saved">Saved Snapshots</TabsTrigger>
         <TabsTrigger value="releases">Releases</TabsTrigger>
       </TabsList>
       <TabsContent value="saved">
         {savedEventHandlers?.map((evHandler) => {
-          const selected = false;
+          const selected = value?.id === evHandler.id;
 
           return (
             <button
@@ -73,7 +73,8 @@ export function SelectEventHandler(props: {
         {releasedEventHandlers?.map((release) => {
           const { eventHandler: evHandler, releasedAt } = release;
 
-          const selected = false;
+          const selected = value?.id === evHandler.id;
+
           return (
             <button
               key={evHandler.id}

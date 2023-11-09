@@ -35,13 +35,15 @@ export function SelectEventHandlerPopup(props: {
         )}
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 pt-2" align="start">
-        <SelectEventHandler
-          value={value}
-          onSelect={(handler) => {
-            onSelect?.(handler);
-            setOpen(false);
-          }}
-        />
+        <div className="max-w-sm">
+          <SelectEventHandler
+            value={value}
+            onSelect={(handler) => {
+              onSelect?.(handler);
+              setOpen(false);
+            }}
+          />
+        </div>
         <div className="h-4 shrink-0"></div>
       </PopoverContent>
     </Popover>
