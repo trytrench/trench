@@ -1,59 +1,25 @@
 import { api } from "~/utils/api";
 import Filter from "./Filter";
-import { useMemo } from "react";
 import { toEntityFilters, toEventFilters } from "./helpers";
 
-interface EntityFilterProps {
-  datasetId: bigint;
+interface Props {
   onChange: (value: any) => void; // shouldn't be any (TODO)
+  projectId: string;
 }
 
-const EntityFilter = ({ datasetId, onChange }: EntityFilterProps) => {
+const EntityFilter = ({ projectId, onChange }: Props) => {
   const { data: entityTypes, isLoading: entityTypesLoading } =
-    api.labels.getEntityTypes.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
-
-  const { data: entityLabels, isLoading: entityLabelsLoading } =
-    api.labels.getEntityLabels.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
+    api.labels.getEntityTypes.useQuery({ projectId });
 
   const { data: entityFeatures, isLoading: entityFeaturesLoading } =
-    api.labels.getEntityFeatures.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
-
-  const { data: featureMetadata, isLoading: featureMetadataLoading } =
-    api.features.getFeatureMetadata.useQuery();
-
-  const featureToMetadata = useMemo(
-    () =>
-      featureMetadata?.reduce(
-        (acc, curr) => {
-          acc[curr.id] = curr;
-          return acc;
-        },
-        {} as Record<string, any>
-      ) ?? {},
-
-    [featureMetadata]
-  );
+    api.labels.getEntityFeatures.useQuery({ projectId });
 
   return (
     <Filter
       options={{
-        types: entityTypes ?? [],
-        labels: entityLabels ?? [],
-        features:
-          entityFeatures?.map((feature) => ({
-            feature,
-            dataType: featureToMetadata[feature]?.dataType ?? "text",
-          })) ?? [],
-        enableDateRange: false,
+        types: entityTypes?.map((type) => type.type) ?? [],
+        labels: [],
+        features: entityFeatures?.map((feature) => feature.feature) ?? [],
       }}
       onChange={(value) => {
         onChange(toEntityFilters(value));
@@ -62,56 +28,19 @@ const EntityFilter = ({ datasetId, onChange }: EntityFilterProps) => {
   );
 };
 
-interface EventFilterProps {
-  datasetId: bigint;
-  onChange: (value: any) => void; // shouldn't be any (TODO)
-}
-
-const EventFilter = ({ datasetId, onChange }: EventFilterProps) => {
+const EventFilter = ({ projectId, onChange }: Props) => {
   const { data: eventTypes, isLoading: eventTypesLoading } =
-    api.labels.getEventTypes.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
-
-  const { data: eventLabels, isLoading: eventLabelsLoading } =
-    api.labels.getEventLabels.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
+    api.labels.getEventTypes.useQuery({ projectId });
 
   const { data: eventFeatures, isLoading: eventFeaturesLoading } =
-    api.labels.getEventFeatures.useQuery(
-      { datasetId: datasetId },
-      { enabled: !!datasetId }
-    );
-
-  const { data: featureMetadata, isLoading: featureMetadataLoading } =
-    api.features.getFeatureMetadata.useQuery();
-
-  const featureToMetadata = useMemo(
-    () =>
-      featureMetadata?.reduce(
-        (acc, curr) => {
-          acc[curr.id] = curr;
-          return acc;
-        },
-        {} as Record<string, any>
-      ) ?? {},
-    [featureMetadata]
-  );
+    api.labels.getEventFeatures.useQuery({ projectId });
 
   return (
     <Filter
       options={{
-        types: eventTypes ?? [],
-        labels: eventLabels ?? [],
-        features:
-          eventFeatures?.map((feature) => ({
-            feature,
-            dataType: featureToMetadata[feature]?.dataType ?? "text",
-          })) ?? [],
-        enableDateRange: true,
+        types: eventTypes?.map((type) => type.type) ?? [],
+        labels: [],
+        features: eventFeatures?.map((feature) => feature.feature) ?? [],
       }}
       onChange={(value) => {
         onChange(toEventFilters(value));

@@ -121,20 +121,29 @@ const Page: NextPageWithLayout = () => {
                 value: value as string,
               }))}
             />
-          </Panel>
-          <Panel>
+          </Panel> */}
+          {/* <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
-            <LabelList labels={entityData?.labels} />
-          </Panel>
+
+            {entityLabels.length ? (
+              <div className="flex flex-row flex-wrap">
+                {entityLabels.map((label) => (
+                  <Badge key={label}>{label}</Badge>
+                ))}
+              </div>
+            ) : (
+              <span className="italic text-muted-foreground text-sm">None</span>
+            )}
+          </Panel> */}
           <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
             <PropertyList
-              entries={Object.entries(entityData?.features ?? {}).map(
-                ([key, value]) => ({
-                  label: key,
-                  value: value as string,
-                })
-              )}
+              entries={
+                entityData?.features.map((feature) => ({
+                  label: feature.name,
+                  value: feature.value,
+                })) ?? []
+              }
             />
           </Panel>
         </div>

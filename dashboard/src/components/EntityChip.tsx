@@ -2,7 +2,7 @@ import * as HoverCard from "@radix-ui/react-hover-card";
 import clsx from "clsx";
 import { BoxIcon } from "lucide-react";
 import { useState } from "react";
-import { type RouterOutputs } from "~/utils/api";
+import { api, type RouterOutputs } from "~/utils/api";
 import { Badge } from "./ui/badge";
 import { Panel } from "./ui/custom/panel";
 import { LabelList } from "./ui/custom/label-list";
@@ -11,14 +11,16 @@ import { FeatureGrid } from "./ui/custom/feature-grid";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   href: string;
+  datasetId: string;
 }
 
-export const EntityChip = ({ entity, href }: Props) => {
-  const entityFeatures = Object.entries(entity.features ?? {});
-  const hasFeatures = entityFeatures.length > 0;
-  const entityLabels = entity.labels?.filter((v) => v !== "") ?? [];
-
+export const EntityChip = ({ entity, href, datasetId }: Props) => {
   const [open, setOpen] = useState(false);
+
+  const { data: entityData } = api.entities.get.useQuery(
+    { id: entity.id, datasetId },
+    { enabled: !!entity.id && open }
+  );
 
   return (
     <HoverCard.Root
@@ -67,12 +69,40 @@ export const EntityChip = ({ entity, href }: Props) => {
 
               <LabelList labels={entity.labels} className="mt-2" />
             </div>
-            <div className="h-3"></div>
+            {/* <div className="h-3"></div>
             <FeatureGrid
               features={entity.features}
               className="text-xs gap-x-4"
               cols={3}
-            />
+            /> */}
+            <div className="h-1"></div>
+            <div className="grid grid-cols-3 gap-x-4 gap-y-4 mt-2">
+              {entityData ? (
+                entityData.features.map((feature, idx) => (
+                  <div key={feature.name}>
+                    <div className="font-semibold text-xs">{feature.name}</div>
+
+                    {feature.dataType === "entity" && feature.value ? (
+                      <div className="truncate text-xs">
+                        {feature.entityName}: {feature.entityType}
+                      </div>
+                    ) : (
+                      <div className="truncate text-xs">
+                        {feature.value === 0
+                          ? "0"
+                          : feature.value === true
+                          ? "True"
+                          : feature.value === false
+                          ? "False"
+                          : (feature.value as string) || "-"}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-400 italic">No features</div>
+              )}
+            </div>
           </Panel>
           <HoverCard.Arrow asChild>
             {/* Triangle svg */}
