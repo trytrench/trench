@@ -18,7 +18,7 @@ export const labelsRouter = createTRPCRouter({
         query: `
           SELECT DISTINCT event_type
           FROM event_entity
-          WHERE dataset_id = '${project.prodDatasetId}'
+          WHERE dataset_id = '${project.productionDatasetId}'
           ORDER BY event_type ASC
         `,
         format: "JSONEachRow",

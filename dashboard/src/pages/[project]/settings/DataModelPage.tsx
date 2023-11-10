@@ -158,10 +158,6 @@ function DataModelPage({ projectId }: Props) {
 
   const [searchValue, setSearchValue] = useState("");
 
-  if (!dataset) {
-    return null;
-  }
-
   return (
     <>
       <h1 className="text-2xl mb-1 text-emphasis-foreground">Data Model</h1>

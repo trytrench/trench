@@ -28,7 +28,7 @@ import {
 import { Input } from "./ui/input";
 import { CommandItem } from "./ui/command";
 
-export interface FeatureListItemProps {
+interface Props {
   feature: string;
   name: string;
   dataType: string;
@@ -40,6 +40,8 @@ export interface FeatureListItemProps {
   draggable: boolean;
   color?: string;
 }
+
+export type Ref = HTMLButtonElement;
 
 // eslint-disable-next-line react/display-name
 export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
@@ -63,13 +65,13 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
   const [name, setName] = useState(initialName || feature);
   const [color, setColor] = useState(initialColor || "bg-gray-400");
 
-    const dataTypeToIcon = {
-      text: Type,
-      number: Hash,
-      boolean: ToggleLeft,
-    } as Record<string, LucideIcon>;
+  const dataTypeToIcon = {
+    text: Type,
+    number: Hash,
+    boolean: ToggleLeft,
+  } as Record<string, LucideIcon>;
 
-    const Icon = dataTypeToIcon[value] ?? Asterisk;
+  const Icon = dataTypeToIcon[value] ?? Asterisk;
 
   return (
     <Popover>
@@ -187,19 +189,10 @@ export const FeatureListItem = forwardRef<Ref, Props>((props, ref) => {
                 onRename(event.target.value);
                 //   debouncedSave(event.target.value || "Untitled");
               }}
-            >
-              <Input
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  onFeatureChange?.({ name: event.target.value });
-                  //   debouncedSave(event.target.value || "Untitled");
-                }}
-              />
-            </form>
-          </PopoverContent>
-        </CommandItem>
-      </Popover>
-    );
-  }
-);
+            />
+          </form>
+        </PopoverContent>
+      </CommandItem>
+    </Popover>
+  );
+});

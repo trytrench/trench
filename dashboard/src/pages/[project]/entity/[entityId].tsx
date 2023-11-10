@@ -74,7 +74,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
+    () => project?.productionDatasetId?.toString(),
     [project]
   );
 
@@ -121,7 +121,7 @@ const Page: NextPageWithLayout = () => {
                 value: value as string,
               }))}
             />
-          </Panel> */}
+          </Panel>
           {/* <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
 

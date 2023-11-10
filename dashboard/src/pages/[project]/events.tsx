@@ -14,7 +14,6 @@ const Page: NextPageWithLayout = () => {
   );
   const datasetId = project?.productionDatasetId;
 
-  console.log(project);
   if (!datasetId) return null;
 
   return (

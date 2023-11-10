@@ -16,7 +16,7 @@ import { EventFilters } from "~/shared/validation";
 import SuperJSON from "superjson";
 import { FeatureGrid } from "./ui/custom/feature-grid";
 
-interface EventsListProps {
+interface Props {
   entityId?: string;
   datasetId: string;
   projectId: string;

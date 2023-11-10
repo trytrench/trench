@@ -107,7 +107,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
+    () => project?.productionDatasetId?.toString(),
     [project]
   );
 
