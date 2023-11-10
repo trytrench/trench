@@ -72,12 +72,7 @@ const config = {
     }
     return config;
   },
-  transpilePackages: [
-    "databases",
-    "event-processing",
-    "sqrl-helpers",
-    "sqrl-redis-functions",
-  ],
+  transpilePackages: ["databases", "event-processing", "sqrl-helpers"],
   typescript: {
     ignoreBuildErrors: false,
   },
