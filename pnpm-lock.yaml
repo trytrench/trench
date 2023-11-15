@@ -9,7 +9,7 @@ patchedDependencies:
     hash: kadna7jz7pwdf2mda5hqm6t22a
     path: patches/sqrl-jsonpath@0.6.10.patch
   sqrl-redis-functions@0.6.10:
-    hash: jaxdms5z2jp2ccurk4avz5topq
+    hash: exkuekv4epuksubnx2lpa4fkym
     path: patches/sqrl-redis-functions@0.6.10.patch
 
 importers:
@@ -472,7 +472,7 @@ importers:
         version: 0.6.10
       sqrl-redis-functions:
         specifier: ^0.6.10
-        version: 0.6.10(patch_hash=jaxdms5z2jp2ccurk4avz5topq)
+        version: 0.6.10(patch_hash=exkuekv4epuksubnx2lpa4fkym)
       sqrl-text-functions:
         specifier: ^0.6.10
         version: 0.6.10
@@ -7482,7 +7482,7 @@ packages:
       sqrl: 0.6.10
     dev: false
 
-  /sqrl-redis-functions@0.6.10(patch_hash=jaxdms5z2jp2ccurk4avz5topq):
+  /sqrl-redis-functions@0.6.10(patch_hash=exkuekv4epuksubnx2lpa4fkym):
     resolution: {integrity: sha512-Rr2GHWILJjbuzjRWBTGQjPjE4KhquWkkecUSbl/mTcqQo7I53D2LcTJ11XuntirqzGu1TCxH7mp1lTl3xuXXKA==}
     engines: {node: '>=12.0.0'}
     dependencies:

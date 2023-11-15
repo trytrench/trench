@@ -3,6 +3,7 @@ import {
   createSqrlInstance,
   hashEventHandler,
 } from "sqrl-helpers";
+import { walkExpr } from "sqrl/lib/expr/Expr";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -119,6 +120,30 @@ export const eventHandlersRouter = createTRPCRouter({
           feature: feature.name,
           projectId,
           isRule: feature.isRule,
+          dataType: feature.isRule ? "boolean" : "text",
+        })),
+        skipDuplicates: true,
+      });
+
+      const entityTypes: string[] = [];
+
+      for (const expr of compiled.getSlotExprs()) {
+        walkExpr(expr, (node) => {
+          if (node.type === "call" && node.func === "_entity") {
+            if (node.exprs?.find((expr) => expr.exprs)) {
+              const entityName = node.exprs?.find(
+                (expr) => expr.type === "constant"
+              )?.value;
+              entityTypes.push(entityName);
+            }
+          }
+        });
+      }
+
+      await ctx.prisma.entityType.createMany({
+        data: entityTypes.map((type) => ({
+          type,
+          projectId: input.projectId,
         })),
         skipDuplicates: true,
       });

@@ -43,7 +43,7 @@ export const EntityCard = ({
 
         <div className="h-4"></div>
 
-        <FeatureGrid features={entity.features} />
+        {/* <FeatureGrid features={entity.features} /> */}
         <div className="flex flex-wrap gap-1 mt-3">
           {/* {entityLabels.length > 0 ? (
             entityLabels.map((label) => {

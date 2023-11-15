@@ -120,5 +120,7 @@ export function getOrderedFeatures({
     };
   });
 
+  if (isRule)
+    return orderedFeatures.filter((feature) => feature.value === "true");
   return orderedFeatures;
 }

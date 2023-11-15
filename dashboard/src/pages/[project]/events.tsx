@@ -12,7 +12,7 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = project?.productionDatasetId;
+  const datasetId = project?.productionDatasetId?.toString();
 
   if (!datasetId) return null;
 

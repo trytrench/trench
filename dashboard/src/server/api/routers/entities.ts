@@ -339,16 +339,22 @@ export const entitiesRouter = createTRPCRouter({
         query: `
           SELECT 
             entity_id as id,
-            entity_type as type,
+            entity_type as type
             ${nameFeatures
               .map(
                 (feature) =>
-                  `argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
+                  `,argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join(",")}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
-          AND entity_id IN (${entityIds.join(",")})
+          ${
+            entityIds.length
+              ? `AND entity_id IN (${entityIds
+                  .map((id) => `'${id}'`)
+                  .join(",")})`
+              : undefined
+          }
           GROUP BY 
             entity_id,
             entity_type;

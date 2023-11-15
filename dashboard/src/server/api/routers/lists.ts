@@ -43,9 +43,9 @@ export const listsRouter = createTRPCRouter({
             ${features
               .map(
                 (feature) =>
-                  `,argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}\n`
+                  `,argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join()}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
           ${
@@ -156,7 +156,7 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
-        datasetId: z.bigint(),
+        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -201,7 +201,7 @@ export const listsRouter = createTRPCRouter({
               filters?.entityId
                 ? `AND event_id IN (
                     SELECT DISTINCT event_id
-                    FROM event_entity_event_labels
+                    FROM event_entity
                     WHERE entity_id = '${filters.entityId}'
                    )`
                 : ""
@@ -257,12 +257,18 @@ export const listsRouter = createTRPCRouter({
                 (feature) =>
                   `,argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join()}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
-          AND entity_id IN (${uniq(
-            events.flatMap((event) => event.entity_ids)
-          ).join(",")})
+          ${
+            events.some((event) => event.entity_ids.length > 0)
+              ? `AND entity_id IN (${uniq(
+                  events.flatMap((event) =>
+                    event.entity_ids.map((id) => `'${id}'`)
+                  )
+                ).join(",")})`
+              : ""
+          }
           GROUP BY 
             entity_id,
             entity_type;
