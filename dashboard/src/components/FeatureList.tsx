@@ -2,9 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   closestCenter,
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -35,7 +38,7 @@ export function FeatureList({
   onToggleHide,
   onColorChange,
 }: Props) {
-  const [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [items, setItems] = useState(features);
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export function FeatureList({
         ))}
       </SortableContext>
       <DragOverlay>
-        {activeId ? (
+        {activeItem ? (
           <FeatureListItem
             feature={activeItem.feature}
             name={activeItem.name}
@@ -100,18 +103,18 @@ export function FeatureList({
     </DndContext>
   );
 
-  function handleDragStart(event) {
+  function handleDragStart(event: DragStartEvent) {
     const { active } = event;
 
     setActiveId(active.id);
   }
 
-  function handleDragEnd(event) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (active.id !== over?.id) {
       const oldIndex = items.findIndex((item) => item.id === active.id);
-      const newIndex = items.findIndex((item) => item.id === over.id);
+      const newIndex = items.findIndex((item) => item.id === over?.id);
       const newItems = arrayMove(items, oldIndex, newIndex);
       onOrderChange(newItems.map((item) => item.id));
 

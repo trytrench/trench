@@ -9,7 +9,7 @@ import { fetchUserData } from "./fetchGithubData";
 import pLimit from "p-limit";
 import { AxiosError } from "axios";
 
-let RedisService;
+let RedisService: any;
 
 if (typeof window === "undefined") {
   RedisService =
@@ -26,7 +26,7 @@ export async function createSqrlInstance(
     const redis = new RedisService(options.config["redis.address"]);
     redisService = redis;
   } else if (options?.config?.["state.allow-in-memory"]) {
-    redisService = new MockRedisService();
+    redisService = new MockRedisService() as any;
   } else {
     throw new Error(
       "No `redis.address` was configured and`state.allow-in-memory` is false."

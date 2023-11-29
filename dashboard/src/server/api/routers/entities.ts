@@ -10,8 +10,8 @@ import {
   buildEventExistsQuery,
 } from "../../lib/filters";
 import { db } from "~/server/db";
-import { getOrderedFeaturesForEntity } from "~/server/lib/features";
 import { uniqBy } from "lodash";
+import { getOrderedFeatures } from "~/server/lib/features";
 
 export const entitiesRouter = createTRPCRouter({
   findIds: publicProcedure
@@ -309,17 +309,14 @@ export const entitiesRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const entities = await result.json<
-        {
+      const [entity] = await result.json<
+        (Record<string, string> & {
           id: string;
           type: string;
           lastSeenAt: string;
-          features: string;
-          labels: string[];
-        }[]
+        })[]
       >();
 
-      const entity = entities[0];
       if (!entity) throw new Error("Entity not found");
 
       const nameFeatures = uniqBy(
@@ -331,12 +328,10 @@ export const entitiesRouter = createTRPCRouter({
         .filter((feature) => feature.dataType === "entity")
         .map((feature) => feature.feature);
 
-      const entityIds = entities.map((entity) => entity.id);
-      for (const entity of entities) {
-        for (const [feature, value] of Object.entries(entity)) {
-          if (value && entityFeatureNames.includes(feature)) {
-            entityIds.push(value);
-          }
+      const entityIds = [entity.id];
+      for (const [feature, value] of Object.entries(entity)) {
+        if (value && entityFeatureNames.includes(feature)) {
+          entityIds.push(value);
         }
       }
 
@@ -344,16 +339,22 @@ export const entitiesRouter = createTRPCRouter({
         query: `
           SELECT 
             entity_id as id,
-            entity_type as type,
+            entity_type as type
             ${nameFeatures
               .map(
                 (feature) =>
-                  `argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
+                  `,argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join(",")}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
-          AND entity_id IN (${entityIds.join(",")})
+          ${
+            entityIds.length
+              ? `AND entity_id IN (${entityIds
+                  .map((id) => `'${id}'`)
+                  .join(",")})`
+              : undefined
+          }
           GROUP BY 
             entity_id,
             entity_type;
@@ -361,17 +362,20 @@ export const entitiesRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const entityNames = await data.json<{ id: string; type: string }[]>();
+      const entities = await data.json<{ id: string; type: string }[]>();
+      const { id, type, lastSeenAt, ...rest } = entity;
 
       return {
-        ...entities[0],
-        features: getOrderedFeaturesForEntity(
-          entity,
-          entityTypes,
-          entityFeatures,
+        ...entity,
+        features: getOrderedFeatures({
+          type: "entity",
+          eventOrEntity: { type, features: rest },
+          eventOrEntityTypes: entityTypes,
+          eventOrEntityFeatures: entityFeatures,
           features,
-          entityNames
-        ),
+          entities: entities,
+          entityTypes,
+        }),
       };
     }),
 

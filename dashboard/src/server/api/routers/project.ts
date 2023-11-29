@@ -17,6 +17,9 @@ export const projectRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return ctx.prisma.project.findUnique({
         where: { name: input.name },
+        include: {
+          productionDataset: true,
+        },
       });
     }),
 });

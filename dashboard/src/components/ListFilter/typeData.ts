@@ -28,6 +28,8 @@ const comparisonOps = {
   [JsonFilterOp.LessThanOrEqual]: { count: 1 },
 };
 
+//
+
 const textOps = {
   ...commonOps,
   [JsonFilterOp.Contains]: { count: 1 },

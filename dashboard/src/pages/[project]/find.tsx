@@ -48,52 +48,51 @@ const EntityList = ({ project, datasetId }: Props) => {
   }, [entities]);
 
   return (
-    <div className="flex flex-col overflow-hidden grow">
+    <div className="flex flex-col">
       <div className="flex p-3 px-8 border-b">
         <EntityFilter projectId={project.id} onChange={setFilters} />
       </div>
-      <div className="grow relative">
-        <div className="absolute inset-0">
-          <ScrollArea className="h-full">
-            <div className="flex flex-col gap-4 px-8 py-4">
-              {entitiesLoading ? (
-                <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
-              ) : (
-                <>
-                  {allEntities.map((entity) => {
-                    return (
-                      <EntityCard
-                        key={entity.id}
-                        href={`/${project.name}/entity/${entity.id}`}
-                        entity={entity}
-                        features={entity.features}
-                        rules={entity.rules}
-                        name={entity.name}
-                        datasetId={datasetId}
-                      />
-                    );
-                  })}
-                  {hasNextPage && (
-                    <div className="self-center my-4">
-                      <SpinnerButton
-                        variant="outline"
-                        onClick={() => {
-                          fetchNextPage().catch((err) => {
-                            console.error(err);
-                          });
-                        }}
-                        loading={isFetchingNextPage}
-                      >
-                        Fetch more entities
-                      </SpinnerButton>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+      <div className="grow">
+        <ScrollArea className="h-full">
+          <div className="flex flex-col gap-4 px-8 py-4">
+            {entitiesLoading ? (
+              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+            ) : (
+              <>
+                {allEntities.map((entity) => {
+                  return (
+                    <EntityCard
+                      key={entity.id}
+                      href={`/${project.name}/entity/${entity.id}`}
+                      entity={entity}
+                      features={entity.features}
+                      rules={entity.rules}
+                      name={entity.name}
+                      datasetId={datasetId}
+                    />
+                  );
+                })}
+                {hasNextPage && (
+                  <div className="self-center my-4">
+                    <SpinnerButton
+                      variant="outline"
+                      onClick={() => {
+                        fetchNextPage().catch((err) => {
+                          console.error(err);
+                        });
+                      }}
+                      loading={isFetchingNextPage}
+                    >
+                      Fetch more entities
+                    </SpinnerButton>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </div>
   );
@@ -107,7 +106,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
+    () => project?.productionDatasetId?.toString(),
     [project]
   );
 

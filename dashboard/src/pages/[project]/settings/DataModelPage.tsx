@@ -192,7 +192,7 @@ function DataModelPage({ projectId }: Props) {
                 <button
                   key={type}
                   className={clsx({
-                    "px-4 py-1 active:bg-blue-100 w-full text-left rounded-md transition flex justify-between items-center":
+                    "px-4 py-1 w-full text-left rounded-md transition flex justify-between items-center":
                       true,
                     "bg-accent text-accent-foreground":
                       selectedItem === ENTITY_PREFIX + type,

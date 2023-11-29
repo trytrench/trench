@@ -4,10 +4,7 @@ import { db } from "~/server/db";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { get, uniq, uniqBy } from "lodash";
-import {
-  getOrderedFeaturesForEntity,
-  getOrderedFeaturesForEvent,
-} from "~/server/lib/features";
+import { getOrderedFeatures } from "~/server/lib/features";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -42,13 +39,13 @@ export const listsRouter = createTRPCRouter({
           SELECT 
             entity_id as id,
             entity_type as type,
-            max(event_timestamp) AS lastSeenAt,
+            max(event_timestamp) AS lastSeenAt
             ${features
               .map(
                 (feature) =>
-                  `argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}\n`
+                  `,argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join(",")}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
           ${
@@ -111,37 +108,45 @@ export const listsRouter = createTRPCRouter({
         }
       }
 
-      const entityTypeToName = entityTypes.reduce(
+      const entityTypeToNameFeature = entityTypes.reduce(
         (acc, type) => ({
           ...acc,
-          [type.type]: type.nameFeature.feature.feature,
+          [type.type]: type.nameFeature?.feature.feature,
         }),
-        {} as Record<string, string>
+        {} as Record<string, string | undefined>
       );
 
       return {
         count: 0,
-        rows: entities.map((entity) => ({
-          ...entity,
-          features: getOrderedFeaturesForEntity(
-            entity,
-            entityTypes,
-            entityFeatures,
-            features,
-            entities
-          ),
-          rules: getOrderedFeaturesForEntity(
-            entity,
-            entityTypes,
-            entityFeatures,
-            features,
-            entities,
-            true
-          ).filter((feature) => feature.value === "true"),
-          name: entities.find((e) => e.id === entity.id)?.[
-            entityTypeToName[entity.type]
-          ],
-        })),
+        rows: entities.map((entity) => {
+          const { id, type, lastSeenAt, ...rest } = entity;
+          const entityNameFeature = entityTypeToNameFeature[entity.type];
+
+          return {
+            ...entity,
+            features: getOrderedFeatures({
+              type: "entity",
+              eventOrEntity: { type, features: rest },
+              eventOrEntityTypes: entityTypes,
+              eventOrEntityFeatures: entityFeatures,
+              features,
+              entityTypes,
+              entities,
+            }),
+            rules: getOrderedFeatures({
+              type: "entity",
+              eventOrEntity: { type, features: rest },
+              eventOrEntityTypes: entityTypes,
+              eventOrEntityFeatures: entityFeatures,
+              features,
+              entityTypes,
+              entities,
+              isRule: true,
+            }),
+            // Wait this doesn't work?
+            name: entityNameFeature && entity[entityNameFeature],
+          };
+        }),
       };
     }),
 
@@ -186,6 +191,20 @@ export const listsRouter = createTRPCRouter({
               filters?.eventFeatures
                 ?.map((filter) => getFeatureQuery(filter, "features"))
                 .join("\n") ?? ""
+            }
+            ${
+              filters?.dateRange
+                ? `AND event_timestamp >= ${filters.dateRange.from} AND event_timestamp <= ${filters.dateRange.to}`
+                : ""
+            }
+            ${
+              filters?.entityId
+                ? `AND event_id IN (
+                    SELECT DISTINCT event_id
+                    FROM event_entity
+                    WHERE entity_id = '${filters.entityId}'
+                   )`
+                : ""
             }
           GROUP BY
             event_id,
@@ -232,18 +251,24 @@ export const listsRouter = createTRPCRouter({
         query: `
           SELECT 
             entity_id as id,
-            entity_type as type,
+            entity_type as type
             ${nameFeatures
               .map(
                 (feature) =>
-                  `argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
+                  `,argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
               )
-              .join(",")}
+              .join("")}
           FROM event_entity
           WHERE dataset_id = '${input.datasetId}'
-          AND entity_id IN (${uniq(
-            events.flatMap((event) => event.entity_ids)
-          ).join(",")})
+          ${
+            events.some((event) => event.entity_ids.length > 0)
+              ? `AND entity_id IN (${uniq(
+                  events.flatMap((event) =>
+                    event.entity_ids.map((id) => `'${id}'`)
+                  )
+                ).join(",")})`
+              : ""
+          }
           GROUP BY 
             entity_id,
             entity_type;
@@ -251,7 +276,10 @@ export const listsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      const entityNames = await data.json<{ id: string; type: string }[]>();
+      const entities =
+        await data.json<
+          (Record<string, string> & { id: string; type: string })[]
+        >();
 
       return {
         count: 0,
@@ -259,29 +287,31 @@ export const listsRouter = createTRPCRouter({
           id: event.event_id,
           type: event.event_type,
           data: JSON.parse(event.event_data),
-          features: getOrderedFeaturesForEvent(
-            {
+          features: getOrderedFeatures({
+            type: "event",
+            eventOrEntity: {
               type: event.event_type,
               features: JSON.parse(event.features),
             },
-            eventTypes,
-            eventFeatures,
+            eventOrEntityTypes: eventTypes,
+            eventOrEntityFeatures: eventFeatures,
             features,
             entityTypes,
-            entityNames
-          ),
-          rules: getOrderedFeaturesForEvent(
-            {
+            entities,
+          }),
+          rules: getOrderedFeatures({
+            type: "event",
+            eventOrEntity: {
               type: event.event_type,
               features: JSON.parse(event.features),
             },
-            eventTypes,
-            eventFeatures,
+            eventOrEntityTypes: eventTypes,
+            eventOrEntityFeatures: eventFeatures,
             features,
             entityTypes,
-            entityNames,
-            true
-          ).filter((feature) => feature.value),
+            entities,
+            isRule: true,
+          }),
           timestamp: new Date(event.event_timestamp),
         })),
       };

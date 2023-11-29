@@ -19,6 +19,7 @@ import AppLayout from "~/components/AppLayout";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from "~/components/DatePickerWithRange";
+import { LabelList } from "~/components/ui/custom/label-list";
 
 interface RelatedEntitiesProps {
   entityId: string;
@@ -73,7 +74,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.project }
   );
   const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
+    () => project?.productionDatasetId?.toString(),
     [project]
   );
 
@@ -99,9 +100,6 @@ const Page: NextPageWithLayout = () => {
   const [tab, setTab] = useQueryParam("tab", StringParam);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const entityLabels =
-    entityData?.labels?.filter((label) => label !== "") ?? [];
-
   return (
     <main className="flex-1 h-0 flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
@@ -111,8 +109,8 @@ const Page: NextPageWithLayout = () => {
         </Badge>
       </div>
       <div className="grid grid-cols-4 flex-1">
-        <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-slate-50 border-r">
-          {/* <Panel>
+        <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
+          <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">
               Entity Information
             </h1>
@@ -123,7 +121,7 @@ const Page: NextPageWithLayout = () => {
                 value: value as string,
               }))}
             />
-          </Panel> */}
+          </Panel>
           {/* <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
 

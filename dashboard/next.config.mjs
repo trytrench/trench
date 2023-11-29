@@ -72,9 +72,9 @@ const config = {
     }
     return config;
   },
-  transpilePackages: ["databases"],
+  transpilePackages: ["databases", "event-processing", "sqrl-helpers"],
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

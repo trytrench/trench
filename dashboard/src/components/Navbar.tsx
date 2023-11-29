@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { api } from "../utils/api";
+import { ThemeToggle } from "./ui/custom/theme-toggle";
 
 interface Props {
   href: string;
@@ -28,8 +29,9 @@ const NavItem = ({ href, children, ...props }: Props) => {
     <NextLink
       href={href}
       className={clsx({
-        "text-gray-500 hover:text-black": !active,
-        "text-black": active,
+        transition: true,
+        "text-muted-foreground hover:text-emphasis-foreground": !active,
+        "text-emphasis-foreground": active,
       })}
       {...props}
     >
@@ -41,7 +43,7 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Rules", path: "rules" },
+  { name: "Code", path: "code" },
   { name: "Explore", path: "explore" },
   { name: "Settings", path: "settings" },
 ];
@@ -55,6 +57,11 @@ export const Navbar = () => {
   const { data: projects } = api.project.list.useQuery();
 
   const project = router.query.project as string;
+
+  const activeTab = router.pathname.split("/")[2];
+  const activeTabChildren = TABS.find((tab) => tab.path === activeTab)
+    ?.children;
+  const activeChildTab = router.pathname.split("/")[3] ?? "";
 
   return (
     <nav
@@ -70,7 +77,9 @@ export const Navbar = () => {
           </button>
         )}
         <NextLink href="/">
-          <h1 className="text-lg font-bold text-black mr-12">Trench</h1>
+          <h1 className="text-lg font-bold text-emphasis-foreground mr-12">
+            Trench
+          </h1>
         </NextLink>
         <div>
           <Select
@@ -96,6 +105,8 @@ export const Navbar = () => {
 
         <div className="grow" />
 
+        <ThemeToggle />
+
         <div className="flex gap-4 text-sm">
           <NavItem href="/changelog">Changelog</NavItem>
           <NavItem href="/help">Help</NavItem>
@@ -105,9 +116,9 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="sticky">
+      <div>
         <Tabs
-          value={router.pathname.split("/").pop()}
+          value={activeTab}
           onValueChange={(tab) => {
             router.push(`/${project}/${tab}`).catch(handleError);
           }}
@@ -120,6 +131,30 @@ export const Navbar = () => {
                 </TabsTrigger>
               );
             })}
+
+            {activeTabChildren && (
+              <div className="flex animate-in fade-in-60">
+                <div className="border-r my-2 mx-4 rotate-12" />
+                <Tabs
+                  value={activeChildTab}
+                  onValueChange={(tab) => {
+                    router
+                      .push(`/${project}/${activeTab}/${tab}`)
+                      .catch(handleError);
+                  }}
+                >
+                  <TabsList>
+                    {activeTabChildren.map((childTab) => {
+                      return (
+                        <TabsTrigger key={childTab.path} value={childTab.path}>
+                          {childTab.name}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
           </TabsList>
         </Tabs>
       </div>

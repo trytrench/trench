@@ -12,6 +12,9 @@ import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
 import { EventFilter } from "./ListFilter";
+import { EventFilters } from "~/shared/validation";
+import SuperJSON from "superjson";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 
 interface Props {
   entityId?: string;
@@ -33,7 +36,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: filters,
+      eventFilters: { ...filters, entityId },
       datasetId,
       limit,
     },
@@ -133,7 +136,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
         {/* The Events List */}
         <div className="grow flex flex-col relative px-4 pt-2">
           {eventsLoading ? (
-            <Loader2Icon className="w-8 h-8 text-gray-300 animate-spin self-center" />
+            <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
           ) : (
             <div className="absolute inset-0">
               <ScrollArea className="h-full px-4">
@@ -156,7 +159,6 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                     item.type === "event" ? (
                       <EventCard
                         key={item.event.id}
-                        datasetId={datasetId}
                         event={item.event}
                         features={item.event.features ?? []}
                         rules={item.event.rules}
@@ -171,8 +173,8 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                     )
                   )
                 )}
-                {hasNextPage && (
-                  <div className="w-auto mt-4 mb-6 flex justify-center">
+                <div className="w-auto mt-4 mb-6 flex justify-center">
+                  {hasNextPage ? (
                     <SpinnerButton
                       variant="outline"
                       onClick={() => {
@@ -184,15 +186,19 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                     >
                       Fetch more events
                     </SpinnerButton>
-                  </div>
-                )}
+                  ) : (
+                    <div className="text-sm text-muted-fg italic">
+                      No more Events.
+                    </div>
+                  )}
+                </div>
               </ScrollArea>
             </div>
           )}
 
           <div className="h-16 shrink-0"></div>
         </div>
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-white pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </>
   );
@@ -220,8 +226,8 @@ function TimeDivider({ duration }: TimeDividerProps) {
     to bottom,
     transparent 0px,
     transparent 8px,
-    #d1d5db 8px,
-    #d1d5db 16px
+    hsl(var(--muted-foreground)) 8px,
+    hsl(var(--muted-foreground)) 16px
   )`;
 
   const timeToWords = (time: number) => {
@@ -259,7 +265,7 @@ function TimeDivider({ duration }: TimeDividerProps) {
           }}
         />
       </div>
-      <div className="italic text-gray-300 my-auto grow text-md">
+      <div className="italic text-muted-foreground my-auto grow text-md">
         {timeToWords(duration)}
       </div>
     </div>
@@ -291,18 +297,16 @@ function EventCard({
 }: EventCardProps) {
   const router = useRouter();
 
-  // const eventLabels = uniq(event.labels.filter((label) => label !== ""));
-
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
-        <div className="absolute left-0 w-[2px] bg-gray-300 ml-3 h-full" />
-        <div className="absolute w-[14px] h-[14px] left-[6px] top-[24px] rounded-full bg-white border-2 border-gray-300" />
+        <div className="absolute left-0 w-[2px] bg-muted-foreground ml-3 h-full" />
+        <div className="absolute w-[14px] h-[14px] left-[6px] top-[24px] rounded-full bg-background border-2 border-muted-foreground" />
         {isFirst && (
-          <div className="absolute top-0 w-full h-4 bg-gradient-to-b from-white to-transparent" />
+          <div className="absolute top-0 w-full h-4 bg-gradient-to-b from-background" />
         )}
         {isLast && (
-          <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
+          <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-background" />
         )}
       </div>
       <div className="w-[16rem] mt-4">

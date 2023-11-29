@@ -2,6 +2,7 @@ import { Badge } from "~/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
 import { type RouterOutputs } from "~/utils/api";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 import { EntityChip } from "./EntityChip";
 import { useRouter } from "next/router";
 
@@ -39,6 +40,10 @@ export const EntityCard = ({
             {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
           </div>
         )}
+
+        <div className="h-4"></div>
+
+        {/* <FeatureGrid features={entity.features} /> */}
         <div className="flex flex-wrap gap-1 mt-3">
           {/* {entityLabels.length > 0 ? (
             entityLabels.map((label) => {

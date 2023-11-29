@@ -12,19 +12,14 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.prodDatasetId?.toString(),
-    [project]
-  );
+  const datasetId = project?.productionDatasetId?.toString();
+
+  if (!datasetId) return null;
 
   return (
-    <div className="flex-1 overflow-hidden flex items-stretch">
+    <div className="h-full flex items-stretch">
       <div className="flex-1 w-full flex flex-col items-stretch">
-        <div className="relative flex-1">
-          {project && (
-            <EventsList datasetId={datasetId} projectId={project.id} />
-          )}
-        </div>
+        {project && <EventsList datasetId={datasetId} projectId={project.id} />}
       </div>
     </div>
   );
