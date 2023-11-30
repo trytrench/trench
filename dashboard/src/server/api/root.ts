@@ -10,6 +10,7 @@ import { listsRouter } from "./routers/lists";
 import { projectRouter } from "./routers/project";
 import { eventHandlersRouter } from "./routers/eventHandlers";
 import { backtestsRouter } from "./routers/backtests";
+import { eventTypesRouter } from "./routers/eventTypes";
 
 /**
  * This is the primary router for your server.
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   features: featuresRouter,
   project: projectRouter,
   backtests: backtestsRouter,
+  eventTypes: eventTypesRouter,
 });
 
 // export type definition of API
