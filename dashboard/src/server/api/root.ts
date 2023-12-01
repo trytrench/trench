@@ -12,6 +12,7 @@ import { eventHandlersRouter } from "./routers/eventHandlers";
 import { backtestsRouter } from "./routers/backtests";
 import { eventTypesRouter } from "./routers/eventTypes";
 import { entityTypesRouter } from "./routers/entityTypes";
+import { featureDefsRouter } from "./routers/featureDefs";
 
 /**
  * This is the primary router for your server.
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
   backtests: backtestsRouter,
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,
+  featureDefs: featureDefsRouter,
 });
 
 // export type definition of API
