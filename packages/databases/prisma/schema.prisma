@@ -91,6 +91,39 @@ model Dataset {
   productionProject Project? @relation("productionDatasetProject")
 }
 
+// Once an FeatureDef is created, only the name can be modified.
+// The type and dataType are immutable.
+model FeatureDef {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  type     String
+  name     String
+  dataType String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  snapshots FeatureDefSnapshot[]
+}
+
+model FeatureDefSnapshot {
+  id String @id @default(dbgenerated("nanoid()"))
+
+  deps   String[]
+  config Json
+
+  createdAt DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  featureDef   FeatureDef @relation(fields: [featureDefId], references: [id], onDelete: Cascade)
+  featureDefId String
+}
+
 model EntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -194,6 +227,9 @@ model Project {
   features    Feature[]
   eventTypes  EventType[]
   entityTypes EntityType[]
+
+  featureDefs        FeatureDef[]
+  FeatureDefSnapshot FeatureDefSnapshot[]
 }
 
 // Necessary for Next auth
