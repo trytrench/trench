@@ -8,13 +8,11 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   type SortingState,
-  type VisibilityState,
   type Table as TableType,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import * as React from "react";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTableViewOptions } from "./data-table-view-options";
-import { Input } from "./input";
 import {
   Table,
   TableBody,
@@ -27,13 +25,13 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  renderFilter?: (table: TableType<TData>) => React.ReactNode;
+  renderHeader?: (table: TableType<TData>) => React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  renderFilter,
+  renderHeader,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -64,10 +62,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center py-4">
-        {renderFilter?.(table)}
-        <DataTableViewOptions table={table} />
-      </div>
+      <div className="flex items-center py-4">{renderHeader?.(table)}</div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
