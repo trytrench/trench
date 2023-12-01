@@ -8,6 +8,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "target": "ES2017",
     "lib": ["ES2015"]
   },
   "exclude": ["node_modules"]

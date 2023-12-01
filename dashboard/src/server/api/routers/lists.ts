@@ -173,15 +173,14 @@ export const listsRouter = createTRPCRouter({
         query: `
           SELECT 
             event_id,
-            dataset_id,
-            event_type,
-            event_data,
-            event_timestamp,
+            type,
+            timestamp,
+            data,
             features,
             groupArray(entity_id) AS entity_ids,
             groupArray(entity_type) AS entity_types
-          FROM event_entity
-          WHERE dataset_id = '${input.datasetId}'
+          FROM events
+          WHERE 1 = 1
             ${
               filters?.eventType
                 ? `AND event_type = '${filters.eventType}'`

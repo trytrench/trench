@@ -427,6 +427,9 @@ importers:
       date-fns:
         specifier: ^2.30.0
         version: 2.30.0
+      nanoid:
+        specifier: ^5.0.3
+        version: 5.0.3
       pg:
         specifier: ^8.11.3
         version: 8.11.3
@@ -436,6 +439,9 @@ importers:
       sqrl-helpers:
         specifier: workspace:*
         version: link:../sqrl-helpers
+      superjson:
+        specifier: ^1.13.1
+        version: 1.13.3
     devDependencies:
       '@types/pg':
         specifier: ^8.10.3
@@ -5964,6 +5970,12 @@ packages:
     resolution: {integrity: sha512-BGcqMMJuToF7i1rt+2PWSNVnWIkGCU78jBG3RxO/bZlnZPK2Cmi2QaffxGO/2RvWi9sL+FAiRiXMgsyxQ1DIDA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
+
+  /nanoid@5.0.3:
+    resolution: {integrity: sha512-I7X2b22cxA4LIHXPSqbBCEQSL+1wv8TuoefejsX4HFWyC6jc5JG7CEaxOltiKjc1M+YCS2YkrZZcj4+dytw9GA==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+    dev: false
 
   /natural-compare-lite@1.4.0:
     resolution: {integrity: sha512-Tj+HTDSJJKaZnfiuw+iaF9skdPpTo2GtEly5JHnWV/hfv2Qj/9RKsGISQtLh2ox3l5EAGw487hnBee0sIJ6v2g==}
