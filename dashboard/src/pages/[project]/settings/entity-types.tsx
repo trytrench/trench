@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -35,14 +34,16 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { RouterOutputs, api } from "~/utils/api";
+import { type NextPageWithLayout } from "../../_app";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../_app";
+import { format } from "date-fns";
+import SettingsLayout from "~/components/SettingsLayout";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -66,14 +67,16 @@ const Page: NextPageWithLayout = () => {
     [project]
   );
 
-  const { data: eventTypes, refetch: refetchEventTypes } =
-    api.eventTypes.list.useQuery(
+  const { data: entityTypes, refetch: refetchEntityTypes } =
+    api.entityTypes.list.useQuery(
       { projectId: project?.id },
       { enabled: !!project?.id }
     );
 
-  const { mutateAsync: createEventType } = api.eventTypes.create.useMutation();
-  const { mutateAsync: deleteEventType } = api.eventTypes.delete.useMutation();
+  const { mutateAsync: createEntityType } =
+    api.entityTypes.create.useMutation();
+  const { mutateAsync: deleteEntityType } =
+    api.entityTypes.delete.useMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -83,7 +86,7 @@ const Page: NextPageWithLayout = () => {
     },
   });
 
-  const columns: ColumnDef<RouterOutputs["eventTypes"]["list"][number]>[] =
+  const columns: ColumnDef<RouterOutputs["entityTypes"]["list"][number]>[] =
     useMemo(
       () => [
         {
@@ -111,6 +114,7 @@ const Page: NextPageWithLayout = () => {
           enableHiding: false,
         },
         {
+          id: "name",
           accessorKey: "type",
           header: "Name",
         },
@@ -142,11 +146,11 @@ const Page: NextPageWithLayout = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
-                        deleteEventType({
+                        deleteEntityType({
                           id: row.original.id,
                         })
                           .then(() => {
-                            return refetchEventTypes();
+                            return refetchEntityTypes();
                           })
                           .catch((error) => {});
                       }}
@@ -164,102 +168,100 @@ const Page: NextPageWithLayout = () => {
     );
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createEventType({
+    createEntityType({
       projectId: project?.id,
       name: values.name,
     })
       .then(() => {
         setOpen(false);
         form.reset();
-        return refetchEventTypes();
+        return refetchEntityTypes();
       })
       .catch((error) => {});
   }
 
   return (
     <div>
-      <div className="container mx-auto py-10">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl text-emphasis-foreground">Event Types</h1>
-        </div>
-        <DataTable
-          columns={columns}
-          data={eventTypes ?? []}
-          renderHeader={(table) => (
-            <>
-              <Input
-                placeholder="Filter event types..."
-                value={
-                  (table.getColumn("name")?.getFilterValue() as string) ?? ""
-                }
-                onChange={(event) =>
-                  table.getColumn("name")?.setFilterValue(event.target.value)
-                }
-                className="max-w-sm"
-              />
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="ml-auto">
-                    Create
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Create event type</DialogTitle>
-                    {/* <DialogDescription>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl text-emphasis-foreground">Entity Types</h1>
+      </div>
+      <DataTable
+        columns={columns}
+        data={entityTypes ?? []}
+        renderHeader={(table) => (
+          <>
+            <Input
+              placeholder="Filter entity types..."
+              value={
+                (table.getColumn("name")?.getFilterValue() as string) ?? ""
+              }
+              onChange={(event) =>
+                table.getColumn("name")?.setFilterValue(event.target.value)
+              }
+              className="max-w-sm"
+            />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="ml-auto">
+                  Create
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Create entity type</DialogTitle>
+                  {/* <DialogDescription>
                   Make changes to your profile here. Click save when you're
                   done.
                 </DialogDescription> */}
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                              <FormItem className="col-span-3">
-                                <FormLabel>Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <FormField
-                            control={form.control}
-                            name="alias"
-                            render={({ field }) => (
-                              <FormItem className="col-span-3">
-                                <FormLabel>Alias</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem className="col-span-3">
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                      <DialogFooter>
-                        <Button type="submit">Save</Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
-        />
-      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <FormField
+                          control={form.control}
+                          name="alias"
+                          render={({ field }) => (
+                            <FormItem className="col-span-3">
+                              <FormLabel>Alias</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">Save</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      />
     </div>
   );
 };
 
-Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
+Page.getLayout = (page) => <SettingsLayout>{page}</SettingsLayout>;
 
 export default Page;
