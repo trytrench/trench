@@ -5,6 +5,11 @@ import { EventOutput, runEvent } from "sqrl-helpers/src/utils/runEvent";
 
 import { prisma } from "databases";
 
+export { DataType } from "./features/dataTypes";
+export { FeatureType, type FeatureConfig } from "./features/featureTypes";
+export { createEngine } from "./createEngine";
+
+/////////////// OLD CODE ///////////////
 type DatasetData = {
   datasetId: bigint;
   code: Record<string, string>;

@@ -1,10 +1,10 @@
-import { assert } from "../../utils";
-import { DataType, Entity } from "../dataTypes";
-import { getPastNCountBucketHashes } from "../lib/counts";
-import { stringifyFeatureValue } from "../lib/stringifyFeature";
-import { RedisInterface } from "../services/redis";
-import { FeatureGetter, StateUpdater } from "../types";
-import { CreateInstanceOptions, FeatureFactory } from "./interface";
+import { assert } from "../../../utils";
+import { DataType, Entity } from "../../dataTypes";
+import { getPastNCountBucketHashes } from "../../lib/counts";
+import { stringifyFeatureValue } from "../../lib/stringifyFeature";
+import { RedisInterface } from "../../services/redis";
+import { FeatureGetter, StateUpdater } from "../../types";
+import { CreateInstanceOptions, FeatureFactory } from "../FeatureFactory";
 
 export type Config = {
   timeWindowMs: number;
@@ -12,13 +12,16 @@ export type Config = {
   conditionFeatureId: string | undefined;
 };
 
-export class CountFeature implements FeatureFactory<Config> {
+export class CountFeature extends FeatureFactory<Config> {
   redis: RedisInterface;
   constructor(redis: RedisInterface) {
+    super();
     this.redis = redis;
   }
 
-  createFeatureInstance(options: CreateInstanceOptions<Config>) {
+  allowedDataTypes = [DataType.Int64] as const;
+
+  createFeatureGetter(options: CreateInstanceOptions<Config>) {
     const getter: FeatureGetter = async ({ event, featureDeps }) => {
       /**
        * 1. In order to get the count, we need to get the counts of the previous 10 time buckets and add them up.
@@ -84,11 +87,7 @@ export class CountFeature implements FeatureFactory<Config> {
         assignedEntities,
       };
     };
-    return {
-      featureId: "count",
-      dependsOn: new Set(["lalal"]),
-      dataType: DataType.Int64,
-      getter: getter,
-    };
+
+    return getter;
   }
 }

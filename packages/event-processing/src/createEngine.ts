@@ -1,13 +1,13 @@
-import { UniqueCountFeature } from "./features/feature-factories/UniqueCount";
-import { CountFeature } from "./features/feature-factories/Count";
-import { MockRedisService } from "./features/services/redis";
-import { ComputedFeature } from "./features/feature-factories/Computed";
+import { FeatureType } from "./features/factories/FeatureType";
+import { ComputedFeature } from "./features/factories/feature-types/Computed";
+import { CountFeature } from "./features/factories/feature-types/Count";
+import { UniqueCountFeature } from "./features/factories/feature-types/UniqueCount";
 import { FeatureType } from "./features/featureTypes";
-import { FeatureFactory } from "./features/feature-factories/interface";
+import { MockRedisService } from "./features/services/redis";
 
 const redis = new MockRedisService();
 
-const factories: Record<FeatureType, FeatureFactory<any>> = {
+const factories: Record<FeatureType, FeatureType<any>> = {
   [FeatureType.Count]: new CountFeature(redis),
   [FeatureType.UniqueCount]: new UniqueCountFeature(redis),
   [FeatureType.Computed]: new ComputedFeature(),

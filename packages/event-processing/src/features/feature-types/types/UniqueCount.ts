@@ -1,11 +1,11 @@
 import { nanoid } from "nanoid";
-import { assert } from "../../utils";
-import { DataType, Entity } from "../dataTypes";
-import { getPastNCountBucketHashes, hashObject } from "../lib/counts";
-import { stringifyFeatureValue } from "../lib/stringifyFeature";
-import { FeatureGetter, StateUpdater } from "../types";
-import { CreateInstanceOptions, FeatureFactory } from "./interface";
-import { RedisInterface } from "../services/redis";
+import { assert } from "../../../utils";
+import { DataType, Entity } from "../../dataTypes";
+import { getPastNCountBucketHashes, hashObject } from "../../lib/counts";
+import { stringifyFeatureValue } from "../../lib/stringifyFeature";
+import { FeatureGetter, StateUpdater } from "../../types";
+import { CreateInstanceOptions, FeatureFactory } from "../FeatureFactory";
+import { RedisInterface } from "../../services/redis";
 
 export type Config = {
   timeWindowMs: number;
@@ -14,13 +14,16 @@ export type Config = {
   conditionFeatureId: string | undefined;
 };
 
-export class UniqueCountFeature implements FeatureFactory<Config> {
+export class UniqueCountFeature extends FeatureFactory<Config> {
   redis: RedisInterface;
   constructor(redis: RedisInterface) {
+    super();
     this.redis = redis;
   }
 
-  createFeatureInstance(options: CreateInstanceOptions<Config>) {
+  allowedDataTypes = [DataType.Int64] as const;
+
+  createFeatureGetter(options: CreateInstanceOptions<Config>) {
     const getter: FeatureGetter = async ({ event, featureDeps }) => {
       const {
         timeWindowMs,
@@ -105,11 +108,7 @@ export class UniqueCountFeature implements FeatureFactory<Config> {
         assignedEntities,
       };
     };
-    return {
-      featureId: "count",
-      dependsOn: new Set(["lalal"]),
-      dataType: DataType.Int64,
-      getter: getter,
-    };
+
+    return getter;
   }
 }

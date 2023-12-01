@@ -442,6 +442,9 @@ importers:
       superjson:
         specifier: ^1.13.1
         version: 1.13.3
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
     devDependencies:
       '@types/pg':
         specifier: ^8.10.3

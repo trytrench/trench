@@ -1,6 +1,7 @@
-import { assert } from "../../utils";
-import { FeatureGetter } from "../types";
-import { CreateInstanceOptions, FeatureFactory } from "./interface";
+import { assert } from "../../../utils";
+import { DataType } from "../../dataTypes";
+import { FeatureGetter } from "../../types";
+import { CreateInstanceOptions, FeatureFactory } from "../FeatureFactory";
 
 export type Config = {
   depsMap: Record<string, string>;
@@ -8,8 +9,16 @@ export type Config = {
   compiledJs: string;
 };
 
-export class ComputedFeature implements FeatureFactory<Config> {
-  createFeatureInstance(options: CreateInstanceOptions<Config>) {
+export class ComputedFeature extends FeatureFactory<Config> {
+  allowedDataTypes = [
+    DataType.Boolean,
+    DataType.Float64,
+    DataType.Int64,
+    DataType.String,
+    DataType.Object,
+  ] as const;
+
+  createFeatureGetter(options: CreateInstanceOptions<Config>) {
     const getter: FeatureGetter = async ({ event, featureDeps }) => {
       const { depsMap, compiledJs } = options.config;
 
@@ -32,11 +41,6 @@ export class ComputedFeature implements FeatureFactory<Config> {
       };
     };
 
-    return {
-      featureId: options.featureId,
-      dependsOn: options.dependsOn,
-      dataType: options.dataType,
-      getter,
-    };
+    return getter;
   }
 }
