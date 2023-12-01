@@ -25,17 +25,17 @@ export type FTAllowedDataTypes = {
   [TFeatureType in FeatureType]: FTFactory[TFeatureType]["allowedDataTypes"][number];
 };
 
-export type FTTsType = {
+export type FTTypescriptType = {
   [TFeatureType in FeatureType]: DataTypeToTsType[FTAllowedDataTypes[TFeatureType]];
 };
 
 // Generic type for feature definition, that looks like the above commented out type
 export type FTFeatureDef = {
-  id: string;
-  name: string;
-  deps: Array<string>;
-} & {
   [TFeatureType in FeatureType]: {
+    id: string;
+    name: string;
+    deps: Array<string>;
+  } & {
     type: TFeatureType;
     dataType: FTAllowedDataTypes[TFeatureType];
     config: FTConfig[TFeatureType];

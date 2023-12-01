@@ -11,18 +11,18 @@ export type CreateInstanceOptions<TConfig> = {
 export abstract class FeatureFactory<TConfig> {
   readonly allowedDataTypes: readonly DataType[] = [];
 
-  public createFeatureInstance(options: CreateInstanceOptions<TConfig>) {
-    if (!this.allowedDataTypes.includes(options.dataType)) {
+  public createFeatureInstance(featureDef: CreateInstanceOptions<TConfig>) {
+    if (!this.allowedDataTypes.includes(featureDef.dataType)) {
       throw new Error(
-        `Feature ${options.featureId} has invalid data type ${options.dataType}`
+        `Feature ${featureDef.featureId} has invalid data type ${featureDef.dataType}`
       );
     }
 
     return {
-      featureId: options.featureId,
-      dependsOn: options.dependsOn,
-      dataType: options.dataType,
-      getter: this.createFeatureGetter(options),
+      featureId: featureDef.featureId,
+      dependsOn: featureDef.dependsOn,
+      dataType: featureDef.dataType,
+      getter: this.createFeatureGetter(featureDef),
     };
   }
 

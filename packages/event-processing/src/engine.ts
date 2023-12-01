@@ -2,6 +2,7 @@ import { assert } from "./utils";
 import {
   FeatureGetter,
   FeatureInstance,
+  FeatureResult,
   StateUpdater,
   TrenchEvent,
 } from "./features/types";
@@ -51,12 +52,12 @@ export class ExecutionEngine {
   }
 
   private getFeatureInstance(featureId: string) {
-    const feature = this.featureInstances[featureId];
-    assert(feature, `No feature instance for id: ${featureId}`);
-    return feature;
+    const instance = this.featureInstances[featureId];
+    assert(instance, `No feature instance for id: ${featureId}`);
+    return instance;
   }
 
-  public async getFeature(featureId: string): Promise<DataType> {
+  public async getFeature(featureId: string): Promise<FeatureResult> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
     const { event, featurePromises } = this.state;
@@ -94,13 +95,9 @@ export class ExecutionEngine {
     }
 
     const featurePromise = featurePromises[featureId];
-    assert(
-      featurePromise,
-      "Feature promise not found... this should never happen"
-    );
+    assert(featurePromise, "No feature promise... this should never happen");
 
-    const { value } = await featurePromise;
-    return value;
+    return await featurePromise;
   }
 
   public async executeStateUpdates() {
@@ -118,7 +115,7 @@ export class ExecutionEngine {
     }
 
     // Await all promises
-    const result: Record<string, any> = {};
+    const result: Record<string, FeatureResult> = {};
     for (const instance of allInstances) {
       result[instance.featureId] = await this.getFeature(instance.featureId);
     }

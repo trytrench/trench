@@ -1,5 +1,5 @@
 import { type } from "os";
-import { DataType, DataTypeValue, Entity } from "./dataTypes";
+import { DataType, DataTypeToTsType, DataTypeValue, Entity } from "./dataTypes";
 import { FeatureType } from "./featureTypes";
 
 export type TrenchEvent = {
@@ -32,14 +32,16 @@ export type TrenchEvent = {
 
 export type StateUpdater = () => Promise<void>;
 
+export type FeatureResult = {
+  value: DataTypeToTsType[DataType];
+  assignedEntities: Array<Entity>;
+  stateUpdaters: Array<StateUpdater>;
+};
+
 export type FeatureGetter = (options: {
   event: TrenchEvent;
   featureDeps: Record<string, DataTypeValue>;
-}) => Promise<{
-  value: any;
-  assignedEntities: Array<Entity>;
-  stateUpdaters: Array<StateUpdater>;
-}>;
+}) => Promise<FeatureResult>;
 
 /**
  * Feature Instance: In-memory object that defines the feature.
