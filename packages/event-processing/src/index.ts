@@ -15,6 +15,7 @@ export {
   setLastEventProcessedId,
 } from "./eventUtils";
 export { writeEngineResultsToStore } from "./featureUtils";
+export * from "./features/featureTypes";
 
 /////////////// OLD CODE ///////////////
 type DatasetData = {

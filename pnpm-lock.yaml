@@ -266,6 +266,9 @@ importers:
       murmurhash3.js:
         specifier: https://github.com/qix/murmurHash3.js/releases/download/3.0.0-qix-0/murmurhash3.js-3.0.0-qix-0.tgz
         version: '@github.com/qix/murmurHash3.js/releases/download/3.0.0-qix-0/murmurhash3.js-3.0.0-qix-0.tgz'
+      nanoid:
+        specifier: ^5.0.3
+        version: 5.0.3
       next:
         specifier: 13.4.12
         version: 13.4.12(@opentelemetry/api@1.6.0)(react-dom@18.2.0)(react@18.2.0)
@@ -287,6 +290,9 @@ importers:
       progress:
         specifier: ^2.0.3
         version: 2.0.3
+      raw-loader:
+        specifier: ^4.0.2
+        version: 4.0.2(webpack@5.89.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -320,6 +326,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.3.5)
+      ts-morph:
+        specifier: ^20.0.0
+        version: 20.0.0
       ulid:
         specifier: ^2.3.0
         version: 2.3.0
@@ -2590,6 +2599,15 @@ packages:
     resolution: {integrity: sha512-s0QuK72orW+pYce60sd4I36N3xJKzypS2k+8GJ7phH4KqO4XjBXezOFmGMcXTznsVqEiX5zs5ujLfQdJ9X3Y2g==}
     dev: false
 
+  /@ts-morph/common@0.21.0:
+    resolution: {integrity: sha512-ES110Mmne5Vi4ypUKrtVQfXFDtCsDXiUiGxF6ILVlE90dDD4fdpC1LSjydl/ml7xJWKSDZwUYD2zkOePMSrPBA==}
+    dependencies:
+      fast-glob: 3.3.1
+      minimatch: 7.4.6
+      mkdirp: 2.1.6
+      path-browserify: 1.0.1
+    dev: false
+
   /@types/amqplib@0.10.3:
     resolution: {integrity: sha512-ZVkD5RqoW6+n84WanWf0a74mT0CVWdXOEEEC9nZvseD//j36XiYGR2phjpHQM6JpYR4vcWnjgUbqFCFG7MB+lw==}
     dependencies:
@@ -3683,6 +3701,10 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     transitivePeerDependencies:
       - '@types/react'
+    dev: false
+
+  /code-block-writer@12.0.0:
+    resolution: {integrity: sha512-q4dMFMlXtKR3XNBHyMHt/3pwYNA69EDk00lloMOaaUMKPUXBw6lpXtbu3MMVG6/uOihGnRDOlkyqsONEUj60+w==}
     dev: false
 
   /color-convert@1.9.3:
@@ -5824,6 +5846,13 @@ packages:
     dependencies:
       brace-expansion: 1.1.11
 
+  /minimatch@7.4.6:
+    resolution: {integrity: sha512-sBz8G/YjVniEz6lKPNpKxXwazJe4c19fEfV2GDMX6AjFz+MX9uDWIZW8XreVhkFW3fkIdTv/gxWr/Kks5FFAVw==}
+    engines: {node: '>=10'}
+    dependencies:
+      brace-expansion: 2.0.1
+    dev: false
+
   /minimatch@9.0.3:
     resolution: {integrity: sha512-RHiac9mvaRw0x3AYRgDC1CxAP7HTcNrrECeA8YYJeWnpo+2Q5CegtZjaotWTWxDG3UeGA1coE05iH1mPjT/2mg==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -5901,6 +5930,12 @@ packages:
 
   /mkdirp@1.0.4:
     resolution: {integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==}
+    engines: {node: '>=10'}
+    hasBin: true
+    dev: false
+
+  /mkdirp@2.1.6:
+    resolution: {integrity: sha512-+hEnITedc8LAtIP9u3HJDFIdcLV2vXP33sqLLIzkv1Db1zO/1OxbvYf0Y1OC/S/Qo5dxHXepofhmxL02PsKe+A==}
     engines: {node: '>=10'}
     hasBin: true
     dev: false
@@ -6424,7 +6459,6 @@ packages:
 
   /path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
-    dev: true
 
   /path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
@@ -6820,6 +6854,17 @@ packages:
       randombytes: 2.1.0
       safe-buffer: 5.2.1
     dev: true
+
+  /raw-loader@4.0.2(webpack@5.89.0):
+    resolution: {integrity: sha512-ZnScIV3ag9A4wPX/ZayxL/jZH+euYb6FcUinPcgiQW0+UBtEv0O6Q3lGd3cqJ+GHH+rksEv3Pj99oxJ3u3VIKA==}
+    engines: {node: '>= 10.13.0'}
+    peerDependencies:
+      webpack: ^4.0.0 || ^5.0.0
+    dependencies:
+      loader-utils: 2.0.4
+      schema-utils: 3.3.0
+      webpack: 5.89.0(webpack-cli@5.1.4)
+    dev: false
 
   /re2@1.20.5:
     resolution: {integrity: sha512-wZAqOjJ3m0PBgM2B8KG9dNJLwSNIAOZGiHN/c0FpKpaM1Hkg5NpKNAWSVbCXe+bb2K0xmHz6DPR4HJaQ2MejgQ==}
@@ -7937,6 +7982,13 @@ packages:
       typescript: 5.2.2
       webpack: 5.89.0(webpack-cli@5.1.4)
     dev: true
+
+  /ts-morph@20.0.0:
+    resolution: {integrity: sha512-JVmEJy2Wow5n/84I3igthL9sudQ8qzjh/6i4tmYCm6IqYyKFlNbJZi7oBdjyqcWSWYRu3CtL0xbT6fS03ESZIg==}
+    dependencies:
+      '@ts-morph/common': 0.21.0
+      code-block-writer: 12.0.0
+    dev: false
 
   /tsconfig-paths@3.14.2:
     resolution: {integrity: sha512-o/9iXgCYc5L/JxCHPe3Hvh8Q/2xm5Z+p18PESBU6Ff33695QnCHBEjcytY2q19ua7Mbl/DavtBOLq+oG0RCL+g==}

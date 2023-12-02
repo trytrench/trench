@@ -1,5 +1,6 @@
+import { GlobalStateKey } from "databases";
+import { DataType, FeatureDef, FeatureType } from "event-processing";
 import { z } from "zod";
-import { FeatureDef } from "~/lib/create-feature/types";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const featureDefsRouter = createTRPCRouter({
@@ -139,8 +140,8 @@ export const featureDefsRouter = createTRPCRouter({
       z.object({
         projectId: z.string(),
         name: z.string(),
-        type: z.string(),
-        dataType: z.string(),
+        type: z.nativeEnum(FeatureType),
+        dataType: z.nativeEnum(DataType),
         eventTypes: z.array(z.string()),
         deps: z.array(z.string()),
         config: z.record(z.any()),
@@ -149,7 +150,7 @@ export const featureDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const configJSON = JSON.stringify(input.config);
 
-      return ctx.prisma.featureDef.create({
+      const featureDef = await ctx.prisma.featureDef.create({
         data: {
           projectId: input.projectId,
           type: input.type,
@@ -167,6 +168,46 @@ export const featureDefsRouter = createTRPCRouter({
           },
         },
       });
+
+      // Publish
+      const latestFeatureSnapshots = await ctx.prisma.featureDef.findMany({
+        where: { projectId: input.projectId },
+        include: {
+          snapshots: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+        },
+      });
+
+      const engine = await ctx.prisma.executionEngine.create({
+        data: {
+          featureDefSnapshots: {
+            createMany: {
+              data: latestFeatureSnapshots.map((featureDef) => ({
+                featureDefSnapshotId: featureDef.snapshots[0]!.id,
+              })),
+            },
+          },
+        },
+      });
+
+      await ctx.prisma.globalState.upsert({
+        where: {
+          key: GlobalStateKey.ActiveEngineId,
+        },
+        create: {
+          key: GlobalStateKey.ActiveEngineId,
+          value: engine.id,
+        },
+        update: {
+          value: engine.id,
+        },
+      });
+
+      return featureDef;
     }),
 
   save: publicProcedure
