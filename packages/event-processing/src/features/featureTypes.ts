@@ -1,7 +1,7 @@
 import { CountFeature } from "./feature-types/types/Count";
 import { UniqueCountFeature } from "./feature-types/types/UniqueCount";
 import { ComputedFeature } from "./feature-types/types/Computed";
-import { DataTypeToTsType } from "./dataTypes";
+import { DataType, DataTypeToTsType } from "./dataTypes";
 
 export enum FeatureType {
   Count = "Count",
@@ -33,7 +33,6 @@ export type FTTypescriptType = {
 export type FTFeatureDef = {
   [TFeatureType in FeatureType]: {
     id: string;
-    name: string;
     deps: Array<string>;
   } & {
     type: TFeatureType;
@@ -42,4 +41,12 @@ export type FTFeatureDef = {
   };
 };
 
-export type FeatureDef = FTFeatureDef[FeatureType];
+export type StrictFeatureDef = FTFeatureDef[FeatureType];
+
+export type FeatureDef = {
+  id: string;
+  deps: Array<string>;
+  type: FeatureType;
+  dataType: DataType;
+  config: object;
+};

@@ -1,12 +1,7 @@
 import { GlobalStateKey, prisma } from "databases";
 import { ExecutionEngine } from "./engine";
-import { FeatureFactory } from "./features/feature-types/FeatureFactory";
-import { ComputedFeature } from "./features/feature-types/types/Computed";
-import { CountFeature } from "./features/feature-types/types/Count";
-import { UniqueCountFeature } from "./features/feature-types/types/UniqueCount";
 import { FeatureDef, FeatureType } from "./features/featureTypes";
-import { MockRedisService } from "./features/services/redis";
-import { assert } from "./utils";
+import { DataType } from "./features/dataTypes";
 
 async function fetchFeatureDefs({
   engineId,
@@ -19,13 +14,31 @@ async function fetchFeatureDefs({
     include: {
       featureDefSnapshots: {
         include: {
-          featureDefSnapshot: true,
+          featureDefSnapshot: {
+            include: {
+              featureDef: true,
+            },
+          },
         },
       },
     },
   });
 
-  return [];
+  if (!engineDef) {
+    throw new Error(`No engine found for engineId ${engineId}`);
+  }
+  const featureDefs = engineDef.featureDefSnapshots.map((item) => {
+    const snapshot = item.featureDefSnapshot;
+    return {
+      id: snapshot.featureDef.id,
+      deps: snapshot.deps,
+      config: snapshot.config as object,
+      dataType: snapshot.featureDef.dataType as DataType,
+      type: snapshot.featureDef.type as FeatureType,
+    };
+  });
+
+  return featureDefs;
 }
 
 export async function fetchCurrentEngineId() {
