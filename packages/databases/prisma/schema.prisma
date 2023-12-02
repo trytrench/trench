@@ -112,8 +112,9 @@ model FeatureDef {
 model FeatureDefSnapshot {
   id String @id @default(dbgenerated("nanoid()"))
 
-  deps   String[]
-  config Json
+  eventTypes String[]
+  deps       String[]
+  config     Json
 
   createdAt DateTime @default(now())
 

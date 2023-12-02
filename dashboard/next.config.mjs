@@ -64,7 +64,7 @@ const config = {
     if (!isServer) {
       config.plugins.push(
         new MonacoEditorWebpackPlugin({
-          languages: [],
+          languages: ["typescript"],
           filename: "static/[name].worker.js",
           publicPath: "_next",
         })

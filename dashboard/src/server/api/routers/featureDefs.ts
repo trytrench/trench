@@ -51,6 +51,16 @@ export const featureDefsRouter = createTRPCRouter({
       };
     }),
 
+  allInfo: publicProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const featureDefs = await ctx.prisma.featureDef.findMany({
+        where: { projectId: input.projectId },
+      });
+
+      return featureDefs;
+    }),
+
   getVersions: publicProcedure
     .input(
       z.object({
@@ -131,6 +141,7 @@ export const featureDefsRouter = createTRPCRouter({
         name: z.string(),
         type: z.string(),
         dataType: z.string(),
+        eventTypes: z.array(z.string()),
         deps: z.array(z.string()),
         config: z.record(z.any()),
       })
@@ -148,6 +159,7 @@ export const featureDefsRouter = createTRPCRouter({
             create: [
               {
                 projectId: input.projectId,
+                eventTypes: input.eventTypes,
                 deps: input.deps,
                 config: configJSON,
               },
