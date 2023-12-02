@@ -1,13 +1,12 @@
 import {
-  EngineResult,
   createEngine,
   fetchCurrentEngineId,
   fetchLastEventProcessedId,
   getEventsSince,
   setLastEventProcessedId,
-  writeEventsAndFeaturesToStore,
+  writeEngineResultsToStore,
 } from "event-processing";
-import { ExecutionEngine } from "event-processing/src/engine";
+import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
 
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
@@ -39,18 +38,15 @@ async function initEventHandler() {
     }
 
     try {
-      const results: EngineResult[] = [];
+      const allResults: EngineResult[] = [];
       for (const eventObj of events) {
         engine.initState(eventObj.event);
-        const features = await engine.getAllFeatures();
-        results.push({
-          event: eventObj.event,
-          featureResults: features,
-        });
+        const results = await engine.getAllEngineResults();
+        allResults.push(...Object.values(results));
       }
 
       await engine.executeStateUpdates();
-      await writeEventsAndFeaturesToStore({ results });
+      await writeEngineResultsToStore({ results: allResults });
 
       const lastEvent = events[events.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);

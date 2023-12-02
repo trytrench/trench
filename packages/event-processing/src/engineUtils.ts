@@ -8,37 +8,6 @@ import { FeatureDef, FeatureType } from "./features/featureTypes";
 import { MockRedisService } from "./features/services/redis";
 import { assert } from "./utils";
 
-const redis = new MockRedisService();
-
-const factories: Record<FeatureType, FeatureFactory<any>> = {
-  [FeatureType.Count]: new CountFeature(redis),
-  [FeatureType.UniqueCount]: new UniqueCountFeature(redis),
-  [FeatureType.Computed]: new ComputedFeature(),
-};
-
-function createEngineFromDefs({
-  featureDefs,
-  engineId,
-}: {
-  featureDefs: FeatureDef[];
-  engineId: string;
-}) {
-  const featureInstances = featureDefs.map((featureDef) => {
-    const factory = factories[featureDef.type];
-    assert(factory, `Unknown feature type ${featureDef.type}`);
-    return factory.createFeatureInstance({
-      config: featureDef.config,
-      dataType: featureDef.dataType,
-      featureId: featureDef.id,
-      dependsOn: new Set(featureDef.deps),
-    });
-  });
-
-  const engine = new ExecutionEngine({ featureInstances, engineId });
-
-  return engine;
-}
-
 async function fetchFeatureDefs({
   engineId,
 }: {
@@ -68,5 +37,5 @@ export async function fetchCurrentEngineId() {
 
 export async function createEngine({ engineId }: { engineId: string }) {
   const featureDefs = await fetchFeatureDefs({ engineId });
-  return createEngineFromDefs({ featureDefs, engineId });
+  return new ExecutionEngine({ featureDefs, engineId });
 }

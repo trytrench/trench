@@ -14,10 +14,7 @@ export {
   fetchLastEventProcessedId,
   setLastEventProcessedId,
 } from "./eventUtils";
-export {
-  writeEngineResultsToStore as writeEventsAndFeaturesToStore,
-  type EngineResult,
-} from "./featureUtils";
+export { writeEngineResultsToStore } from "./featureUtils";
 
 /////////////// OLD CODE ///////////////
 type DatasetData = {
