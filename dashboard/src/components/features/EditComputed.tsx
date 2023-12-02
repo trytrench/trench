@@ -132,7 +132,7 @@ function EditComputed(props: EditComputedProps) {
       compiledJs: compileStatus.code,
       depsMap: dependencies,
     });
-  }, [returnType]);
+  }, [returnType, compileStatus, dependencies]);
 
   return (
     <>
