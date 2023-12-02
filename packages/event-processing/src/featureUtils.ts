@@ -16,6 +16,13 @@ type FeatureTableRow = {
   value_Bool: boolean | null;
 };
 
+type EventTableRow = {
+  id: string;
+  type: string;
+  data: object;
+  timestamp: Date;
+};
+
 export async function writeEngineResultsToStore({
   results,
 }: {

@@ -3,7 +3,3 @@ type TrenchEvent = {
   timestamp: Date;
   data: any;
 };
-
-declare module fn {
-  function testFunction(n: number): string;
-}

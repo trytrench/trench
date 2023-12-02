@@ -23,7 +23,7 @@ export async function getEventsSince({
   lastEventProcessedId: string | null;
   limit?: number;
 }): Promise<{ event: TrenchEvent; options: object }[]> {
-  const events = await prisma.eventLog.findMany({
+  const events = await prisma.event.findMany({
     where: {
       id: {
         gt: lastEventProcessedId ?? undefined,

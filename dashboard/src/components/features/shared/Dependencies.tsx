@@ -20,7 +20,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 interface DependenciesProps {
   featureId: string | null;
-  dependencies: Record<string, string>;
+  dependencies: Record<string, string>; // [alias]: feature id
   onChange?: (dependencies: Record<string, string>) => void;
 }
 
@@ -37,11 +37,11 @@ function Dependencies(props: DependenciesProps) {
     }
   );
 
-  const addDependency = (dependency: string) => {
-    const existingAliases = new Set(Object.values(dependencies));
+  const addDependency = (dependencyId: string) => {
+    const existingAliases = new Set(Object.keys(dependencies));
 
     let alias = toCamelCase(
-      allFeatureDefs?.find((v) => v.id === dependency)?.name ?? "Untitled"
+      allFeatureDefs?.find((v) => v.id === dependencyId)?.name ?? "Untitled"
     );
     if (existingAliases.has(alias)) {
       let i = 1;
@@ -49,17 +49,22 @@ function Dependencies(props: DependenciesProps) {
       alias = `${alias}${i}`;
     }
 
-    onChange?.({ ...dependencies, [dependency]: alias });
+    onChange?.({ ...dependencies, [alias]: dependencyId });
   };
 
   const removeDependency = (dependency: string) => {
-    const newDependencies = { ...dependencies };
-    delete newDependencies[dependency];
-    onChange?.(newDependencies);
+    const removed = Object.fromEntries(
+      Object.entries(dependencies).filter(([_, v]) => v !== dependency)
+    );
+
+    onChange?.(removed);
   };
 
   const renameDependency = (dependency: string, alias: string) => {
-    onChange?.({ ...dependencies, [dependency]: alias });
+    const removed = Object.fromEntries(
+      Object.entries(dependencies).filter(([_, v]) => v !== dependency)
+    );
+    onChange?.({ ...removed, [alias]: dependency });
   };
 
   return (
@@ -74,7 +79,7 @@ function Dependencies(props: DependenciesProps) {
       </div>
 
       <div className="flex flex-col gap-1.5 mb-1">
-        {Object.entries(dependencies).map(([dependencyId, alias]) => (
+        {Object.entries(dependencies).map(([alias, dependencyId]) => (
           <div key={dependencyId} className="flex items-center gap-4">
             <div className="w-40 text-muted-foreground">
               {allFeatureDefs?.find((v) => v.id === dependencyId)?.name ?? "-"}
@@ -107,7 +112,11 @@ function Dependencies(props: DependenciesProps) {
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
                 {allFeatureDefs
-                  ?.filter((v) => !(v.id in dependencies) && v.id !== featureId)
+                  ?.filter(
+                    (v) =>
+                      !Object.values(dependencies).includes(v.id) &&
+                      v.id !== featureId
+                  )
                   .map((featureDef) => (
                     <CommandItem
                       key={featureDef.id}

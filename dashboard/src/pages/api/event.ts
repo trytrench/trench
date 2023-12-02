@@ -63,6 +63,13 @@ export default async function handler(
     }
     const engine = await createEngine({ engineId });
 
+    engine.initState({
+      id: eventId,
+      type: event.type,
+      data: event.data,
+      timestamp: event.timestamp,
+    });
+
     const results = await engine.getAllEngineResults();
 
     return res.status(200).json({

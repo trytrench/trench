@@ -25,6 +25,7 @@ export class ComputedFeature extends FeatureFactory<Config> {
       const depValues: Record<string, any> = {};
       for (const [key, depFeatureId] of Object.entries(depsMap)) {
         const featureValue = featureDeps[depFeatureId];
+        console.log(depsMap);
         assert(featureValue, `Feature ${depFeatureId} not registered`);
         depValues[key] = featureValue.data;
       }

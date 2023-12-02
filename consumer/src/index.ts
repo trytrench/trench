@@ -26,6 +26,7 @@ initEventHandler();
 async function initEventHandler() {
   while (true) {
     if (!engine) {
+      console.log("No engine deployed");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;
     }

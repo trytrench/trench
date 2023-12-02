@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import type { IDisposable } from "monaco-editor/esm/vs/editor/editor.api";
 
 interface ErrorState {
   state: "error";
@@ -32,7 +31,7 @@ export const useMonacoEditor = (): ErrorState | PendingState | SuccessState => {
       .then(setMonacoEditorState)
       .catch(() => {
         setErrorState(
-          "Failed to load monaco-editor. Please check your internet connection.",
+          "Failed to load monaco-editor. Please check your internet connection."
         );
       });
   }, []);

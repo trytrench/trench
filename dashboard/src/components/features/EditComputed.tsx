@@ -6,13 +6,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dependencies } from "./shared/Dependencies";
 import { Button } from "../ui/button";
 import { api } from "~/utils/api";
-import { DataType } from "~/lib/create-feature/types";
 import { MonacoEditor } from "../ts-editor/MonacoEditor";
 import { CheckIcon, Loader2, Settings, XIcon } from "lucide-react";
 import { Project, ts } from "ts-morph";
 import { COMPILER_OPTIONS } from "../ts-editor/compilerOptions";
-import { FeatureType } from "~/lib/create-feature/types";
 import { toast } from "../ui/use-toast";
+import { DataType, FeatureType } from "event-processing";
 
 // - the monaco editor ig? unsure
 
@@ -30,9 +29,11 @@ interface EditComputedProps {
 }
 
 function EditComputed(props: EditComputedProps) {
+  const { onDepsChange, onConfigChange, onValidChange } = props;
   const { projectId, featureName, featureType, dataType, eventTypes } =
     props.data;
-
+  console.log("REEEEEErender");
+  // [feature alias]: feature id
   const [dependencies, setDependencies] = useState<Record<string, string>>({});
 
   const [valid, setValid] = useState(false);
@@ -54,7 +55,7 @@ function EditComputed(props: EditComputedProps) {
   const { prefix, suffix } = usePrefixAndSuffix({
     projectId: projectId,
     dataType: dataType,
-    featureType: featureType!,
+    featureType: featureType,
     dependencies: dependencies,
   });
 
@@ -119,20 +120,20 @@ function EditComputed(props: EditComputedProps) {
   }, [compileStatus]);
 
   useEffect(() => {
-    props.onValidChange?.(valid);
-  }, [valid]);
+    onValidChange?.(valid);
+  }, [onValidChange, valid]);
 
   useEffect(() => {
-    props.onDepsChange?.(Object.keys(dependencies));
-  }, [dependencies]);
+    onDepsChange?.(Object.values(dependencies));
+  }, [dependencies, onDepsChange]);
 
   useEffect(() => {
-    props.onConfigChange?.({
+    onConfigChange?.({
       tsCode: code,
       compiledJs: compileStatus.code,
       depsMap: dependencies,
     });
-  }, [returnType, compileStatus, dependencies]);
+  }, [returnType, compileStatus, dependencies, onConfigChange, code]);
 
   return (
     <>
@@ -160,7 +161,7 @@ function EditComputed(props: EditComputedProps) {
         <MonacoEditor
           prefix={prefix}
           suffix={suffix}
-          value={code}
+          // value={code}
           onValueChange={(change) => {
             setCode(change);
             setCompileStatus({
@@ -199,12 +200,12 @@ const usePrefixAndSuffix = (props: {
 
   const depTypes = useMemo(() => {
     // Return dependencies but each value is mapped to the feature's type
-    return Object.entries(dependencies).reduce((acc, [featureId, alias]) => {
+    return Object.entries(dependencies).reduce((acc, [alias, featureId]) => {
       const feature = allFeatureDefs?.find((v) => v.id === featureId);
       if (!feature) return acc;
       return {
         ...acc,
-        [alias]: feature.dataType,
+        [alias]: DataTypeToTsType[feature.dataType as DataType],
       };
     }, {});
   }, [dependencies, allFeatureDefs]);
@@ -219,7 +220,7 @@ interface Input {
 
 async function ${
       FeatureTypeToFunctionName[featureType]
-    }(input: Input): Promise<${dataType}> {`;
+    }(input: Input): Promise<${DataTypeToTsType[dataType]}> {`;
   }, [dataType, depTypes, featureType]);
 
   const suffix = "}";
@@ -242,12 +243,21 @@ function depsToInterface(deps: Record<string, DataType>) {
 }`;
 }
 
+const DataTypeToTsType: Record<DataType, string> = {
+  [DataType.Boolean]: "boolean",
+  [DataType.Int64]: "number",
+  [DataType.Float64]: "number",
+  [DataType.String]: "string",
+  [DataType.Entity]: "string",
+  [DataType.Object]: "any",
+};
+
 const FeatureTypeToFunctionName: Record<FeatureType, string> = {
   [FeatureType.Computed]: "getFeature",
-  [FeatureType.Entity]: "getEntityId",
+  // [FeatureType.Entity]: "getEntityId",
   [FeatureType.Count]: "shouldCount",
   [FeatureType.UniqueCount]: "shouldCount",
-  [FeatureType.Rule]: "getRule",
+  // [FeatureType.Rule]: s"getRule",
 };
 
 interface CompileStatusIndicatorProps {

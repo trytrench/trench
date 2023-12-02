@@ -148,8 +148,6 @@ export const featureDefsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const configJSON = JSON.stringify(input.config);
-
       const featureDef = await ctx.prisma.featureDef.create({
         data: {
           projectId: input.projectId,
@@ -162,7 +160,7 @@ export const featureDefsRouter = createTRPCRouter({
                 projectId: input.projectId,
                 eventTypes: input.eventTypes,
                 deps: input.deps,
-                config: configJSON,
+                config: input.config,
               },
             ],
           },
@@ -220,8 +218,6 @@ export const featureDefsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const configJSON = JSON.stringify(input.config);
-
       return ctx.prisma.featureDef.update({
         where: {
           projectId: input.projectId,
@@ -233,7 +229,7 @@ export const featureDefsRouter = createTRPCRouter({
               {
                 projectId: input.projectId,
                 deps: input.deps,
-                config: configJSON,
+                config: input.config,
               },
             ],
           },

@@ -115,6 +115,10 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monacoEditor.languages.typescript.typescriptDefaults.setCompilerOptions(
       COMPILER_OPTIONS as any
     );
+    monacoEditor.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+      noSemanticValidation: false,
+      noSyntaxValidation: false,
+    });
 
     editor.onDidChangeCursorSelection(({ selection }) => {
       const editableRange = new monacoEditor.Range(

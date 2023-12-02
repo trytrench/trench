@@ -18,22 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { FeatureType, DataType } from "~/lib/create-feature/types";
 import { toast } from "~/components/ui/use-toast";
+import { DataType, FeatureType } from "event-processing";
 
 const Page: NextPageWithLayout = () => {
   const { data: project } = useProject();
 
+  console.log("Rerender");
   // Get feature id from url
   const router = useRouter();
   const featureId = router.query.featureId as string;
 
   const typeDefaults = {
-    Computed: "string",
-    Entity: "string",
-    Rule: "boolean",
-    Count: "number",
-    UniqueCount: "number",
+    [FeatureType.Computed]: DataType.String,
+    [FeatureType.Count]: DataType.Int64,
+    [FeatureType.UniqueCount]: DataType.Boolean,
   } as Record<FeatureType, DataType>;
 
   const { mutateAsync: createFeatureDef } =

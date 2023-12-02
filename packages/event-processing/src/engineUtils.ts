@@ -45,7 +45,7 @@ export async function fetchCurrentEngineId() {
   const state = await prisma.globalState.findUnique({
     where: { key: GlobalStateKey.ActiveEngineId },
   });
-  return state?.value;
+  return state?.value ?? null;
 }
 
 export async function createEngine({ engineId }: { engineId: string }) {

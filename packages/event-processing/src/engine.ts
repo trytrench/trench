@@ -109,10 +109,20 @@ export class ExecutionEngine {
         // Get dependencies
         const instance = this.getFeatureInstance(featureId);
 
-        const dependsOnValues: Record<string, any> = {};
+        const dependsOnValues: Record<
+          string,
+          {
+            data: any;
+            type: DataType;
+          }
+        > = {};
         for (const depFeatureId of instance.dependsOn) {
           const depValue = await this.getFeature(depFeatureId);
-          dependsOnValues[depFeatureId] = depValue;
+          const depFeatureDef = this.getFeatureDef(depFeatureId);
+          dependsOnValues[depFeatureId] = {
+            data: depValue.value,
+            type: depFeatureDef.dataType,
+          };
         }
 
         // Run getter
