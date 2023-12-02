@@ -62,10 +62,6 @@ const Page: NextPageWithLayout = () => {
     { name: router.query.project as string },
     { enabled: !!router.query.project }
   );
-  const datasetId = useMemo(
-    () => project?.productionDatasetId?.toString(),
-    [project]
-  );
 
   const { data: eventTypes, refetch: refetchEventTypes } =
     api.eventTypes.list.useQuery(

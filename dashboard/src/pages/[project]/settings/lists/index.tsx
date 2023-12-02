@@ -1,11 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import AppLayout from "~/components/AppLayout";
+import SettingsLayout from "~/components/SettingsLayout";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
@@ -34,16 +35,14 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../../_app";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { format } from "date-fns";
-import SettingsLayout from "~/components/SettingsLayout";
+import { NextPageWithLayout } from "~/pages/_app";
+import { RouterOutputs, api } from "~/utils/api";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -58,21 +57,10 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
+  const { data: lists, refetch: refetchLists } = api.lists2.list.useQuery();
 
-  const { data: entityTypes, refetch: refetchEntityTypes } =
-    api.entityTypes.list.useQuery(
-      { projectId: project?.id },
-      { enabled: !!project?.id }
-    );
-
-  const { mutateAsync: createEntityType } =
-    api.entityTypes.create.useMutation();
-  const { mutateAsync: deleteEntityType } =
-    api.entityTypes.delete.useMutation();
+  const { mutateAsync: createList } = api.lists2.create.useMutation();
+  const { mutateAsync: deleteList } = api.lists2.delete.useMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -82,96 +70,99 @@ const Page: NextPageWithLayout = () => {
     },
   });
 
-  const columns: ColumnDef<RouterOutputs["entityTypes"]["list"][number]>[] =
-    useMemo(
-      () => [
-        {
-          id: "select",
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && "indeterminate")
-              }
-              onCheckedChange={(value) =>
-                table.toggleAllPageRowsSelected(!!value)
-              }
-              aria-label="Select all"
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          ),
-          enableSorting: false,
-          enableHiding: false,
-        },
-        {
-          id: "name",
-          accessorKey: "type",
-          header: "Name",
-        },
-        {
-          id: "actions",
-          cell: ({ row }) => {
-            return (
-              <>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="h-4 w-4" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Created by {row.original.createdBy} on{" "}
-                      {format(row.original.createdAt, "MMM d, yyyy")}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0 ml-2">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        deleteEntityType({
-                          id: row.original.id,
+  const columns: ColumnDef<RouterOutputs["lists2"]["list"][number]>[] = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            onClick={(event) => event.stopPropagation()}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+      },
+      {
+        accessorKey: "_count.items",
+        header: "Items",
+      },
+      {
+        id: "actions",
+        cell: ({ row }) => {
+          return (
+            <>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Created by {row.original.createdBy} on{" "}
+                    {format(row.original.createdAt, "MMM d, yyyy")}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0 ml-2">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      deleteList({
+                        id: row.original.id,
+                      })
+                        .then(() => {
+                          return refetchLists();
                         })
-                          .then(() => {
-                            return refetchEntityTypes();
-                          })
-                          .catch((error) => {});
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            );
-          },
+                        .catch((error) => {});
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          );
         },
-      ],
-      []
-    );
+      },
+    ],
+    []
+  );
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createEntityType({
-      projectId: project?.id,
+    createList({
       name: values.name,
+      alias: values.alias,
     })
       .then(() => {
         setOpen(false);
         form.reset();
-        return refetchEntityTypes();
+        return refetchLists();
       })
       .catch((error) => {});
   }
@@ -179,15 +170,18 @@ const Page: NextPageWithLayout = () => {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl text-emphasis-foreground">Entity Types</h1>
+        <h1 className="text-2xl text-emphasis-foreground">Lists</h1>
       </div>
       <DataTable
         columns={columns}
-        data={entityTypes ?? []}
+        data={lists ?? []}
+        onRowClick={(row) => {
+          router.push(`/${router.query.project}/settings/lists/${row.id}`);
+        }}
         renderHeader={(table) => (
           <>
             <Input
-              placeholder="Filter entity types..."
+              placeholder="Filter lists..."
               value={
                 (table.getColumn("name")?.getFilterValue() as string) ?? ""
               }
@@ -204,7 +198,7 @@ const Page: NextPageWithLayout = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Create entity type</DialogTitle>
+                  <DialogTitle>Create list</DialogTitle>
                   {/* <DialogDescription>
                   Make changes to your profile here. Click save when you're
                   done.

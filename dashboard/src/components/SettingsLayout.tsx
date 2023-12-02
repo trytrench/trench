@@ -11,6 +11,7 @@ const items = [
   { title: "Features", path: "features" },
   { title: "Event types", path: "event-types" },
   { title: "Entity types", path: "entity-types" },
+  { title: "Lists", path: "lists" },
 ];
 
 export default function SettingsLayout({ children }: Props) {
@@ -33,7 +34,9 @@ export default function SettingsLayout({ children }: Props) {
                       "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
                       {
                         "bg-accent text-accent-foreground":
-                          router.pathname.split("/").pop() === item.path,
+                          router.pathname
+                            .split("settings/")[1]
+                            ?.split("/")[0] === item.path,
                       }
                     )}
                   >

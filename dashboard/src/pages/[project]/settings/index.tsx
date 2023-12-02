@@ -3,12 +3,6 @@ import SettingsLayout from "~/components/SettingsLayout";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
-const items = [
-  { title: "Features", path: "features" },
-  { title: "Event types", path: "event-types" },
-  { title: "Entity types", path: "entity-types" },
-];
-
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
