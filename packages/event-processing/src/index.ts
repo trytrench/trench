@@ -3,11 +3,21 @@ import { getUnixTime } from "date-fns";
 import { type Event } from "sqrl-helpers";
 import { EventOutput, runEvent } from "sqrl-helpers/src/utils/runEvent";
 
-import { prisma } from "databases";
+import { GlobalStateKey, prisma } from "databases";
+import { FeatureDef } from "./features/featureTypes";
 
 export { DataType } from "./features/dataTypes";
-export { FeatureType, type FeatureConfig } from "./features/featureTypes";
-export { createEngine } from "./createEngine";
+export { FeatureType } from "./features/featureTypes";
+export { createEngine, fetchCurrentEngineId } from "./engineUtils";
+export {
+  getEventsSince,
+  fetchLastEventProcessedId,
+  setLastEventProcessedId,
+} from "./eventUtils";
+export {
+  writeEngineResultsToStore as writeEventsAndFeaturesToStore,
+  type EngineResult,
+} from "./featureUtils";
 
 /////////////// OLD CODE ///////////////
 type DatasetData = {

@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export { DatasetType } from "@prisma/client";
+export { DatasetType, GlobalStateKey } from "@prisma/client";
 
 export const prisma =
   globalForPrisma.prisma ??

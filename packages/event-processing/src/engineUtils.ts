@@ -1,3 +1,4 @@
+import { GlobalStateKey, prisma } from "databases";
 import { ExecutionEngine } from "./engine";
 import { FeatureFactory } from "./features/feature-types/FeatureFactory";
 import { ComputedFeature } from "./features/feature-types/types/Computed";
@@ -15,7 +16,13 @@ const factories: Record<FeatureType, FeatureFactory<any>> = {
   [FeatureType.Computed]: new ComputedFeature(),
 };
 
-export function createEngine({ featureDefs }: { featureDefs: FeatureDef[] }) {
+function createEngineFromDefs({
+  featureDefs,
+  engineId,
+}: {
+  featureDefs: FeatureDef[];
+  engineId: string;
+}) {
   const featureInstances = featureDefs.map((featureDef) => {
     const factory = factories[featureDef.type];
     assert(factory, `Unknown feature type ${featureDef.type}`);
@@ -27,7 +34,39 @@ export function createEngine({ featureDefs }: { featureDefs: FeatureDef[] }) {
     });
   });
 
-  const engine = new ExecutionEngine({ featureInstances, engineId: "test" });
+  const engine = new ExecutionEngine({ featureInstances, engineId });
 
   return engine;
+}
+
+async function fetchFeatureDefs({
+  engineId,
+}: {
+  engineId: string;
+}): Promise<FeatureDef[]> {
+  // Check for new engine
+  const engineDef = await prisma.executionEngine.findUnique({
+    where: { id: engineId },
+    include: {
+      featureDefSnapshots: {
+        include: {
+          featureDefSnapshot: true,
+        },
+      },
+    },
+  });
+
+  return [];
+}
+
+export async function fetchCurrentEngineId() {
+  const state = await prisma.globalState.findUnique({
+    where: { key: GlobalStateKey.ActiveEngineId },
+  });
+  return state?.value;
+}
+
+export async function createEngine({ engineId }: { engineId: string }) {
+  const featureDefs = await fetchFeatureDefs({ engineId });
+  return createEngineFromDefs({ featureDefs, engineId });
 }
