@@ -18,11 +18,5 @@
     "prettier": "^3.0.3",
     "turbo": "1.10.4"
   },
-  "packageManager": "pnpm@8.8.0",
-  "pnpm": {
-    "patchedDependencies": {
-      "sqrl-jsonpath@0.6.10": "patches/sqrl-jsonpath@0.6.10.patch",
-      "sqrl-redis-functions@0.6.10": "patches/sqrl-redis-functions@0.6.10.patch"
-    }
-  }
+  "packageManager": "pnpm@8.8.0"
 }

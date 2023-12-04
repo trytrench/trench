@@ -92,7 +92,6 @@
     "react-use": "^17.4.0",
     "recharts": "^2.8.0",
     "sqrl": "^0.6.10",
-    "sqrl-helpers": "workspace:*",
     "superjson": "^1.13.1",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",

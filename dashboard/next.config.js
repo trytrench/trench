@@ -22,7 +22,7 @@ const config = {
   webpack: (
     /** @type {import('webpack').Configuration} */
     config,
-    { isServer }
+    { isServer },
   ) => {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
@@ -47,7 +47,7 @@ const config = {
 
     const oneOfRule = config.module.rules.find(
       /** @returns {rule is import('webpack').RuleSetRule} */
-      (rule) => typeof rule === "object" && !!rule.oneOf
+      (rule) => typeof rule === "object" && !!rule.oneOf,
     );
     assert(oneOfRule?.oneOf);
 
@@ -67,7 +67,7 @@ const config = {
         languages: ["typescript"],
         filename: "static/[name].worker.js",
         publicPath: "/_next",
-      })
+      }),
     );
 
     if (!isServer) {
@@ -76,7 +76,7 @@ const config = {
     }
     return config;
   },
-  transpilePackages: ["databases", "event-processing", "sqrl-helpers"],
+  transpilePackages: ["databases", "event-processing"],
   typescript: {
     ignoreBuildErrors: false,
   },

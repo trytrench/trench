@@ -12,8 +12,7 @@
     "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "databases": "workspace:*",
-    "sqrl-helpers": "workspace:*"
+    "databases": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.10.3"
