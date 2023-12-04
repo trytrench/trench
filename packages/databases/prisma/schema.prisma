@@ -11,6 +11,28 @@ datasource db {
   url      = env("POSTGRES_URL")
 }
 
+model List {
+  id        String     @id @default(dbgenerated("nanoid()"))
+  updatedAt DateTime   @updatedAt
+  createdAt DateTime   @default(now())
+  name      String
+  alias     String     @unique
+  // createdBy String
+  items     ListItem[]
+}
+
+model ListItem {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  value     String
+  listId    String
+  list      List     @relation(fields: [listId], references: [id])
+  // createdBy String
+
+  @@unique([listId, value])
+}
+
 model Event {
   id        String   @id
   timestamp DateTime

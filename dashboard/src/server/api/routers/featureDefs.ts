@@ -97,7 +97,7 @@ export const featureDefsRouter = createTRPCRouter({
       };
     }),
 
-  allLatest: publicProcedure
+  list: publicProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       const featureDefs = await ctx.prisma.featureDef.findMany({
@@ -120,14 +120,14 @@ export const featureDefsRouter = createTRPCRouter({
         const latestSnapshot = featureDef.snapshots[0];
 
         return {
-          featureDef: {
+          ...({
             id: featureDef.id,
             name: featureDef.name,
             deps: latestSnapshot.deps,
             type: featureDef.type,
             dataType: featureDef.dataType,
             config: JSON.parse(featureDef.snapshots[0].config as string),
-          } as FeatureDef,
+          } as FeatureDef),
 
           updatedAt: featureDef.snapshots[0].createdAt,
           createdAt: featureDef.createdAt,
