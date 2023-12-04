@@ -189,8 +189,8 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6(react@18.2.0)
       '@t3-oss/env-nextjs':
-        specifier: ^0.3.1
-        version: 0.3.1(typescript@5.2.2)(zod@3.22.4)
+        specifier: ^0.7.1
+        version: 0.7.1(typescript@5.2.2)(zod@3.22.4)
       '@tanstack/react-query':
         specifier: ^4.29.25
         version: 4.36.1(react-dom@18.2.0)(react@18.2.0)
@@ -387,6 +387,9 @@ importers:
       postcss:
         specifier: ^8.4.27
         version: 8.4.31
+      prettier-plugin-tailwindcss:
+        specifier: ^0.5.7
+        version: 0.5.7(prettier@3.0.3)
       prisma:
         specifier: ^5.1.1
         version: 5.5.2
@@ -2502,16 +2505,6 @@ packages:
       tslib: 2.6.2
     dev: false
 
-  /@t3-oss/env-core@0.3.1(typescript@5.2.2)(zod@3.22.4):
-    resolution: {integrity: sha512-iEnBuWeSjzqQLDTUw7H+YhstV4OZrGXTkQGL6ZOMxZQoCmwGX7GVS+1KCd5RvCzOtrIAD9jeOItSWNjC7sG4Sg==}
-    peerDependencies:
-      typescript: '>=4.7.2'
-      zod: ^3.0.0
-    dependencies:
-      typescript: 5.2.2
-      zod: 3.22.4
-    dev: false
-
   /@t3-oss/env-core@0.6.1(typescript@5.2.2)(zod@3.22.4):
     resolution: {integrity: sha512-KQD7qEDJtkWIWWmTVjNvk0wnHpkvAQ6CRbUxbWMFNG/fiosBQDQvtRpBNu6USxBscJCoC4z6y7P9MN52/mLOzw==}
     peerDependencies:
@@ -2522,13 +2515,29 @@ packages:
       zod: 3.22.4
     dev: false
 
-  /@t3-oss/env-nextjs@0.3.1(typescript@5.2.2)(zod@3.22.4):
-    resolution: {integrity: sha512-W1OgOn5xtpdEGraAQesyLzO2aNLRfSJEyK6qjQFfEUnrPbkvB+WxABX2bPMqfn4KJQ8pziLCSdBFiUN8OagqAg==}
+  /@t3-oss/env-core@0.7.1(typescript@5.2.2)(zod@3.22.4):
+    resolution: {integrity: sha512-3+SQt39OlmSaRLqYVFv8uRm1BpFepM5TIiMytRqO9cjH+wB77o6BIJdeyM5h5U4qLBMEzOJWCY4MBaU/rLwbYw==}
     peerDependencies:
       typescript: '>=4.7.2'
       zod: ^3.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
     dependencies:
-      '@t3-oss/env-core': 0.3.1(typescript@5.2.2)(zod@3.22.4)
+      typescript: 5.2.2
+      zod: 3.22.4
+    dev: false
+
+  /@t3-oss/env-nextjs@0.7.1(typescript@5.2.2)(zod@3.22.4):
+    resolution: {integrity: sha512-tQDbNLGCOvKGi+JoGuJ/CJInJI7/kLWJqtgGppAKS7ZFLdVOqZYR/uRjxlXOWPnxmUKF8VswOAsq7fXUpNZDhA==}
+    peerDependencies:
+      typescript: '>=4.7.2'
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@t3-oss/env-core': 0.7.1(typescript@5.2.2)(zod@3.22.4)
       typescript: 5.2.2
       zod: 3.22.4
     dev: false
@@ -6746,6 +6755,61 @@ packages:
   /prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+    dev: true
+
+  /prettier-plugin-tailwindcss@0.5.7(prettier@3.0.3):
+    resolution: {integrity: sha512-4v6uESAgwCni6YF6DwJlRaDjg9Z+al5zM4JfngcazMy4WEf/XkPS5TEQjbD+DZ5iNuG6RrKQLa/HuX2SYzC3kQ==}
+    engines: {node: '>=14.21.3'}
+    peerDependencies:
+      '@ianvs/prettier-plugin-sort-imports': '*'
+      '@prettier/plugin-pug': '*'
+      '@shopify/prettier-plugin-liquid': '*'
+      '@shufo/prettier-plugin-blade': '*'
+      '@trivago/prettier-plugin-sort-imports': '*'
+      prettier: ^3.0
+      prettier-plugin-astro: '*'
+      prettier-plugin-css-order: '*'
+      prettier-plugin-import-sort: '*'
+      prettier-plugin-jsdoc: '*'
+      prettier-plugin-marko: '*'
+      prettier-plugin-organize-attributes: '*'
+      prettier-plugin-organize-imports: '*'
+      prettier-plugin-style-order: '*'
+      prettier-plugin-svelte: '*'
+      prettier-plugin-twig-melody: '*'
+    peerDependenciesMeta:
+      '@ianvs/prettier-plugin-sort-imports':
+        optional: true
+      '@prettier/plugin-pug':
+        optional: true
+      '@shopify/prettier-plugin-liquid':
+        optional: true
+      '@shufo/prettier-plugin-blade':
+        optional: true
+      '@trivago/prettier-plugin-sort-imports':
+        optional: true
+      prettier-plugin-astro:
+        optional: true
+      prettier-plugin-css-order:
+        optional: true
+      prettier-plugin-import-sort:
+        optional: true
+      prettier-plugin-jsdoc:
+        optional: true
+      prettier-plugin-marko:
+        optional: true
+      prettier-plugin-organize-attributes:
+        optional: true
+      prettier-plugin-organize-imports:
+        optional: true
+      prettier-plugin-style-order:
+        optional: true
+      prettier-plugin-svelte:
+        optional: true
+      prettier-plugin-twig-melody:
+        optional: true
+    dependencies:
+      prettier: 3.0.3
     dev: true
 
   /prettier@2.8.8:

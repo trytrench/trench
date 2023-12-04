@@ -2,7 +2,7 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
-await import("./src/env.mjs");
+await import("./src/env.js");
 import assert from "assert";
 import MonacoEditorWebpackPlugin from "monaco-editor-webpack-plugin";
 
