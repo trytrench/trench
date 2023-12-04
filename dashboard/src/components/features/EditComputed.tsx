@@ -1,10 +1,16 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { DataType, FeatureType } from "event-processing";
+import {
+  DataType,
+  FeatureType,
+  FeatureTypeDef,
+  FeatureTypeDefs,
+} from "event-processing";
 import { CheckIcon, Loader2, Settings, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Project, ts } from "ts-morph";
+import { z } from "zod";
 import { api } from "~/utils/api";
 import { MonacoEditor } from "../ts-editor/MonacoEditor";
 import { COMPILER_OPTIONS } from "../ts-editor/compilerOptions";
@@ -15,6 +21,9 @@ import { Dependencies } from "./shared/Dependencies";
 
 // - the monaco editor ig? unsure
 
+type ComputedFeatureConfig = z.infer<
+  FeatureTypeDefs[FeatureType.Computed]["configSchema"]
+>;
 interface EditComputedProps {
   data: {
     featureName: string;
@@ -30,10 +39,9 @@ interface EditComputedProps {
 function EditComputed(props: EditComputedProps) {
   const { onDepsChange, onConfigChange, onValidChange } = props;
   const { featureName, featureType, dataType, eventTypes } = props.data;
-  console.log("REEEEEErender");
   // [feature alias]: feature id
   const [dependencies, setDependencies] = useState<Record<string, string>>({});
-
+  console.log(featureType);
   const [valid, setValid] = useState(false);
 
   const [returnType, setReturnType] = useState<"string" | "boolean" | "number">(
@@ -129,6 +137,7 @@ function EditComputed(props: EditComputedProps) {
       tsCode: code,
       compiledJs: compileStatus.code,
       depsMap: dependencies,
+      assignedEntityFeatureIds: [],
     });
   }, [returnType, compileStatus, dependencies, onConfigChange, code]);
 
@@ -183,7 +192,7 @@ const usePrefixAndSuffix = (props: {
   dataType: DataType;
   dependencies: Record<string, string>;
 }) => {
-  const { eatureType, dataType, dependencies } = props;
+  const { featureType, dataType, dependencies } = props;
 
   const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
 

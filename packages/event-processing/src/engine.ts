@@ -67,7 +67,7 @@ export class ExecutionEngine {
 
         const resolver = featureTypeDef.createResolver({
           featureDef,
-          context: featureTypeDef.context,
+          context: featureTypeDef.getContext?.(),
         });
 
         return {
