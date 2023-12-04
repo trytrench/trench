@@ -1,21 +1,20 @@
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { uniq } from "lodash";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
-import { RouterOutputs } from "~/utils/api";
-import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
-import { useRouter } from "next/router";
 import { Badge } from "~/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
+import { RouterOutputs } from "~/utils/api";
 import { PropertyList } from "./ui/custom/property-list";
 
 export function EventDrawer(props: {
-  datasetId: string;
   selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number] | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { isOpen, selectedEvent, onOpenChange, datasetId } = props;
+  const { isOpen, selectedEvent, onOpenChange } = props;
   const [expandData, setExpandData] = useState(false);
   const router = useRouter();
 
@@ -91,9 +90,8 @@ export function EventDrawer(props: {
               <EntityCard
                 key={entity.id}
                 entity={entity}
-                datasetId={datasetId}
                 relation={entity.relation}
-                href={`/${router.query.project as string}/entity/${entity.id}`}
+                href={`/entity/${entity.id}`}
               />
             );
           })}

@@ -5,12 +5,15 @@
   "dependencies": {
     "@clickhouse/client": "^0.2.2",
     "date-fns": "^2.30.0",
+    "nanoid": "^5.0.3",
     "pg": "^8.11.3",
-    "pg-format": "^1.0.4"
+    "pg-format": "^1.0.4",
+    "superjson": "^1.13.1",
+    "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "sqrl-helpers": "workspace:*",
-    "databases": "workspace:*"
+    "databases": "workspace:*",
+    "sqrl-helpers": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.10.3"

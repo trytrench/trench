@@ -33,85 +33,17 @@ model ListItem {
   @@unique([listId, value])
 }
 
-model EventLog {
+model Event {
   id        String   @id
   timestamp DateTime
   type      String
   data      Json     @default("{}")
   options   Json     @default("{}")
 
-  datasets Dataset[]
 
   @@index([timestamp])
 }
 
-// Once an EventHandler is created, it should never be modified
-model EventHandler {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  hash String
-
-  code    Json
-  message String
-
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  assignments EventHandlerAssignment[]
-}
-
-model EventHandlerAssignment {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  eventHandlerId String
-  eventHandler   EventHandler @relation(fields: [eventHandlerId], references: [id])
-
-  datasetId BigInt
-  dataset   Dataset @relation("datasetAssignments", fields: [datasetId], references: [id])
-
-  currentDataset Dataset? @relation("currentDatasetAssignment")
-}
-
-// Below tables all belong to a dataset
-
-enum DatasetType {
-  PRODUCTION
-  BACKTEST
-}
-
-model Dataset {
-  id        BigInt   @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  type     DatasetType
-  isActive Boolean     @default(true)
-
-  name        String
-  description String?
-
-  startTime DateTime?
-  endTime   DateTime?
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id])
-
-  // Below: Event processing configuration and status
-
-  lastEventLog   EventLog? @relation(fields: [lastEventLogId], references: [id])
-  lastEventLogId String?
-
-  currentEventHandlerAssignmentId String?                 @unique
-  currentEventHandlerAssignment   EventHandlerAssignment? @relation("currentDatasetAssignment", fields: [currentEventHandlerAssignmentId], references: [id])
-
-  eventHandlerAssignments EventHandlerAssignment[] @relation("datasetAssignments")
-
-  productionProject Project? @relation("productionDatasetProject")
-}
 
 // Once an FeatureDef is created, only the name can be modified.
 // The type and dataType are immutable.
@@ -125,45 +57,63 @@ model FeatureDef {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
   snapshots FeatureDefSnapshot[]
 }
 
 model FeatureDefSnapshot {
   id String @id @default(dbgenerated("nanoid()"))
 
-  deps   String[]
-  config Json
+  eventTypes String[]
+  deps       String[]
+  config     Json
 
   createdAt DateTime @default(now())
 
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
 
   featureDef   FeatureDef @relation(fields: [featureDefId], references: [id], onDelete: Cascade)
   featureDefId String
+
+  executionEngines ExecutionEngineToFeatureDefSnapshot[]
 }
 
+
+model ExecutionEngineToFeatureDefSnapshot {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  featureDefSnapshotId String
+  featureDefSnapshot   FeatureDefSnapshot @relation(fields: [featureDefSnapshotId], references: [id])
+
+  executionEngineId String
+  executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
+
+  @@unique([featureDefSnapshotId, executionEngineId])
+}
+
+model ExecutionEngine {
+  id        String     @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+
+  featureDefSnapshots ExecutionEngineToFeatureDefSnapshot[]  
+
+}
+
+enum GlobalStateKey {
+  LastEventProcessedId
+  ActiveEngineId
+}
+
+model GlobalState {
+  key   GlobalStateKey @id
+  value String
+}
 model EntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type String
-
-  featureOrder String[]
-  ruleOrder    String[]
-  features     EntityFeature[]
-
-  nameFeature   EntityFeature? @relation("NameFeature", fields: [nameFeatureId], references: [id])
-  nameFeatureId String?        @unique
-
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  @@unique([type, projectId])
+  type String @unique
 }
 
 model EventType {
@@ -171,88 +121,12 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type String
-
-  featureOrder String[]
-  ruleOrder    String[]
-  features     EventFeature[]
-
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  @@unique([type, projectId])
+  type String @unique
 }
 
-model EntityFeature {
-  id String @id @default(dbgenerated("nanoid()"))
 
-  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
-  entityTypeId String
 
-  feature   Feature @relation(fields: [featureId], references: [id])
-  featureId String
 
-  name  String?
-  color String?
-
-  nameFeatureEntityType EntityType? @relation("NameFeature")
-
-  @@unique([entityTypeId, featureId])
-}
-
-model EventFeature {
-  id String @id @default(dbgenerated("nanoid()"))
-
-  eventType   EventType @relation(fields: [eventTypeId], references: [id])
-  eventTypeId String
-
-  feature   Feature @relation(fields: [featureId], references: [id])
-  featureId String
-
-  name  String?
-  color String?
-
-  @@unique([eventTypeId, featureId])
-}
-
-model Feature {
-  id       String  @id @default(dbgenerated("nanoid()"))
-  feature  String
-  isRule   Boolean
-  dataType String  @default("text")
-  // name    String?
-  // color   String?
-  // hidden  Boolean @default(false)
-
-  eventFeatures  EventFeature[]
-  entityFeatures EntityFeature[]
-
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  @@unique([feature, projectId])
-}
-
-model Project {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name String @unique
-
-  productionDatasetId BigInt?  @unique
-  productionDataset   Dataset? @relation("productionDatasetProject", fields: [productionDatasetId], references: [id])
-
-  eventHandlers EventHandler[]
-  datasets      Dataset[]
-
-  features    Feature[]
-  eventTypes  EventType[]
-  entityTypes EntityType[]
-
-  featureDefs        FeatureDef[]
-  FeatureDefSnapshot FeatureDefSnapshot[]
-}
 
 // Necessary for Next auth
 model Account {
@@ -298,3 +172,5 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+

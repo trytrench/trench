@@ -1,45 +1,40 @@
 import { format } from "date-fns";
 import { sumBy } from "lodash";
 import { useMemo } from "react";
+import { DateRange } from "react-day-picker";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
-import { DateRange } from "react-day-picker";
-import { Panel } from "./ui/custom/panel";
 import { BarList } from "./charts/BarList";
+import { Panel } from "./ui/custom/panel";
 import { Separator } from "./ui/separator";
 
 interface Props {
   entityId?: string;
-  datasetId: string;
   dateRange: DateRange;
 }
 
-export default function EventsDashboard({
-  entityId,
-  datasetId,
-  dateRange,
-}: Props) {
+export default function EventsDashboard({ entityId, dateRange }: Props) {
   const { data: eventTypeBins } = api.events.getEventTypeTimeData.useQuery(
-    { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
-    { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
+    { start: dateRange.from!, end: dateRange.to!, entityId },
+    { enabled: !!dateRange.from && !!dateRange.to }
   );
 
   const { data: eventTypeDists } =
     api.events.getEventTypeDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
-      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
+      { start: dateRange.from!, end: dateRange.to!, entityId },
+      { enabled: !!dateRange.from && !!dateRange.to }
     );
 
   const { data: eventLabelDists } =
     api.events.getEventLabelDistributions.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
-      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
+      { start: dateRange.from!, end: dateRange.to!, entityId },
+      { enabled: !!dateRange.from && !!dateRange.to }
     );
 
   const { data: eventLabelTimeData } =
     api.events.getEventLabelTimeData.useQuery(
-      { start: dateRange.from!, end: dateRange.to!, entityId, datasetId },
-      { enabled: !!dateRange.from && !!dateRange.to && !!datasetId }
+      { start: dateRange.from!, end: dateRange.to!, entityId },
+      { enabled: !!dateRange.from && !!dateRange.to }
     );
 
   const eventTypeBarData = useMemo(

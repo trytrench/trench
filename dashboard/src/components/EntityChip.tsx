@@ -4,21 +4,20 @@ import { BoxIcon } from "lucide-react";
 import { useState } from "react";
 import { api, type RouterOutputs } from "~/utils/api";
 import { Badge } from "./ui/badge";
-import { Panel } from "./ui/custom/panel";
-import { LabelList } from "./ui/custom/label-list";
 import { FeatureGrid } from "./ui/custom/feature-grid";
+import { LabelList } from "./ui/custom/label-list";
+import { Panel } from "./ui/custom/panel";
 
-interface Props {
+interface EntityChip {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   href: string;
-  datasetId: string;
 }
 
-export const EntityChip = ({ entity, href, datasetId }: Props) => {
+export const EntityChip = ({ entity, href }: EntityChip) => {
   const [open, setOpen] = useState(false);
 
   const { data: entityData } = api.entities.get.useQuery(
-    { id: entity.id, datasetId },
+    { id: entity.id },
     { enabled: !!entity.id && open }
   );
 

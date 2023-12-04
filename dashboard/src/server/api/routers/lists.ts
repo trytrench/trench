@@ -1,10 +1,11 @@
+import { Entity, getFeatureDefFromSnapshot } from "event-processing";
+import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
+import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
-import { get, uniq, uniqBy } from "lodash";
-import { getOrderedFeatures } from "~/server/lib/features";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -20,7 +21,6 @@ export const listsRouter = createTRPCRouter({
           .optional(),
         limit: z.number().optional(),
         cursor: z.number().optional(),
-        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -47,7 +47,6 @@ export const listsRouter = createTRPCRouter({
               )
               .join("")}
           FROM event_entity
-          WHERE dataset_id = '${input.datasetId}'
           ${
             filters?.entityType
               ? `AND entity_type = '${filters.entityType}'`
@@ -156,64 +155,42 @@ export const listsRouter = createTRPCRouter({
         eventFilters: eventFiltersZod,
         cursor: z.number().optional(),
         limit: z.number().optional(),
-        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
-      const eventTypes = await ctx.prisma.eventType.findMany();
-      const eventFeatures = await ctx.prisma.eventFeature.findMany({
-        include: {
-          eventType: true,
-        },
-      });
-      const features = await ctx.prisma.feature.findMany();
 
       const result = await db.query({
         query: `
-          SELECT 
-            event_id,
-            dataset_id,
-            event_type,
-            event_data,
-            event_timestamp,
-            features,
-            groupArray(entity_id) AS entity_ids,
-            groupArray(entity_type) AS entity_types
-          FROM event_entity
-          WHERE dataset_id = '${input.datasetId}'
-            ${
-              filters?.eventType
-                ? `AND event_type = '${filters.eventType}'`
-                : ""
-            }
-            ${
-              filters?.eventFeatures
-                ?.map((filter) => getFeatureQuery(filter, "features"))
-                .join("\n") ?? ""
-            }
-            ${
-              filters?.dateRange
-                ? `AND event_timestamp >= ${filters.dateRange.from} AND event_timestamp <= ${filters.dateRange.to}`
-                : ""
-            }
-            ${
-              filters?.entityId
-                ? `AND event_id IN (
-                    SELECT DISTINCT event_id
-                    FROM event_entity
-                    WHERE entity_id = '${filters.entityId}'
-                   )`
-                : ""
-            }
-          GROUP BY
-            event_id,
-            dataset_id,
-            event_type,
-            event_data,
-            event_timestamp,
-            features
-          ORDER BY event_timestamp DESC, event_id DESC
+          WITH entity_appearances AS (
+              SELECT event_id, entity_type, entity_id
+              FROM features
+              WHERE notEmpty(entity_id)
+              GROUP BY event_id, entity_type, entity_id
+          ), desired_event_ids AS (
+              SELECT DISTINCT event_id
+              FROM features
+              JOIN events ON features.event_id = events.id
+          ), event_features AS (
+              SELECT
+                  event_id,
+                  groupArray(tuple(feature_id, value)) AS features_arr
+              FROM features
+              GROUP BY event_id
+          )
+          SELECT
+            DISTINCT desired_event_ids.event_id as event_id,
+            e.type as event_type,
+            e.timestamp as event_timestamp,
+            e.data as event_data,
+            groupArray(tuple(ea.entity_type, ea.entity_id)) OVER (PARTITION BY e.id) AS entities,
+            ef.features_arr as features_array
+          FROM desired_event_ids
+          LEFT JOIN entity_appearances ea ON desired_event_ids.event_id = ea.event_id
+          LEFT JOIN events e ON desired_event_ids.event_id = e.id
+          LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
+          WHERE event_id IN (SELECT event_id FROM desired_event_ids)
+          ORDER BY event_id DESC
           LIMIT ${input.limit ?? 50}
           OFFSET ${input.cursor ?? 0};
         `,
@@ -223,96 +200,36 @@ export const listsRouter = createTRPCRouter({
       type EventResult = {
         event_id: string;
         event_type: string;
-        event_data: string;
         event_timestamp: Date;
-        features: string;
-        entity_ids: string[];
-        entity_types: string[];
+        event_data: string;
+        entities: Array<[string[], string[]]>;
+        features_array: Array<[string, string]>;
       };
 
       const events = await result.json<EventResult[]>();
 
-      const entityTypes = await ctx.prisma.entityType.findMany({
+      const latestSnapshots = await ctx.prisma.featureDefSnapshot.findMany({
+        distinct: ["featureDefId"],
+        orderBy: {
+          createdAt: "desc",
+        },
         include: {
-          nameFeature: {
-            include: {
-              feature: true,
-            },
-          },
+          featureDef: true,
         },
       });
 
-      const nameFeatures = uniqBy(
-        entityTypes.map((type) => type.nameFeature?.feature).filter(Boolean),
-        (feature) => feature?.feature
+      const featureDefs = latestSnapshots.map((snapshot) =>
+        getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot })
       );
-
-      const data = await db.query({
-        query: `
-          SELECT 
-            entity_id as id,
-            entity_type as type
-            ${nameFeatures
-              .map(
-                (feature) =>
-                  `,argMaxIf(JSONExtractString(features, '${feature?.feature}'), event_timestamp, JSONExtractString(features, '${feature?.feature}') IS NOT NULL) AS ${feature.feature}`
-              )
-              .join("")}
-          FROM event_entity
-          WHERE dataset_id = '${input.datasetId}'
-          ${
-            events.some((event) => event.entity_ids.length > 0)
-              ? `AND entity_id IN (${uniq(
-                  events.flatMap((event) =>
-                    event.entity_ids.map((id) => `'${id}'`)
-                  )
-                ).join(",")})`
-              : ""
-          }
-          GROUP BY 
-            entity_id,
-            entity_type;
-        `,
-        format: "JSONEachRow",
-      });
-
-      const entities =
-        await data.json<
-          (Record<string, string> & { id: string; type: string })[]
-        >();
 
       return {
         count: 0,
         rows: events.map((event) => ({
           id: event.event_id,
           type: event.event_type,
-          data: JSON.parse(event.event_data),
-          features: getOrderedFeatures({
-            type: "event",
-            eventOrEntity: {
-              type: event.event_type,
-              features: JSON.parse(event.features),
-            },
-            eventOrEntityTypes: eventTypes,
-            eventOrEntityFeatures: eventFeatures,
-            features,
-            entityTypes,
-            entities,
-          }),
-          rules: getOrderedFeatures({
-            type: "event",
-            eventOrEntity: {
-              type: event.event_type,
-              features: JSON.parse(event.features),
-            },
-            eventOrEntityTypes: eventTypes,
-            eventOrEntityFeatures: eventFeatures,
-            features,
-            entityTypes,
-            entities,
-            isRule: true,
-          }),
           timestamp: new Date(event.event_timestamp),
+          data: JSON.parse(event.event_data),
+          entities: getUniqueEntities(event.entities),
         })),
       };
     }),
@@ -457,3 +374,26 @@ const getFeatureQuery = (filter: JsonFilter, column: string) => {
 
   if (stringOps[op]) return `AND ${feature} ${stringOps[op]}`;
 };
+
+function getUniqueEntities(
+  entities_array: Array<[string[], string[]]>
+): Entity[] {
+  const entities: Entity[] = [];
+  for (const [entity_types, entity_ids] of entities_array) {
+    for (let i = 0; i < entity_ids.length; i++) {
+      const entity_id = entity_ids[i];
+      const entity_type = entity_types[i];
+      const found = entities.some(
+        (entity) => entity.id === entity_id && entity.type === entity_type
+      );
+      if (found) {
+        continue;
+      }
+      if (!entity_id || !entity_type) {
+        throw new Error("Invalid entity array from clickhouse");
+      }
+      entities.push({ id: entity_id, type: entity_type });
+    }
+  }
+  return entities;
+}

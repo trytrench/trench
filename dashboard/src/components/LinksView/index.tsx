@@ -7,31 +7,28 @@ import {
   EyeOffIcon,
   ListFilterIcon,
 } from "lucide-react";
-import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
+import { useRouter } from "next/router";
+import pluralize from "pluralize";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { api } from "~/utils/api";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
-import { api } from "~/utils/api";
-import pluralize from "pluralize";
 import type { LeftItem, RightItem } from "./types";
-import { useRouter } from "next/router";
 
 interface LinksViewProps {
   entityId: string;
   leftTypeFilter: string;
   onLeftTypeFilterChange?: (value: string) => void;
-  datasetId: string;
 }
 
 function LinksView({
   entityId,
   leftTypeFilter,
   onLeftTypeFilterChange,
-  datasetId,
 }: LinksViewProps) {
   const router = useRouter();
   const { data } = api.links.relatedEntities.useQuery(
     {
-      datasetId: datasetId,
       id: entityId ?? "",
       leftSideType: leftTypeFilter,
       limit: leftTypeFilter ? 20 : undefined,
@@ -155,9 +152,7 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                href={`/${router.query.project as string}/entity/${
-                  item.id
-                }?tab=links`}
+                href={`/entity/${item.id}?tab=links`}
               />
             );
           })}
@@ -194,9 +189,7 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              href={`/${router.query.project as string}/entity/${
-                item.id
-              }?tab=links`}
+              href={`/entity/${item.id}?tab=links`}
             />
           );
         })}

@@ -36,10 +36,10 @@ const config = {
     };
 
     assert(config.module?.rules);
-    config.module.rules.push({
-      test: /\.txt$/,
-      type: "asset/source",
-    });
+    // config.module.rules.push({
+    //   test: /\.txt$/,
+    //   type: "asset/source",
+    // });
 
     // Disable code optimization, SQRL uses function names
     assert(config.optimization);
@@ -61,14 +61,18 @@ const config = {
     });
 
     assert(config.plugins, "no plugins array");
+
+    config.plugins.push(
+      new MonacoEditorWebpackPlugin({
+        languages: ["typescript"],
+        filename: "static/[name].worker.js",
+        publicPath: "/_next",
+      })
+    );
+
     if (!isServer) {
-      config.plugins.push(
-        new MonacoEditorWebpackPlugin({
-          languages: [],
-          filename: "static/[name].worker.js",
-          publicPath: "_next",
-        })
-      );
+      config.resolve.fallback.fs = false;
+      config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
     return config;
   },

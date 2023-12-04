@@ -2,27 +2,24 @@ import { format } from "date-fns";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
+import SuperJSON from "superjson";
 import { Toggle } from "~/components/ui/toggle";
-import { EventFilters } from "~/shared/validation";
+import { type EventFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EntityChip } from "./EntityChip";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
+import { EventFilter } from "./ListFilter";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { EventFilter } from "./ListFilter";
-import { EventFilters } from "~/shared/validation";
-import SuperJSON from "superjson";
-import { FeatureGrid } from "./ui/custom/feature-grid";
 
-interface Props {
+interface EventsListProps {
   entityId?: string;
-  datasetId: string;
-  projectId: string;
 }
 
-export default function EventsList({ entityId, datasetId, projectId }: Props) {
+export default function EventsList({ entityId }: EventsListProps) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
@@ -37,11 +34,9 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
   } = api.lists.getEventsList.useInfiniteQuery(
     {
       eventFilters: { ...filters, entityId },
-      datasetId,
       limit,
     },
     {
-      enabled: !!datasetId,
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
@@ -100,7 +95,6 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
   return (
     <>
       <EventDrawer
-        datasetId={datasetId}
         isOpen={!!selectedEvent}
         onOpenChange={(open) => {
           if (!open) setSelectedEvent(null);
@@ -111,7 +105,7 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <EventFilter projectId={projectId} onChange={setFilters} />
+          <EventFilter onChange={setFilters} />
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle
@@ -293,7 +287,6 @@ function EventCard({
   isLast,
   features,
   rules,
-  datasetId,
 }: EventCardProps) {
   const router = useRouter();
 
@@ -358,10 +351,7 @@ function EventCard({
                           name: entityName,
                           type: entityType,
                         }}
-                        datasetId={datasetId}
-                        href={`/${
-                          router.query.project as string
-                        }/entity/${value}`}
+                        href={`/entity/${value}`}
                       />
                     ) : (
                       <div className="truncate">
