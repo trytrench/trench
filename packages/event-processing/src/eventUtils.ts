@@ -1,5 +1,5 @@
 import { GlobalStateKey, prisma } from "databases";
-import { TrenchEvent } from "./features/types";
+import { TrenchEvent } from "./feature-type-defs/featureTypeDef";
 
 export async function fetchLastEventProcessedId(): Promise<string | null> {
   const state = await prisma.globalState.findUnique({

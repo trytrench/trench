@@ -1,4 +1,4 @@
-import { assert } from "../utils";
+import { assert } from "./utils";
 
 export enum DataType {
   Int64 = "Int64",
@@ -23,12 +23,16 @@ export interface DataTypeToTsType {
   [DataType.Entity]: Entity;
 }
 
-export type DataTypeValue = {
-  [K in DataType]: { type: K; data: DataTypeToTsType[K] };
-}[DataType];
+export type TypedData = {
+  [TDataType in DataType]: {
+    type: TDataType;
+    value: DataTypeToTsType[TDataType];
+  };
+};
 
-export function validateDataType(value: any, dataType: DataType) {
-  switch (dataType) {
+export function validateTypedData(typedData: TypedData[DataType]) {
+  const { type, value } = typedData;
+  switch (type) {
     case DataType.Int64:
     case DataType.Float64:
       assert(typeof value === "number", "Expected number");
@@ -53,5 +57,25 @@ export function validateDataType(value: any, dataType: DataType) {
         "Entity must have a type of type string"
       );
       break;
+  }
+}
+
+export function stringifyTypedData(data: TypedData[DataType]) {
+  const { type, value } = data;
+  switch (type) {
+    case DataType.Boolean:
+      return value.toString();
+    case DataType.Entity:
+      return JSON.stringify({
+        type: value.type,
+        id: value.id,
+      });
+    case DataType.Float64:
+    case DataType.Int64:
+      return value.toString();
+    case DataType.String:
+      return value;
+    default:
+      throw new Error(`Cannot stringify unknown data type ${type}`);
   }
 }

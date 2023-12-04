@@ -1,17 +1,17 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { Label } from "../ui/label";
+import { DataType, FeatureType } from "event-processing";
+import { CheckIcon, Loader2, Settings, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Dependencies } from "./shared/Dependencies";
-import { Button } from "../ui/button";
+import { Project, ts } from "ts-morph";
 import { api } from "~/utils/api";
 import { MonacoEditor } from "../ts-editor/MonacoEditor";
-import { CheckIcon, Loader2, Settings, XIcon } from "lucide-react";
-import { Project, ts } from "ts-morph";
 import { COMPILER_OPTIONS } from "../ts-editor/compilerOptions";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
 import { toast } from "../ui/use-toast";
-import { DataType, FeatureType } from "event-processing";
+import { Dependencies } from "./shared/Dependencies";
 
 // - the monaco editor ig? unsure
 

@@ -1,18 +1,18 @@
-import { assert } from "./utils";
+import { DataType, TypedData, validateTypedData } from "./dataTypes";
 import {
-  FeatureGetter,
-  FeatureInstance,
-  FeatureResult,
+  FEATURE_TYPE_DEFS,
+  FeatureDefs,
+  FeatureTypeDefs,
+} from "./feature-type-defs";
+import {
+  FeatureDef,
+  FeatureTypeDef,
+  Resolver,
   StateUpdater,
   TrenchEvent,
-} from "./features/types";
-import { DataType, validateDataType } from "./features/dataTypes";
-import { FeatureDef, FeatureType } from "./features/featureTypes";
-import { FeatureFactory } from "./features/feature-types/FeatureFactory";
-import { ComputedFeature } from "./features/feature-types/types/Computed";
-import { CountFeature } from "./features/feature-types/types/Count";
-import { UniqueCountFeature } from "./features/feature-types/types/UniqueCount";
-import { MockRedisService } from "./features/services/redis";
+} from "./feature-type-defs/featureTypeDef";
+import { FeatureType } from "./feature-type-defs/types/_enum";
+import { assert } from "./utils";
 
 /**
  * Execution Engine
@@ -22,55 +22,62 @@ import { MockRedisService } from "./features/services/redis";
  * feature's value.
  */
 
-const redis = new MockRedisService();
-
-const factories: Record<FeatureType, FeatureFactory<any>> = {
-  [FeatureType.Count]: new CountFeature(redis),
-  [FeatureType.UniqueCount]: new UniqueCountFeature(redis),
-  [FeatureType.Computed]: new ComputedFeature(),
-};
+type ResolverOutput = ReturnType<Resolver<DataType>>;
 
 type ExecutionState = {
-  featurePromises: Record<string, ReturnType<FeatureGetter>>;
+  featurePromises: Record<string, ResolverOutput>;
   stateUpdaters: Array<StateUpdater>;
   event: TrenchEvent;
 };
 
-export type EngineResult = {
-  event: TrenchEvent;
-  featureResult: FeatureResult;
-  featureDef: FeatureDef;
+type FeatureInstance = {
+  [TFeatureType in FeatureType]: {
+    featureDef: FeatureDefs[TFeatureType];
+    resolver: Resolver<
+      FeatureTypeDefs[TFeatureType]["allowedDataTypes"][number]
+    >;
+  };
 };
 
+export type EngineResult = {
+  featureResult: Awaited<ResolverOutput>;
+  featureDef: FeatureDef;
+  event: TrenchEvent;
+};
 export class ExecutionEngine {
   engineId: string;
-  featureInstances: Record<string, FeatureInstance> = {};
-  featureDefs: Record<string, FeatureDef> = {};
+
+  featureInstances: Record<string, FeatureInstance[FeatureType]> = {};
 
   state: ExecutionState | null = null;
 
-  constructor(props: { featureDefs: Array<FeatureDef>; engineId: string }) {
+  constructor(props: {
+    featureDefs: Array<FeatureDefs[FeatureType]>;
+    engineId: string;
+  }) {
     const { featureDefs, engineId } = props;
 
     this.engineId = engineId;
 
-    const featureInstances = featureDefs.map((featureDef) => {
-      const factory = factories[featureDef.type];
-      assert(factory, `Unknown feature type ${featureDef.type}`);
-      return factory.createFeatureInstance({
-        config: featureDef.config,
-        dataType: featureDef.dataType,
-        featureId: featureDef.id,
-        dependsOn: new Set(featureDef.deps),
-      });
-    });
+    const featureInstances: FeatureInstance[FeatureType][] = featureDefs.map(
+      (featureDef) => {
+        const featureType = featureDef.featureType;
+        const featureTypeDef = FEATURE_TYPE_DEFS[featureType] as FeatureTypeDef;
 
-    featureInstances.forEach((feature) => {
-      this.featureInstances[feature.featureId] = feature;
-    });
+        const resolver = featureTypeDef.createResolver({
+          featureDef,
+          context: featureTypeDef.context,
+        });
 
-    featureDefs.forEach((featureDef) => {
-      this.featureDefs[featureDef.id] = featureDef;
+        return {
+          featureDef,
+          resolver,
+        } as FeatureInstance[FeatureType];
+      }
+    );
+
+    featureInstances.forEach((instance) => {
+      this.featureInstances[instance.featureDef.featureId] = instance;
     });
 
     validateFeatureInstanceMap(this.featureInstances);
@@ -90,13 +97,9 @@ export class ExecutionEngine {
     return instance;
   }
 
-  private getFeatureDef(featureId: string) {
-    const def = this.featureDefs[featureId];
-    assert(def, `No feature def for id: ${featureId}`);
-    return def;
-  }
-
-  public async getFeature(featureId: string): Promise<FeatureResult> {
+  public async evaluateFeature(
+    featureId: string
+  ): ReturnType<Resolver<DataType>> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
     const { event, featurePromises } = this.state;
@@ -108,30 +111,21 @@ export class ExecutionEngine {
 
         // Get dependencies
         const instance = this.getFeatureInstance(featureId);
+        const { featureDef, resolver } = instance;
 
-        const dependsOnValues: Record<
-          string,
-          {
-            data: any;
-            type: DataType;
-          }
-        > = {};
-        for (const depFeatureId of instance.dependsOn) {
-          const depValue = await this.getFeature(depFeatureId);
-          const depFeatureDef = this.getFeatureDef(depFeatureId);
-          dependsOnValues[depFeatureId] = {
-            data: depValue.value,
-            type: depFeatureDef.dataType,
-          };
+        const dependsOnValues: Record<string, TypedData[DataType]> = {};
+        for (const depFeatureId of featureDef.dependsOn) {
+          const resolverResult = await this.evaluateFeature(depFeatureId);
+          dependsOnValues[depFeatureId] = resolverResult.data;
         }
 
         // Run getter
-        const resolvedFeature = await instance.getter({
+        const resolvedFeature = await resolver({
           event,
-          featureDeps: dependsOnValues,
+          dependencies: dependsOnValues,
         });
 
-        validateDataType(resolvedFeature.value, instance.dataType);
+        validateTypedData(resolvedFeature.data);
 
         // Register state updaters
         this.state.stateUpdaters.push(...resolvedFeature.stateUpdaters);
@@ -162,17 +156,17 @@ export class ExecutionEngine {
 
     // Initialize all promises
     for (const instance of allInstances) {
-      this.getFeature(instance.featureId);
+      this.evaluateFeature(instance.featureDef.featureId);
     }
 
     // Await all promises
     const engineResults: Record<string, EngineResult> = {};
     for (const instance of allInstances) {
-      const featureResult = await this.getFeature(instance.featureId);
-      const featureDef = this.getFeatureDef(instance.featureId);
-      engineResults[instance.featureId] = {
-        featureResult,
-        featureDef,
+      const { featureDef } = instance;
+      const featureResult = await this.evaluateFeature(featureDef.featureId);
+      engineResults[featureDef.featureId] = {
+        featureResult: featureResult,
+        featureDef: instance.featureDef,
         event: this.state.event,
       };
     }
@@ -181,13 +175,16 @@ export class ExecutionEngine {
   }
 }
 
-function validateFeatureInstanceMap(map: Record<string, FeatureInstance>) {
+function validateFeatureInstanceMap(
+  map: Record<string, FeatureInstance[FeatureType]>
+) {
   // Check dependencies are valid
   for (const feature of Object.values(map)) {
-    for (const depFeatureId of feature.dependsOn) {
+    const def = feature.featureDef;
+    for (const depFeatureId of def.dependsOn) {
       assert(
         depFeatureId in map,
-        `Feature ${feature.featureId} depends on ${depFeatureId}, but ${depFeatureId} does not exist`
+        `Feature '${def.featureId}' depends on '${depFeatureId}', but '${depFeatureId}' does not exist`
       );
     }
   }

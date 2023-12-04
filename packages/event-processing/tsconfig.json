@@ -10,7 +10,11 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "target": "ES2017",
-    "lib": ["ES2015"]
+    "lib": ["ES2015"],
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["src/*"]
+    }
   },
   "exclude": ["node_modules"]
 }

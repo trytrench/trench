@@ -1,7 +1,6 @@
 import { GlobalStateKey, db, prisma } from "databases";
-import { FeatureResult, TrenchEvent } from "./features/types";
+import { DataType, stringifyTypedData } from "./dataTypes";
 import { EngineResult } from "./engine";
-import { DataType } from "./features/dataTypes";
 
 type FeatureTableRow = {
   event_id: string;
@@ -31,17 +30,17 @@ export async function writeEngineResultsToStore({
   const rows: FeatureTableRow[] = results.map(
     ({ event, featureDef, featureResult }) => {
       const { dataType } = featureDef;
-      const { assignedEntities, value } = featureResult;
+      const { assignedEntities, data } = featureResult;
 
-      const safeValue = value || "";
+      const safeValue = data.value || "";
 
       return {
         event_id: event.id,
-        feature_type: featureDef.type,
-        feature_id: featureDef.id,
+        feature_type: featureDef.featureType,
+        feature_id: featureDef.featureId,
         entity_type: assignedEntities.map(({ type }) => type),
         entity_id: assignedEntities.map(({ id }) => id),
-        value: safeValue.toString(),
+        value: stringifyTypedData(data),
         value_Int64: dataType === DataType.Int64 ? Number(safeValue) : null,
         value_Float64: dataType === DataType.Float64 ? Number(safeValue) : null,
         value_String:

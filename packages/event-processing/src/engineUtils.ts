@@ -1,7 +1,8 @@
 import { GlobalStateKey, prisma } from "databases";
+import { DataType } from "./dataTypes";
 import { ExecutionEngine } from "./engine";
-import { FeatureDef, FeatureType } from "./features/featureTypes";
-import { DataType } from "./features/dataTypes";
+import { FeatureDef } from "./feature-type-defs/featureTypeDef";
+import { FeatureType } from "./feature-type-defs/types/_enum";
 
 async function fetchFeatureDefs({
   engineId,
@@ -30,11 +31,11 @@ async function fetchFeatureDefs({
   const featureDefs = engineDef.featureDefSnapshots.map((item) => {
     const snapshot = item.featureDefSnapshot;
     return {
-      id: snapshot.featureDef.id,
-      deps: snapshot.deps,
+      featureId: snapshot.featureDef.id,
+      featureType: snapshot.featureDef.type as FeatureType,
+      dependsOn: new Set(snapshot.deps),
       config: snapshot.config as object,
       dataType: snapshot.featureDef.dataType as DataType,
-      type: snapshot.featureDef.type as FeatureType,
     };
   });
 
