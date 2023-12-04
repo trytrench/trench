@@ -1,6 +1,6 @@
-import { Label } from "~/components/ui/label";
-import { useProject } from "~/hooks/useProject";
-import { api } from "~/utils/api";
+import { Plus, Sparkles, Trash, Trash2 } from "lucide-react";
+import { Fragment } from "react";
+import { Button } from "~/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,15 +9,14 @@ import {
   CommandItem,
   CommandList,
 } from "~/components/ui/command";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { Button } from "~/components/ui/button";
-import { Fragment } from "react";
-import { Input } from "~/components/ui/input";
-import { Plus, Sparkles, Trash, Trash2 } from "lucide-react";
+import { api } from "~/utils/api";
 
 interface CodeProps {
   featureId: string;
@@ -28,15 +27,7 @@ interface CodeProps {
 function Code(props: CodeProps) {
   const { featureId, dependencies, onChange } = props;
 
-  const { data: project } = useProject();
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
-    {
-      projectId: project?.id!,
-    },
-    {
-      enabled: !!project?.id,
-    }
-  );
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
 
   return (
     <div className="grid gap-1.5">

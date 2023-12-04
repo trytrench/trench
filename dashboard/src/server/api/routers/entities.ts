@@ -1,5 +1,8 @@
+import { uniqBy } from "lodash";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { db } from "~/server/db";
+import { getOrderedFeatures } from "~/server/lib/features";
 import {
   entityFiltersZod,
   eventFiltersZod,
@@ -9,9 +12,6 @@ import {
   buildEntityExistsQuery,
   buildEventExistsQuery,
 } from "../../lib/filters";
-import { db } from "~/server/db";
-import { uniqBy } from "lodash";
-import { getOrderedFeatures } from "~/server/lib/features";
 
 export const entitiesRouter = createTRPCRouter({
   findIds: publicProcedure
@@ -268,7 +268,6 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        datasetId: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {

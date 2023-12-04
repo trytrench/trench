@@ -1,11 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ColumnDef } from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import AppLayout from "~/components/AppLayout";
+import SettingsLayout from "~/components/SettingsLayout";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
@@ -34,16 +36,14 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../../_app";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { format } from "date-fns";
-import SettingsLayout from "~/components/SettingsLayout";
+import { api, type RouterOutputs } from "~/utils/api";
+import { type NextPageWithLayout } from "../_app";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -58,16 +58,8 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-
   const { data: entityTypes, refetch: refetchEntityTypes } =
-    api.entityTypes.list.useQuery(
-      { projectId: project?.id },
-      { enabled: !!project?.id }
-    );
+    api.entityTypes.list.useQuery();
 
   const { mutateAsync: createEntityType } =
     api.entityTypes.create.useMutation();
@@ -165,7 +157,6 @@ const Page: NextPageWithLayout = () => {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     createEntityType({
-      projectId: project?.id,
       name: values.name,
     })
       .then(() => {

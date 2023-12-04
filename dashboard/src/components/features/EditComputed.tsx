@@ -17,7 +17,6 @@ import { Dependencies } from "./shared/Dependencies";
 
 interface EditComputedProps {
   data: {
-    projectId: string;
     featureName: string;
     featureType: FeatureType;
     dataType: DataType;
@@ -30,8 +29,7 @@ interface EditComputedProps {
 
 function EditComputed(props: EditComputedProps) {
   const { onDepsChange, onConfigChange, onValidChange } = props;
-  const { projectId, featureName, featureType, dataType, eventTypes } =
-    props.data;
+  const { featureName, featureType, dataType, eventTypes } = props.data;
   console.log("REEEEEErender");
   // [feature alias]: feature id
   const [dependencies, setDependencies] = useState<Record<string, string>>({});
@@ -53,7 +51,6 @@ function EditComputed(props: EditComputedProps) {
   });
 
   const { prefix, suffix } = usePrefixAndSuffix({
-    projectId: projectId,
     dataType: dataType,
     featureType: featureType,
     dependencies: dependencies,
@@ -182,21 +179,13 @@ function EditComputed(props: EditComputedProps) {
 }
 
 const usePrefixAndSuffix = (props: {
-  projectId: string;
   featureType: FeatureType;
   dataType: DataType;
   dependencies: Record<string, string>;
 }) => {
-  const { projectId, featureType, dataType, dependencies } = props;
+  const { eatureType, dataType, dependencies } = props;
 
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
-    {
-      projectId: projectId,
-    },
-    {
-      enabled: !!projectId,
-    }
-  );
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
 
   const depTypes = useMemo(() => {
     // Return dependencies but each value is mapped to the feature's type

@@ -6,11 +6,6 @@ import { api } from "~/utils/api";
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-
   return <div className="grow overflow-y-auto"></div>;
 };
 

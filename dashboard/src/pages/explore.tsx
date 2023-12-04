@@ -1,25 +1,16 @@
-import EntitiesDashboard from "~/components/EntitiesDashboard";
-import EventsDashboard from "~/components/EventsDashboard";
-import { type NextPageWithLayout } from "../_app";
-import AppLayout from "~/components/AppLayout";
-import { DatePickerWithRange } from "~/components/DatePickerWithRange";
+import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { type DateRange } from "react-day-picker";
+import AppLayout from "~/components/AppLayout";
+import { DatePickerWithRange } from "~/components/DatePickerWithRange";
+import EntitiesDashboard from "~/components/EntitiesDashboard";
+import EventsDashboard from "~/components/EventsDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useRouter } from "next/router";
 import { api } from "~/utils/api";
+import { type NextPageWithLayout } from "../_app";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
-
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = useMemo(
-    () => project?.productionDatasetId?.toString(),
-    [project]
-  );
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
@@ -43,7 +34,7 @@ const Page: NextPageWithLayout = () => {
           {dateRange && (
             <>
               <TabsContent value="events">
-                <EventsDashboard datasetId={datasetId} dateRange={dateRange} />
+                <EventsDashboard dateRange={dateRange} />
               </TabsContent>
               <TabsContent value="entities">
                 <EntitiesDashboard dateRange={dateRange} />

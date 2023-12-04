@@ -1,4 +1,3 @@
-import { EntityFeature, EntityType, Feature, Project } from "@prisma/client";
 import { Loader2Icon } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -11,12 +10,7 @@ import type { NextPageWithLayout } from "~/pages/_app";
 import { EntityFilters } from "~/shared/validation";
 import { api } from "~/utils/api";
 
-interface Props {
-  project: Project;
-  datasetId: string;
-}
-
-const EntityList = ({ project, datasetId }: Props) => {
+const EntityList = () => {
   const [filters, setFilters] = useState<EntityFilters>(undefined);
 
   const limit = 10;
@@ -32,14 +26,12 @@ const EntityList = ({ project, datasetId }: Props) => {
       entityFilters: filters,
       // sortBy,
       limit,
-      datasetId: datasetId ?? "",
     },
     {
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
-      enabled: !!datasetId,
     }
   );
 
@@ -50,7 +42,7 @@ const EntityList = ({ project, datasetId }: Props) => {
   return (
     <div className="flex flex-col">
       <div className="flex p-3 px-8 border-b">
-        <EntityFilter projectId={project.id} onChange={setFilters} />
+        <EntityFilter onChange={setFilters} />
       </div>
       <div className="grow">
         <ScrollArea className="h-full">
@@ -63,7 +55,7 @@ const EntityList = ({ project, datasetId }: Props) => {
                   return (
                     <EntityCard
                       key={entity.id}
-                      href={`/${project.name}/entity/${entity.id}`}
+                      href={`/entity/${entity.id}`}
                       entity={entity}
                       features={entity.features}
                       rules={entity.rules}
@@ -101,18 +93,7 @@ const EntityList = ({ project, datasetId }: Props) => {
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = useMemo(
-    () => project?.productionDatasetId?.toString(),
-    [project]
-  );
-
-  if (!project || !datasetId) return null;
-
-  return <EntityList datasetId={datasetId} project={project} />;
+  return <EntityList />;
 };
 
 Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;

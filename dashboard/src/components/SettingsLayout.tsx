@@ -1,8 +1,8 @@
+import clsx from "clsx";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { Navbar } from "./Navbar";
 import { Toaster } from "./ui/toaster";
-import { useRouter } from "next/router";
-import clsx from "clsx";
 
 interface Props {
   children: React.ReactNode;
@@ -28,7 +28,7 @@ export default function SettingsLayout({ children }: Props) {
               <div className="w-[16rem] flex flex-col">
                 {items.map((item) => (
                   <Link
-                    href={`/${router.query.project}/settings/${item.path}`}
+                    href={`/settings/${item.path}`}
                     key={item.title}
                     className={clsx(
                       "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",

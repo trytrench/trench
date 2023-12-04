@@ -1,5 +1,5 @@
 import { GlobalStateKey } from "databases";
-import { DataType, FeatureDef, FeatureType } from "event-processing";
+import { DataType, FeatureType, type FeatureDef } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -7,14 +7,12 @@ export const featureDefsRouter = createTRPCRouter({
   getLatest: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         id: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
       const featureDef = await ctx.prisma.featureDef.findUnique({
         where: {
-          projectId: input.projectId,
           id: input.id,
         },
         include: {
@@ -39,10 +37,10 @@ export const featureDefsRouter = createTRPCRouter({
 
       return {
         featureDef: {
-          id: featureDef.id,
+          featureId: featureDef.id,
+          featureType: featureDef.type,
           name: featureDef.name,
-          deps: latestSnapshot.deps,
-          type: featureDef.type,
+          dependsOn: new Set(latestSnapshot.deps),
           dataType: featureDef.dataType,
           config: JSON.parse(featureDef.snapshots[0].config as string),
         } as FeatureDef,
@@ -52,27 +50,21 @@ export const featureDefsRouter = createTRPCRouter({
       };
     }),
 
-  allInfo: publicProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const featureDefs = await ctx.prisma.featureDef.findMany({
-        where: { projectId: input.projectId },
-      });
+  allInfo: publicProcedure.query(async ({ ctx, input }) => {
+    const featureDefs = await ctx.prisma.featureDef.findMany({});
 
-      return featureDefs;
-    }),
+    return featureDefs;
+  }),
 
   getVersions: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         id: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
       const featureDef = await ctx.prisma.featureDef.findUnique({
         where: {
-          projectId: input.projectId,
           id: input.id,
         },
         include: {
@@ -97,48 +89,44 @@ export const featureDefsRouter = createTRPCRouter({
       };
     }),
 
-  list: publicProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const featureDefs = await ctx.prisma.featureDef.findMany({
-        where: { projectId: input.projectId },
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
+  list: publicProcedure.query(async ({ ctx, input }) => {
+    const featureDefs = await ctx.prisma.featureDef.findMany({
+      include: {
+        snapshots: {
+          orderBy: {
+            createdAt: "desc",
           },
+          take: 1,
         },
-      });
+      },
+    });
 
-      return featureDefs.map((featureDef) => {
-        if (!featureDef.snapshots[0]) {
-          throw new Error("Feature has no snapshots");
-        }
+    return featureDefs.map((featureDef) => {
+      if (!featureDef.snapshots[0]) {
+        throw new Error("Feature has no snapshots");
+      }
 
-        const latestSnapshot = featureDef.snapshots[0];
+      const latestSnapshot = featureDef.snapshots[0];
 
-        return {
-          ...({
-            id: featureDef.id,
-            name: featureDef.name,
-            deps: latestSnapshot.deps,
-            type: featureDef.type,
-            dataType: featureDef.dataType,
-            config: JSON.parse(featureDef.snapshots[0].config as string),
-          } as FeatureDef),
+      return {
+        ...({
+          featureId: featureDef.id,
+          name: featureDef.name,
+          dependsOn: new Set(latestSnapshot.deps),
+          featureType: featureDef.type,
+          dataType: featureDef.dataType,
+          config: JSON.parse(featureDef.snapshots[0].config as string),
+        } as FeatureDef),
 
-          updatedAt: featureDef.snapshots[0].createdAt,
-          createdAt: featureDef.createdAt,
-        };
-      });
-    }),
+        updatedAt: featureDef.snapshots[0].createdAt,
+        createdAt: featureDef.createdAt,
+      };
+    });
+  }),
 
   create: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         name: z.string(),
         type: z.nativeEnum(FeatureType),
         dataType: z.nativeEnum(DataType),
@@ -150,14 +138,12 @@ export const featureDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const featureDef = await ctx.prisma.featureDef.create({
         data: {
-          projectId: input.projectId,
           type: input.type,
           dataType: input.dataType,
           name: input.name,
           snapshots: {
             create: [
               {
-                projectId: input.projectId,
                 eventTypes: input.eventTypes,
                 deps: input.deps,
                 config: input.config,
@@ -169,7 +155,6 @@ export const featureDefsRouter = createTRPCRouter({
 
       // Publish
       const latestFeatureSnapshots = await ctx.prisma.featureDef.findMany({
-        where: { projectId: input.projectId },
         include: {
           snapshots: {
             orderBy: {
@@ -211,7 +196,6 @@ export const featureDefsRouter = createTRPCRouter({
   save: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         id: z.string(),
         deps: z.array(z.string()),
         config: z.record(z.any()),
@@ -220,14 +204,12 @@ export const featureDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.featureDef.update({
         where: {
-          projectId: input.projectId,
           id: input.id,
         },
         data: {
           snapshots: {
             create: [
               {
-                projectId: input.projectId,
                 deps: input.deps,
                 config: input.config,
               },
@@ -240,7 +222,6 @@ export const featureDefsRouter = createTRPCRouter({
   rename: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         id: z.string(),
         name: z.string(),
       })
@@ -248,7 +229,6 @@ export const featureDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.featureDef.update({
         where: {
-          projectId: input.projectId,
           id: input.id,
         },
         data: {
@@ -260,14 +240,12 @@ export const featureDefsRouter = createTRPCRouter({
   delete: publicProcedure
     .input(
       z.object({
-        projectId: z.string(),
         id: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.featureDef.delete({
         where: {
-          projectId: input.projectId,
           id: input.id,
         },
       });

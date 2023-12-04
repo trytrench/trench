@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import AppLayout from "~/components/AppLayout";
+import SettingsLayout from "~/components/SettingsLayout";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
@@ -42,8 +43,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../../_app";
-import SettingsLayout from "~/components/SettingsLayout";
+import { type NextPageWithLayout } from "../_app";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -58,16 +58,8 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-
   const { data: eventTypes, refetch: refetchEventTypes } =
-    api.eventTypes.list.useQuery(
-      { projectId: project?.id },
-      { enabled: !!project?.id }
-    );
+    api.eventTypes.list.useQuery();
 
   const { mutateAsync: createEventType } = api.eventTypes.create.useMutation();
   const { mutateAsync: deleteEventType } = api.eventTypes.delete.useMutation();
@@ -162,7 +154,6 @@ const Page: NextPageWithLayout = () => {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     createEventType({
-      projectId: project?.id,
       name: values.name,
     })
       .then(() => {

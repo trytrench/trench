@@ -1,4 +1,4 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
@@ -23,22 +23,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../../_app";
+import { api, type RouterOutputs } from "~/utils/api";
+import { type NextPageWithLayout } from "../_app";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-
   const { data: featureDefs, refetch: refetchFeatureDefs } =
-    api.featureDefs.list.useQuery(
-      { projectId: project?.id },
-      { enabled: !!project?.id }
-    );
+    api.featureDefs.list.useQuery();
 
   // const { mutateAsync: deleteEventType } = api.eventTypes.delete.useMutation();
 

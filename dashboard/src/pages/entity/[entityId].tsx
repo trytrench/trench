@@ -69,19 +69,8 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const entityId = router.query.entityId as string;
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = useMemo(
-    () => project?.productionDatasetId?.toString(),
-    [project]
-  );
 
-  const { data: entityData } = api.entities.get.useQuery(
-    { id: entityId, datasetId: datasetId! },
-    { enabled: !!entityId && !!datasetId }
-  );
+  const { data: entityData } = api.entities.get.useQuery();
 
   const entityInfo = useMemo(
     () =>

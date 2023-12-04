@@ -23,4 +23,5 @@ export type FeatureDefs = {
   >;
 };
 
+export * from "./featureTypeDef";
 export * from "./types/_enum";

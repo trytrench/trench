@@ -55,8 +55,6 @@ export const Navbar = () => {
 
   const router = useRouter();
 
-  const project = router.query.project as string;
-
   const activeTab = router.pathname.split("/")[2];
   const activeTabChildren = TABS.find((tab) => tab.path === activeTab)
     ?.children;
@@ -98,7 +96,7 @@ export const Navbar = () => {
         <Tabs
           value={activeTab}
           onValueChange={(tab) => {
-            router.push(`/${project}/${tab}`).catch(handleError);
+            router.push(`/${tab}`).catch(handleError);
           }}
         >
           <TabsList className="pl-2">
@@ -116,9 +114,7 @@ export const Navbar = () => {
                 <Tabs
                   value={activeChildTab}
                   onValueChange={(tab) => {
-                    router
-                      .push(`/${project}/${activeTab}/${tab}`)
-                      .catch(handleError);
+                    router.push(`/${activeTab}/${tab}`).catch(handleError);
                   }}
                 >
                   <TabsList>

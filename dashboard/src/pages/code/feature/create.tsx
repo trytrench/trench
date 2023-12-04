@@ -2,15 +2,14 @@ import { useMemo, useState } from "react";
 import AppLayout from "~/components/AppLayout";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import { useProject } from "~/hooks/useProject";
 
-import { EditComputed } from "~/components/features/EditComputed";
+import { DataType, FeatureType } from "event-processing";
 import { useRouter } from "next/router";
-import { Button } from "~/components/ui/button";
+import { EditComputed } from "~/components/features/EditComputed";
 import { EventTypes } from "~/components/features/shared/EventTypes";
-import { Label } from "~/components/ui/label";
-import { Separator } from "~/components/ui/separator";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,13 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Separator } from "~/components/ui/separator";
 import { toast } from "~/components/ui/use-toast";
-import { DataType, FeatureType } from "event-processing";
 
 const Page: NextPageWithLayout = () => {
-  const { data: project } = useProject();
-
-  console.log("Rerender");
   // Get feature id from url
   const router = useRouter();
   const featureId = router.query.featureId as string;
@@ -74,7 +70,6 @@ const Page: NextPageWithLayout = () => {
 
     try {
       await create({
-        projectId: project?.id!,
         name: featureName,
         type: featureType!,
         dataType: dataType!,
@@ -169,7 +164,6 @@ const Page: NextPageWithLayout = () => {
         <>
           <EditComputed
             data={{
-              projectId: project?.id!,
               featureName: featureName,
               featureType: featureType,
               dataType: dataType!,

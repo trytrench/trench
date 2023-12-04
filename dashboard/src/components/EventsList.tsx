@@ -351,9 +351,7 @@ function EventCard({
                           name: entityName,
                           type: entityType,
                         }}
-                        href={`/${
-                          router.query.project as string
-                        }/entity/${value}`}
+                        href={`/entity/${value}`}
                       />
                     ) : (
                       <div className="truncate">

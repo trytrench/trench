@@ -1,6 +1,5 @@
-import { Label } from "~/components/ui/label";
-import { useProject } from "~/hooks/useProject";
-import { api } from "~/utils/api";
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,14 +8,14 @@ import {
   CommandItem,
   CommandList,
 } from "~/components/ui/command";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { api } from "~/utils/api";
 
 interface DependenciesProps {
   featureId: string | null;
@@ -27,15 +26,7 @@ interface DependenciesProps {
 function Dependencies(props: DependenciesProps) {
   const { featureId, dependencies, onChange } = props;
 
-  const { data: project } = useProject();
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
-    {
-      projectId: project?.id!,
-    },
-    {
-      enabled: !!project?.id,
-    }
-  );
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
 
   const addDependency = (dependencyId: string) => {
     const existingAliases = new Set(Object.keys(dependencies));

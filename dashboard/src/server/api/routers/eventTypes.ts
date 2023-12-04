@@ -6,14 +6,12 @@ export const eventTypesRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string(),
-        projectId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       return await ctx.prisma.eventType.create({
         data: {
           type: input.name,
-          projectId: input.projectId,
         },
       });
     }),
@@ -30,13 +28,7 @@ export const eventTypesRouter = createTRPCRouter({
         },
       });
     }),
-  list: publicProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.eventType.findMany({
-        where: {
-          projectId: input.projectId,
-        },
-      });
-    }),
+  list: publicProcedure.query(async ({ ctx, input }) => {
+    return ctx.prisma.eventType.findMany({});
+  }),
 });

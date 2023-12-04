@@ -91,7 +91,7 @@ export function EventDrawer(props: {
                 key={entity.id}
                 entity={entity}
                 relation={entity.relation}
-                href={`/${router.query.project as string}/entity/${entity.id}`}
+                href={`/entity/${entity.id}`}
               />
             );
           })}
