@@ -1,5 +1,5 @@
 import { ZodRawShape, ZodType, z } from "zod";
-import { DataType, DataTypeToTsType, Entity, TypedData } from "~/dataTypes";
+import { DataType, DataTypeToTsType, Entity, TypedData } from "../dataTypes";
 import { FeatureType } from "./types/_enum";
 
 export type FeatureDef<

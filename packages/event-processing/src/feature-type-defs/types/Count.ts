@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { DataType, Entity, stringifyTypedData } from "~/dataTypes";
-import { assert } from "~/utils";
+import { DataType, Entity, stringifyTypedData } from "../../dataTypes";
+import { assert } from "../../utils";
 import { StateUpdater, createFeatureTypeDef } from "../featureTypeDef";
 import { getPastNCountBucketHashes } from "../lib/counts";
 import { MockRedisService } from "../services/redis";

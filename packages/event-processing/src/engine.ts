@@ -43,6 +43,7 @@ export type EngineResult = {
   featureResult: Awaited<ResolverOutput>;
   featureDef: FeatureDef;
   event: TrenchEvent;
+  engineId: string;
 };
 export class ExecutionEngine {
   engineId: string;
@@ -168,6 +169,7 @@ export class ExecutionEngine {
         featureResult: featureResult,
         featureDef: instance.featureDef,
         event: this.state.event,
+        engineId: this.engineId,
       };
     }
 

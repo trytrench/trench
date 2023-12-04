@@ -5,6 +5,7 @@ import {
   getEventsSince,
   setLastEventProcessedId,
   writeEngineResultsToStore,
+  writeEventsToStore,
 } from "event-processing";
 import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
 
@@ -15,6 +16,7 @@ setInterval(async () => {
   if (engineId !== engine?.engineId) {
     if (engineId) {
       engine = await createEngine({ engineId });
+      console.log("Switched to engine:", engineId);
     } else {
       engine = null;
     }
@@ -26,7 +28,6 @@ initEventHandler();
 async function initEventHandler() {
   while (true) {
     if (!engine) {
-      console.log("No engine deployed");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;
     }
@@ -48,6 +49,7 @@ async function initEventHandler() {
 
       await engine.executeStateUpdates();
       await writeEngineResultsToStore({ results: allResults });
+      await writeEventsToStore({ events: events.map((e) => e.event) });
 
       const lastEvent = events[events.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);

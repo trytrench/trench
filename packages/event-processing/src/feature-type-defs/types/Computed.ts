@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { DataType } from "~/dataTypes";
-import { assert } from "~/utils";
+import { DataType } from "../../dataTypes";
+import { assert } from "../../utils";
 import { createFeatureTypeDef } from "../featureTypeDef";
 import { FeatureType } from "./_enum";
 
