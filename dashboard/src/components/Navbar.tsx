@@ -4,15 +4,15 @@ import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
 import { Button } from "~/components/ui/button";
-import { handleError } from "../lib/handleError";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
 import {
   Select,
-  SelectItem,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { handleError } from "../lib/handleError";
 import { api } from "../utils/api";
 import { ThemeToggle } from "./ui/custom/theme-toggle";
 
@@ -54,7 +54,6 @@ export const Navbar = () => {
   const btnRef = useRef(null);
 
   const router = useRouter();
-  const { data: projects } = api.project.list.useQuery();
 
   const project = router.query.project as string;
 
@@ -81,27 +80,6 @@ export const Navbar = () => {
             Trench
           </h1>
         </NextLink>
-        <div>
-          <Select
-            value={project}
-            onValueChange={(value) => {
-              router.push(`/${value}/events`).catch(handleError);
-            }}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select project..." />
-            </SelectTrigger>
-            <SelectContent>
-              {projects?.map((project) => {
-                return (
-                  <SelectItem key={project.name} value={project.name}>
-                    {project.name}
-                  </SelectItem>
-                );
-              }) ?? []}
-            </SelectContent>
-          </Select>
-        </div>
 
         <div className="grow" />
 

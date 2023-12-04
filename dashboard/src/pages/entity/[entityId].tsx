@@ -1,10 +1,14 @@
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
+import { type DateRange } from "react-day-picker";
 import { StringParam, useQueryParam } from "use-query-params";
+import AppLayout from "~/components/AppLayout";
+import { DatePickerWithRange } from "~/components/DatePickerWithRange";
 import EventsList from "~/components/EventsList";
 import LinksView from "~/components/LinksView";
 import { Badge } from "~/components/ui/badge";
 import { ClearableSelect } from "~/components/ui/custom/clearable-select";
+import { LabelList } from "~/components/ui/custom/label-list";
 import {
   Tabs,
   TabsContent,
@@ -13,13 +17,9 @@ import {
 } from "~/components/ui/custom/light-tabs";
 import { Panel } from "~/components/ui/custom/panel";
 import { PropertyList } from "~/components/ui/custom/property-list";
+import { ScrollArea } from "~/components/ui/scroll-area";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import AppLayout from "~/components/AppLayout";
-import { ScrollArea } from "~/components/ui/scroll-area";
-import { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "~/components/DatePickerWithRange";
-import { LabelList } from "~/components/ui/custom/label-list";
 
 interface RelatedEntitiesProps {
   entityId: string;

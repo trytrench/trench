@@ -1,16 +1,9 @@
 import { type Prisma } from "@prisma/client";
+import { createEngine, fetchCurrentEngineId } from "event-processing";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
-import { bigint, z } from "zod";
-import { db, prisma } from "~/server/db";
-import {
-  batchInsertEvents,
-  createEngine,
-  fetchCurrentEngineId,
-  getDatasetData,
-} from "event-processing";
-import { errorIfFalse } from "../../server/lib/throwIfFalse";
-import { processEvents } from "sqrl-helpers";
+import { z } from "zod";
+import { prisma } from "~/server/db";
 
 const eventSchema = z.object({
   timestamp: z

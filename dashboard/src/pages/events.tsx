@@ -8,18 +8,10 @@ import { api } from "~/utils/api";
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const { data: project } = api.project.getByName.useQuery(
-    { name: router.query.project as string },
-    { enabled: !!router.query.project }
-  );
-  const datasetId = project?.productionDatasetId?.toString();
-
-  if (!datasetId) return null;
-
   return (
     <div className="h-full flex items-stretch">
       <div className="flex-1 w-full flex flex-col items-stretch">
-        {project && <EventsList datasetId={datasetId} projectId={project.id} />}
+        <EventsList />
       </div>
     </div>
   );

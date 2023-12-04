@@ -1,16 +1,16 @@
 import { createTRPCRouter } from "~/server/api/trpc";
+import { backtestsRouter } from "./routers/backtests";
 import { dashboardRouter } from "./routers/dashboard";
 import { datasetsRouter } from "./routers/datasets";
 import { entitiesRouter } from "./routers/entities";
+import { eventHandlersRouter } from "./routers/eventHandlers";
 import { eventsRouter } from "./routers/events";
+import { featureDefsRouter } from "./routers/featureDefs";
 import { featuresRouter } from "./routers/features";
 import { labelsRouter } from "./routers/labels";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
 import { projectRouter } from "./routers/project";
-import { eventHandlersRouter } from "./routers/eventHandlers";
-import { backtestsRouter } from "./routers/backtests";
-import { featureDefsRouter } from "./routers/featureDefs";
 
 /**
  * This is the primary router for your server.
@@ -24,11 +24,6 @@ export const appRouter = createTRPCRouter({
   lists: listsRouter,
   dashboard: dashboardRouter,
   links: linksRouter,
-  datasets: datasetsRouter,
-  eventHandlers: eventHandlersRouter,
-  features: featuresRouter,
-  project: projectRouter,
-  backtests: backtestsRouter,
   featureDefs: featureDefsRouter,
 });
 

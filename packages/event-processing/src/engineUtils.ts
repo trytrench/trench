@@ -4,7 +4,30 @@ import { ExecutionEngine } from "./engine";
 import { FeatureDef } from "./feature-type-defs/featureTypeDef";
 import { FeatureType } from "./feature-type-defs/types/_enum";
 
-async function fetchFeatureDefs({
+export function getFeatureDefFromSnapshot({
+  featureDefSnapshot,
+}: {
+  featureDefSnapshot: {
+    id: string;
+    config: any;
+    deps: string[];
+    featureDef: {
+      id: string;
+      type: string;
+      dataType: string;
+    };
+  };
+}): FeatureDef {
+  return {
+    featureId: featureDefSnapshot.featureDef.id,
+    featureType: featureDefSnapshot.featureDef.type as FeatureType,
+    dependsOn: new Set(featureDefSnapshot.deps),
+    config: featureDefSnapshot.config as object,
+    dataType: featureDefSnapshot.featureDef.dataType as DataType,
+  };
+}
+
+async function fetchFeatureDefSnapshots({
   engineId,
 }: {
   engineId: string;
@@ -30,13 +53,7 @@ async function fetchFeatureDefs({
   }
   const featureDefs = engineDef.featureDefSnapshots.map((item) => {
     const snapshot = item.featureDefSnapshot;
-    return {
-      featureId: snapshot.featureDef.id,
-      featureType: snapshot.featureDef.type as FeatureType,
-      dependsOn: new Set(snapshot.deps),
-      config: snapshot.config as object,
-      dataType: snapshot.featureDef.dataType as DataType,
-    };
+    return getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot });
   });
 
   return featureDefs;
@@ -50,6 +67,6 @@ export async function fetchCurrentEngineId() {
 }
 
 export async function createEngine({ engineId }: { engineId: string }) {
-  const featureDefs = await fetchFeatureDefs({ engineId });
+  const featureDefs = await fetchFeatureDefSnapshots({ engineId });
   return new ExecutionEngine({ featureDefs, engineId });
 }

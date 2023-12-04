@@ -1,10 +1,10 @@
-import { Badge } from "~/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
-import { type RouterOutputs } from "~/utils/api";
-import { FeatureGrid } from "./ui/custom/feature-grid";
-import { EntityChip } from "./EntityChip";
 import { useRouter } from "next/router";
+import { Badge } from "~/components/ui/badge";
+import { type RouterOutputs } from "~/utils/api";
+import { EntityChip } from "./EntityChip";
+import { FeatureGrid } from "./ui/custom/feature-grid";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -19,7 +19,6 @@ export const EntityCard = ({
   features,
   rules,
   name,
-  datasetId,
 }: Props) => {
   const router = useRouter();
 
@@ -79,7 +78,6 @@ export const EntityCard = ({
                 <EntityChip
                   entity={{ id: value, name: entityName, type: entityType }}
                   href={`/${router.query.project as string}/entity/${value}`}
-                  datasetId={datasetId}
                 />
               ) : (
                 <div className="truncate">
