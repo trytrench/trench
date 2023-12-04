@@ -36,15 +36,15 @@ export type FeatureTypeDef<
   TFeatureType extends FeatureType = any,
   TDataType extends DataType = any,
   TConfigSchema extends ZodType = any,
-  TContext = any,
+  TGetContext extends () => any = any,
 > = {
   featureType: TFeatureType;
   configSchema: TConfigSchema;
   allowedDataTypes: TDataType[];
-  context?: TContext;
+  getContext?: TGetContext;
   createResolver: (options: {
     featureDef: FeatureDef<TFeatureType, TDataType, z.infer<TConfigSchema>>;
-    context: TContext;
+    context: ReturnType<TGetContext>;
   }) => Resolver<TDataType>;
 };
 
@@ -52,7 +52,7 @@ export function createFeatureTypeDef<
   TFeatureType extends FeatureType = any,
   TDataType extends DataType = any,
   TConfigSchema extends ZodType = any,
-  TContext = any,
->(def: FeatureTypeDef<TFeatureType, TDataType, TConfigSchema, TContext>) {
+  TGetContext extends () => any = any,
+>(def: FeatureTypeDef<TFeatureType, TDataType, TConfigSchema, TGetContext>) {
   return def;
 }

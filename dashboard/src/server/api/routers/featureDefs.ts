@@ -1,5 +1,10 @@
 import { GlobalStateKey } from "databases";
-import { DataType, FeatureType, type FeatureDef } from "event-processing";
+import {
+  DataType,
+  FEATURE_TYPE_DEFS,
+  FeatureType,
+  type FeatureDef,
+} from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -123,22 +128,26 @@ export const featureDefsRouter = createTRPCRouter({
       };
     });
   }),
-
   create: publicProcedure
     .input(
       z.object({
         name: z.string(),
-        type: z.nativeEnum(FeatureType),
-        dataType: z.nativeEnum(DataType),
+
         eventTypes: z.array(z.string()),
         deps: z.array(z.string()),
+
         config: z.record(z.any()),
+        featureType: z.nativeEnum(FeatureType),
+        dataType: z.nativeEnum(DataType),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const featureTypeZod = FEATURE_TYPE_DEFS[input.featureType].configSchema;
+      featureTypeZod.parse(input.config);
+
       const featureDef = await ctx.prisma.featureDef.create({
         data: {
-          type: input.type,
+          type: input.featureType,
           dataType: input.dataType,
           name: input.name,
           snapshots: {

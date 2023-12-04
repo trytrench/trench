@@ -93,4 +93,11 @@ export class MockRedisService implements RedisInterface {
   }
 }
 
-export const redis = new MockRedisService();
+var redis: RedisInterface | undefined = undefined;
+
+export function getRedisService() {
+  if (!redis) {
+    redis = new MockRedisService();
+  }
+  return redis;
+}

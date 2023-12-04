@@ -4,7 +4,7 @@ import { DataType, Entity, stringifyTypedData } from "../../dataTypes";
 import { assert } from "../../utils";
 import { StateUpdater, createFeatureTypeDef } from "../featureTypeDef";
 import { getPastNCountBucketHashes, hashObject } from "../lib/counts";
-import { MockRedisService } from "../services/redis";
+import { getRedisService } from "../services/redis";
 import { FeatureType } from "./_enum";
 
 export const uniqueCountFeatureDef = createFeatureTypeDef({
@@ -16,8 +16,10 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
     conditionFeatureId: z.string().optional(),
   }),
   allowedDataTypes: [DataType.Int64],
-  context: {
-    redis: new MockRedisService(),
+  getContext: () => {
+    return {
+      redis: getRedisService(),
+    };
   },
   createResolver: ({ featureDef, context }) => {
     return async ({ event, dependencies }) => {

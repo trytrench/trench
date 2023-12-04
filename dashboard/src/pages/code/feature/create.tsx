@@ -71,7 +71,7 @@ const Page: NextPageWithLayout = () => {
     try {
       await create({
         name: featureName,
-        type: featureType!,
+        featureType: featureType!,
         dataType: dataType!,
         eventTypes: eventTypes,
         deps: dependencies,

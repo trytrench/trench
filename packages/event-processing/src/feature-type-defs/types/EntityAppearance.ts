@@ -4,25 +4,18 @@ import { assert } from "../../utils";
 import { createFeatureTypeDef } from "../featureTypeDef";
 import { FeatureType } from "./_enum";
 
-export const computedFeatureDef = createFeatureTypeDef({
-  featureType: FeatureType.Computed,
+export const entityAppearanceFeatureDef = createFeatureTypeDef({
+  featureType: FeatureType.EntityAppearance,
   configSchema: z.object({
     depsMap: z.record(z.string()),
     tsCode: z.string(),
     compiledJs: z.string(),
-    assignedEntityFeatureIds: z.array(z.string()),
+    entityType: z.string(),
   }),
-  allowedDataTypes: [
-    DataType.Int64,
-    DataType.Float64,
-    DataType.Boolean,
-    DataType.Entity,
-    DataType.String,
-  ],
+  allowedDataTypes: [DataType.Entity],
   createResolver: ({ featureDef }) => {
     return async ({ event, dependencies }) => {
-      const { depsMap, compiledJs, assignedEntityFeatureIds } =
-        featureDef.config;
+      const { depsMap, compiledJs, entityType } = featureDef.config;
 
       const depValues: Record<string, any> = {};
       for (const [key, depFeatureId] of Object.entries(depsMap)) {
@@ -32,26 +25,23 @@ export const computedFeatureDef = createFeatureTypeDef({
         depValues[key] = featureValue.value;
       }
 
-      const assignedEntities: Entity[] = [];
-      for (const entityFeatureId of assignedEntityFeatureIds) {
-        const entityValue = dependencies[entityFeatureId];
-        assert(entityValue, `Feature ${entityFeatureId} not registered`);
-        assert(entityValue.type === DataType.Entity, "Expected entity");
-        assignedEntities.push(entityValue.value);
-      }
-
       const value = await eval(`(${compiledJs})`)({
         deps: depValues,
         event,
       });
 
+      const entity: Entity = {
+        type: entityType,
+        id: value,
+      };
+
       return {
         data: {
-          type: featureDef.dataType,
-          value: value,
+          type: DataType.Entity,
+          value: entity,
         },
-        assignedEntities,
         stateUpdaters: [],
+        assignedEntities: [entity],
       };
     };
   },
