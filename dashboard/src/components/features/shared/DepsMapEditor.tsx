@@ -1,5 +1,6 @@
 import { FeatureDef } from "event-processing";
 import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Command,
@@ -19,118 +20,78 @@ import {
 import { api } from "~/utils/api";
 
 interface DepsMapEditorProps {
-  featureDef: Partial<FeatureDef>;
-  onFeatureDefChange?: (featureDef: Partial<FeatureDef>) => void;
+  featureId?: string; // so we don't show the currently editing feature as an option.
+  depsMap: Record<string, string>;
+  onChange?: (depsMap: Record<string, string>) => void;
 }
 
 function DepsMapEditor(props: DepsMapEditorProps) {
-  const { featureDef, onFeatureDefChange } = props;
-  const deps: Record<string, string> = featureDef?.config?.depsMap ?? {};
+  const { featureId, depsMap, onChange } = props;
 
   const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
 
-  const updateDepsOnly = (deps: Record<string, string>) => {
-    const asSet = new Set(Object.values(deps));
-
-    onFeatureDefChange?.({
-      ...featureDef,
-      dependsOn: asSet,
-      config: {
-        ...featureDef?.config,
-        depsMap: deps,
-      },
-    });
-  };
-
-  const addDependency = (dependencyId: string) => {
+  const addDependency = (depId: string) => {
     let alias = toCamelCase(
-      allFeatureDefs?.find((v) => v.id === dependencyId)?.name ?? "Untitled"
+      allFeatureDefs?.find((v) => v.id === depId)?.name ?? "Untitled"
     );
-
-    let validAlias = nextValidAlias(alias, deps);
-
-    updateDepsOnly({
-      ...deps,
-      [validAlias]: dependencyId,
-    });
+    let validAlias = nextValidAlias(alias, depsMap);
+    onChange?.({ ...depsMap, [validAlias]: depId });
   };
 
-  const removeDependency = (dependency: string) => {
+  const removeDependency = (depId: string) => {
     const removed = Object.fromEntries(
-      Object.entries(deps).filter(([_, v]) => v !== dependency)
+      Object.entries(depsMap).filter(([_, v]) => v !== depId)
     ) as Record<string, string>;
-
-    updateDepsOnly(removed);
+    onChange?.(removed);
   };
 
-  const renameDependency = (dependency: string, alias: string) => {
+  const renameDependency = (depId: string, alias: string) => {
     const removed = Object.fromEntries(
-      Object.entries(deps).filter(([_, v]) => v !== dependency)
+      Object.entries(depsMap).filter(([_, v]) => v !== depId)
     ) as Record<string, string>;
-
     const validAlias = nextValidAlias(alias, removed);
-
-    updateDepsOnly({
-      ...removed,
-      [validAlias]: dependency,
-    });
+    onChange?.({ ...removed, [validAlias]: depId });
   };
+
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const availableFeatures = useMemo(() => {
+    if (!allFeatureDefs) return [];
+    return allFeatureDefs.filter(
+      (v) => !Object.values(depsMap).includes(v.id) && v.id !== featureId
+    );
+  }, [allFeatureDefs, depsMap, featureId]);
 
   return (
     <div className="grid gap-1.5">
-      <div className="flex flex-col gap-2 mb-4">
+      {/* Title and Add Button */}
+
+      <div className="flex mb-4 items-center gap-8">
         <Label className="text-emphasis-foreground text-md">Dependencies</Label>
-      </div>
-
-      <div className="flex items-center gap-4 text-sm border-b pb-1 mb-1 mr-auto">
-        <div className="w-40">Name</div>
-        <div className="w-[20rem]">Alias</div>
-      </div>
-
-      <div className="flex flex-col gap-1.5 mb-1">
-        {Object.entries(deps).map(([alias, depId]) => (
-          <div key={depId} className="flex items-center gap-4">
-            <div className="w-40 text-muted-foreground">
-              {allFeatureDefs?.find((v) => v.id === depId)?.name ?? "-"}
-            </div>
-
-            <Input
-              value={alias}
-              onChange={(e) => renameDependency(depId, e.target.value)}
-              className="max-w-xs"
-            />
-
-            <Trash2
-              className="w-6 h-6 text-destructive cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
-              onClick={() => removeDependency(depId)}
-            />
-          </div>
-        ))}
-      </div>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="xs" className="mr-auto gap-1.5">
-            <Plus className="w-4 h-4" />
-            Add
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="p-0">
-          <Command>
-            <CommandInput placeholder="Search..." />
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                {allFeatureDefs
-                  ?.filter(
-                    (v) =>
-                      !Object.values(deps).includes(v.id) &&
-                      v.id !== featureDef?.featureId
-                  )
-                  .map((fd) => (
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="secondary"
+              size="xs"
+              className="gap-2"
+              disabled={!availableFeatures.length}
+            >
+              <Plus className="w-4 h-4" />
+              Add
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="p-0">
+            <Command>
+              <CommandInput placeholder="Search..." />
+              <CommandList>
+                <CommandEmpty>No results found.</CommandEmpty>
+                <CommandGroup>
+                  {availableFeatures.map((fd) => (
                     <CommandItem
                       key={fd.id}
-                      value={fd.id}
+                      value={fd.name}
                       onSelect={() => {
+                        setPopoverOpen(true);
                         addDependency(fd.id);
                       }}
                       className="relative pl-8"
@@ -138,11 +99,46 @@ function DepsMapEditor(props: DepsMapEditorProps) {
                       {fd.name}
                     </CommandItem>
                   ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Table */}
+
+      <div className="flex items-center gap-4 text-sm border-b pb-1 mb-1 mr-auto">
+        <div className="w-[10rem]">Name</div>
+        <div className="w-[20rem]">Alias</div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 min-h-[3rem]">
+        {Object.keys(depsMap).length ? (
+          Object.entries(depsMap).map(([alias, depId]) => (
+            <div key={depId} className="flex items-center gap-4">
+              <div className="w-[10rem] text-muted-foreground">
+                {allFeatureDefs?.find((v) => v.id === depId)?.name ?? "-"}
+              </div>
+
+              <Input
+                value={alias}
+                onChange={(e) => renameDependency(depId, e.target.value)}
+                className="max-w-xs"
+              />
+
+              <Trash2
+                className="w-6 h-6 text-destructive cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
+                onClick={() => removeDependency(depId)}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="w-[30rem] text-center p-3 text-sm text-muted-foreground italic">
+            No dependencies
+          </div>
+        )}
+      </div>
     </div>
   );
 }

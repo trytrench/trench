@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useEffect, useMemo, useState } from "react";
 
 import {
   DataType,
@@ -57,6 +57,8 @@ const TYPE_DEFAULTS = {
     dataType: DataType.Boolean,
     config: {
       eventTypes: new Set(),
+      code: "",
+      depsMap: {},
     },
   },
 } as Record<
@@ -67,7 +69,7 @@ const TYPE_DEFAULTS = {
   }
 >;
 
-const featureTypeToComponent = {
+const FEATURE_TYPE_TO_COMPONENT: Record<FeatureType, React.FC> = {
   Computed: EditComputed,
   Entity: null,
   Count: null,
@@ -236,9 +238,8 @@ function EditFeatureDef(props: EditFeatureDefProps) {
         </div>
       </div>
 
-      <Label className="text-emphasis-foreground w-32 mb-1.5 mt-8">
-        Event Types
-      </Label>
+      <div className="h-8 shrink-0" />
+
       <EventTypes
         eventTypes={eventTypes}
         onChange={(v) => {
