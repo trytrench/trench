@@ -3,11 +3,12 @@ import { DataType, DataTypeToTsType, Entity, TypedData } from "../dataTypes";
 import { FeatureType } from "./types/_enum";
 
 export type FeatureDef<
-  TFeatureType extends FeatureType = any,
-  TDataType extends DataType = any,
+  TFeatureType extends FeatureType = FeatureType,
+  TDataType extends DataType = DataType,
   TConfig = any,
 > = {
   featureId: string;
+  featureName: string;
   featureType: TFeatureType;
   dataType: TDataType;
   config: TConfig;

@@ -15,12 +15,14 @@ export function getFeatureDefFromSnapshot({
       id: string;
       type: string;
       dataType: string;
+      name: string;
     };
   };
 }): FeatureDef {
   return {
     featureId: featureDefSnapshot.featureDef.id,
     featureType: featureDefSnapshot.featureDef.type as FeatureType,
+    featureName: featureDefSnapshot.featureDef.name,
     dependsOn: new Set(featureDefSnapshot.deps),
     config: featureDefSnapshot.config as object,
     dataType: featureDefSnapshot.featureDef.dataType as DataType,

@@ -3,96 +3,33 @@ import {
   DataType,
   FEATURE_TYPE_DEFS,
   FeatureType,
+  getFeatureDefFromSnapshot,
   type FeatureDef,
 } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 export const featureDefsRouter = createTRPCRouter({
-  getLatest: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const featureDef = await ctx.prisma.featureDef.findUnique({
-        where: {
-          id: input.id,
-        },
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
-        },
-      });
-
-      if (!featureDef) {
-        throw new Error("Feature not found");
-      }
-
-      if (!featureDef.snapshots[0]) {
-        throw new Error("Feature has no snapshots");
-      }
-
-      const latestSnapshot = featureDef.snapshots[0];
-
-      return {
-        featureDef: {
-          featureId: featureDef.id,
-          featureType: featureDef.type,
-          name: featureDef.name,
-          dependsOn: new Set(latestSnapshot.deps),
-          dataType: featureDef.dataType,
-          config: JSON.parse(featureDef.snapshots[0].config as string),
-        } as FeatureDef,
-
-        updatedAt: featureDef.snapshots[0].createdAt,
-        createdAt: featureDef.createdAt,
-      };
-    }),
-
   allInfo: publicProcedure.query(async ({ ctx, input }) => {
     const featureDefs = await ctx.prisma.featureDef.findMany({});
 
     return featureDefs;
   }),
 
-  getVersions: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const featureDef = await ctx.prisma.featureDef.findUnique({
-        where: {
-          id: input.id,
-        },
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-          },
-        },
-      });
+  getLatest: publicProcedure.query(async ({ ctx, input }) => {
+    const snapshots = await ctx.prisma.featureDefSnapshot.findMany({
+      distinct: ["featureDefId"],
+      include: {
+        featureDef: true,
+      },
+    });
 
-      if (!featureDef) {
-        throw new Error("Feature not found");
-      }
+    const featureDefs = snapshots.map((snapshot) => {
+      return getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot });
+    });
 
-      return {
-        ...featureDef,
-        snapshots: featureDef.snapshots.map((snapshot) => ({
-          ...snapshot,
-          config: JSON.parse(snapshot.config as string),
-        })),
-      };
-    }),
+    return featureDefs;
+  }),
 
   list: publicProcedure.query(async ({ ctx, input }) => {
     const featureDefs = await ctx.prisma.featureDef.findMany({

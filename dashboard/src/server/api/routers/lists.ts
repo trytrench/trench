@@ -6,6 +6,7 @@ import { db } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { buildEventFilterQuery } from "../../lib/buildEventFilterQuery";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: publicProcedure
@@ -160,42 +161,17 @@ export const listsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
 
+      const query = buildEventFilterQuery({
+        filter: filters,
+        limit: input.limit,
+        cursor: input.cursor,
+      });
       const result = await db.query({
-        query: `
-          WITH entity_appearances AS (
-              SELECT event_id, entity_type, entity_id
-              FROM features
-              WHERE notEmpty(entity_id)
-              GROUP BY event_id, entity_type, entity_id
-          ), desired_event_ids AS (
-              SELECT DISTINCT event_id
-              FROM features
-              JOIN events ON features.event_id = events.id
-          ), event_features AS (
-              SELECT
-                  event_id,
-                  groupArray(tuple(feature_id, value)) AS features_arr
-              FROM features
-              GROUP BY event_id
-          )
-          SELECT
-            DISTINCT desired_event_ids.event_id as event_id,
-            e.type as event_type,
-            e.timestamp as event_timestamp,
-            e.data as event_data,
-            groupArray(tuple(ea.entity_type, ea.entity_id)) OVER (PARTITION BY e.id) AS entities,
-            ef.features_arr as features_array
-          FROM desired_event_ids
-          LEFT JOIN entity_appearances ea ON desired_event_ids.event_id = ea.event_id
-          LEFT JOIN events e ON desired_event_ids.event_id = e.id
-          LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
-          WHERE event_id IN (SELECT event_id FROM desired_event_ids)
-          ORDER BY event_id DESC
-          LIMIT ${input.limit ?? 50}
-          OFFSET ${input.cursor ?? 0};
-        `,
+        query,
         format: "JSONEachRow",
       });
+
+      console.log(query);
 
       type EventResult = {
         event_id: string;

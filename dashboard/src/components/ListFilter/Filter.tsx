@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 
+import type { DateRange } from "react-day-picker";
 import {
   Command,
   CommandEmpty,
@@ -29,11 +30,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { JsonFilter, JsonFilterOp } from "~/shared/jsonFilter";
+import { GenericFilters } from "~/shared/validation";
 import { Badge } from "../ui/badge";
 import { Calendar } from "../ui/calendar";
-import type { DateRange } from "react-day-picker";
-import { GenericFilters } from "~/shared/validation";
-import { JsonFilter, JsonFilterOp } from "~/shared/jsonFilter";
 
 import { ulid } from "ulid";
 import {

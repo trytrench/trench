@@ -52,10 +52,7 @@ export class ExecutionEngine {
 
   state: ExecutionState | null = null;
 
-  constructor(props: {
-    featureDefs: Array<FeatureDefs[FeatureType]>;
-    engineId: string;
-  }) {
+  constructor(props: { featureDefs: Array<FeatureDef>; engineId: string }) {
     const { featureDefs, engineId } = props;
 
     this.engineId = engineId;
