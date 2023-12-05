@@ -1,3 +1,4 @@
+import { FeatureDef } from "event-processing";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,45 +18,64 @@ import {
 } from "~/components/ui/popover";
 import { api } from "~/utils/api";
 
-interface DependenciesProps {
-  featureId: string | null;
-  dependencies: Record<string, string>; // [alias]: feature id
-  onChange?: (dependencies: Record<string, string>) => void;
+interface DepsMapEditorProps {
+  featureDef: Partial<FeatureDef>;
+  onFeatureDefChange?: (featureDef: Partial<FeatureDef>) => void;
 }
 
-function Dependencies(props: DependenciesProps) {
-  const { featureId, dependencies, onChange } = props;
+function DepsMapEditor(props: DepsMapEditorProps) {
+  const { featureDef, onFeatureDefChange } = props;
+  const deps: Record<string, string> = featureDef?.config?.depsMap ?? {};
+
+  console.log(deps);
 
   const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
 
-  const addDependency = (dependencyId: string) => {
-    const existingAliases = new Set(Object.keys(dependencies));
+  const updateDepsOnly = (deps: Record<string, string>) => {
+    const asSet = new Set(Object.values(deps));
 
+    onFeatureDefChange?.({
+      ...featureDef,
+      dependsOn: asSet,
+      config: {
+        ...featureDef?.config,
+        depsMap: deps,
+      },
+    });
+  };
+
+  const addDependency = (dependencyId: string) => {
     let alias = toCamelCase(
       allFeatureDefs?.find((v) => v.id === dependencyId)?.name ?? "Untitled"
     );
-    if (existingAliases.has(alias)) {
-      let i = 1;
-      while (existingAliases.has(`${alias}${i}`)) i++;
-      alias = `${alias}${i}`;
-    }
 
-    onChange?.({ ...dependencies, [alias]: dependencyId });
+    let validAlias = nextValidAlias(alias, deps);
+
+    updateDepsOnly({
+      ...deps,
+      [validAlias]: dependencyId,
+    });
   };
 
   const removeDependency = (dependency: string) => {
     const removed = Object.fromEntries(
-      Object.entries(dependencies).filter(([_, v]) => v !== dependency)
-    );
+      Object.entries(deps).filter(([_, v]) => v !== dependency)
+    ) as Record<string, string>;
 
-    onChange?.(removed);
+    updateDepsOnly(removed);
   };
 
   const renameDependency = (dependency: string, alias: string) => {
     const removed = Object.fromEntries(
-      Object.entries(dependencies).filter(([_, v]) => v !== dependency)
-    );
-    onChange?.({ ...removed, [alias]: dependency });
+      Object.entries(deps).filter(([_, v]) => v !== dependency)
+    ) as Record<string, string>;
+
+    const validAlias = nextValidAlias(alias, removed);
+
+    updateDepsOnly({
+      ...removed,
+      [validAlias]: dependency,
+    });
   };
 
   return (
@@ -70,21 +90,21 @@ function Dependencies(props: DependenciesProps) {
       </div>
 
       <div className="flex flex-col gap-1.5 mb-1">
-        {Object.entries(dependencies).map(([alias, dependencyId]) => (
-          <div key={dependencyId} className="flex items-center gap-4">
+        {Object.entries(deps).map(([alias, depId]) => (
+          <div key={depId} className="flex items-center gap-4">
             <div className="w-40 text-muted-foreground">
-              {allFeatureDefs?.find((v) => v.id === dependencyId)?.name ?? "-"}
+              {allFeatureDefs?.find((v) => v.id === depId)?.name ?? "-"}
             </div>
 
             <Input
               value={alias}
-              onChange={(e) => renameDependency(dependencyId, e.target.value)}
+              onChange={(e) => renameDependency(depId, e.target.value)}
               className="max-w-xs"
             />
 
             <Trash2
               className="w-6 h-6 text-destructive cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
-              onClick={() => removeDependency(dependencyId)}
+              onClick={() => removeDependency(depId)}
             />
           </div>
         ))}
@@ -105,19 +125,19 @@ function Dependencies(props: DependenciesProps) {
                 {allFeatureDefs
                   ?.filter(
                     (v) =>
-                      !Object.values(dependencies).includes(v.id) &&
-                      v.id !== featureId
+                      !Object.values(deps).includes(v.id) &&
+                      v.id !== featureDef?.featureId
                   )
-                  .map((featureDef) => (
+                  .map((fd) => (
                     <CommandItem
-                      key={featureDef.id}
-                      value={featureDef.id}
+                      key={fd.id}
+                      value={fd.id}
                       onSelect={() => {
-                        addDependency(featureDef.id);
+                        addDependency(fd.id);
                       }}
                       className="relative pl-8"
                     >
-                      {featureDef.name}
+                      {fd.name}
                     </CommandItem>
                   ))}
               </CommandGroup>
@@ -129,6 +149,10 @@ function Dependencies(props: DependenciesProps) {
   );
 }
 
+export { DepsMapEditor };
+
+//
+
 function toCamelCase(str: string) {
   const alphaNumeric = str.replace(/[^a-zA-Z0-9 ]/g, "");
   return alphaNumeric
@@ -137,4 +161,15 @@ function toCamelCase(str: string) {
     .join("");
 }
 
-export { Dependencies };
+function nextValidAlias(baseName: string, deps: Record<string, string>) {
+  const existingAliases = new Set(Object.keys(deps));
+
+  let alias = toCamelCase(baseName);
+  if (existingAliases.has(alias)) {
+    let i = 1;
+    while (existingAliases.has(`${alias}${i}`)) i++;
+    alias = `${alias}${i}`;
+  }
+
+  return alias;
+}

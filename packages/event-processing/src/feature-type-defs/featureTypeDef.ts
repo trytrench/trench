@@ -13,6 +13,7 @@ export type FeatureDef<
   dataType: TDataType;
   config: TConfig;
   dependsOn: Set<string>;
+  eventTypes: Set<string>;
 };
 
 export type TrenchEvent = {

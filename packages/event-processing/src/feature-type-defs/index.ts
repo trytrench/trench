@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { FeatureDef, FeatureTypeDef } from "./featureTypeDef";
 import { computedFeatureDef } from "./types/Computed";
 import { countFeatureDef } from "./types/Count";
@@ -24,20 +23,6 @@ export type FeatureDefs = {
     FeatureTypeDefs[TFeatureType]["configSchema"]["_input"]
   >;
 };
-
-const featureDefZodSchema = z.union([
-  z.string(),
-  z.string(),
-  ...Object.values(FEATURE_TYPE_DEFS).map((def) =>
-    z.object({
-      featureId: z.string(),
-      featureType: z.enum([def.featureType]),
-      dataType: z.enum(["_", ...def.allowedDataTypes]),
-      dependsOn: z.set(z.string()),
-      config: def.configSchema,
-    })
-  ),
-]);
 
 export * from "./featureTypeDef";
 export * from "./types/_enum";

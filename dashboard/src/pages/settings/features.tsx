@@ -32,7 +32,8 @@ const Page: NextPageWithLayout = () => {
   const { data: featureDefs, refetch: refetchFeatureDefs } =
     api.featureDefs.list.useQuery();
 
-  // const { mutateAsync: deleteEventType } = api.eventTypes.delete.useMutation();
+  const { mutateAsync: deleteFeatureDef } =
+    api.featureDefs.delete.useMutation();
 
   const columns: ColumnDef<RouterOutputs["featureDefs"]["list"][number]>[] =
     useMemo(
@@ -62,7 +63,7 @@ const Page: NextPageWithLayout = () => {
           enableHiding: false,
         },
         {
-          accessorKey: "name",
+          accessorKey: "featureName",
           header: "Name",
         },
         {
@@ -76,7 +77,7 @@ const Page: NextPageWithLayout = () => {
                       <Info className="h-4 w-4" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Created by {row.original.createdBy} on{" "}
+                      {/* Created by {row.original.createdBy} on{" "} */}
                       {format(row.original.createdAt, "MMM d, yyyy")}
                     </TooltipContent>
                   </Tooltip>
@@ -93,8 +94,17 @@ const Page: NextPageWithLayout = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
-                        deleteEventType({
-                          id: row.original.id,
+                        router.push(
+                          `/code/feature/edit/${row.original.featureId}`
+                        );
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        deleteFeatureDef({
+                          id: row.original.featureId,
                         })
                           .then(() => {
                             return refetchFeatureDefs();
@@ -127,14 +137,23 @@ const Page: NextPageWithLayout = () => {
             <Input
               placeholder="Filter features..."
               value={
-                (table.getColumn("name")?.getFilterValue() as string) ?? ""
+                (table.getColumn("featureName")?.getFilterValue() as string) ??
+                ""
               }
               onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
+                table
+                  .getColumn("featureName")
+                  ?.setFilterValue(event.target.value)
               }
               className="max-w-sm"
             />
-            <Button size="sm" className="ml-auto">
+            <Button
+              size="sm"
+              className="ml-auto"
+              onClick={() => {
+                router.push("/code/feature/create");
+              }}
+            >
               Create
             </Button>
           </>

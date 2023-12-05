@@ -53,11 +53,12 @@ export const featureDefsRouter = createTRPCRouter({
       return {
         ...({
           featureId: featureDef.id,
-          name: featureDef.name,
+          featureName: featureDef.name,
           dependsOn: new Set(latestSnapshot.deps),
           featureType: featureDef.type,
+          eventTypes: new Set(latestSnapshot.eventTypes),
           dataType: featureDef.dataType,
-          config: JSON.parse(featureDef.snapshots[0].config as string),
+          config: featureDef.snapshots[0].config,
         } as FeatureDef),
 
         updatedAt: featureDef.snapshots[0].createdAt,
@@ -144,6 +145,7 @@ export const featureDefsRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         deps: z.array(z.string()),
+        eventTypes: z.array(z.string()),
         config: z.record(z.any()),
       })
     )
@@ -158,6 +160,7 @@ export const featureDefsRouter = createTRPCRouter({
               {
                 deps: input.deps,
                 config: input.config,
+                eventTypes: input.eventTypes,
               },
             ],
           },

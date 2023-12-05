@@ -11,6 +11,7 @@ export function getFeatureDefFromSnapshot({
     id: string;
     config: any;
     deps: string[];
+    eventTypes: string[];
     featureDef: {
       id: string;
       type: string;
@@ -24,6 +25,7 @@ export function getFeatureDefFromSnapshot({
     featureType: featureDefSnapshot.featureDef.type as FeatureType,
     featureName: featureDefSnapshot.featureDef.name,
     dependsOn: new Set(featureDefSnapshot.deps),
+    eventTypes: new Set(featureDefSnapshot.eventTypes),
     config: featureDefSnapshot.config as object,
     dataType: featureDefSnapshot.featureDef.dataType as DataType,
   };

@@ -1,4 +1,4 @@
-import { Check, Pencil, Plus, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Command,
@@ -8,23 +8,15 @@ import {
   CommandItem,
   CommandList,
 } from "~/components/ui/command";
-import { Label } from "~/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 
 interface EventTypesProps {
-  eventTypes: string[];
-  onChange?: (eventTypes: string[]) => void;
+  eventTypes?: Set<string>;
+  onChange?: (eventTypes: Set<string>) => void;
 }
 
 function EventTypes(props: EventTypesProps) {
@@ -33,11 +25,14 @@ function EventTypes(props: EventTypesProps) {
   // todo: query event types
 
   const toggleEventType = (eventType: string) => {
-    if (eventTypes.includes(eventType)) {
-      onChange?.(eventTypes.filter((et) => et !== eventType));
+    const newSet = new Set(eventTypes);
+    if (newSet.has(eventType)) {
+      newSet.delete(eventType);
     } else {
-      onChange?.([...eventTypes, eventType]);
+      newSet.add(eventType);
     }
+
+    onChange?.(newSet);
   };
 
   // placeholder
@@ -46,10 +41,10 @@ function EventTypes(props: EventTypesProps) {
   return (
     <div>
       <div className="text-muted-foreground pl-2">
-        {eventTypes.length === 0 ? (
+        {!eventTypes || eventTypes.size === 0 ? (
           <span>None</span>
         ) : (
-          <span className="font-mono">{eventTypes.sort().join(", ")}</span>
+          <span className="font-mono">{[...eventTypes].sort().join(", ")}</span>
         )}
       </div>
       <Popover>
@@ -73,7 +68,7 @@ function EventTypes(props: EventTypesProps) {
                     }}
                     className="relative pl-8"
                   >
-                    {eventTypes.includes(eventType) && (
+                    {eventTypes?.has(eventType) && (
                       <Check className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4" />
                     )}
                     {eventType}
