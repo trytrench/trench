@@ -1,7 +1,11 @@
 import { Entity, getFeatureDefFromSnapshot } from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
