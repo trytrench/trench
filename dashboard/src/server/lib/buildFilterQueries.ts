@@ -2,11 +2,13 @@ import { getUnixTime } from "date-fns";
 import { DataType } from "event-processing";
 import { type z } from "zod";
 import {
+  DateRange,
+  EntityFilters,
   type eventFiltersZod,
   type featureFiltersZod,
 } from "../../shared/validation";
 
-type EventFilterInput = z.infer<typeof eventFiltersZod>;
+type EventFilterfilters = z.infer<typeof eventFiltersZod>;
 
 function checkAtMostOneIsDefined<T extends Record<string, any>>(
   obj: T
@@ -20,6 +22,23 @@ function checkAtMostOneIsDefined<T extends Record<string, any>>(
     );
   }
 }
+
+const getWhereClausesForDateRange = (
+  dateRange: DateRange,
+  columnName: string
+) => {
+  const whereClauses = [];
+  if (dateRange.from)
+    whereClauses.push(
+      `${columnName} >= to_timestamp(${getUnixTime(new Date(dateRange.from))})`
+    );
+  if (dateRange.to) {
+    whereClauses.push(
+      `${columnName} <= to_timestamp(${getUnixTime(new Date(dateRange.to))})`
+    );
+  }
+  return whereClauses;
+};
 
 const buildWhereClauseForFeatureFilter = (
   filter: z.infer<typeof featureFiltersZod>
@@ -55,13 +74,17 @@ const buildWhereClauseForFeatureFilter = (
     }
     case DataType.Boolean: {
       const column = "value_Bool";
-      conditions.push(`${column} = ${value.eq}`);
+      if (value.eq !== undefined) {
+        conditions.push(`${column} = ${value.eq}`);
+      }
       break;
     }
     case DataType.Entity: {
       const column = "value"; // String type, should be a JSON encoding of {type: string; id: string;}
-      conditions.push(`${column}->>'type' = '${value.eq.entityType}'`);
-      conditions.push(`${column}->>'id' = '${value.eq.entityId}'`);
+      if (value.eq !== undefined) {
+        conditions.push(`${column}->>'type' = '${value.eq.entityType}'`);
+        conditions.push(`${column}->>'id' = '${value.eq.entityId}'`);
+      }
       break;
     }
   }
@@ -69,8 +92,68 @@ const buildWhereClauseForFeatureFilter = (
   return conditions.length > 0 ? `(${conditions.join(" AND ")})` : "";
 };
 
+export function buildEntityFilterQuery(props: {
+  filters: EntityFilters;
+  limit?: number;
+  cursor?: number;
+}): string {
+  const { filters, limit, cursor } = props;
+
+  const whereClauses = [];
+  const havingClauses = [];
+
+  whereClauses.push(`length(entity_id) = 1`);
+  if (filters.entityType) {
+    whereClauses.push(`entity_type = ['${filters.entityType}']`);
+  }
+
+  if (filters.features && filters.features.length > 0) {
+    const featureConditions = filters.features
+      .map((feature) => buildWhereClauseForFeatureFilter(feature))
+      .filter((condition) => condition !== "")
+      .join(" OR ");
+    if (featureConditions) {
+      whereClauses.push(featureConditions);
+    }
+  }
+
+  if (filters.firstSeen) {
+    havingClauses.push(
+      ...getWhereClausesForDateRange(filters.firstSeen, "first_seen")
+    );
+  }
+
+  if (filters.lastSeen) {
+    havingClauses.push(
+      ...getWhereClausesForDateRange(filters.lastSeen, "last_seen")
+    );
+  }
+
+  const preAggregationWhereClause =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  const postAggregationHavingClause =
+    havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : "";
+
+  const finalQuery = `
+    SELECT
+        entity_type,
+        entity_id,
+        groupArray((feature_id, value)) as features_array,
+        min(event_timestamp) as first_seen,
+        max(event_timestamp) as last_seen
+    FROM features
+    ${preAggregationWhereClause}
+    GROUP BY entity_type, entity_id
+    ${postAggregationHavingClause}
+    ORDER BY last_seen DESC
+    LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
+  `;
+
+  return finalQuery;
+}
+
 export const buildEventFilterQuery = (options: {
-  filter: EventFilterInput;
+  filter: EventFilterfilters;
   limit?: number;
   cursor?: number;
 }): string => {
@@ -82,19 +165,9 @@ export const buildEventFilterQuery = (options: {
   }
 
   if (filter.dateRange) {
-    if (filter.dateRange.from)
-      whereClauses.push(
-        `timestamp >= to_timestamp(${getUnixTime(
-          new Date(filter.dateRange.from)
-        )})`
-      );
-    if (filter.dateRange.to) {
-      whereClauses.push(
-        `timestamp <= to_timestamp(${getUnixTime(
-          new Date(filter.dateRange.to)
-        )})`
-      );
-    }
+    whereClauses.push(
+      ...getWhereClausesForDateRange(filter.dateRange, "timestamp")
+    );
   }
 
   if (filter.eventType) {

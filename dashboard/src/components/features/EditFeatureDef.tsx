@@ -32,12 +32,40 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 
-const typeDefaults = {
-  [FeatureType.Computed]: DataType.String,
-  [FeatureType.Count]: DataType.Int64,
-  [FeatureType.UniqueCount]: DataType.Boolean,
-  [FeatureType.EntityAppearance]: DataType.Entity,
-} as Record<FeatureType, DataType>;
+const TYPE_DEFAULTS = {
+  [FeatureType.Computed]: {
+    dataType: DataType.Boolean,
+    config: {
+      code: "",
+      depsMap: {},
+      assignedEntityFeatureIds: [],
+    },
+  },
+  [FeatureType.Count]: {
+    dataType: DataType.Int64,
+    config: {
+      eventTypes: new Set(),
+    },
+  },
+  [FeatureType.UniqueCount]: {
+    dataType: DataType.Int64,
+    config: {
+      eventTypes: new Set(),
+    },
+  },
+  [FeatureType.EntityAppearance]: {
+    dataType: DataType.Boolean,
+    config: {
+      eventTypes: new Set(),
+    },
+  },
+} as Record<
+  FeatureType,
+  {
+    dataType: DataType;
+    config: any;
+  }
+>;
 
 const featureTypeToComponent = {
   Computed: EditComputed,
@@ -78,7 +106,8 @@ function EditFeatureDef(props: EditFeatureDefProps) {
   const handleFeatureTypeSelect = (val: FeatureType) => {
     updateFeatureDef({
       featureType: val,
-      dataType: typeDefaults[val]!,
+      dataType: TYPE_DEFAULTS[val].dataType,
+      config: TYPE_DEFAULTS[val].config,
     });
   };
 

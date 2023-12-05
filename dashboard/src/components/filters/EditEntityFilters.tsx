@@ -1,6 +1,5 @@
-import { Check, ListFilter } from "lucide-react";
-import { ulid } from "ulid";
-import { EventFilters } from "../../shared/validation";
+import { ListFilter } from "lucide-react";
+import { type EntityFilters } from "../../shared/validation";
 import { api } from "../../utils/api";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
@@ -16,18 +15,18 @@ import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
-interface EditEventFiltersProps {
-  value: EventFilters;
-  onChange: (value: EventFilters) => void;
+interface EditEntityFiltersProps {
+  value: EntityFilters;
+  onChange: (value: EntityFilters) => void;
 }
 
-export function EditEventFilters(props: EditEventFiltersProps) {
+export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
 
-  const { data: allEventTypes } = api.eventTypes.list.useQuery();
+  const { data: allEntityTypes } = api.entityTypes.list.useQuery();
   const { data: allFeatureDefs } = api.featureDefs.getLatest.useQuery();
 
-  const { dateRange, eventType, features: featureFilters } = value;
+  const { firstSeen, lastSeen, entityType, features: featureFilters } = value;
 
   return (
     <>
@@ -43,22 +42,43 @@ export function EditEventFilters(props: EditEventFiltersProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
-            {/* Date Range Filter */}
+            {/* First Seen / Last Seen Filter */}
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Date Range</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>First Seen</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <Calendar
                   initialFocus
                   mode="range"
-                  defaultMonth={dateRange?.from}
+                  defaultMonth={firstSeen?.from}
                   selected={{
-                    from: dateRange?.from,
-                    to: dateRange?.to,
+                    from: firstSeen?.from,
+                    to: firstSeen?.to,
                   }}
                   onSelect={(newRange) => {
                     onChange({
                       ...value,
-                      dateRange: newRange,
+                      firstSeen: newRange,
+                    });
+                  }}
+                  numberOfMonths={2}
+                />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Last Seen</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={lastSeen?.from}
+                  selected={{
+                    from: lastSeen?.from,
+                    to: lastSeen?.to,
+                  }}
+                  onSelect={(newRange) => {
+                    onChange({
+                      ...value,
+                      lastSeen: newRange,
                     });
                   }}
                   numberOfMonths={2}
@@ -68,12 +88,12 @@ export function EditEventFilters(props: EditEventFiltersProps) {
 
             {/* Type Filter */}
             <TypeSelectorSubItem
-              types={allEventTypes?.map((e) => e.type) ?? []}
-              value={eventType ?? null}
+              types={allEntityTypes?.map((e) => e.type) ?? []}
+              value={entityType ?? null}
               onChange={(type) => {
                 onChange({
                   ...value,
-                  eventType: type,
+                  entityType: type,
                 });
               }}
             />
@@ -93,28 +113,45 @@ export function EditEventFilters(props: EditEventFiltersProps) {
         </DropdownMenu>
       </div>
       <div className="mr-auto ml-3 flex gap-1 flex-wrap">
-        {eventType && (
+        {entityType && (
           <TypeChip
-            type={eventType}
+            type={entityType}
             onDelete={() => {
               onChange({
                 ...value,
-                eventType: undefined,
+                entityType: undefined,
               });
             }}
           />
         )}
 
-        {dateRange?.from && dateRange.to && (
+        {firstSeen?.from && firstSeen.to && (
           <DateRangeChip
+            title="First Seen"
             dateRange={{
-              from: dateRange.from,
-              to: dateRange.to,
+              from: firstSeen.from,
+              to: firstSeen.to,
             }}
             onDelete={() => {
               onChange({
                 ...value,
-                dateRange: undefined,
+                firstSeen: undefined,
+              });
+            }}
+          />
+        )}
+
+        {lastSeen?.from && lastSeen.to && (
+          <DateRangeChip
+            title="Last Seen"
+            dateRange={{
+              from: lastSeen.from,
+              to: lastSeen.to,
+            }}
+            onDelete={() => {
+              onChange({
+                ...value,
+                lastSeen: undefined,
               });
             }}
           />

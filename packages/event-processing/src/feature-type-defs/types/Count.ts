@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DataType, Entity, stringifyTypedData } from "../../dataTypes";
+import { DataType, Entity, encodeTypedData } from "../../dataTypes";
 import { assert } from "../../utils";
 import { StateUpdater, createFeatureTypeDef } from "../featureTypeDef";
 import { getPastNCountBucketHashes } from "../lib/counts";
@@ -46,7 +46,7 @@ export const countFeatureDef = createFeatureTypeDef({
       });
 
       const countBy = featuresToCountBy.map((feature) => {
-        const stringValue = stringifyTypedData(feature.data);
+        const stringValue = encodeTypedData(feature.data);
         return { stringValue, featureId: feature.featureId };
       });
 

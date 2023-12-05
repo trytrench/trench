@@ -60,7 +60,7 @@ export function validateTypedData(typedData: TypedData[DataType]) {
   }
 }
 
-export function stringifyTypedData(data: TypedData[DataType]) {
+export function encodeTypedData(data: TypedData[DataType]) {
   const { type, value } = data;
   switch (type) {
     case DataType.Boolean:
@@ -77,5 +77,45 @@ export function stringifyTypedData(data: TypedData[DataType]) {
       return value;
     default:
       throw new Error(`Cannot stringify unknown data type ${type}`);
+  }
+}
+
+export function decodeTypedData(
+  dataType: DataType,
+  value: string
+): TypedData[DataType] {
+  switch (dataType) {
+    case DataType.Boolean:
+      return {
+        type: DataType.Boolean,
+        value: value === "true",
+      };
+    case DataType.Entity: {
+      const { type, id } = JSON.parse(value);
+      return {
+        type: DataType.Entity,
+        value: {
+          type,
+          id,
+        },
+      };
+    }
+    case DataType.Float64:
+      return {
+        type: DataType.Float64,
+        value: Number(value),
+      };
+    case DataType.Int64:
+      return {
+        type: DataType.Int64,
+        value: Number(value),
+      };
+    case DataType.String:
+      return {
+        type: DataType.String,
+        value,
+      };
+    default:
+      throw new Error(`Cannot decode unknown data type ${dataType}`);
   }
 }

@@ -8,13 +8,25 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { toast } from "~/components/ui/use-toast";
 
-export type CompileStatus = {
-  status: "empty" | "compiling" | "success" | "error";
-  message?: string;
-  code?: string;
-  compiled?: string;
-  diagnostics?: Diagnostic<ts.Diagnostic>[];
-};
+export type CompileStatus =
+  | {
+      status: "empty";
+    }
+  | {
+      status: "compiling";
+      message: string;
+    }
+  | {
+      status: "success";
+      message: string;
+      code: string;
+      compiled: string;
+    }
+  | {
+      status: "error";
+      message: string;
+      diagnostics: Diagnostic<ts.Diagnostic>[];
+    };
 
 interface CodeEditorProps {
   prefix?: string;
@@ -32,9 +44,17 @@ function CodeEditor(props: CodeEditorProps) {
   // - The monaco editor is not used as a controlled component
   const [code, setCode] = useState("");
 
-  const [compileStatus, setCompileStatus] = useState<CompileStatus>({
+  const [compileStatus, _setCompileStatus] = useState<CompileStatus>({
     status: "empty",
   });
+
+  const setCompileStatus = useCallback(
+    (status: CompileStatus) => {
+      _setCompileStatus(status);
+      onCompileStatusChange?.(status);
+    },
+    [onCompileStatusChange]
+  );
 
   const compile = useCallback(() => {
     setCompileStatus({
@@ -92,10 +112,6 @@ function CodeEditor(props: CodeEditorProps) {
       });
     }
   }, [code, prefix, setCompileStatus, suffix]);
-
-  useEffect(() => {
-    onCompileStatusChange?.(compileStatus);
-  }, [compileStatus, onCompileStatusChange]);
 
   return (
     <>

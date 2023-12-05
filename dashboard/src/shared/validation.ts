@@ -2,6 +2,13 @@ import { DataType, FeatureType } from "event-processing";
 import { z } from "zod";
 import { jsonFilterZod } from "./jsonFilter";
 
+export const dateRangeZod = z.object({
+  from: z.date().optional(),
+  to: z.date().optional(),
+});
+
+export type DateRange = z.infer<typeof dateRangeZod>;
+
 export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
@@ -55,12 +62,7 @@ export const featureFiltersZod = z.union([
 
 export const genericFiltersZod = z
   .object({
-    dateRange: z
-      .object({
-        from: z.number(),
-        to: z.number(),
-      })
-      .optional(),
+    dateRange: dateRangeZod.optional(),
     type: z.string().optional(),
     labels: z.array(z.string()).optional(),
     features: z.array(jsonFilterZod).optional(),
@@ -88,14 +90,17 @@ export const eventFiltersZod = z.object({
 
 export type EventFilters = z.infer<typeof eventFiltersZod>;
 
-export const entityFiltersZod = z
-  .object({
-    entityType: z.string().optional(),
-    entityId: z.string().optional(),
-    entityLabels: z.array(z.string()).optional(),
-    entityFeatures: z.array(jsonFilterZod).optional(),
-  })
-  .optional();
+export const entityFiltersZod = z.object({
+  firstSeen: dateRangeZod.optional(),
+  lastSeen: dateRangeZod.optional(),
+  entityType: z.string().optional(),
+  features: z.array(featureFiltersZod).optional(),
+
+  // old
+  entityId: z.string().optional(),
+  entityLabels: z.array(z.string()).optional(),
+  entityFeatures: z.array(jsonFilterZod).optional(),
+});
 
 export type EntityFilters = z.infer<typeof entityFiltersZod>;
 

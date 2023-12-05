@@ -85,11 +85,13 @@ const LabelChip = ({
 
 interface DateRangeChipProps extends React.ComponentPropsWithoutRef<"div"> {
   dateRange: DateRange;
+  title?: string;
   onDelete?: () => void;
 }
 
 const DateRangeChip = ({
   dateRange,
+  title = "Date Range",
   onDelete,
   className,
   ...props
@@ -105,7 +107,7 @@ const DateRangeChip = ({
       variant="default"
       className={cn("flex pr-2 animate-in zoom-in-95 fade-in-20", className)}
     >
-      Date Range: {dateRangeString}
+      {title}: {dateRangeString}
       <button
         className="ml-1 rounded-full flex items-center"
         onClick={onDelete}

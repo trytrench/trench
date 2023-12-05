@@ -1,4 +1,11 @@
-import { Entity, getFeatureDefFromSnapshot } from "event-processing";
+import {
+  DataType,
+  Entity,
+  FeatureDef,
+  TypedData,
+  decodeTypedData,
+  getFeatureDefFromSnapshot,
+} from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
 import {
@@ -6,11 +13,14 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { db } from "~/server/db";
+import { db, prisma } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
-import { buildEventFilterQuery } from "../../lib/buildEventFilterQuery";
+import {
+  buildEntityFilterQuery,
+  buildEventFilterQuery,
+} from "../../lib/buildFilterQueries";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: protectedProcedure
@@ -30,125 +40,48 @@ export const listsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
-      const features = await ctx.prisma.feature.findMany();
 
-      const entityFeatures = await ctx.prisma.entityFeature.findMany({
-        include: {
-          entityType: true,
-        },
+      const query = buildEntityFilterQuery({
+        filters: filters,
+        limit: input.limit,
+        cursor: input.cursor,
       });
-
-      // TODO: Implement sort by
       const result = await db.query({
-        query: `
-          SELECT 
-            entity_id as id,
-            entity_type as type,
-            max(event_timestamp) AS lastSeenAt
-            ${features
-              .map(
-                (feature) =>
-                  `,argMaxIf(JSONExtractString(features, '${feature.feature}'), event_timestamp, JSONExtractString(features, '${feature.feature}') IS NOT NULL) AS ${feature.feature}`
-              )
-              .join("")}
-          FROM event_entity
-          ${
-            filters?.entityType
-              ? `AND entity_type = '${filters.entityType}'`
-              : ""
-          }
-          ${
-            filters?.entityLabels?.length
-              ? `AND label IN (${filters.entityLabels
-                  .map((label) => `'${label}'`)
-                  .join(", ")})`
-              : ""
-          }
-          ${
-            filters?.entityFeatures
-              ?.map((filter) => getFeatureQuery(filter, "entity_features"))
-              .join("\n") ?? ""
-          }
-          GROUP BY entity_id, entity_type
-          ORDER BY ${
-            input.sortBy
-              ? getFeatureSortKey("features", input.sortBy)
-              : "lastSeenAt DESC, entity_id DESC"
-          }
-          LIMIT ${input.limit ?? 50}
-          OFFSET ${input.cursor ?? 0};
-        `,
+        query,
         format: "JSONEachRow",
       });
-      const entities = await result.json<
-        {
-          id: string;
-          type: string;
-          lastSeenAt: string;
-          features: string;
-        }[]
-      >();
 
-      const entityFeatureNames = features
-        .filter((feature) => feature.dataType === "entity")
-        .map((feature) => feature.feature);
+      /**
+       *         entity_type,
+        entity_id,
+        groupArray((feature_id, value)) as features_array,
+        min(event_timestamp) as first_seen,
+        max(event_timestamp) as last_seen
+       */
 
-      const entityTypes = await ctx.prisma.entityType.findMany({
-        include: {
-          nameFeature: {
-            include: {
-              feature: true,
-            },
-          },
-        },
-      });
+      type EntityResult = {
+        entity_type: [string];
+        entity_id: [string];
+        features_array: Array<[string, string]>;
+        first_seen: Date;
+        last_seen: Date;
+      };
 
-      const entityIds = entities.map((entity) => entity.id);
-      for (const entity of entities) {
-        for (const [feature, value] of Object.entries(entity)) {
-          if (value && entityFeatureNames.includes(feature)) {
-            entityIds.push(feature);
-          }
-        }
-      }
+      const entities = await result.json<EntityResult[]>();
 
-      const entityTypeToNameFeature = entityTypes.reduce(
-        (acc, type) => ({
-          ...acc,
-          [type.type]: type.nameFeature?.feature.feature,
-        }),
-        {} as Record<string, string | undefined>
-      );
+      const featureDefs = await getLatestFeatureDefs();
 
       return {
         count: 0,
         rows: entities.map((entity) => {
-          const { id, type, lastSeenAt, ...rest } = entity;
-          const entityNameFeature = entityTypeToNameFeature[entity.type];
-
+          const entityType = entity.entity_type[0];
+          const entityId = entity.entity_id[0];
           return {
-            ...entity,
-            features: getOrderedFeatures({
-              type: "entity",
-              eventOrEntity: { type, features: rest },
-              eventOrEntityTypes: entityTypes,
-              eventOrEntityFeatures: entityFeatures,
-              features,
-              entityTypes,
-              entities,
-            }),
-            rules: getOrderedFeatures({
-              type: "entity",
-              eventOrEntity: { type, features: rest },
-              eventOrEntityTypes: entityTypes,
-              eventOrEntityFeatures: entityFeatures,
-              features,
-              entityTypes,
-              entities,
-              isRule: true,
-            }),
-            // Wait this doesn't work?
-            name: entityNameFeature && entity[entityNameFeature],
+            entityType,
+            entityId,
+            firstSeen: entity.first_seen,
+            lastSeen: entity.last_seen,
+            features: getAnnotatedFeatures(featureDefs, entity.features_array),
           };
         }),
       };
@@ -186,19 +119,7 @@ export const listsRouter = createTRPCRouter({
 
       const events = await result.json<EventResult[]>();
 
-      const latestSnapshots = await ctx.prisma.featureDefSnapshot.findMany({
-        distinct: ["featureDefId"],
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          featureDef: true,
-        },
-      });
-
-      const featureDefs = latestSnapshots.map((snapshot) =>
-        getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot })
-      );
+      const featureDefs = await getLatestFeatureDefs();
 
       return {
         count: 0,
@@ -208,6 +129,7 @@ export const listsRouter = createTRPCRouter({
           timestamp: new Date(event.event_timestamp),
           data: JSON.parse(event.event_data),
           entities: getUniqueEntities(event.entities),
+          features: getAnnotatedFeatures(featureDefs, event.features_array),
         })),
       };
     }),
@@ -374,4 +296,53 @@ function getUniqueEntities(
     }
   }
   return entities;
+}
+
+type AnnotatedFeature = {
+  featureId: string;
+  featureType: string;
+  data: TypedData[DataType];
+};
+
+function getAnnotatedFeatures(
+  featureDefs: FeatureDef[],
+  featuresArray: Array<[string, string]>
+) {
+  const featureDefsMap = new Map<string, FeatureDef>();
+  for (const featureDef of featureDefs) {
+    featureDefsMap.set(featureDef.featureId, featureDef);
+  }
+
+  const annotatedFeatures: AnnotatedFeature[] = [];
+  for (const [featureId, value] of featuresArray) {
+    const featureDef = featureDefsMap.get(featureId);
+    if (!featureDef) {
+      continue;
+    }
+    annotatedFeatures.push({
+      featureId,
+      featureType: featureDef.featureType,
+      data: decodeTypedData(featureDef.dataType, value),
+    });
+  }
+
+  return annotatedFeatures;
+}
+
+async function getLatestFeatureDefs() {
+  const latestSnapshots = await prisma.featureDefSnapshot.findMany({
+    distinct: ["featureDefId"],
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      featureDef: true,
+    },
+  });
+
+  const featureDefs = latestSnapshots.map((snapshot) =>
+    getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot })
+  );
+
+  return featureDefs;
 }

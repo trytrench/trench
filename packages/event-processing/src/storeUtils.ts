@@ -1,6 +1,6 @@
 import { GlobalStateKey, db, prisma } from "databases";
 import { getUnixTime } from "date-fns";
-import { DataType, stringifyTypedData } from "./dataTypes";
+import { DataType, encodeTypedData } from "./dataTypes";
 import { EngineResult } from "./engine";
 import { TrenchEvent } from "./feature-type-defs/featureTypeDef";
 
@@ -45,7 +45,7 @@ export async function writeEngineResultsToStore({
         entity_type: assignedEntities.map(({ type }) => type),
         entity_id: assignedEntities.map(({ id }) => id),
         data_type: dataType,
-        value: stringifyTypedData(data),
+        value: encodeTypedData(data),
         value_Int64: dataType === DataType.Int64 ? Number(safeValue) : null,
         value_Float64: dataType === DataType.Float64 ? Number(safeValue) : null,
         value_String:

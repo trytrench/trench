@@ -18,8 +18,8 @@ import { AssignedEntitySelector } from "../shared/AssignedEntitySelector";
 // - the monaco editor ig? unsure
 
 interface EditComputedProps {
-  featureDef: Partial<FeatureDefs[FeatureType.Computed]>;
-  onFeatureDefChange?: (featureDef: Partial<FeatureDef>) => void;
+  featureDef: FeatureDefs[FeatureType.Computed];
+  onFeatureDefChange?: (featureDef: FeatureDefs[FeatureType.Computed]) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
@@ -30,17 +30,10 @@ function EditComputed(props: EditComputedProps) {
   const depsMap = config?.depsMap ?? {};
   const assignedEntityFeatureIds = config?.assignedEntityFeatureIds ?? [];
 
-  const [compileStatus, setCompileStatus] = useState<CompileStatus>();
-
   const prefix = usePrefix({
-    dataType: featureDef.dataType!,
+    dataType: featureDef.dataType,
     dependencies: depsMap,
   });
-
-  // is everything in this section valid?
-  useEffect(() => {
-    onValidChange?.(compileStatus?.status === "success");
-  }, [compileStatus, onValidChange]);
 
   return (
     <>
@@ -73,7 +66,21 @@ function EditComputed(props: EditComputedProps) {
         prefix={prefix}
         suffix={"}"}
         initialCode={featureDef?.config?.tsCode ?? ""}
-        onCompileStatusChange={setCompileStatus}
+        onCompileStatusChange={(compileStatus) => {
+          if (compileStatus.status === "success") {
+            onValidChange?.(true);
+            onFeatureDefChange?.({
+              ...featureDef,
+              config: {
+                ...config,
+                tsCode: compileStatus.code,
+                compiledJs: compileStatus.compiled,
+              },
+            });
+          } else {
+            onValidChange?.(false);
+          }
+        }}
       />
     </>
   );

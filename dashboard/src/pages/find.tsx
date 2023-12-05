@@ -9,9 +9,10 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { EntityFilters } from "~/shared/validation";
 import { api } from "~/utils/api";
+import { EditEntityFilters } from "../components/filters/EditEntityFilters";
 
 const EntityList = () => {
-  const [filters, setFilters] = useState<EntityFilters>(undefined);
+  const [filters, setFilters] = useState<EntityFilters>({});
 
   const limit = 10;
 
@@ -42,7 +43,7 @@ const EntityList = () => {
   return (
     <div className="flex flex-col">
       <div className="flex p-3 px-8 border-b">
-        <EntityFilter onChange={setFilters} />
+        <EditEntityFilters value={filters} onChange={setFilters} />
       </div>
       <div className="grow">
         <ScrollArea className="h-full">
@@ -54,7 +55,7 @@ const EntityList = () => {
                 {allEntities.map((entity) => {
                   return (
                     <EntityCard
-                      key={entity.id}
+                      key={entity.entityId}
                       href={`/entity/${entity.id}`}
                       entity={entity}
                       features={entity.features}
