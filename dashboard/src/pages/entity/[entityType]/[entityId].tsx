@@ -24,10 +24,11 @@ import { api } from "~/utils/api";
 
 interface RelatedEntitiesProps {
   entityId: string;
+  entityType: string;
 }
 
-function RelatedEntities({ entityId }: RelatedEntitiesProps) {
-  const [entityType, setEntityType] = useState<string>("");
+function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
+  const [filterEntityType, setFilterEntityType] = useState<string>("");
   const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
 
   return (
@@ -38,10 +39,14 @@ function RelatedEntities({ entityId }: RelatedEntitiesProps) {
         <ClearableSelect
           options={entityTypes?.map((et) => ({ label: et, value: et })) ?? []}
           onChange={(value: any) => {
-            setEntityType((value?.value as string) ?? "");
+            setFilterEntityType((value?.value as string) ?? "");
           }}
           placeholder="All Entities"
-          value={entityType ? { label: entityType, value: entityType } : null}
+          value={
+            filterEntityType
+              ? { label: filterEntityType, value: filterEntityType }
+              : null
+          }
           isClearable={true}
         />
       </div>
@@ -50,8 +55,9 @@ function RelatedEntities({ entityId }: RelatedEntitiesProps) {
           <ScrollArea className="h-full pr-4">
             <LinksView
               entityId={entityId ?? ""}
-              leftTypeFilter={entityType}
-              onLeftTypeFilterChange={setEntityType}
+              entityType={entityType}
+              leftTypeFilter={filterEntityType}
+              onLeftTypeFilterChange={setFilterEntityType}
             />
           </ScrollArea>
         </div>
@@ -151,24 +157,24 @@ const Page: NextPageWithLayout = () => {
             onValueChange={setTab}
           >
             <TabsList className="w-full">
-              <TabsTrigger value="explorer">Event Explorer</TabsTrigger>
+              {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
               <TabsTrigger value="history">Event History</TabsTrigger>
               <TabsTrigger value="links">Related Entities</TabsTrigger>
             </TabsList>
-            <TabsContent value="explorer">
+            {/* <TabsContent value="explorer">
               <div className="">
                 <DatePickerWithRange
                   dateRange={dateRange}
                   onDateRangeChange={setDateRange}
                 />
               </div>
-              {/* <EventsDashboard entityId={entityId} datasetId={datasetId} /> */}
-            </TabsContent>
+              <EventsDashboard entityId={entityId} datasetId={datasetId} />
+            </TabsContent> */}
             <TabsContent value="history" className="relative grow mt-0">
               <EventsList entityId={entityId} />
             </TabsContent>
             <TabsContent value="links" className="relative grow">
-              <RelatedEntities entityId={entityId} />
+              <RelatedEntities entityId={entityId} entityType={entityType} />
             </TabsContent>
           </Tabs>
         </div>

@@ -17,24 +17,27 @@ import type { LeftItem, RightItem } from "./types";
 
 interface LinksViewProps {
   entityId: string;
+  entityType: string;
   leftTypeFilter: string;
   onLeftTypeFilterChange?: (value: string) => void;
 }
 
 function LinksView({
   entityId,
+  entityType,
   leftTypeFilter,
   onLeftTypeFilterChange,
 }: LinksViewProps) {
   const router = useRouter();
   const { data } = api.links.relatedEntities.useQuery(
     {
-      id: entityId ?? "",
+      entityId: entityId ?? "",
+      entityType: entityType,
       leftSideType: leftTypeFilter,
       limit: leftTypeFilter ? 20 : undefined,
       skip: leftTypeFilter ? 0 : undefined,
     },
-    { enabled: !!entityId }
+    { enabled: !!entityId && !!entityType }
   );
 
   const left = data?.left ?? [];
