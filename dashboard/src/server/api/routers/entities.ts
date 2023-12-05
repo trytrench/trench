@@ -1,6 +1,6 @@
 import { uniqBy } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import {
@@ -14,7 +14,7 @@ import {
 } from "../../lib/filters";
 
 export const entitiesRouter = createTRPCRouter({
-  findIds: publicProcedure
+  findIds: protectedProcedure
     .input(
       z.object({
         ids: z.array(z.string()),
@@ -30,7 +30,7 @@ export const entitiesRouter = createTRPCRouter({
       });
     }),
 
-  getTimeBuckets: publicProcedure
+  getTimeBuckets: protectedProcedure
     .input(
       z.object({
         interval: z.number(),
@@ -158,7 +158,7 @@ export const entitiesRouter = createTRPCRouter({
       };
     }),
 
-  findTop: publicProcedure
+  findTop: protectedProcedure
     .input(findTopEntitiesArgs)
     .query(async ({ ctx, input }) => {
       const topEntities = await ctx.prisma.$queryRawUnsafe<
@@ -229,7 +229,7 @@ export const entitiesRouter = createTRPCRouter({
 
       return ret;
     }),
-  findMany: publicProcedure
+  findMany: protectedProcedure
     .input(
       z.object({
         offset: z.number().optional(),
@@ -264,7 +264,7 @@ export const entitiesRouter = createTRPCRouter({
       });
     }),
 
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -378,7 +378,7 @@ export const entitiesRouter = createTRPCRouter({
       };
     }),
 
-  findRelatedEntities: publicProcedure
+  findRelatedEntities: protectedProcedure
     .input(
       z.object({
         id: z.string(),

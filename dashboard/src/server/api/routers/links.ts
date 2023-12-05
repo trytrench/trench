@@ -5,14 +5,14 @@ import {
 } from "~/components/LinksView/helpers";
 import { RawLeft, RawLinks } from "~/components/LinksView/types";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 
 // set to true to print out query statistics
 const DEBUG = false;
 
 export const linksRouter = createTRPCRouter({
-  relatedEntities: publicProcedure
+  relatedEntities: protectedProcedure
     .input(
       z.object({
         id: z.string(),

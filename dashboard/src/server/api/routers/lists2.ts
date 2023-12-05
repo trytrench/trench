@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const listItemSchema = z.object({
   value: z.string().nonempty(),
@@ -12,7 +12,7 @@ const listSchema = z.object({
 });
 
 export const lists2Router = createTRPCRouter({
-  list: publicProcedure.query(async ({ ctx, input }) => {
+  list: protectedProcedure.query(async ({ ctx, input }) => {
     return ctx.prisma.list.findMany({
       include: {
         _count: {
@@ -23,16 +23,18 @@ export const lists2Router = createTRPCRouter({
       },
     });
   }),
-  create: publicProcedure.input(listSchema).mutation(async ({ ctx, input }) => {
-    return ctx.prisma.list.create({
-      data: {
-        name: input.name,
-        alias: input.alias,
-        // createdBy: ctx.session.user.id,
-      },
-    });
-  }),
-  delete: publicProcedure
+  create: protectedProcedure
+    .input(listSchema)
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.list.create({
+        data: {
+          name: input.name,
+          alias: input.alias,
+          // createdBy: ctx.session.user.id,
+        },
+      });
+    }),
+  delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.prisma.listItem.deleteMany({
@@ -47,7 +49,7 @@ export const lists2Router = createTRPCRouter({
         },
       });
     }),
-  addItem: publicProcedure
+  addItem: protectedProcedure
     .input(listItemSchema)
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.listItem.create({
@@ -58,7 +60,7 @@ export const lists2Router = createTRPCRouter({
         },
       });
     }),
-  deleteItem: publicProcedure
+  deleteItem: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.listItem.delete({
@@ -67,7 +69,7 @@ export const lists2Router = createTRPCRouter({
         },
       });
     }),
-  get: publicProcedure
+  get: protectedProcedure
     .input(
       z.object({
         id: z.string(),

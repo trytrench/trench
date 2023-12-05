@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   buildEntityExistsQuery,
   buildEventExistsQuery,
@@ -9,7 +9,7 @@ import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { PrismaClient } from "@prisma/client";
 
 export const dashboardRouter = createTRPCRouter({
-  getTopEntities: publicProcedure
+  getTopEntities: protectedProcedure
     .input(
       z.object({
         startTime: z.number(),
@@ -126,7 +126,7 @@ export const dashboardRouter = createTRPCRouter({
 
       return topLists;
     }),
-  getTopEntitiesOfTypeAndLabel: publicProcedure
+  getTopEntitiesOfTypeAndLabel: protectedProcedure
     .input(
       z.object({
         startTime: z.number(),
@@ -280,7 +280,7 @@ export const dashboardRouter = createTRPCRouter({
         topRelatedEntities: processCountList(topRelatedEntities),
       };
     }),
-  getEventsOfTypeAndLabel: publicProcedure
+  getEventsOfTypeAndLabel: protectedProcedure
     .input(
       z.object({
         startTime: z.number(),
@@ -316,7 +316,7 @@ export const dashboardRouter = createTRPCRouter({
 
       return res;
     }),
-  getTimeBuckets: publicProcedure
+  getTimeBuckets: protectedProcedure
     .input(
       z.object({
         interval: z.number(),
