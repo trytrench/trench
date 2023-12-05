@@ -171,8 +171,6 @@ export const listsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      console.log(query);
-
       type EventResult = {
         event_id: string;
         event_type: string;

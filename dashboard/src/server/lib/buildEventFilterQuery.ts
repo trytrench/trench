@@ -81,7 +81,6 @@ export const buildEventFilterQuery = (options: {
     return "";
   }
 
-  console.log("filter", filter);
   if (filter.dateRange) {
     if (filter.dateRange.from)
       whereClauses.push(
