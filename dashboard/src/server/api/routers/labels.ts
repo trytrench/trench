@@ -1,9 +1,9 @@
 import { db } from "databases";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const labelsRouter = createTRPCRouter({
-  getEventTypes: publicProcedure
+  getEventTypes: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       const project = await ctx.prisma.project.findUniqueOrThrow({
@@ -34,7 +34,7 @@ export const labelsRouter = createTRPCRouter({
           }
       );
     }),
-  getEntityTypes: publicProcedure
+  getEntityTypes: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.entityType.findMany({
@@ -50,7 +50,7 @@ export const labelsRouter = createTRPCRouter({
         },
       });
     }),
-  getFeatures: publicProcedure
+  getFeatures: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.feature.findMany({
@@ -59,7 +59,7 @@ export const labelsRouter = createTRPCRouter({
         },
       });
     }),
-  getEventFeatures: publicProcedure
+  getEventFeatures: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.eventFeature.findMany({
@@ -70,7 +70,7 @@ export const labelsRouter = createTRPCRouter({
         },
       });
     }),
-  getEntityFeatures: publicProcedure
+  getEntityFeatures: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.entityFeature.findMany({
@@ -81,7 +81,7 @@ export const labelsRouter = createTRPCRouter({
         },
       });
     }),
-  saveEventType: publicProcedure
+  saveEventType: protectedProcedure
     .input(
       z.object({
         projectId: z.string(),

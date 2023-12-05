@@ -1,20 +1,20 @@
+import { DropdownMenu } from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
 import { Menu } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
-import { Button } from "~/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { handleError } from "../lib/handleError";
-import { api } from "../utils/api";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ThemeToggle } from "./ui/custom/theme-toggle";
+import {
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { getInitials } from "~/utils/getInitials";
 
 interface Props {
   href: string;
@@ -49,16 +49,15 @@ const TABS = [
 ];
 
 export const Navbar = () => {
+  const session = useSession();
+
   // const isDesktop = useBreakpointValue({ base: false, lg: true });
   const isDesktop = true;
   const btnRef = useRef(null);
 
   const router = useRouter();
 
-  const activeTab = router.pathname.split("/")[2];
-  const activeTabChildren = TABS.find((tab) => tab.path === activeTab)
-    ?.children;
-  const activeChildTab = router.pathname.split("/")[3] ?? "";
+  const activeTab = router.pathname.split("/")[1];
 
   return (
     <nav
@@ -81,14 +80,32 @@ export const Navbar = () => {
 
         <div className="grow" />
 
-        <ThemeToggle />
-
-        <div className="flex gap-4 text-sm">
+        <div className="flex items-center gap-4 text-sm">
+          <ThemeToggle />
           <NavItem href="/changelog">Changelog</NavItem>
           <NavItem href="/help">Help</NavItem>
           <NavItem href="/docs">Docs</NavItem>
-          <div className="grow" />
-          {/* <UserButton afterSignOutUrl="/" /> */}
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Avatar className="w-9 h-9">
+                {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
+                <AvatarFallback>
+                  {getInitials(session.data?.user.name ?? "")}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onClick={() => {
+                  void signOut();
+                  void router.push("/login");
+                }}
+              >
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -107,28 +124,6 @@ export const Navbar = () => {
                 </TabsTrigger>
               );
             })}
-
-            {activeTabChildren && (
-              <div className="flex animate-in fade-in-60">
-                <div className="border-r my-2 mx-4 rotate-12" />
-                <Tabs
-                  value={activeChildTab}
-                  onValueChange={(tab) => {
-                    router.push(`/${activeTab}/${tab}`).catch(handleError);
-                  }}
-                >
-                  <TabsList>
-                    {activeTabChildren.map((childTab) => {
-                      return (
-                        <TabsTrigger key={childTab.path} value={childTab.path}>
-                          {childTab.name}
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
-                </Tabs>
-              </div>
-            )}
           </TabsList>
         </Tabs>
       </div>

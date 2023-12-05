@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const entityTypesRouter = createTRPCRouter({
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
@@ -15,7 +15,7 @@ export const entityTypesRouter = createTRPCRouter({
         },
       });
     }),
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -28,7 +28,7 @@ export const entityTypesRouter = createTRPCRouter({
         },
       });
     }),
-  list: publicProcedure.query(async ({ ctx, input }) => {
+  list: protectedProcedure.query(async ({ ctx, input }) => {
     return ctx.prisma.entityType.findMany({});
   }),
 });

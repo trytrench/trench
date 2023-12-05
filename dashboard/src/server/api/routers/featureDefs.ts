@@ -7,16 +7,16 @@ import {
   type FeatureDef,
 } from "event-processing";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const featureDefsRouter = createTRPCRouter({
-  allInfo: publicProcedure.query(async ({ ctx, input }) => {
+  allInfo: protectedProcedure.query(async ({ ctx, input }) => {
     const featureDefs = await ctx.prisma.featureDef.findMany({});
 
     return featureDefs;
   }),
 
-  getLatest: publicProcedure.query(async ({ ctx, input }) => {
+  getLatest: protectedProcedure.query(async ({ ctx, input }) => {
     const snapshots = await ctx.prisma.featureDefSnapshot.findMany({
       distinct: ["featureDefId"],
       include: {
@@ -31,7 +31,7 @@ export const featureDefsRouter = createTRPCRouter({
     return featureDefs;
   }),
 
-  list: publicProcedure.query(async ({ ctx, input }) => {
+  list: protectedProcedure.query(async ({ ctx, input }) => {
     const featureDefs = await ctx.prisma.featureDef.findMany({
       include: {
         snapshots: {
@@ -65,7 +65,7 @@ export const featureDefsRouter = createTRPCRouter({
       };
     });
   }),
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
@@ -139,7 +139,7 @@ export const featureDefsRouter = createTRPCRouter({
       return featureDef;
     }),
 
-  save: publicProcedure
+  save: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -165,7 +165,7 @@ export const featureDefsRouter = createTRPCRouter({
       });
     }),
 
-  rename: publicProcedure
+  rename: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -183,7 +183,7 @@ export const featureDefsRouter = createTRPCRouter({
       });
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),

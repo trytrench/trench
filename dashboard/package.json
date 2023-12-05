@@ -1,6 +1,7 @@
 {
   "name": "dashboard",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -46,7 +47,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@react-hook/resize-observer": "^1.2.6",
-    "@t3-oss/env-nextjs": "^0.3.1",
+    "@t3-oss/env-nextjs": "^0.7.1",
     "@tanstack/react-query": "^4.29.25",
     "@tanstack/react-table": "^8.9.3",
     "@trpc/client": "^10.34.0",
@@ -91,7 +92,6 @@
     "react-use": "^17.4.0",
     "recharts": "^2.8.0",
     "sqrl": "^0.6.10",
-    "sqrl-helpers": "workspace:*",
     "superjson": "^1.13.1",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",
@@ -117,6 +117,7 @@
     "eslint": "^8.40.0",
     "eslint-config-next": "^13.4.2",
     "postcss": "^8.4.27",
+    "prettier-plugin-tailwindcss": "^0.5.7",
     "prisma": "^5.1.1",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.4"

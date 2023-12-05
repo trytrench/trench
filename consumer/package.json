@@ -19,7 +19,6 @@
     "event-processing": "workspace:*",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
-    "sqrl-helpers": "workspace:*",
     "typescript": "^5.2.2",
     "ulid": "^2.3.0",
     "webpack": "^5.88.2",

@@ -1,7 +1,7 @@
 import { Entity, getFeatureDefFromSnapshot } from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
@@ -9,7 +9,7 @@ import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { buildEventFilterQuery } from "../../lib/buildEventFilterQuery";
 
 export const listsRouter = createTRPCRouter({
-  getEntitiesList: publicProcedure
+  getEntitiesList: protectedProcedure
     .input(
       z.object({
         entityFilters: entityFiltersZod,
@@ -150,7 +150,7 @@ export const listsRouter = createTRPCRouter({
       };
     }),
 
-  getEventsList: publicProcedure
+  getEventsList: protectedProcedure
     .input(
       z.object({
         eventFilters: eventFiltersZod,
@@ -209,7 +209,7 @@ export const listsRouter = createTRPCRouter({
     }),
 
   // prob doesnt work
-  getFeatureColumnsForEventType: publicProcedure
+  getFeatureColumnsForEventType: protectedProcedure
     .input(
       z.object({
         eventType: z.string(),
@@ -224,7 +224,7 @@ export const listsRouter = createTRPCRouter({
       return vals;
     }),
 
-  getEvent: publicProcedure
+  getEvent: protectedProcedure
     .input(
       z.object({
         eventId: z.string(),
@@ -252,7 +252,7 @@ export const listsRouter = createTRPCRouter({
       return event;
     }),
 
-  getEventsOfType: publicProcedure
+  getEventsOfType: protectedProcedure
     .input(
       z.object({
         eventTypeId: z.string(),

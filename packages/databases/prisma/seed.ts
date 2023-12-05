@@ -1,6 +1,5 @@
 import { readdir, readFile } from "fs/promises";
 import path from "path";
-import { hashEventHandler } from "sqrl-helpers";
 import { prisma } from "..";
 
 async function readFiles(dirPath: string): Promise<Record<string, string>> {
