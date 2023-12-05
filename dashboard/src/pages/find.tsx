@@ -26,7 +26,7 @@ const EntityList = () => {
     {
       entityFilters: filters,
       // sortBy,
-      limit,
+      // limit,
     },
     {
       getNextPageParam: (lastPage, pages) => {
@@ -58,10 +58,6 @@ const EntityList = () => {
                       key={entity.entityId}
                       href={`/entity/${entity.id}`}
                       entity={entity}
-                      features={entity.features}
-                      rules={entity.rules}
-                      name={entity.name}
-                      datasetId={datasetId}
                     />
                   );
                 })}

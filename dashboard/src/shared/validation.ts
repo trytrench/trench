@@ -94,10 +94,10 @@ export const entityFiltersZod = z.object({
   firstSeen: dateRangeZod.optional(),
   lastSeen: dateRangeZod.optional(),
   entityType: z.string().optional(),
+  entityId: z.string().optional(),
   features: z.array(featureFiltersZod).optional(),
 
   // old
-  entityId: z.string().optional(),
   entityLabels: z.array(z.string()).optional(),
   entityFeatures: z.array(jsonFilterZod).optional(),
 });

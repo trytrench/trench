@@ -34,22 +34,18 @@ export const labelsRouter = createTRPCRouter({
           }
       );
     }),
-  getEntityTypes: protectedProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.entityType.findMany({
-        where: {
-          projectId: input.projectId,
-        },
-        include: {
-          nameFeature: {
-            include: {
-              feature: true,
-            },
+  getEntityTypes: protectedProcedure.query(async ({ ctx, input }) => {
+    return ctx.prisma.entityType.findMany({
+      where: {},
+      include: {
+        nameFeature: {
+          include: {
+            feature: true,
           },
         },
-      });
-    }),
+      },
+    });
+  }),
   getFeatures: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {

@@ -102,18 +102,20 @@ export function buildEntityFilterQuery(props: {
   const whereClauses = [];
   const havingClauses = [];
 
-  whereClauses.push(`length(entity_id) = 1`);
+  havingClauses.push(`length(entity_id) = 1`);
   if (filters.entityType) {
     whereClauses.push(`entity_type = ['${filters.entityType}']`);
+  }
+  if (filters.entityId) {
+    whereClauses.push(`entity_id = ['${filters.entityId}']`);
   }
 
   if (filters.features && filters.features.length > 0) {
     const featureConditions = filters.features
       .map((feature) => buildWhereClauseForFeatureFilter(feature))
-      .filter((condition) => condition !== "")
-      .join(" OR ");
+      .filter((condition) => condition !== "");
     if (featureConditions) {
-      whereClauses.push(featureConditions);
+      whereClauses.push(...featureConditions);
     }
   }
 
@@ -138,11 +140,21 @@ export function buildEntityFilterQuery(props: {
     SELECT
         entity_type,
         entity_id,
-        groupArray((feature_id, value)) as features_array,
+        groupArray((latest_features.feature_id, latest_features.value)) as features_array,
         min(event_timestamp) as first_seen,
         max(event_timestamp) as last_seen
-    FROM features
-    ${preAggregationWhereClause}
+    FROM (
+        SELECT
+            entity_type,
+            entity_id,
+            feature_id,
+            value,
+            event_timestamp,
+            row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
+        FROM features
+        ${preAggregationWhereClause}
+    ) AS latest_features
+    WHERE latest_features.rn = 1
     GROUP BY entity_type, entity_id
     ${postAggregationHavingClause}
     ORDER BY last_seen DESC

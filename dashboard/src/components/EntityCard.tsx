@@ -5,6 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { type RouterOutputs } from "~/utils/api";
 import { EntityChip } from "./EntityChip";
 import { FeatureGrid } from "./ui/custom/feature-grid";
+import { RenderTypedData } from "./RenderTypedData";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -12,14 +13,7 @@ interface Props {
   href: string;
 }
 
-export const EntityCard = ({
-  entity,
-  relation,
-  href,
-  features,
-  rules,
-  name,
-}: Props) => {
+export const EntityCard = ({ entity, relation, href }: Props) => {
   const router = useRouter();
 
   return (
@@ -28,7 +22,7 @@ export const EntityCard = ({
         <Link href={href}>
           <div className="flex">
             <h1 className="text-lg text-emphasis-foreground">
-              {entity.type}: {name}
+              {entity.entityType}: {entity.entityId}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
           </div>
@@ -57,7 +51,7 @@ export const EntityCard = ({
           )} */}
         </div>
         <div className="h-2"></div>
-        {rules.length > 0 && (
+        {/* {rules.length > 0 && (
           <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground mb-4">
             {rules.map(({ name, color }) => (
               <div key={name} className="flex space-x-1 items-center">
@@ -68,30 +62,25 @@ export const EntityCard = ({
               </div>
             ))}
           </div>
-        )}
+        )} */}
         <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
-          {features.map(({ name, value, dataType, entityName, entityType }) => (
-            <div key={name}>
-              <div className="font-semibold">{name}</div>
+          {entity.features.map((feature) => {
+            const { featureId, featureName, data } = feature;
+            return (
+              <div key={featureId}>
+                <div className="font-semibold">{featureName}</div>
+                <RenderTypedData data={data} />
 
-              {dataType === "entity" && value ? (
-                <EntityChip
-                  entity={{ id: value, name: entityName, type: entityType }}
-                  href={`/entity/${value}`}
-                />
-              ) : (
-                <div className="truncate">
-                  {value === 0
-                    ? "0"
-                    : value === true
-                    ? "True"
-                    : value === false
-                    ? "False"
-                    : (JSON.stringify(value) as string) || "-"}
-                </div>
-              )}
-            </div>
-          ))}
+                {/* {data.type === DataType.Entity ? (
+                  <EntityChip
+                    entity={entity}
+                    href={`/entity/${data.value.id}`}
+                  />
+                ) : (
+                )} */}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { cn } from "~/lib/utils";
 
 interface PropertyListProps extends React.HTMLAttributes<HTMLUListElement> {
-  entries: { label: string; value: string }[];
+  entries: { label: string; value: any }[];
 }
 
 function PropertyList({ className, entries, ...props }: PropertyListProps) {

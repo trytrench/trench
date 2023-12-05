@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { type DateRange } from "react-day-picker";
@@ -23,17 +24,11 @@ import { api } from "~/utils/api";
 
 interface RelatedEntitiesProps {
   entityId: string;
-  datasetId: string;
 }
 
-function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
+function RelatedEntities({ entityId }: RelatedEntitiesProps) {
   const [entityType, setEntityType] = useState<string>("");
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery(
-    {
-      datasetId,
-    },
-    { enabled: !!datasetId }
-  );
+  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
 
   return (
     <div className="h-full flex flex-col">
@@ -55,7 +50,6 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
           <ScrollArea className="h-full pr-4">
             <LinksView
               entityId={entityId ?? ""}
-              datasetId={datasetId}
               leftTypeFilter={entityType}
               onLeftTypeFilterChange={setEntityType}
             />
@@ -68,19 +62,32 @@ function RelatedEntities({ entityId, datasetId }: RelatedEntitiesProps) {
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
-  const entityId = router.query.entityId as string;
+  const entityId = decodeURIComponent(router.query.entityId as string);
+  const entityType = router.query.entityType as string;
 
-  const { data: entityData } = api.entities.get.useQuery();
+  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
+    {
+      entityFilters: {
+        entityId,
+        entityType,
+      },
+    },
+    {
+      enabled: !!entityId && !!entityType,
+    }
+  );
+
+  const entityData = entityDataRows?.rows[0];
 
   const entityInfo = useMemo(
     () =>
       entityData
         ? {
-            Type: entityData.type,
-            Name: entityData.name,
-            ID: entityData.id,
-            // "First Seen": format(entityData.firstSeen, "yyyy-MM-dd HH:mm:ss"),
-            // "Last Seen": format(entityData.lastSeen, "yyyy-MM-dd HH:mm:ss"),
+            Type: entityData.entityType,
+            // Name: entityData.name,
+            ID: entityData.entityId,
+            "First Seen": format(entityData.firstSeenAt, "yyyy-MM-dd HH:mm:ss"),
+            "Last Seen": format(entityData.lastSeenAt, "yyyy-MM-dd HH:mm:ss"),
           }
         : {},
     [entityData]
@@ -92,9 +99,9 @@ const Page: NextPageWithLayout = () => {
   return (
     <main className="flex-1 h-0 flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
-        <h1 className="text-2xl">{entityData?.name}</h1>
+        <h1 className="text-2xl">{entityData?.entityId}</h1>
         <Badge className="-translate-y-0.5">
-          Entity Type: {entityData?.type}
+          Entity Type: {entityData?.entityType}
         </Badge>
       </div>
       <div className="grid grid-cols-4 flex-1">
@@ -129,8 +136,8 @@ const Page: NextPageWithLayout = () => {
             <PropertyList
               entries={
                 entityData?.features.map((feature) => ({
-                  label: feature.name,
-                  value: feature.value,
+                  label: feature.featureName,
+                  value: feature.data.value,
                 })) ?? []
               }
             />
@@ -158,10 +165,10 @@ const Page: NextPageWithLayout = () => {
               {/* <EventsDashboard entityId={entityId} datasetId={datasetId} /> */}
             </TabsContent>
             <TabsContent value="history" className="relative grow mt-0">
-              <EventsList entityId={entityId} datasetId={datasetId} />
+              <EventsList entityId={entityId} />
             </TabsContent>
             <TabsContent value="links" className="relative grow">
-              <RelatedEntities entityId={entityId} datasetId={datasetId} />
+              <RelatedEntities entityId={entityId} />
             </TabsContent>
           </Tabs>
         </div>

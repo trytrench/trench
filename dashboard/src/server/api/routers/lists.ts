@@ -51,23 +51,19 @@ export const listsRouter = createTRPCRouter({
         format: "JSONEachRow",
       });
 
-      /**
-       *         entity_type,
-        entity_id,
-        groupArray((feature_id, value)) as features_array,
-        min(event_timestamp) as first_seen,
-        max(event_timestamp) as last_seen
-       */
-
       type EntityResult = {
         entity_type: [string];
         entity_id: [string];
         features_array: Array<[string, string]>;
-        first_seen: Date;
-        last_seen: Date;
+        first_seen: string;
+        last_seen: string;
       };
 
       const entities = await result.json<EntityResult[]>();
+
+      console.log("Filters", filters);
+      console.log("Query", query);
+      console.log("Entities", entities);
 
       const featureDefs = await getLatestFeatureDefs();
 
@@ -79,8 +75,8 @@ export const listsRouter = createTRPCRouter({
           return {
             entityType,
             entityId,
-            firstSeen: entity.first_seen,
-            lastSeen: entity.last_seen,
+            firstSeenAt: new Date(entity.first_seen),
+            lastSeenAt: new Date(entity.last_seen),
             features: getAnnotatedFeatures(featureDefs, entity.features_array),
           };
         }),
@@ -301,6 +297,7 @@ function getUniqueEntities(
 type AnnotatedFeature = {
   featureId: string;
   featureType: string;
+  featureName: string;
   data: TypedData[DataType];
 };
 
@@ -322,6 +319,7 @@ function getAnnotatedFeatures(
     annotatedFeatures.push({
       featureId,
       featureType: featureDef.featureType,
+      featureName: featureDef.featureName,
       data: decodeTypedData(featureDef.dataType, value),
     });
   }

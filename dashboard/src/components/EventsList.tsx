@@ -15,6 +15,8 @@ import { FeatureGrid } from "./ui/custom/feature-grid";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
+import { DataType } from "event-processing";
+import { RenderTypedData } from "./RenderTypedData";
 
 interface EventsListProps {
   entityId?: string;
@@ -160,8 +162,6 @@ export default function EventsList({ entityId }: EventsListProps) {
                       <EventCard
                         key={item.event.id}
                         event={item.event}
-                        features={item.event.features ?? []}
-                        rules={item.event.rules}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
                       />
@@ -278,22 +278,9 @@ interface EventCardProps {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isFirst: boolean;
   isLast: boolean;
-  features: {
-    id: string;
-    name: string;
-    value: string;
-    dataType: string;
-  }[];
-  rules: any[];
 }
 
-function EventCard({
-  event,
-  isFirst,
-  isLast,
-  features,
-  rules,
-}: EventCardProps) {
+function EventCard({ event, isFirst, isLast }: EventCardProps) {
   const router = useRouter();
 
   return (
@@ -330,7 +317,7 @@ function EventCard({
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {rules.length > 0 && (
+        {/* {rules.length > 0 && (
           <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
             {rules.map(({ name, color }) => (
               <div key={name} className="flex space-x-1 items-center">
@@ -341,38 +328,20 @@ function EventCard({
               </div>
             ))}
           </div>
-        )}
+        )} */}
 
-        {features.length > 0 ? (
+        {event.features.length > 0 ? (
           <>
             <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
-              {features.map(
-                ({ name, value, dataType, entityName, entityType }, idx) => (
-                  <div key={name}>
-                    <div className="font-semibold">{name}</div>
-                    {dataType === "entity" && value ? (
-                      <EntityChip
-                        entity={{
-                          id: value,
-                          name: entityName,
-                          type: entityType,
-                        }}
-                        href={`/entity/${value}`}
-                      />
-                    ) : (
-                      <div className="truncate">
-                        {value === 0
-                          ? "0"
-                          : value === true
-                          ? "True"
-                          : value === false
-                          ? "False"
-                          : (JSON.stringify(value) as string) || "-"}
-                      </div>
-                    )}
+              {event.features.map((f, idx) => {
+                const { featureId, featureName, featureType, data } = f;
+                return (
+                  <div key={featureId}>
+                    <div className="font-semibold">{featureName}</div>
+                    <RenderTypedData data={data} />
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           </>
         ) : (

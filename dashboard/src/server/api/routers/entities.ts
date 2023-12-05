@@ -268,6 +268,7 @@ export const entitiesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        type: z.string(),
       })
     )
     .query(async ({ ctx, input }) => {
