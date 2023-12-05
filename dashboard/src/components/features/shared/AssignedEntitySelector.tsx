@@ -25,25 +25,13 @@ export function AssignedEntitySelector(props: {
 
   return (
     <div>
-      <div className="flex flex-col gap-2 mb-4">
+      <div className="flex mb-4 items-center gap-8">
         <Label className="text-emphasis-foreground text-md">
           Assigned Entities
         </Label>
-      </div>
-      <div className="flex">
-        {allFeatureDefs?.map((fd) => {
-          const isSelected = entityFeatureIds.includes(fd.id);
-          if (!isSelected) return null;
-          return (
-            <div className="flex items-center gap-1.5" key={fd.id}>
-              <div className="w-4 h-4 bg-gray-300 rounded-full" />
-              <span>{fd.name}</span>
-            </div>
-          );
-        })}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="xs" className="mr-auto gap-1.5">
+            <Button variant="secondary" size="xs" className="gap-2">
               <Plus className="w-4 h-4" />
               Add
             </Button>
@@ -76,6 +64,18 @@ export function AssignedEntitySelector(props: {
             </Command>
           </PopoverContent>
         </Popover>
+      </div>
+      <div className="flex">
+        {allFeatureDefs?.map((fd) => {
+          const isSelected = entityFeatureIds.includes(fd.id);
+          if (!isSelected) return null;
+          return (
+            <div className="flex items-center gap-1.5" key={fd.id}>
+              <div className="w-4 h-4 bg-gray-300 rounded-full" />
+              <span>{fd.name}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

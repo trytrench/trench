@@ -4,6 +4,7 @@
 import {
   DataType,
   FeatureDef,
+  FeatureDefs,
   FeatureType,
   FeatureTypeDefs,
 } from "event-processing";
@@ -23,61 +24,54 @@ import {
 
 // - the monaco editor ig? unsure
 
-type ComputedEntityAppearanceConfig = z.infer<
-  FeatureTypeDefs[FeatureType.EntityAppearance]["configSchema"]
->;
+type Config = FeatureDefs[FeatureType.EntityAppearance]["config"];
 interface EditEntityAppearanceProps {
-  featureDef: Partial<FeatureDef>;
-  onFeatureDefChange?: (featureDef: Partial<FeatureDef>) => void;
+  featureDef: FeatureDefs[FeatureType.EntityAppearance];
+  onFeatureDefChange?: (
+    featureDef: FeatureDefs[FeatureType.EntityAppearance]
+  ) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
 function EditEntityAppearance(props: EditEntityAppearanceProps) {
   const { featureDef, onFeatureDefChange, onValidChange } = props;
-  const deps = featureDef?.config?.depsMap ?? {};
-  const entityType = featureDef?.config?.entityType;
+
+  const { config } = featureDef;
+  const { depsMap, entityType } = config;
 
   const [compileStatus, setCompileStatus] = useState<CompileStatus>();
 
   const prefix = usePrefix({
-    dependencies: deps,
+    dependencies: depsMap,
   });
+
+  function updateConfigAndDeps(val: Partial<Config>) {
+    const newConfig = {
+      ...config,
+      ...val,
+    };
+
+    onFeatureDefChange?.({
+      ...featureDef,
+      config: newConfig,
+      dependsOn: new Set([...Object.values(newConfig.depsMap)]),
+    });
+
+    // check if valid
+    onValidChange?.(
+      compileStatus?.status === "success" && !!newConfig.entityType
+    );
+  }
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
   const handleEntityTypeChange = (val: string) => {
-    onFeatureDefChange?.({
-      ...featureDef,
-      config: {
-        ...featureDef.config,
-        entityType: val,
-      } as ComputedEntityAppearanceConfig,
-    });
+    updateConfigAndDeps({ entityType: val });
   };
-
-  // is everything in this section valid?
-  useEffect(() => {
-    onValidChange?.(compileStatus?.status === "success" && entityType);
-  }, [compileStatus, entityType]);
-
-  // for updating the def
-  useEffect(() => {
-    if (!compileStatus || compileStatus.status !== "success") return;
-    if (featureDef?.config?.tsCode === compileStatus.code) return; // this prevents an infinite rerender loop
-    onFeatureDefChange?.({
-      ...featureDef,
-      config: {
-        ...featureDef.config,
-        tsCode: compileStatus.code!,
-        compiledJs: compileStatus.compiled!,
-        depsMap: deps,
-      } as ComputedEntityAppearanceConfig,
-    });
-  }, [compileStatus, deps, onFeatureDefChange, featureDef]);
 
   return (
     <>
       {/* Feature Type */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label>Entity Type</Label>
         <Select value={entityType} onValueChange={handleEntityTypeChange}>
           <SelectTrigger className="w-[20rem]">
@@ -96,8 +90,10 @@ function EditEntityAppearance(props: EditEntityAppearanceProps) {
       <div className="mt-16" />
 
       <DepsMapEditor
-        featureDef={featureDef}
-        onFeatureDefChange={onFeatureDefChange}
+        depsMap={depsMap}
+        onChange={(val) => {
+          updateConfigAndDeps({ depsMap: val });
+        }}
       />
 
       <div className="mt-16" />
@@ -105,8 +101,18 @@ function EditEntityAppearance(props: EditEntityAppearanceProps) {
       <CodeEditor
         prefix={prefix}
         suffix={"}"}
-        initialCode={featureDef?.config?.tsCode ?? ""}
-        onCompileStatusChange={setCompileStatus}
+        initialCode={featureDef.config?.tsCode ?? ""}
+        onCompileStatusChange={(compileStatus) => {
+          setCompileStatus(compileStatus);
+          if (compileStatus.status === "success") {
+            updateConfigAndDeps({
+              tsCode: compileStatus.code,
+              compiledJs: compileStatus.compiled,
+            });
+          } else {
+            onValidChange?.(false);
+          }
+        }}
       />
     </>
   );
@@ -126,7 +132,7 @@ const DataTypeToTsType: Record<DataType, string> = {
 
 function usePrefix(props: { dependencies: Record<string, string> }) {
   const { dependencies } = props;
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
 
   const depInterface = useMemo(() => {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {
