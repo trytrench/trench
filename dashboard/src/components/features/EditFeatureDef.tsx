@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { DataType, FeatureDef, FeatureType } from "event-processing";
+import {
+  DataType,
+  FeatureDef,
+  FeatureDefs,
+  FeatureType,
+} from "event-processing";
 
 import { EditComputed } from "~/components/features/feature-types/EditComputed";
 import { EventTypes } from "~/components/features/shared/EventTypes";
@@ -31,7 +36,7 @@ const typeDefaults = {
   [FeatureType.Computed]: DataType.String,
   [FeatureType.Count]: DataType.Int64,
   [FeatureType.UniqueCount]: DataType.Boolean,
-  [FeatureType.EntityAppearance]: DataType.String,
+  [FeatureType.EntityAppearance]: DataType.Entity,
 } as Record<FeatureType, DataType>;
 
 const featureTypeToComponent = {
@@ -89,13 +94,8 @@ function EditFeatureDef(props: EditFeatureDefProps) {
     );
   }, [featureDef, typeDetailsValid]);
 
-  useEffect(() => {
-    console.log(featureDef);
-  }, [featureDef]);
-
   const save = () => {
     if (!featureDef || !everythingValid) return;
-
     // TODO: validate that featureDef is a complete FeatureDef
     onFeatureDefSave?.(featureDef as FeatureDef);
   };
@@ -213,22 +213,21 @@ function EditFeatureDef(props: EditFeatureDefProps) {
       <EventTypes
         eventTypes={eventTypes}
         onChange={(v) => {
-          console.log(v);
           updateFeatureDef({ eventTypes: v });
         }}
       />
 
       <Separator className="my-12" />
 
-      {featureType && (
+      {featureDef.featureType && (
         <>
-          {featureType === FeatureType.Computed ? (
+          {featureDef.featureType === FeatureType.Computed ? (
             <EditComputed
-              featureDef={featureDef}
+              featureDef={featureDef as FeatureDefs[FeatureType.Computed]}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureType === FeatureType.EntityAppearance ? (
+          ) : featureDef.featureType === FeatureType.EntityAppearance ? (
             <EditEntityAppearance
               featureDef={featureDef}
               onFeatureDefChange={setFeatureDef}

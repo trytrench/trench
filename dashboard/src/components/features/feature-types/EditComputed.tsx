@@ -4,6 +4,7 @@
 import {
   DataType,
   FeatureDef,
+  FeatureDefs,
   FeatureType,
   FeatureTypeDefs,
 } from "event-processing";
@@ -12,51 +13,55 @@ import { z } from "zod";
 import { api } from "~/utils/api";
 import { DepsMapEditor } from "../shared/DepsMapEditor";
 import { CodeEditor, CompileStatus } from "../shared/CodeEditor";
+import { AssignedEntitySelector } from "../shared/AssignedEntitySelector";
 
 // - the monaco editor ig? unsure
 
-type ComputedFeatureConfig = z.infer<
-  FeatureTypeDefs[FeatureType.Computed]["configSchema"]
->;
 interface EditComputedProps {
-  featureDef: Partial<FeatureDef>;
+  featureDef: Partial<FeatureDefs[FeatureType.Computed]>;
   onFeatureDefChange?: (featureDef: Partial<FeatureDef>) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
 function EditComputed(props: EditComputedProps) {
   const { featureDef, onFeatureDefChange, onValidChange } = props;
-  const deps = featureDef?.config?.depsMap ?? {};
+
+  const config = featureDef?.config;
+  const depsMap = config?.depsMap ?? {};
+  const assignedEntityFeatureIds = config?.assignedEntityFeatureIds ?? [];
 
   const [compileStatus, setCompileStatus] = useState<CompileStatus>();
 
   const prefix = usePrefix({
-    dataType: featureDef?.dataType!,
-    dependencies: deps,
+    dataType: featureDef.dataType!,
+    dependencies: depsMap,
   });
 
   // is everything in this section valid?
   useEffect(() => {
     onValidChange?.(compileStatus?.status === "success");
-  }, [compileStatus]);
-
-  // for updating the def
-  useEffect(() => {
-    if (!compileStatus || compileStatus.status !== "success") return;
-    if (featureDef?.config?.tsCode === compileStatus.code) return; // this prevents an infinite rerender loop
-    onFeatureDefChange?.({
-      ...featureDef,
-      config: {
-        tsCode: compileStatus.code!,
-        compiledJs: compileStatus.compiled!,
-        depsMap: deps,
-        assignedEntityFeatureIds: [],
-      } as ComputedFeatureConfig,
-    });
-  }, [compileStatus, deps, onFeatureDefChange, featureDef]);
+  }, [compileStatus, onValidChange]);
 
   return (
     <>
+      <AssignedEntitySelector
+        entityFeatureIds={assignedEntityFeatureIds}
+        onEntityFeatureIdsChange={(assignedEntityFeatureIds) => {
+          const depsMapFeatureIds = Object.values(depsMap);
+          onFeatureDefChange?.({
+            ...featureDef,
+            config: {
+              ...config,
+              assignedEntityFeatureIds,
+            },
+            dependsOn: new Set([
+              ...depsMapFeatureIds,
+              ...assignedEntityFeatureIds,
+            ]),
+          });
+        }}
+      />
+      <div className="mt-16"></div>
       <DepsMapEditor
         featureDef={featureDef}
         onFeatureDefChange={onFeatureDefChange}
@@ -92,7 +97,7 @@ function usePrefix(props: {
   dependencies: Record<string, string>;
 }) {
   const { dataType, dependencies } = props;
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
 
   const depInterface = useMemo(() => {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {

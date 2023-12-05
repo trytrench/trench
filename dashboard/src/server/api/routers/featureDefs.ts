@@ -10,11 +10,21 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const featureDefsRouter = createTRPCRouter({
-  allInfo: protectedProcedure.query(async ({ ctx, input }) => {
-    const featureDefs = await ctx.prisma.featureDef.findMany({});
+  allInfo: protectedProcedure
+    .input(
+      z.object({
+        featureType: z.nativeEnum(FeatureType).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const featureDefs = await ctx.prisma.featureDef.findMany({
+        where: {
+          type: input.featureType,
+        },
+      });
 
-    return featureDefs;
-  }),
+      return featureDefs;
+    }),
 
   getLatest: protectedProcedure.query(async ({ ctx, input }) => {
     const snapshots = await ctx.prisma.featureDefSnapshot.findMany({

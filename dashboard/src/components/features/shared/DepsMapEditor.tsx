@@ -27,9 +27,7 @@ function DepsMapEditor(props: DepsMapEditorProps) {
   const { featureDef, onFeatureDefChange } = props;
   const deps: Record<string, string> = featureDef?.config?.depsMap ?? {};
 
-  console.log(deps);
-
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery();
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
 
   const updateDepsOnly = (deps: Record<string, string>) => {
     const asSet = new Set(Object.values(deps));

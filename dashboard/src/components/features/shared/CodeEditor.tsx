@@ -28,8 +28,6 @@ function CodeEditor(props: CodeEditorProps) {
   const { prefix, suffix } = props;
   const { onCompileStatusChange } = props;
 
-  console.log("REREnder");
-
   // note:
   // - The monaco editor is not used as a controlled component
   const [code, setCode] = useState("");
