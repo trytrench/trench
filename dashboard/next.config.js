@@ -22,32 +22,13 @@ const config = {
   webpack: (
     /** @type {import('webpack').Configuration} */
     config,
-    { isServer },
+    { isServer }
   ) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // ignore re2 import
-      re2: false,
-    };
-    config.resolve.fallback = {
-      // the require for this module is wrapped in a try/catch, so it can fail without causing issues
-      "sqrl-test-utils": false,
-    };
-
     assert(config.module?.rules);
-    // config.module.rules.push({
-    //   test: /\.txt$/,
-    //   type: "asset/source",
-    // });
-
-    // Disable code optimization, SQRL uses function names
-    assert(config.optimization);
-    config.optimization.minimize = false;
 
     const oneOfRule = config.module.rules.find(
       /** @returns {rule is import('webpack').RuleSetRule} */
-      (rule) => typeof rule === "object" && !!rule.oneOf,
+      (rule) => typeof rule === "object" && !!rule.oneOf
     );
     assert(oneOfRule?.oneOf);
 
@@ -67,7 +48,7 @@ const config = {
         languages: ["typescript"],
         filename: "static/[name].worker.js",
         publicPath: "/_next",
-      }),
+      })
     );
 
     if (!isServer) {

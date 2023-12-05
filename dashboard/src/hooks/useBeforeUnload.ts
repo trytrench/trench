@@ -1,19 +1,37 @@
-import { useRouter } from "next/router";
-import { useEffect } from "react";
-import { useBeforeUnload } from "react-use";
+import { useCallback, useEffect } from "react";
 
-export const useConfirmPageLeave = (enabled: boolean, message: string) => {
-  const router = useRouter();
-  useBeforeUnload(enabled, message);
-  useEffect(() => {
-    const handler = () => {
-      if (enabled && !window.confirm(message)) {
-        throw "Route change aborted";
+const useBeforeUnload = (
+  enabled: boolean | (() => boolean) = true,
+  message?: string
+) => {
+  const handler = useCallback(
+    (event: BeforeUnloadEvent) => {
+      const finalEnabled = typeof enabled === "function" ? enabled() : true;
+
+      if (!finalEnabled) {
+        return;
       }
-    };
-    router.events.on("routeChangeStart", handler);
-    return () => {
-      router.events.off("routeChangeStart", handler);
-    };
-  }, [enabled, router.events, message]);
+
+      event.preventDefault();
+
+      if (message) {
+        event.returnValue = message;
+      }
+
+      return message;
+    },
+    [enabled, message]
+  );
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    window.addEventListener("beforeunload", handler);
+
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [enabled, handler]);
 };
+
+export default useBeforeUnload;
