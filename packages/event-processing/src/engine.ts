@@ -22,10 +22,11 @@ import { assert } from "./utils";
  * feature's value.
  */
 
-type ResolverOutput = ReturnType<Resolver<DataType>>;
+type ResolverPromise = ReturnType<Resolver<DataType>>;
+type ResolverOutput = Awaited<ResolverPromise>;
 
 type ExecutionState = {
-  featurePromises: Record<string, ResolverOutput>;
+  featurePromises: Record<string, ResolverPromise>;
   stateUpdaters: Array<StateUpdater>;
   event: TrenchEvent;
 };
@@ -40,7 +41,7 @@ type FeatureInstance = {
 };
 
 export type EngineResult = {
-  featureResult: Awaited<ResolverOutput>;
+  featureResult: Awaited<ResolverPromise>;
   featureDef: FeatureDef;
   event: TrenchEvent;
   engineId: string;
@@ -97,7 +98,7 @@ export class ExecutionEngine {
 
   public async evaluateFeature(
     featureId: string
-  ): ReturnType<Resolver<DataType>> {
+  ): Promise<ResolverOutput | null> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
     const { event, featurePromises } = this.state;
@@ -114,6 +115,11 @@ export class ExecutionEngine {
         const dependsOnValues: Record<string, TypedData[DataType]> = {};
         for (const depFeatureId of featureDef.dependsOn) {
           const resolverResult = await this.evaluateFeature(depFeatureId);
+          if (resolverResult === null) {
+            throw new Error(
+              `Feature '${featureDef.featureId}' depends on '${depFeatureId}', but '${depFeatureId}' errored and returned null`
+            );
+          }
           dependsOnValues[depFeatureId] = resolverResult.data;
         }
 
@@ -137,8 +143,11 @@ export class ExecutionEngine {
 
     const featurePromise = featurePromises[featureId];
     assert(featurePromise, "No feature promise... this should never happen");
-
-    return await featurePromise;
+    try {
+      return await featurePromise;
+    } catch (e) {
+      return null;
+    }
   }
 
   public async executeStateUpdates() {
@@ -162,6 +171,9 @@ export class ExecutionEngine {
     for (const instance of allInstances) {
       const { featureDef } = instance;
       const featureResult = await this.evaluateFeature(featureDef.featureId);
+      if (featureResult === null) {
+        continue;
+      }
       engineResults[featureDef.featureId] = {
         featureResult: featureResult,
         featureDef: instance.featureDef,
