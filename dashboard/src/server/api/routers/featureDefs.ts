@@ -14,12 +14,14 @@ export const featureDefsRouter = createTRPCRouter({
     .input(
       z.object({
         featureType: z.nativeEnum(FeatureType).optional(),
+        dataType: z.nativeEnum(DataType).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const featureDefs = await ctx.prisma.featureDef.findMany({
         where: {
           type: input.featureType,
+          dataType: input.dataType,
         },
       });
 

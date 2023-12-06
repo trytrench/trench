@@ -10,7 +10,10 @@ import { FeatureType } from "./_enum";
 export const countFeatureDef = createFeatureTypeDef({
   featureType: FeatureType.Count,
   configSchema: z.object({
-    timeWindowMs: z.number(),
+    timeWindow: z.object({
+      number: z.number(),
+      unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
+    }),
     countByFeatureIds: z.array(z.string()),
     conditionFeatureId: z.string().optional(),
   }),
@@ -28,8 +31,18 @@ export const countFeatureDef = createFeatureTypeDef({
        * 2. Then, we need to return a callback that increments the count of the current time bucket.
        */
 
-      const { timeWindowMs, countByFeatureIds, conditionFeatureId } =
+      const { timeWindow, countByFeatureIds, conditionFeatureId } =
         featureDef.config;
+
+      const intervals = {
+        minutes: 60000,
+        hours: 3600000,
+        days: 86400000,
+        weeks: 604800000,
+        months: 2628000000,
+      };
+
+      const timeWindowMs = timeWindow.number * intervals[timeWindow.unit];
 
       let shouldIncrementCount = true;
       if (conditionFeatureId) {

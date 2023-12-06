@@ -4,30 +4,27 @@
 import { DataType, FeatureDefs, FeatureType } from "event-processing";
 import { useMemo } from "react";
 import { api } from "~/utils/api";
-import { DepsMapEditor } from "../shared/DepsMapEditor";
-import { CodeEditor } from "../shared/CodeEditor";
 import { FeatureMultiSelect } from "../shared/FeatureMultiSelect";
+import { TimeIntervalSelector } from "../shared/TimeIntervalSelector";
+import { Select } from "~/components/ui/select";
+import { FeatureSelect } from "../shared/FeatureSelect";
 
 // - the monaco editor ig? unsure
 
-type Config = FeatureDefs[FeatureType.Computed]["config"];
+type Config = FeatureDefs[FeatureType.Count]["config"];
 
-interface EditComputedProps {
-  featureDef: FeatureDefs[FeatureType.Computed];
-  onFeatureDefChange?: (featureDef: FeatureDefs[FeatureType.Computed]) => void;
+interface EditCountProps {
+  isEditingExistingFeature: boolean;
+  featureDef: FeatureDefs[FeatureType.Count];
+  onFeatureDefChange?: (featureDef: FeatureDefs[FeatureType.Count]) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
-function EditComputed(props: EditComputedProps) {
+function EditCount(props: EditCountProps) {
   const { featureDef, onFeatureDefChange, onValidChange } = props;
 
   const { config } = featureDef;
-  const { depsMap, assignedEntityFeatureIds } = config;
-
-  const prefix = usePrefix({
-    dataType: featureDef.dataType,
-    dependencies: depsMap,
-  });
+  const { timeWindow, countByFeatureIds, conditionFeatureId } = config;
 
   function updateConfigAndDeps(val: Partial<Config>) {
     const newConfig = {
@@ -35,60 +32,58 @@ function EditComputed(props: EditComputedProps) {
       ...val,
     };
 
+    const newDeps = new Set<string>([...newConfig.countByFeatureIds]);
+    if (newConfig.conditionFeatureId) {
+      newDeps.add(newConfig.conditionFeatureId);
+    }
+
     onFeatureDefChange?.({
       ...featureDef,
       config: newConfig,
-      dependsOn: new Set([
-        ...Object.values(newConfig.depsMap),
-        ...newConfig.assignedEntityFeatureIds,
-      ]),
+      dependsOn: newDeps,
     });
+
+    onValidChange?.(newConfig.countByFeatureIds.length > 0);
   }
 
   return (
-    <>
-      {/* Assigned Entities */}
+    <div className="pb-40">
       <FeatureMultiSelect
-        featureIds={assignedEntityFeatureIds}
+        featureIds={countByFeatureIds}
         onFeatureIdsChange={(val) => {
-          updateConfigAndDeps({ assignedEntityFeatureIds: val });
+          updateConfigAndDeps({ countByFeatureIds: val });
         }}
-        filter={{ featureType: FeatureType.EntityAppearance }}
-        label="Assigned Entities"
+        label="Group By Features"
+      />
+      {/* todo: put an info question mark thingy */}
+
+      <div className="mt-16"></div>
+
+      <TimeIntervalSelector
+        value={timeWindow}
+        onChange={(val) => {
+          updateConfigAndDeps({ timeWindow: val });
+        }}
+        label="Time Interval"
       />
 
       <div className="mt-16"></div>
 
-      <DepsMapEditor
-        depsMap={depsMap}
+      <FeatureSelect
+        value={conditionFeatureId}
         onChange={(val) => {
-          updateConfigAndDeps({ depsMap: val });
+          updateConfigAndDeps({ conditionFeatureId: val });
         }}
-      />
-
-      <div className="mt-16" />
-
-      <CodeEditor
-        prefix={prefix}
-        suffix={"}"}
-        initialCode={featureDef.config?.tsCode ?? ""}
-        onCompileStatusChange={(compileStatus) => {
-          if (compileStatus.status === "success") {
-            onValidChange?.(true);
-            updateConfigAndDeps({
-              tsCode: compileStatus.code,
-              compiledJs: compileStatus.compiled,
-            });
-          } else {
-            onValidChange?.(false);
-          }
+        filter={{
+          dataType: DataType.Boolean,
         }}
+        label="Condition Feature"
       />
-    </>
+    </div>
   );
 }
 
-export { EditComputed };
+export { EditCount };
 
 //
 

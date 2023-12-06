@@ -31,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
+import { EditCount } from "./feature-types/EditCount";
 
 const TYPE_DEFAULTS = {
   [FeatureType.Computed]: {
@@ -44,14 +45,17 @@ const TYPE_DEFAULTS = {
   [FeatureType.Count]: {
     dataType: DataType.Int64,
     config: {
-      eventTypes: new Set(),
-    },
+      timeWindow: {
+        number: 1,
+        unit: "hours",
+      },
+      countByFeatureIds: [],
+      conditionFeatureId: "",
+    } as FeatureDefs[FeatureType.Count]["config"],
   },
   [FeatureType.UniqueCount]: {
     dataType: DataType.Int64,
-    config: {
-      eventTypes: new Set(),
-    },
+    config: {},
   },
   [FeatureType.EntityAppearance]: {
     dataType: DataType.Boolean,
@@ -68,13 +72,6 @@ const TYPE_DEFAULTS = {
     config: any;
   }
 >;
-
-const FEATURE_TYPE_TO_COMPONENT: Record<FeatureType, React.FC> = {
-  Computed: EditComputed,
-  Entity: null,
-  Count: null,
-  Decision: null,
-};
 
 //
 
@@ -259,12 +256,19 @@ function EditFeatureDef(props: EditFeatureDefProps) {
             />
           ) : featureDef.featureType === FeatureType.EntityAppearance ? (
             <EditEntityAppearance
-              featureDef={featureDef}
+              featureDef={
+                featureDef as FeatureDefs[FeatureType.EntityAppearance]
+              }
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
           ) : (
-            <div>TODO</div>
+            <EditCount
+              featureDef={featureDef as FeatureDefs[FeatureType.Count]}
+              isEditingExistingFeature={isEditingExistingFeature}
+              onFeatureDefChange={setFeatureDef}
+              onValidChange={setTypeDetailsValid}
+            />
           )}
         </>
       )}

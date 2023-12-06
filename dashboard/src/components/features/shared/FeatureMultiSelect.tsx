@@ -13,25 +13,42 @@ import { api } from "../../../utils/api";
 import { FeatureType } from "event-processing";
 import { Label } from "../../ui/label";
 
-export function AssignedEntitySelector(props: {
-  entityFeatureIds: string[];
-  onEntityFeatureIdsChange?: (entityFeatureIds: string[]) => void;
-}) {
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({
-    featureType: FeatureType.EntityAppearance,
-  });
+// TODO: replace with inferred type
+type FeatureQueryInput = {
+  featureType: FeatureType;
+};
 
-  const { entityFeatureIds, onEntityFeatureIdsChange } = props;
+export function FeatureMultiSelect(props: {
+  selfFeatureId?: string; // so that it doesn't show up in options
+  featureIds: string[];
+  onFeatureIdsChange?: (entityFeatureIds: string[]) => void;
+  filter?: FeatureQueryInput;
+  label: string;
+  disabled?: boolean;
+}) {
+  const { featureIds, onFeatureIdsChange, filter, label } = props;
+  const { selfFeatureId, disabled } = props;
+
+  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
+    filter ?? {}
+  );
+
+  const featureOpts = allFeatureDefs?.filter(
+    (v) => !featureIds.includes(v.id) && v.id !== selfFeatureId
+  );
 
   return (
     <div>
       <div className="flex mb-4 items-center gap-8">
-        <Label className="text-emphasis-foreground text-md">
-          Assigned Entities
-        </Label>
+        <Label className="text-emphasis-foreground text-md">{label}</Label>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="secondary" size="xs" className="gap-2">
+            <Button
+              variant="secondary"
+              size="xs"
+              className="gap-2"
+              disabled={disabled}
+            >
               <Plus className="w-4 h-4" />
               Add
             </Button>
@@ -42,23 +59,18 @@ export function AssignedEntitySelector(props: {
               <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
                 <CommandGroup>
-                  {allFeatureDefs
-                    ?.filter((v) => !entityFeatureIds.includes(v.id))
-                    .map((fd) => (
-                      <CommandItem
-                        key={fd.id}
-                        value={fd.id}
-                        onSelect={() => {
-                          onEntityFeatureIdsChange?.([
-                            ...entityFeatureIds,
-                            fd.id,
-                          ]);
-                        }}
-                        className="relative pl-8"
-                      >
-                        {fd.name}
-                      </CommandItem>
-                    ))}
+                  {featureOpts?.map((fd) => (
+                    <CommandItem
+                      key={fd.id}
+                      value={fd.id}
+                      onSelect={() => {
+                        onFeatureIdsChange?.([...featureIds, fd.id]);
+                      }}
+                      className="relative pl-8"
+                    >
+                      {fd.name}
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               </CommandList>
             </Command>
@@ -67,7 +79,7 @@ export function AssignedEntitySelector(props: {
       </div>
       <div className="flex">
         {allFeatureDefs?.map((fd) => {
-          const isSelected = entityFeatureIds.includes(fd.id);
+          const isSelected = featureIds.includes(fd.id);
           if (!isSelected) return null;
           return (
             <div className="flex items-center gap-1.5" key={fd.id}>
