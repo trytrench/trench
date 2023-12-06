@@ -102,7 +102,7 @@ export async function fetchUserData(username: string) {
   $("li.mb-3").each((index, element) => {
     pinnedRepos.push({
       title: $(element).find("a.text-bold").text().trim(),
-      url: $(element).find("a.text-bold").attr("href")?.trim(),
+      url: $(element).find("a.text-bold").attr("href")?.trim() ?? "",
       description: $(element).find("p.pinned-item-desc").text().trim(),
       programmingLanguage: $(element)
         .find('span[itemprop="programmingLanguage"]')
@@ -145,9 +145,9 @@ export async function fetchUserData(username: string) {
 
   sponsoringDiv.find(".d-flex.mb-1.mr-1").each((i, el) => {
     const user = {
-      url: $(el).find("a").attr("href"),
-      avatar: $(el).find("img").attr("src"),
-      username: $(el).find("img").attr("alt")?.replace("@", ""),
+      url: $(el).find("a").attr("href") ?? "",
+      avatar: $(el).find("img").attr("src") ?? "",
+      username: $(el).find("img").attr("alt")?.replace("@", "") ?? "",
     };
     if (sponsoringDiv.text().includes("Sponsors")) sponsors.push(user);
     else if (sponsoringDiv.text().includes("Sponsoring")) sponsorees.push(user);
