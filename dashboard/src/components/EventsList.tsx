@@ -15,14 +15,14 @@ import { FeatureGrid } from "./ui/custom/feature-grid";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { DataType } from "event-processing";
+import { DataType, Entity } from "event-processing";
 import { RenderTypedData } from "./RenderTypedData";
 
 interface EventsListProps {
-  entityId?: string;
+  entity: Entity;
 }
 
-export default function EventsList({ entityId }: EventsListProps) {
+export default function EventsList({ entity }: EventsListProps) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
@@ -36,7 +36,10 @@ export default function EventsList({ entityId }: EventsListProps) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: { ...eventFilters, entityId },
+      eventFilters: {
+        ...eventFilters,
+        entities: entity ? [entity] : undefined,
+      },
       limit,
     },
     {

@@ -113,9 +113,10 @@ export function buildEntityFilterQuery(props: {
   if (filters.features && filters.features.length > 0) {
     const featureConditions = filters.features
       .map((feature) => buildWhereClauseForFeatureFilter(feature))
-      .filter((condition) => condition !== "");
+      .filter((condition) => condition !== "")
+      .join(" OR ");
     if (featureConditions) {
-      whereClauses.push(...featureConditions);
+      whereClauses.push(featureConditions);
     }
   }
 
@@ -131,9 +132,9 @@ export function buildEntityFilterQuery(props: {
     );
   }
 
-  const preAggregationWhereClause =
+  const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-  const postAggregationHavingClause =
+  const havingClause =
     havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : "";
 
   const finalQuery = `
@@ -152,11 +153,11 @@ export function buildEntityFilterQuery(props: {
             event_timestamp,
             row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
         FROM features
-        ${preAggregationWhereClause}
+        ${whereClause}
     ) AS latest_features
     WHERE latest_features.rn = 1
     GROUP BY entity_type, entity_id
-    ${postAggregationHavingClause}
+    ${havingClause}
     ORDER BY last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
   `;
@@ -186,11 +187,11 @@ export const buildEventFilterQuery = (options: {
     whereClauses.push(`event_type = '${filter.eventType}'`);
   }
 
-  if (filter.entityIds && filter.entityIds.length > 0) {
-    const entityConditions = filter.entityIds
+  if (filter.entities && filter.entities.length > 0) {
+    const entityConditions = filter.entities
       .map(
-        (id) =>
-          `arrayExists((type, id) -> type = 'Card' AND id = '${id}', arrayZip(entity_type, entity_id))`
+        (ent) =>
+          `arrayExists((type, id) -> type = '${ent.type}' AND id = '${ent.id}', arrayZip(entity_type, entity_id))`
       )
       .join(" OR ");
     whereClauses.push(`(${entityConditions})`);

@@ -103,7 +103,7 @@ const Page: NextPageWithLayout = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   return (
-    <main className="flex-1 h-0 flex flex-col">
+    <main className="h-full flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
         <h1 className="text-2xl">{entityData?.entityId}</h1>
         <Badge className="-translate-y-0.5">
@@ -151,9 +151,9 @@ const Page: NextPageWithLayout = () => {
         </div>
         <div className="flex flex-col col-span-3 p-4 py-2 overflow-hidden h-full">
           <Tabs
-            defaultValue="explorer"
+            defaultValue="history"
             className="flex flex-col grow"
-            value={tab ?? "explorer"}
+            value={tab ?? "history"}
             onValueChange={setTab}
           >
             <TabsList className="w-full">
@@ -171,7 +171,12 @@ const Page: NextPageWithLayout = () => {
               <EventsDashboard entityId={entityId} datasetId={datasetId} />
             </TabsContent> */}
             <TabsContent value="history" className="relative grow mt-0">
-              <EventsList entityId={entityId} />
+              <EventsList
+                entity={{
+                  id: entityId,
+                  type: entityType,
+                }}
+              />
             </TabsContent>
             <TabsContent value="links" className="relative grow">
               <RelatedEntities entityId={entityId} entityType={entityType} />

@@ -80,7 +80,14 @@ export const eventFiltersZod = z.object({
     .optional(),
   eventType: z.string().optional(),
   features: z.array(featureFiltersZod).optional(),
-  entityIds: z.array(z.string()).optional(),
+  entities: z
+    .array(
+      z.object({
+        type: z.string(),
+        id: z.string(),
+      })
+    )
+    .optional(),
 
   // old
   eventLabels: z.array(z.string()).optional(),
