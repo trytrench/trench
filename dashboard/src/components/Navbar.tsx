@@ -60,7 +60,7 @@ export const Navbar = () => {
   const activeTab = router.pathname.split("/")[1];
 
   return (
-    <nav className="flex mt-2 px-4 items-center justify-start gap-4 border-b py-2">
+    <nav className="flex mt-2 px-4 items-center justify-start gap-4 border-b pb-2">
       {!isDesktop && (
         // missing onclick
         <button className="-m-3 p-3" ref={btnRef}>
