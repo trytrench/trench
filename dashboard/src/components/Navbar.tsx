@@ -43,8 +43,6 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Code", path: "code" },
-  { name: "Explore", path: "explore" },
   { name: "Settings", path: "settings" },
 ];
 
