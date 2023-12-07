@@ -216,10 +216,13 @@ export const buildEventFilterQuery = (options: {
 
   const finalQuery = `
     WITH entity_appearances AS (
-        SELECT event_id, entity_type, entity_id
-        FROM features
-        WHERE notEmpty(entity_id)
-        GROUP BY event_id, entity_type, entity_id
+      SELECT
+        event_id,
+        entity_type as entity_type,
+        entity_id as entity_id
+      FROM features
+      WHERE notEmpty(entity_id)
+      AND feature_type = 'EntityAppearance'
     ), 
     desired_event_ids AS (
         SELECT DISTINCT event_id

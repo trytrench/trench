@@ -61,10 +61,6 @@ export const listsRouter = createTRPCRouter({
 
       const entities = await result.json<EntityResult[]>();
 
-      console.log("Filters", filters);
-      console.log("Query", query);
-      console.log("Entities", entities);
-
       const featureDefs = await getLatestFeatureDefs();
 
       return {
