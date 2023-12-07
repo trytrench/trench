@@ -69,7 +69,7 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const entityId = decodeURIComponent(router.query.entityId as string);
-  const entityType = router.query.entityType as string;
+  const entityType = decodeURIComponent(router.query.entityType as string);
 
   const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
     {

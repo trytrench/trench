@@ -58,8 +58,13 @@ export const linksRouter = createTRPCRouter({
         WHERE
             fdc.entity_type_1 = '${input.entityType}'
             AND fdc.entity_id_1 = '${input.entityId}'
+            AND fdc2.entity_type_2 = entity_type
+            ${
+              input.leftSideType
+                ? `AND fdc2.entity_type_1 = '${input.leftSideType}'`
+                : ""
+            }
       `;
-      console.log(query);
       const result = await db.query({
         query,
       });

@@ -120,6 +120,10 @@ export function buildEntityFilterQuery(props: {
     }
   }
 
+  if (filters.eventId) {
+    whereClauses.push(`event_id = '${filters.eventId}'`);
+  }
+
   if (filters.firstSeen) {
     havingClauses.push(
       ...getWhereClausesForDateRange(filters.firstSeen, "first_seen")
@@ -244,8 +248,6 @@ export const buildEventFilterQuery = (options: {
     LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
     ORDER BY event_id DESC;
   `;
-
-  console.log(finalQuery.replace("\n", " "));
 
   return finalQuery;
 };

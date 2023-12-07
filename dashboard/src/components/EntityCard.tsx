@@ -10,16 +10,19 @@ import { RenderTypedData } from "./RenderTypedData";
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
-  href: string;
 }
 
-export const EntityCard = ({ entity, relation, href }: Props) => {
+export const EntityCard = ({ entity, relation }: Props) => {
   const router = useRouter();
 
   return (
     <div className="border rounded-lg shadow-sm p-8 bg-card">
       <div className="">
-        <Link href={href}>
+        <Link
+          href={`/entity/${encodeURIComponent(
+            entity.entityType
+          )}/${encodeURIComponent(entity.entityId)}`}
+        >
           <div className="flex">
             <h1 className="text-lg text-emphasis-foreground">
               {entity.entityType}: {entity.entityId}

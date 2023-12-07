@@ -28,7 +28,9 @@ export const EntityChip = ({ entity }: EntityChip) => {
           true,
       })}
       key={entity.id}
-      href={`/entity/${entity.type}/${encodeURIComponent(entity.id)}`}
+      href={`/entity/${encodeURIComponent(entity.type)}/${encodeURIComponent(
+        entity.id
+      )}`}
       onClick={(e) => {
         e.stopPropagation();
       }}

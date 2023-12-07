@@ -104,6 +104,8 @@ export const entityFiltersZod = z.object({
   entityId: z.string().optional(),
   features: z.array(featureFiltersZod).optional(),
 
+  eventId: z.string().optional(),
+
   // old
   entityLabels: z.array(z.string()).optional(),
   entityFeatures: z.array(jsonFilterZod).optional(),
