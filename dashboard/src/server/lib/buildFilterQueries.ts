@@ -222,6 +222,7 @@ export const buildEventFilterQuery = (options: {
         FROM features
         JOIN events ON features.event_id = events.id
         ${whereClause}
+        LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
     ), 
     event_features AS (
         SELECT
@@ -241,9 +242,10 @@ export const buildEventFilterQuery = (options: {
     LEFT JOIN entity_appearances ea ON desired_event_ids.event_id = ea.event_id
     LEFT JOIN events e ON desired_event_ids.event_id = e.id
     LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
-    ORDER BY event_id DESC
-    LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
+    ORDER BY event_id DESC;
   `;
+
+  console.log(finalQuery.replace("\n", " "));
 
   return finalQuery;
 };

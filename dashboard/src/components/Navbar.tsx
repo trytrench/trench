@@ -138,7 +138,7 @@ export const Navbar = () => {
               <NavItem href="/settings">Settings</NavItem>
             </VStack>
           </DrawerBody>
-        </DrawerContent>
+        </DrawerContent>p
       </Drawer> */}
     </nav>
   );
