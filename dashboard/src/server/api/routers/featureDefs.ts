@@ -95,6 +95,14 @@ export const featureDefsRouter = createTRPCRouter({
       const featureTypeZod = FEATURE_TYPE_DEFS[input.featureType].configSchema;
       featureTypeZod.parse(input.config);
 
+      const allowedDataTypes: DataType[] =
+        FEATURE_TYPE_DEFS[input.featureType].allowedDataTypes;
+      if (!allowedDataTypes.includes(input.dataType)) {
+        throw new Error(
+          `Feature type ${input.featureType} does not support data type ${input.dataType}`
+        );
+      }
+
       const featureDef = await ctx.prisma.featureDef.create({
         data: {
           type: input.featureType,
