@@ -2,9 +2,14 @@
   "name": "event-processing",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "browser": {
+    "./src/feature-type-defs/services/redis.js": "./src/feature-type-defs/services/redis.browser.js",
+    "./src/feature-type-defs/services/redis.ts": "./src/feature-type-defs/services/redis.browser.ts"
+  },
   "dependencies": {
     "@clickhouse/client": "^0.2.2",
     "date-fns": "^2.30.0",
+    "ioredis": "^5.3.2",
     "nanoid": "^5.0.3",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",

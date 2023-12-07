@@ -3,7 +3,6 @@ import { DataType, Entity, encodeTypedData } from "../../dataTypes";
 import { assert } from "../../utils";
 import { StateUpdater, createFeatureTypeDef } from "../featureTypeDef";
 import { getPastNCountBucketHashes } from "../lib/counts";
-import { MockRedisService } from "../services/redis";
 import { getRedisService } from "./../services/redis";
 import { FeatureType } from "./_enum";
 
