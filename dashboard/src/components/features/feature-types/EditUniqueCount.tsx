@@ -6,21 +6,22 @@ import { useMemo } from "react";
 import { api } from "~/utils/api";
 import { FeatureMultiSelect } from "../shared/FeatureMultiSelect";
 import { TimeIntervalSelector } from "../shared/TimeIntervalSelector";
-import { Select } from "~/components/ui/select";
 import { FeatureSelect } from "../shared/FeatureSelect";
 
 // - the monaco editor ig? unsure
 
-type Config = FeatureDefs[FeatureType.Count]["config"];
+type Config = FeatureDefs[FeatureType.UniqueCount]["config"];
 
-interface EditCountProps {
+interface EditUniqueCountProps {
   isEditingExistingFeature: boolean;
-  featureDef: FeatureDefs[FeatureType.Count];
-  onFeatureDefChange?: (featureDef: FeatureDefs[FeatureType.Count]) => void;
+  featureDef: FeatureDefs[FeatureType.UniqueCount];
+  onFeatureDefChange?: (
+    featureDef: FeatureDefs[FeatureType.UniqueCount]
+  ) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
-function EditCount(props: EditCountProps) {
+function EditUniqueCount(props: EditUniqueCountProps) {
   const {
     featureDef,
     onFeatureDefChange,
@@ -29,7 +30,12 @@ function EditCount(props: EditCountProps) {
   } = props;
 
   const { config } = featureDef;
-  const { timeWindow, countByFeatureIds, conditionFeatureId } = config;
+  const {
+    timeWindow,
+    countByFeatureIds,
+    countUniqueFeatureIds,
+    conditionFeatureId,
+  } = config;
 
   function updateConfigAndDeps(val: Partial<Config>) {
     const newConfig = {
@@ -48,7 +54,10 @@ function EditCount(props: EditCountProps) {
       dependsOn: newDeps,
     });
 
-    onValidChange?.(newConfig.countByFeatureIds.length > 0);
+    onValidChange?.(
+      newConfig.countUniqueFeatureIds.length > 0 &&
+        newConfig.countByFeatureIds.length > 0
+    );
   }
 
   return (
@@ -62,6 +71,17 @@ function EditCount(props: EditCountProps) {
         disabled={isEditingExistingFeature}
       />
       {/* todo: put an info question mark thingy */}
+
+      <div className="mt-16"></div>
+
+      <FeatureMultiSelect
+        featureIds={countUniqueFeatureIds}
+        onFeatureIdsChange={(val) => {
+          updateConfigAndDeps({ countUniqueFeatureIds: val });
+        }}
+        label="Unique By Features"
+        disabled={isEditingExistingFeature}
+      />
 
       <div className="mt-16"></div>
 
@@ -92,7 +112,7 @@ function EditCount(props: EditCountProps) {
   );
 }
 
-export { EditCount };
+export { EditUniqueCount };
 
 //
 

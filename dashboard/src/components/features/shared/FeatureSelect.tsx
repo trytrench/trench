@@ -27,9 +27,10 @@ export function FeatureSelect(props: {
   filter?: FeatureQueryInput;
   label: string;
   disabled?: boolean;
+  optional?: boolean;
 }) {
   const { value, onChange, filter, label } = props;
-  const { selfFeatureId, disabled } = props;
+  const { selfFeatureId, disabled, optional } = props;
 
   const [open, setOpen] = useState(false);
 
@@ -54,7 +55,7 @@ export function FeatureSelect(props: {
           >
             {value ? selectedFeatureName : "None Selected"}
             <div className="flex ml-2 gap-2 items-center">
-              {value && (
+              {optional && value && (
                 <X
                   onClick={(e) => {
                     e.stopPropagation();

@@ -59,7 +59,8 @@ function EditEntityAppearance(props: EditEntityAppearanceProps) {
 
     // check if valid
     onValidChange?.(
-      compileStatus?.status === "success" && !!newConfig.entityType
+      (compileStatus?.status === "success" || !!val.compiledJs) &&
+        !!newConfig.entityType
     );
   }
 
