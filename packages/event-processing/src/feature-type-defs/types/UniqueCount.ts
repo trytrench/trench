@@ -10,7 +10,10 @@ import { FeatureType } from "./_enum";
 export const uniqueCountFeatureDef = createFeatureTypeDef({
   featureType: FeatureType.UniqueCount,
   configSchema: z.object({
-    timeWindowMs: z.number(),
+    timeWindow: z.object({
+      number: z.number(),
+      unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
+    }),
     countUniqueFeatureIds: z.array(z.string()),
     countByFeatureIds: z.array(z.string()),
     conditionFeatureId: z.string().optional(),
@@ -24,11 +27,21 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
   createResolver: ({ featureDef, context }) => {
     return async ({ event, dependencies }) => {
       const {
-        timeWindowMs,
+        timeWindow,
         countByFeatureIds,
         countUniqueFeatureIds,
         conditionFeatureId,
       } = featureDef.config;
+
+      const intervals = {
+        minutes: 60000,
+        hours: 3600000,
+        days: 86400000,
+        weeks: 604800000,
+        months: 2628000000,
+      };
+
+      const timeWindowMs = timeWindow.number * intervals[timeWindow.unit];
 
       let shouldUpdateCount = true;
       if (conditionFeatureId) {

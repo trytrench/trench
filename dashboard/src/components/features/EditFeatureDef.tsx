@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import {
   DataType,
@@ -32,6 +32,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { EditCount } from "./feature-types/EditCount";
+import { EditUniqueCount } from "./feature-types/EditUniqueCount";
 
 const TYPE_DEFAULTS = {
   [FeatureType.Computed]: {
@@ -50,12 +51,20 @@ const TYPE_DEFAULTS = {
         unit: "hours",
       },
       countByFeatureIds: [],
-      conditionFeatureId: "",
+      conditionFeatureId: undefined,
     } as FeatureDefs[FeatureType.Count]["config"],
   },
   [FeatureType.UniqueCount]: {
     dataType: DataType.Int64,
-    config: {},
+    config: {
+      timeWindow: {
+        number: 1,
+        unit: "hours",
+      },
+      countByFeatureIds: [],
+      countUniqueFeatureIds: [],
+      conditionFeatureId: undefined,
+    } as FeatureDefs[FeatureType.UniqueCount]["config"],
   },
   [FeatureType.EntityAppearance]: {
     dataType: DataType.Boolean,
@@ -140,10 +149,7 @@ function EditFeatureDef(props: EditFeatureDefProps) {
           <h1 className="text-emphasis-foreground text-3xl mb-4">
             {isEditingExistingFeature ? (
               <>
-                Edit{" "}
-                <span className="font-mono text-muted-foreground">
-                  `{featureName ?? ""}`
-                </span>
+                <span className="italic">{featureName ?? ""}</span>
               </>
             ) : (
               "Create Feature"
@@ -262,13 +268,22 @@ function EditFeatureDef(props: EditFeatureDefProps) {
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : (
+          ) : featureDef.featureType === FeatureType.Count ? (
             <EditCount
               featureDef={featureDef as FeatureDefs[FeatureType.Count]}
               isEditingExistingFeature={isEditingExistingFeature}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
+          ) : featureDef.featureType === FeatureType.UniqueCount ? (
+            <EditUniqueCount
+              featureDef={featureDef as FeatureDefs[FeatureType.UniqueCount]}
+              isEditingExistingFeature={isEditingExistingFeature}
+              onFeatureDefChange={setFeatureDef}
+              onValidChange={setTypeDetailsValid}
+            />
+          ) : (
+            <div>TODO</div>
           )}
         </>
       )}
