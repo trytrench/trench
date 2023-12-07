@@ -67,7 +67,7 @@ const TYPE_DEFAULTS = {
     } as FeatureDefs[FeatureType.UniqueCount]["config"],
   },
   [FeatureType.EntityAppearance]: {
-    dataType: DataType.Boolean,
+    dataType: DataType.Entity,
     config: {
       eventTypes: new Set(),
       code: "",
