@@ -21,6 +21,7 @@ import { PropertyList } from "~/components/ui/custom/property-list";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
+import { RenderTypedData } from "../../../components/RenderTypedData";
 
 interface RelatedEntitiesProps {
   entityId: string;
@@ -143,7 +144,7 @@ const Page: NextPageWithLayout = () => {
               entries={
                 entityData?.features.map((feature) => ({
                   label: feature.featureName,
-                  value: feature.data.value,
+                  value: <RenderTypedData data={feature.data} />,
                 })) ?? []
               }
             />
