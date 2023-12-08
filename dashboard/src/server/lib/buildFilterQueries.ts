@@ -30,11 +30,11 @@ const getWhereClausesForDateRange = (
   const whereClauses = [];
   if (dateRange.from)
     whereClauses.push(
-      `${columnName} >= to_timestamp(${getUnixTime(new Date(dateRange.from))})`
+      `${columnName} >= ${getUnixTime(new Date(dateRange.from))}`
     );
   if (dateRange.to) {
     whereClauses.push(
-      `${columnName} <= to_timestamp(${getUnixTime(new Date(dateRange.to))})`
+      `${columnName} <= ${getUnixTime(new Date(dateRange.to))}`
     );
   }
   return whereClauses;
