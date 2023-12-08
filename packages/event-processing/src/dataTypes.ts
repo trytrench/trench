@@ -36,6 +36,7 @@ export function validateTypedData(typedData: TypedData[DataType]) {
     case DataType.Int64:
     case DataType.Float64:
       assert(typeof value === "number", "Expected number");
+      assert(!isNaN(value), "Expected number");
       break;
     case DataType.String:
       assert(typeof value === "string", "Expected string");

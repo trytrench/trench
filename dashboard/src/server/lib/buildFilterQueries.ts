@@ -101,6 +101,7 @@ export function buildEntityFilterQuery(props: {
 
   const whereClauses = [];
   const havingClauses = [];
+  const seenWhereClauses = [];
 
   havingClauses.push(`length(entity_id) = 1`);
   if (filters.entityType) {
@@ -125,13 +126,13 @@ export function buildEntityFilterQuery(props: {
   }
 
   if (filters.firstSeen) {
-    havingClauses.push(
+    seenWhereClauses.push(
       ...getWhereClausesForDateRange(filters.firstSeen, "first_seen")
     );
   }
 
   if (filters.lastSeen) {
-    havingClauses.push(
+    seenWhereClauses.push(
       ...getWhereClausesForDateRange(filters.lastSeen, "last_seen")
     );
   }
@@ -140,28 +141,50 @@ export function buildEntityFilterQuery(props: {
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
   const havingClause =
     havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : "";
+  const seenWhereClause =
+    seenWhereClauses.length > 0
+      ? `WHERE ${seenWhereClauses.join(" AND ")}`
+      : "";
 
   const finalQuery = `
-    SELECT
+    WITH results AS (
+      SELECT
+          entity_type,
+          entity_id,
+          groupArray((latest_features.feature_id, latest_features.value)) as features_array
+      FROM (
+          SELECT
+              entity_type,
+              entity_id,
+              feature_id,
+              value,
+              event_timestamp,
+              row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
+          FROM features
+          ${whereClause}
+      ) AS latest_features
+      WHERE latest_features.rn = 1
+      GROUP BY entity_type, entity_id
+      ${havingClause}
+    ),
+    seen AS (
+      SELECT
         entity_type,
         entity_id,
-        groupArray((latest_features.feature_id, latest_features.value)) as features_array,
         min(event_timestamp) as first_seen,
         max(event_timestamp) as last_seen
-    FROM (
-        SELECT
-            entity_type,
-            entity_id,
-            feature_id,
-            value,
-            event_timestamp,
-            row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
-        FROM features
-        ${whereClause}
-    ) AS latest_features
-    WHERE latest_features.rn = 1
-    GROUP BY entity_type, entity_id
-    ${havingClause}
+      FROM features
+      GROUP BY entity_type, entity_id 
+    )
+    SELECT
+      results.entity_type as entity_type,
+      results.entity_id as entity_id,
+      seen.first_seen as first_seen,
+      seen.last_seen as last_seen,
+      results.features_array as features_array
+    FROM results
+    JOIN seen ON results.entity_type = seen.entity_type AND results.entity_id = seen.entity_id
+    ${seenWhereClause}
     ORDER BY last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
   `;
