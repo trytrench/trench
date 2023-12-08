@@ -6,6 +6,7 @@ import { COMPILER_OPTIONS } from "./compilerOptions";
 
 // @ts-ignore
 import libSource from "!!raw-loader?esModule=false!./editorLib.ts";
+import { useTheme } from "next-themes";
 
 export type ChangeHandler = (
   value: string,
@@ -43,7 +44,8 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const monacoEditorObj = useMonacoEditor();
   const editorRef = useRef<EditorApi.editor.IStandaloneCodeEditor>();
 
-  const theme = true ? "custom-dark" : "custom";
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
 
   const prefixLineCount = useMemo(() => getLineCount(prefix), [prefix]);
   const suffixLineCount = useMemo(() => getLineCount(suffix), [suffix]);
