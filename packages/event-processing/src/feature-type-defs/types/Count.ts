@@ -6,6 +6,9 @@ import { getPastNCountBucketHashes } from "../lib/counts";
 import { getRedisService } from "./../services/redis";
 import { FeatureType } from "./_enum";
 
+// Make sure it's a multiple of 10
+const N_BUCKETS = 10 * 1;
+
 export const countFeatureDef = createFeatureTypeDef({
   featureType: FeatureType.Count,
   configSchema: z.object({
@@ -41,19 +44,26 @@ export const countFeatureDef = createFeatureTypeDef({
         months: 2628000000,
       };
 
-      const timeWindowMs = timeWindow.number * intervals[timeWindow.unit];
+      const timeWindowMs =
+        (timeWindow.number * intervals[timeWindow.unit]) / N_BUCKETS;
 
       let shouldIncrementCount = true;
       if (conditionFeatureId) {
         const conditionValue = dependencies[conditionFeatureId];
-        assert(conditionValue, `Feature ${conditionFeatureId} not registered`);
+        assert(
+          conditionValue,
+          `Condition feature ${conditionFeatureId} not found`
+        );
         assert(conditionValue.type === DataType.Boolean, "Expected boolean");
         shouldIncrementCount = conditionValue.value;
       }
 
       const featuresToCountBy = countByFeatureIds.map((featureId) => {
         const data = dependencies[featureId];
-        assert(data, `Feature ${featureId} not registered`);
+        assert(
+          typeof data !== "undefined",
+          `Dependency ${featureId} not found`
+        );
         return { featureId, data };
       });
 
@@ -63,7 +73,7 @@ export const countFeatureDef = createFeatureTypeDef({
       });
 
       const bucketHashes = getPastNCountBucketHashes({
-        n: 10,
+        n: N_BUCKETS,
         timeWindowMs: timeWindowMs,
         countFeatureId: featureDef.featureId,
         countBy,
@@ -81,7 +91,7 @@ export const countFeatureDef = createFeatureTypeDef({
         stateUpdaters.push(async () => {
           const latestBucket = bucketHashes[0];
           assert(latestBucket, "Latest bucket not found");
-          context.redis.increment(latestBucket, 1);
+          await context.redis.increment(latestBucket, 1);
         });
       }
 

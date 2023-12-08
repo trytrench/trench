@@ -122,6 +122,7 @@ model EventType {
   updatedAt DateTime @updatedAt
 
   type String @unique
+  exampleEvent Json?
 }
 
 
@@ -172,5 +173,3 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-
-

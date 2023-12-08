@@ -44,10 +44,10 @@ async function initEventHandler() {
       for (const eventObj of events) {
         engine.initState(eventObj.event);
         const results = await engine.getAllEngineResults();
+        await engine.executeStateUpdates();
         allResults.push(...Object.values(results));
       }
 
-      await engine.executeStateUpdates();
       await writeEngineResultsToStore({ results: allResults });
       await writeEventsToStore({ events: events.map((e) => e.event) });
 

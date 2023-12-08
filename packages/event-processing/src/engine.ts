@@ -26,7 +26,7 @@ type ResolverPromise = ReturnType<Resolver<DataType>>;
 type ResolverOutput = Awaited<ResolverPromise>;
 
 type ExecutionState = {
-  featurePromises: Record<string, ResolverPromise>;
+  featurePromises: Record<string, Promise<ResolverOutput | null>>;
   stateUpdaters: Array<StateUpdater>;
   event: TrenchEvent;
 };
@@ -137,23 +137,21 @@ export class ExecutionEngine {
         return resolvedFeature;
       };
 
-      const promise = processFeature();
+      const promise = processFeature().catch((e) => {
+        return null;
+      });
       featurePromises[featureId] = promise;
     }
 
     const featurePromise = featurePromises[featureId];
     assert(featurePromise, "No feature promise... this should never happen");
-    try {
-      return await featurePromise;
-    } catch (e) {
-      return null;
-    }
+    return await featurePromise;
   }
 
   public async executeStateUpdates() {
     assert(this.state, "No running execution");
     const { stateUpdaters } = this.state;
-    await Promise.all(stateUpdaters.map((cb) => cb()));
+    await Promise.all(stateUpdaters.map((updater) => updater()));
   }
 
   public async getAllEngineResults() {
