@@ -34,6 +34,25 @@ import {
 import { EditCount } from "./feature-types/EditCount";
 import { EditUniqueCount } from "./feature-types/EditUniqueCount";
 
+const DATA_TYPE_OPTIONS = [
+  {
+    label: "String",
+    value: DataType.String,
+  },
+  {
+    label: "Number",
+    value: DataType.Float64,
+  },
+  {
+    label: "Boolean",
+    value: DataType.Boolean,
+  },
+  {
+    label: "JSON",
+    value: DataType.Object,
+  },
+];
+
 const TYPE_DEFAULTS = {
   [FeatureType.Computed]: {
     dataType: DataType.Boolean,
@@ -230,9 +249,9 @@ function EditFeatureDef(props: EditFeatureDefProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(DataType).map((dataTypeOpt) => (
-                  <SelectItem key={dataTypeOpt} value={dataTypeOpt}>
-                    {dataTypeOpt}
+                {DATA_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>

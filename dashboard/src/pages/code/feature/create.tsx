@@ -13,8 +13,8 @@ const Page: NextPageWithLayout = () => {
 
   async function handleSave(def: FeatureDef) {
     try {
-      const res = await create({
-        name: def.featureName!,
+      await create({
+        name: def.featureName,
         featureType: def.featureType,
         dataType: def.dataType,
         eventTypes: [...def.eventTypes],
@@ -22,12 +22,11 @@ const Page: NextPageWithLayout = () => {
         config: def.config,
       });
 
-      router.push(`/settings/features`).then(() => {
-        toast({
-          variant: "default",
-          title: "FeatureDef created!",
-          description: `${def.featureName} (${def.featureType}))`,
-        });
+      void router.push(`/settings/features`);
+      toast({
+        variant: "default",
+        title: "FeatureDef created!",
+        description: `${def.featureName} (${def.featureType})`,
       });
     } catch (e) {
       toast({
