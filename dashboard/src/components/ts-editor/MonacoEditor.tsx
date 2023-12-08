@@ -88,7 +88,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   }, [editorRef.current, monacoEditorObj.state, markers]);
 
   const eventTypes = useEventTypes();
-  console.log(eventTypes);
   useEffect(() => {
     if (monacoEditorObj.state !== "success" || !containerRef.current) return;
 
