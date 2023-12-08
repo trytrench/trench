@@ -15,7 +15,7 @@ CREATE TABLE features (
     value_Float64 Nullable(Float64),
     value_String Nullable(String),
     value_Bool Nullable(Bool)
-) ENGINE = MergeTree()
-ORDER BY (event_id, feature_id, entity_id);
+) ENGINE = ReplacingMergeTree()
+ORDER BY (event_id, feature_id);
 
 -- migrate:down

@@ -30,7 +30,7 @@ const getWhereClausesForDateRange = (
   const whereClauses = [];
   if (dateRange.from)
     whereClauses.push(
-      `${columnName} >= ${getUnixTime(new Date(dateRange.from))}`
+      `${columnName} >= ${getUnixTime(new Date(dateRange.from))})`
     );
   if (dateRange.to) {
     whereClauses.push(
@@ -161,6 +161,7 @@ export function buildEntityFilterQuery(props: {
               event_timestamp,
               row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
           FROM features
+          FINAL
           ${whereClause}
       ) AS latest_features
       WHERE latest_features.rn = 1
@@ -174,6 +175,7 @@ export function buildEntityFilterQuery(props: {
         min(event_timestamp) as first_seen,
         max(event_timestamp) as last_seen
       FROM features
+      FINAL
       GROUP BY entity_type, entity_id 
     )
     SELECT
@@ -244,12 +246,14 @@ export const buildEventFilterQuery = (options: {
         entity_type as entity_type,
         entity_id as entity_id
       FROM features
+      FINAL
       WHERE notEmpty(entity_id)
       AND feature_type = 'EntityAppearance'
     ), 
     desired_event_ids AS (
         SELECT DISTINCT event_id
         FROM features
+        FINAL
         JOIN events ON features.event_id = events.id
         ${whereClause}
         ORDER BY event_id DESC
@@ -260,6 +264,7 @@ export const buildEventFilterQuery = (options: {
             event_id,
             groupArray(tuple(feature_id, value)) AS features_arr
         FROM features
+        FINAL
         GROUP BY event_id
     )
     SELECT

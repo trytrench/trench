@@ -8,6 +8,7 @@ import {
   writeEventsToStore,
 } from "event-processing";
 import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
+import { recordEventType } from "./recordEventType";
 
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
@@ -43,6 +44,7 @@ async function initEventHandler() {
       const allResults: EngineResult[] = [];
       for (const eventObj of events) {
         engine.initState(eventObj.event);
+        await recordEventType(eventObj.event.type, eventObj.event.data);
         const results = await engine.getAllEngineResults();
         await engine.executeStateUpdates();
         allResults.push(...Object.values(results));

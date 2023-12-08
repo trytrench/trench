@@ -23,14 +23,20 @@ import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { RenderTypedData } from "../../../components/RenderTypedData";
 
+type Option = {
+  label: string;
+  value: string;
+};
 interface RelatedEntitiesProps {
   entityId: string;
   entityType: string;
 }
 
 function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
-  const [filterEntityType, setFilterEntityType] = useState<string>("");
-  const { data: entityTypes } = api.labels.getEntityTypes.useQuery();
+  const [filterEntityType, setFilterEntityType] = useState<Option | undefined>(
+    undefined
+  );
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   return (
     <div className="h-full flex flex-col">
@@ -38,16 +44,14 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
         <span className="whitespace-nowrap text-sm">Filter</span>
 
         <ClearableSelect
-          options={entityTypes?.map((et) => ({ label: et, value: et })) ?? []}
-          onChange={(value: any) => {
-            setFilterEntityType((value?.value as string) ?? "");
+          options={
+            entityTypes?.map((et) => ({ label: et.type, value: et.id })) ?? []
+          }
+          onChange={(value) => {
+            setFilterEntityType((value as Option) ?? undefined);
           }}
           placeholder="All Entities"
-          value={
-            filterEntityType
-              ? { label: filterEntityType, value: filterEntityType }
-              : null
-          }
+          value={filterEntityType}
           isClearable={true}
         />
       </div>
@@ -57,8 +61,13 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
             <LinksView
               entityId={entityId ?? ""}
               entityType={entityType}
-              leftTypeFilter={filterEntityType}
-              onLeftTypeFilterChange={setFilterEntityType}
+              leftTypeFilter={filterEntityType?.value ?? ""}
+              onLeftTypeFilterChange={(newValue) => {
+                const eType = entityTypes?.find((et) => et.id === newValue);
+                setFilterEntityType(
+                  eType ? { label: eType.type, value: eType.id } : undefined
+                );
+              }}
             />
           </ScrollArea>
         </div>
