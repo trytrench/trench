@@ -55,6 +55,17 @@ const config = {
       config.resolve.fallback.fs = false;
       config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
+
+    // Handling WebAssembly files
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: "webassembly/async",
+    });
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
+
     return config;
   },
   transpilePackages: ["databases", "event-processing"],

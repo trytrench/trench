@@ -14,7 +14,7 @@ export async function recordEventType(eventType: string, exampleEvent: any) {
     },
     create: {
       type: eventType,
-      exampleEvent: JSON.stringify(exampleEvent),
+      exampleEvent: exampleEvent,
     },
     update: {},
   });

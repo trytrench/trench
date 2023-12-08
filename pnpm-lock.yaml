@@ -231,6 +231,9 @@ importers:
       jotai:
         specifier: ^2.5.0
         version: 2.5.0(@types/react@18.2.33)(react@18.2.0)
+      json_typegen_wasm:
+        specifier: ^0.7.0
+        version: 0.7.0
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -4977,6 +4980,10 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+    dev: false
+
+  /json_typegen_wasm@0.7.0:
+    resolution: {integrity: sha512-xTDD7jlMpXB8S/6lD00aqOmHPuVszG4vtrJTaED8Mb6ziryGtXmtkREWpuvJbWWj45aVFGO3O/WjwxRBLw8dUQ==}
     dev: false
 
   /jsx-ast-utils@3.3.5:
