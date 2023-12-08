@@ -43,7 +43,10 @@ function EditUniqueCount(props: EditUniqueCountProps) {
       ...val,
     };
 
-    const newDeps = new Set<string>([...newConfig.countByFeatureIds]);
+    const newDeps = new Set<string>([
+      ...newConfig.countByFeatureIds,
+      ...newConfig.countUniqueFeatureIds,
+    ]);
     if (newConfig.conditionFeatureId) {
       newDeps.add(newConfig.conditionFeatureId);
     }
