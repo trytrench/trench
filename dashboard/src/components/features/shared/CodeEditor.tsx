@@ -9,10 +9,12 @@ import { useDebounce } from "~/hooks/useDebounce";
 export type CompileStatus =
   | {
       status: "empty";
+      code: string;
     }
   | {
       status: "compiling";
       message: string;
+      code: string;
     }
   | {
       status: "success";
@@ -24,6 +26,7 @@ export type CompileStatus =
       status: "error";
       message: string;
       diagnostics: Diagnostic<ts.Diagnostic>[];
+      code: string;
     };
 
 interface CodeEditorProps {
@@ -43,11 +46,12 @@ function CodeEditor({
 }: CodeEditorProps) {
   // note:
   // - The monaco editor is not used as a controlled component
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
   const debouncedCode = useDebounce(code, 1000);
 
   const [compileStatus, setCompileStatus] = useState<CompileStatus>({
     status: "empty",
+    code,
   });
 
   useEffect(() => {
@@ -60,6 +64,7 @@ function CodeEditor({
       setCompileStatus({
         status: "compiling",
         message: "Compiling...",
+        code,
       });
 
       // Assemble and compile the code
@@ -109,6 +114,7 @@ function CodeEditor({
           status: "error" as const,
           message: "There was an error compiling your code",
           diagnostics: allDiagnostics,
+          code,
         });
       }
     },
@@ -130,11 +136,12 @@ function CodeEditor({
         <MonacoEditor
           prefix={prefix}
           suffix={suffix}
-          value={initialCode ?? ""}
+          value={code}
           onValueChange={(change) => {
             setCode(change);
             setCompileStatus({
               status: "empty",
+              code,
             });
           }}
           className="h-96 w-full"
