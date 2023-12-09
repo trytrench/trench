@@ -175,9 +175,7 @@ const Page: NextPageWithLayout = () => {
       <DataTable
         columns={columns}
         data={lists ?? []}
-        onRowClick={(row) => {
-          router.push(`/${router.query.project}/settings/lists/${row.id}`);
-        }}
+        onRowClick={(row) => void router.push(`/settings/lists/${row.id}`)}
         renderHeader={(table) => (
           <>
             <Input
