@@ -80,6 +80,10 @@ function EditComputed(props: EditComputedProps) {
               compiledJs: compileStatus.compiled,
             });
           } else {
+            updateConfigAndDeps({
+              tsCode: compileStatus.code,
+              compiledJs: undefined,
+            });
             onValidChange?.(false);
           }
         }}

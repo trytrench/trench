@@ -63,8 +63,8 @@ const Page: NextPageWithLayout = () => {
   return (
     <EditFeatureDef
       initialDef={data.find((v) => v.featureId === featureId)}
-      onFeatureDefSave={handleSave}
-      onFeatureRename={handleRename}
+      onFeatureDefSave={void handleSave}
+      onFeatureRename={void handleRename}
     />
   );
 };

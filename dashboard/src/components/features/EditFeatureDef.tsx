@@ -36,6 +36,25 @@ import { EditUniqueCount } from "./feature-types/EditUniqueCount";
 import { SchemaDisplay } from "./SchemaDisplay";
 import { toast } from "../ui/use-toast";
 
+const DATA_TYPE_OPTIONS = [
+  {
+    label: "String",
+    value: DataType.String,
+  },
+  {
+    label: "Number",
+    value: DataType.Float64,
+  },
+  {
+    label: "Boolean",
+    value: DataType.Boolean,
+  },
+  {
+    label: "JSON",
+    value: DataType.Object,
+  },
+];
+
 const TYPE_DEFAULTS = {
   [FeatureType.Computed]: {
     dataType: DataType.Boolean,
@@ -83,18 +102,6 @@ const TYPE_DEFAULTS = {
     config: any;
   }
 >;
-
-const TYPE_OPTS = {
-  [FeatureType.Computed]: [
-    DataType.Boolean,
-    DataType.Int64,
-    DataType.Float64,
-    DataType.String,
-  ],
-  [FeatureType.Count]: [DataType.Int64],
-  [FeatureType.UniqueCount]: [DataType.Int64],
-  [FeatureType.EntityAppearance]: [DataType.Entity],
-};
 
 //
 
@@ -268,13 +275,11 @@ function EditFeatureDef(props: EditFeatureDefProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TYPE_OPTS[featureType ?? FeatureType.Computed].map(
-                    (dataTypeOpt) => (
-                      <SelectItem key={dataTypeOpt} value={dataTypeOpt}>
-                        {dataTypeOpt}
-                      </SelectItem>
-                    )
-                  )}
+                  {DATA_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
