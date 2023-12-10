@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { type RouterOutputs } from "~/utils/api";
 import { EntityChip } from "./EntityChip";
 import { FeatureGrid } from "./ui/custom/feature-grid";
-import { RenderTypedData } from "./RenderTypedData";
+import { RenderResult, RenderTypedData } from "./RenderResult";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -68,11 +68,11 @@ export const EntityCard = ({ entity, relation }: Props) => {
         )} */}
         <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
           {entity.features.map((feature) => {
-            const { featureId, featureName, data } = feature;
+            const { featureId, featureName, result } = feature;
             return (
               <div key={featureId}>
                 <div className="font-semibold">{featureName}</div>
-                <RenderTypedData data={data} />
+                <RenderResult result={result} />
 
                 {/* {data.type === DataType.Entity ? (
                   <EntityChip

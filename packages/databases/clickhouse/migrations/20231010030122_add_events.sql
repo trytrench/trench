@@ -5,7 +5,7 @@ CREATE TABLE events (
     timestamp DateTime,
     type String,
     data String
-) ENGINE = MergeTree()
-ORDER BY (id, timestamp, type);
+) ENGINE = ReplacingMergeTree()
+ORDER BY (id);
 
 -- migrate:down

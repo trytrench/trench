@@ -17,10 +17,7 @@ import { db, prisma } from "~/server/db";
 import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
-import {
-  buildEntityFilterQuery,
-  buildEventFilterQuery,
-} from "../../lib/buildFilterQueries";
+import { getEntitiesList, getEventsList } from "../../lib/buildFilterQueries";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: protectedProcedure
@@ -41,25 +38,11 @@ export const listsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
 
-      const query = buildEntityFilterQuery({
+      const entities = await getEntitiesList({
         filters: filters,
         limit: input.limit,
         cursor: input.cursor,
       });
-      const result = await db.query({
-        query,
-        format: "JSONEachRow",
-      });
-
-      type EntityResult = {
-        entity_type: [string];
-        entity_id: [string];
-        features_array: Array<[string, string]>;
-        first_seen: string;
-        last_seen: string;
-      };
-
-      const entities = await result.json<EntityResult[]>();
 
       const featureDefs = await getLatestFeatureDefs();
 
@@ -90,26 +73,11 @@ export const listsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
 
-      const query = buildEventFilterQuery({
+      const events = await getEventsList({
         filter: filters,
         limit: input.limit,
         cursor: input.cursor,
       });
-      const result = await db.query({
-        query,
-        format: "JSONEachRow",
-      });
-
-      type EventResult = {
-        event_id: string;
-        event_type: string;
-        event_timestamp: Date;
-        event_data: string;
-        entities: Array<[string[], string[]]>;
-        features_array: Array<[string, string]>;
-      };
-
-      const events = await result.json<EventResult[]>();
 
       const featureDefs = await getLatestFeatureDefs();
 
@@ -294,12 +262,20 @@ type AnnotatedFeature = {
   featureId: string;
   featureType: string;
   featureName: string;
-  data: TypedData[DataType];
+  result:
+    | {
+        type: "error";
+        message: string;
+      }
+    | {
+        type: "success";
+        data: TypedData[DataType];
+      };
 };
 
 function getAnnotatedFeatures(
   featureDefs: FeatureDef[],
-  featuresArray: Array<[string, string]>
+  featuresArray: Array<[string, string | null, string | null]> // featureId, value, error
 ) {
   const featureDefsMap = new Map<string, FeatureDef>();
   for (const featureDef of featureDefs) {
@@ -307,16 +283,22 @@ function getAnnotatedFeatures(
   }
 
   const annotatedFeatures: AnnotatedFeature[] = [];
-  for (const [featureId, value] of featuresArray) {
+  for (const [featureId, value, error] of featuresArray) {
     const featureDef = featureDefsMap.get(featureId);
     if (!featureDef) {
       continue;
     }
+
     annotatedFeatures.push({
       featureId,
       featureType: featureDef.featureType,
       featureName: featureDef.featureName,
-      data: decodeTypedData(featureDef.dataType, value),
+      result: error
+        ? { type: "error", message: error }
+        : {
+            type: "success",
+            data: decodeTypedData(featureDef.dataType, value ?? ""),
+          },
     });
   }
 

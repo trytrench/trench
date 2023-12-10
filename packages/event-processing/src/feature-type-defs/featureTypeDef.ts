@@ -27,10 +27,13 @@ export type StateUpdater = () => Promise<void>;
 
 export type Resolver<TDataType extends DataType> = (input: {
   event: TrenchEvent;
-  dependencies: Record<string, TypedData[DataType]>;
+  getDependency<TDataType extends DataType>(props: {
+    featureId: string;
+    expectedDataTypes?: TDataType[];
+  }): TypedData[TDataType];
 }) => Promise<{
-  stateUpdaters: StateUpdater[];
-  assignedEntities: Entity[];
+  stateUpdaters: readonly StateUpdater[];
+  assignedEntities: readonly Entity[];
   data: TypedData[TDataType];
 }>;
 

@@ -3,6 +3,7 @@ import { DataType, Entity } from "../../dataTypes";
 import { assert } from "../../utils";
 import { createFeatureTypeDef } from "../featureTypeDef";
 import { FeatureType } from "./_enum";
+import { printFDef } from "../lib/print";
 
 export const computedFeatureDef = createFeatureTypeDef({
   featureType: FeatureType.Computed,
@@ -20,23 +21,24 @@ export const computedFeatureDef = createFeatureTypeDef({
     DataType.String,
   ],
   createResolver: ({ featureDef }) => {
-    return async ({ event, dependencies }) => {
+    return async ({ event, getDependency }) => {
       const { depsMap, compiledJs, assignedEntityFeatureIds } =
         featureDef.config;
 
       const depValues: Record<string, any> = {};
       for (const [key, depFeatureId] of Object.entries(depsMap)) {
-        const featureValue = dependencies[depFeatureId];
-        assert(featureValue, `Feature ${depFeatureId} not registered`);
-
+        const featureValue = getDependency({
+          featureId: depFeatureId,
+        });
         depValues[key] = featureValue.value;
       }
 
       const assignedEntities: Entity[] = [];
       for (const entityFeatureId of assignedEntityFeatureIds) {
-        const entityValue = dependencies[entityFeatureId];
-        assert(entityValue, `Feature ${entityFeatureId} not registered`);
-        assert(entityValue.type === DataType.Entity, "Expected entity");
+        const entityValue = getDependency({
+          featureId: entityFeatureId,
+          expectedDataTypes: [DataType.Entity],
+        });
         assignedEntities.push(entityValue.value);
       }
 

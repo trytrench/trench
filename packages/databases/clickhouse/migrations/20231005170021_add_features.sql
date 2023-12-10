@@ -9,13 +9,15 @@ CREATE TABLE features (
     feature_id LowCardinality(String),
     entity_type Array(LowCardinality(String)),
     entity_id Array(String),
-    data_type LowCardinality(String),
-    value String,
+    data_type LowCardinality(Nullable(String)),
+    value Nullable(String),
     value_Int64 Nullable(UInt64),
     value_Float64 Nullable(Float64),
     value_String Nullable(String),
-    value_Bool Nullable(Bool)
-) ENGINE = ReplacingMergeTree()
+    value_Bool Nullable(Bool),
+    error Nullable(String),
+    is_deleted UInt8
+) ENGINE = ReplacingMergeTree(created_at, is_deleted)
 ORDER BY (event_id, feature_id);
 
 -- migrate:down

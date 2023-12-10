@@ -16,7 +16,7 @@ import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
 import { DataType, Entity } from "event-processing";
-import { RenderTypedData } from "./RenderTypedData";
+import { RenderResult, RenderTypedData } from "./RenderResult";
 
 interface EventsListProps {
   entity: Entity;
@@ -337,11 +337,11 @@ function EventCard({ event, isFirst, isLast }: EventCardProps) {
           <>
             <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
               {event.features.map((f, idx) => {
-                const { featureId, featureName, featureType, data } = f;
+                const { featureId, featureName, featureType, result } = f;
                 return (
                   <div key={featureId}>
                     <div className="font-semibold">{featureName}</div>
-                    <RenderTypedData data={data} />
+                    <RenderResult result={result} />
                   </div>
                 );
               })}

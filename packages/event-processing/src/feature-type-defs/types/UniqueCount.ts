@@ -25,7 +25,7 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
     };
   },
   createResolver: ({ featureDef, context }) => {
-    return async ({ event, dependencies }) => {
+    return async ({ event, getDependency }) => {
       const {
         timeWindow,
         countByFeatureIds,
@@ -45,15 +45,19 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
 
       let shouldUpdateCount = true;
       if (conditionFeatureId) {
-        const featureData = dependencies[conditionFeatureId];
-        assert(featureData, `Feature ${conditionFeatureId} not registered`);
-        assert(featureData.type === DataType.Boolean, "Expected boolean");
+        const featureData = getDependency({
+          featureId: conditionFeatureId,
+          expectedDataTypes: [DataType.Boolean],
+        });
+
         shouldUpdateCount = featureData.value;
       }
 
       const featuresToCountBy = countByFeatureIds.map((featureId) => {
-        const data = dependencies[featureId];
-        assert(data, `Feature ${featureId} not registered`);
+        const data = getDependency({
+          featureId,
+          expectedDataTypes: [DataType.Entity, DataType.String],
+        });
         return { featureId, data };
       });
       const countBy = featuresToCountBy.map((feature) => {
@@ -70,8 +74,10 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
       });
 
       const countUniqueValues = countUniqueFeatureIds.map((featureId) => {
-        const value = dependencies[featureId];
-        assert(value, `Feature ${featureId} not registered`);
+        const value = getDependency({
+          featureId,
+          expectedDataTypes: [DataType.Entity, DataType.String],
+        });
         return { featureId, value };
       });
 
@@ -100,7 +106,10 @@ export const uniqueCountFeatureDef = createFeatureTypeDef({
       if (shouldUpdateCount) {
         stateUpdaters.push(async () => {
           const latestBucket = bucketHashes[0];
-          assert(latestBucket, "Latest bucket not found");
+          assert(
+            latestBucket,
+            "Latest bucket not found (this should never happen)"
+          );
           await context.redis.pfadd(latestBucket, [
             sortedValuesHash.toString(),
           ]);

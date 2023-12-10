@@ -14,6 +14,10 @@ export type Entity = {
   id: string;
 };
 
+export type TrenchError = {
+  message: string;
+};
+
 export interface DataTypeToTsType {
   [DataType.Int64]: number;
   [DataType.Float64]: number;
@@ -51,11 +55,11 @@ export function validateTypedData(typedData: TypedData[DataType]) {
       assert(typeof value === "object", "Expected object");
       assert(
         value.id && typeof value.id === "string",
-        "Entity must have an id of type string"
+        "DataType Entity must have an id of type string"
       );
       assert(
         value.type && typeof value.type === "string",
-        "Entity must have a type of type string"
+        "DataType Entity must have a type of type string"
       );
       break;
   }

@@ -34,7 +34,7 @@ async function initEventHandler() {
     }
 
     const lastEventProcessedId = await fetchLastEventProcessedId();
-    const events = await getEventsSince({ lastEventProcessedId });
+    const events = await getEventsSince({ lastEventProcessedId, limit: 3000 });
     if (events.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;
@@ -55,6 +55,7 @@ async function initEventHandler() {
 
       const lastEvent = events[events.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);
+      console.log(`Processed ${events.length} events`);
     } catch (e) {
       console.error("Error processing events", e);
     }

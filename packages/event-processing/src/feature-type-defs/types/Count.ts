@@ -26,7 +26,7 @@ export const countFeatureDef = createFeatureTypeDef({
     };
   },
   createResolver: ({ featureDef, context }) => {
-    return async ({ event, dependencies }) => {
+    return async ({ event, getDependency }) => {
       /**
        * 1. In order to get the count, we need to get the counts of the previous 10 time buckets and add them up.
        *      bucket_key = hash(timeBucket, featureId, hash([entities, sorted by entityFeatureId]))
@@ -49,21 +49,19 @@ export const countFeatureDef = createFeatureTypeDef({
 
       let shouldIncrementCount = true;
       if (conditionFeatureId) {
-        const conditionValue = dependencies[conditionFeatureId];
-        assert(
-          conditionValue,
-          `Condition feature ${conditionFeatureId} not found`
-        );
-        assert(conditionValue.type === DataType.Boolean, "Expected boolean");
+        const conditionValue = getDependency({
+          featureId: conditionFeatureId,
+          expectedDataTypes: [DataType.Boolean],
+        });
         shouldIncrementCount = conditionValue.value;
       }
 
       const featuresToCountBy = countByFeatureIds.map((featureId) => {
-        const data = dependencies[featureId];
-        assert(
-          typeof data !== "undefined",
-          `Dependency ${featureId} not found`
-        );
+        const data = getDependency({
+          featureId,
+          expectedDataTypes: [DataType.Entity, DataType.String],
+        });
+
         return { featureId, data };
       });
 
@@ -90,7 +88,10 @@ export const countFeatureDef = createFeatureTypeDef({
       if (shouldIncrementCount) {
         stateUpdaters.push(async () => {
           const latestBucket = bucketHashes[0];
-          assert(latestBucket, "Latest bucket not found");
+          assert(
+            latestBucket,
+            "Latest bucket not found (this should never happen)"
+          );
           await context.redis.increment(latestBucket, 1);
         });
       }

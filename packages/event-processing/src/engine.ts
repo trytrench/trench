@@ -11,6 +11,7 @@ import {
   StateUpdater,
   TrenchEvent,
 } from "./feature-type-defs/featureTypeDef";
+import { printFDef } from "./feature-type-defs/lib/print";
 import { FeatureType } from "./feature-type-defs/types/_enum";
 import { assert } from "./utils";
 
@@ -22,11 +23,35 @@ import { assert } from "./utils";
  * feature's value.
  */
 
+type TrenchError = {
+  message: string;
+};
+
+function createError(message: string): FeatureResult {
+  return {
+    type: "error",
+    output: {
+      message,
+    },
+  };
+}
+
+function createSuccess(output: ResolverOutput): FeatureResult {
+  return {
+    type: "success",
+    output,
+  };
+}
+
+type FeatureResult =
+  | { type: "error"; output: TrenchError }
+  | { type: "success"; output: ResolverOutput };
+
 type ResolverPromise = ReturnType<Resolver<DataType>>;
 type ResolverOutput = Awaited<ResolverPromise>;
 
 type ExecutionState = {
-  featurePromises: Record<string, Promise<ResolverOutput | null>>;
+  featurePromises: Record<string, Promise<FeatureResult>>;
   stateUpdaters: Array<StateUpdater>;
   event: TrenchEvent;
 };
@@ -41,7 +66,7 @@ type FeatureInstance = {
 };
 
 export type EngineResult = {
-  featureResult: Awaited<ResolverPromise>;
+  featureResult: FeatureResult;
   featureDef: FeatureDef;
   event: TrenchEvent;
   engineId: string;
@@ -96,12 +121,17 @@ export class ExecutionEngine {
     return instance;
   }
 
-  public async evaluateFeature(
-    featureId: string
-  ): Promise<ResolverOutput | null> {
+  public async evaluateFeature(featureId: string): Promise<FeatureResult> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
     const { event, featurePromises } = this.state;
+
+    // const instance = this.getFeatureInstance(featureId);
+    // if (instance.featureDef.eventTypes.has(event.type) === false) {
+    //   return createError(
+    //     `Feature '${featureId}' does not support event type '${event.type}'`
+    //   );
+    // }
 
     // If feature processing has not started, start it
     if (!featurePromises[featureId]) {
@@ -114,19 +144,49 @@ export class ExecutionEngine {
 
         const dependsOnValues: Record<string, TypedData[DataType]> = {};
         for (const depFeatureId of featureDef.dependsOn) {
-          const resolverResult = await this.evaluateFeature(depFeatureId);
-          if (resolverResult === null) {
+          const output = await this.evaluateFeature(depFeatureId);
+          const depFeatureDef =
+            this.getFeatureInstance(depFeatureId).featureDef;
+          if (output.type === "error") {
             throw new Error(
-              `Feature '${featureDef.featureId}' depends on '${depFeatureId}', but '${depFeatureId}' errored and returned null`
+              `Feature ${printFDef(featureDef)} depends on ${printFDef(
+                depFeatureDef
+              )}, but it errored with message: ${output.output.message}`
             );
           }
-          dependsOnValues[depFeatureId] = resolverResult.data;
+          dependsOnValues[depFeatureId] = output.output.data;
         }
 
         // Run getter
         const resolvedFeature = await resolver({
           event,
-          dependencies: dependsOnValues,
+
+          getDependency: ({ featureId, expectedDataTypes }) => {
+            const depFeatureDef = this.getFeatureInstance(featureId).featureDef;
+
+            const value = dependsOnValues[featureId];
+            assert(
+              value,
+              `Feature ${printFDef(featureDef)} depends on ${printFDef(
+                depFeatureDef
+              )}, but no value was found.`
+            );
+
+            if (expectedDataTypes) {
+              assert(
+                expectedDataTypes.includes(value.type as any),
+                `Feature ${printFDef(
+                  featureDef
+                )} expects dependency ${printFDef(
+                  depFeatureDef
+                )} to be of type ${expectedDataTypes.join(
+                  ", "
+                )}, but it is of type ${value.type}`
+              );
+            }
+
+            return value as any;
+          },
         });
 
         validateTypedData(resolvedFeature.data);
@@ -134,11 +194,11 @@ export class ExecutionEngine {
         // Register state updaters
         this.state.stateUpdaters.push(...resolvedFeature.stateUpdaters);
 
-        return resolvedFeature;
+        return createSuccess(resolvedFeature);
       };
 
       const promise = processFeature().catch((e) => {
-        return null;
+        return createError(e.message);
       });
       featurePromises[featureId] = promise;
     }
@@ -168,12 +228,15 @@ export class ExecutionEngine {
     const engineResults: Record<string, EngineResult> = {};
     for (const instance of allInstances) {
       const { featureDef } = instance;
-      const featureResult = await this.evaluateFeature(featureDef.featureId);
-      if (featureResult === null) {
-        continue;
-      }
+
+      // if (!featureDef.eventTypes.has(this.state.event.type)) {
+      //   continue;
+      // }
+
+      const result = await this.evaluateFeature(featureDef.featureId);
+
       engineResults[featureDef.featureId] = {
-        featureResult: featureResult,
+        featureResult: result,
         featureDef: instance.featureDef,
         event: this.state.event,
         engineId: this.engineId,
@@ -191,10 +254,28 @@ function validateFeatureInstanceMap(
   for (const feature of Object.values(map)) {
     const def = feature.featureDef;
     for (const depFeatureId of def.dependsOn) {
+      const depFeature = map[depFeatureId];
       assert(
-        depFeatureId in map,
-        `Feature '${def.featureId}' depends on '${depFeatureId}', but '${depFeatureId}' does not exist`
+        depFeature,
+        `Feature ${printFDef(
+          def
+        )} depends on feature of ID ${depFeatureId}, which is not included in the engine's feature set.`
       );
+
+      // Check that dependency's event types is a superset of this feature's event types
+      const depFeatureDef = depFeature.featureDef;
+      const depFeatureEventTypes = depFeatureDef.eventTypes;
+      const featureEventTypes = def.eventTypes;
+      for (const eventType of featureEventTypes) {
+        assert(
+          depFeatureEventTypes.has(eventType),
+          `Feature ${printFDef(
+            def
+          )} supports event type '${eventType}', but depends on feature ${printFDef(
+            depFeatureDef
+          )} which doesn't.`
+        );
+      }
     }
   }
 }

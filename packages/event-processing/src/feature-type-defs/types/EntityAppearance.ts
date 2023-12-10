@@ -14,13 +14,14 @@ export const entityAppearanceFeatureDef = createFeatureTypeDef({
   }),
   allowedDataTypes: [DataType.Entity],
   createResolver: ({ featureDef }) => {
-    return async ({ event, dependencies }) => {
+    return async ({ event, getDependency }) => {
       const { depsMap, compiledJs, entityType } = featureDef.config;
 
       const depValues: Record<string, any> = {};
       for (const [key, depFeatureId] of Object.entries(depsMap)) {
-        const featureValue = dependencies[depFeatureId];
-        assert(featureValue, `Feature ${depFeatureId} not registered`);
+        const featureValue = getDependency({
+          featureId: depFeatureId,
+        });
 
         depValues[key] = featureValue.value;
       }
