@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api, type RouterOutputs } from "~/utils/api";
-import { type NextPageWithLayout } from "../_app";
+import { type NextPageWithLayout } from "../../_app";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -93,11 +93,11 @@ const Page: NextPageWithLayout = () => {
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => {
-                        router.push(
-                          `/code/feature/edit/${row.original.featureId}`
-                        );
-                      }}
+                      onClick={() =>
+                        void router.push(
+                          `/settings/features/${row.original.featureId}`
+                        )
+                      }
                     >
                       Edit
                     </DropdownMenuItem>
@@ -150,9 +150,7 @@ const Page: NextPageWithLayout = () => {
             <Button
               size="sm"
               className="ml-auto"
-              onClick={() => {
-                router.push("/code/feature/create");
-              }}
+              onClick={() => void router.push("/settings/features/create")}
             >
               Create
             </Button>

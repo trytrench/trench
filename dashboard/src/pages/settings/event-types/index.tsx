@@ -43,7 +43,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { RouterOutputs, api } from "~/utils/api";
-import { type NextPageWithLayout } from "../_app";
+import { type NextPageWithLayout } from "../../_app";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -172,6 +172,9 @@ const Page: NextPageWithLayout = () => {
       <DataTable
         columns={columns}
         data={eventTypes ?? []}
+        onRowClick={(row) =>
+          void router.push(`/settings/event-types/${row.id}`)
+        }
         renderHeader={(table) => (
           <>
             <Input

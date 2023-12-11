@@ -1,20 +1,20 @@
-import { FeatureDef } from "event-processing";
-import { CheckIcon, Loader2, Settings, XIcon } from "lucide-react";
+import { CheckIcon, Loader2, XIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Diagnostic, Project, ts } from "ts-morph";
 import { MonacoEditor } from "~/components/ts-editor/MonacoEditor";
 import { COMPILER_OPTIONS } from "~/components/ts-editor/compilerOptions";
-import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { toast } from "~/components/ui/use-toast";
+import { useDebounce } from "~/hooks/useDebounce";
 
 export type CompileStatus =
   | {
       status: "empty";
+      code: string;
     }
   | {
       status: "compiling";
       message: string;
+      code: string;
     }
   | {
       status: "success";
@@ -26,6 +26,7 @@ export type CompileStatus =
       status: "error";
       message: string;
       diagnostics: Diagnostic<ts.Diagnostic>[];
+      code: string;
     };
 
 interface CodeEditorProps {
@@ -33,109 +34,114 @@ interface CodeEditorProps {
   suffix?: string;
   initialCode?: string;
   libSource?: string;
-  onCompileStatusChange?: (Status: CompileStatus) => void;
+  onCompileStatusChange: (Status: CompileStatus) => void;
 }
 
-function CodeEditor(props: CodeEditorProps) {
-  const { prefix, suffix } = props;
-  const { onCompileStatusChange } = props;
-
+function CodeEditor({
+  prefix,
+  suffix,
+  initialCode,
+  libSource,
+  onCompileStatusChange,
+}: CodeEditorProps) {
   // note:
   // - The monaco editor is not used as a controlled component
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
+  const debouncedCode = useDebounce(code, 1000);
 
-  const [compileStatus, _setCompileStatus] = useState<CompileStatus>({
+  const [compileStatus, setCompileStatus] = useState<CompileStatus>({
     status: "empty",
+    code,
   });
 
-  const setCompileStatus = useCallback(
-    (status: CompileStatus) => {
-      _setCompileStatus(status);
-      onCompileStatusChange?.(status);
-    },
-    [onCompileStatusChange]
-  );
+  useEffect(() => {
+    onCompileStatusChange(compileStatus);
+  }, [onCompileStatusChange, compileStatus]);
 
-  const compile = useCallback(() => {
-    setCompileStatus({
-      status: "compiling",
-      message: "Compiling...",
-    });
+  const compile = useCallback(
+    (code: string) => {
+      console.log("compiling");
+      setCompileStatus({
+        status: "compiling",
+        message: "Compiling...",
+        code,
+      });
 
-    // Assemble and compile the code
+      // Assemble and compile the code
 
-    const LIB_SOURCE = `
+      const LIB_SOURCE = `
     type TrenchEvent = {
       type: string;
       timestamp: Date;
       data: any;
     };`;
 
-    const finalCode = [prefix, code, suffix, LIB_SOURCE].join("\n");
+      const finalCode = [prefix, code, suffix, LIB_SOURCE].join("\n");
 
-    const project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: COMPILER_OPTIONS,
-    });
-
-    project.createSourceFile("main.ts", finalCode);
-
-    const allDiagnostics = project.getPreEmitDiagnostics();
-
-    // Set compile status based on results
-
-    if (!allDiagnostics.length) {
-      const transpiledOutput = ts.transpileModule(finalCode, {
-        compilerOptions: {
-          ...COMPILER_OPTIONS,
-        },
+      const project = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: COMPILER_OPTIONS,
       });
 
-      setCompileStatus({
-        status: "success" as const,
-        message: "Compiled successfully",
-        code: code,
-        compiled: transpiledOutput.outputText,
-      });
-    } else {
-      const lineNum = allDiagnostics[0]?.getLineNumber();
-      toast({
-        variant: "destructive",
-        title: lineNum ? `Error in line ${lineNum}` : "Compile error",
-        description: allDiagnostics[0]?.getMessageText().toString(),
-      });
+      project.createSourceFile("main.ts", finalCode);
 
-      setCompileStatus({
-        status: "error" as const,
-        message: "There was an error compiling your code",
-        diagnostics: allDiagnostics,
-      });
-    }
-  }, [code, prefix, setCompileStatus, suffix]);
+      const allDiagnostics = project.getPreEmitDiagnostics();
+
+      // Set compile status based on results
+
+      if (!allDiagnostics.length) {
+        const transpiledOutput = ts.transpileModule(finalCode, {
+          compilerOptions: {
+            ...COMPILER_OPTIONS,
+          },
+        });
+
+        setCompileStatus({
+          status: "success" as const,
+          message: "Compiled successfully",
+          code,
+          compiled: transpiledOutput.outputText,
+        });
+      } else {
+        // const lineNum = allDiagnostics[0]?.getLineNumber();
+        // toast({
+        //   variant: "destructive",
+        //   title: lineNum ? `Error in line ${lineNum}` : "Compile error",
+        //   description: allDiagnostics[0]?.getMessageText().toString(),
+        // });
+
+        setCompileStatus({
+          status: "error" as const,
+          message: "There was an error compiling your code",
+          diagnostics: allDiagnostics,
+          code,
+        });
+      }
+    },
+    [setCompileStatus, prefix, suffix]
+  );
+
+  useEffect(() => {
+    if (debouncedCode.trim()) compile(debouncedCode);
+  }, [debouncedCode, compile]);
 
   return (
     <>
-      <div className="flex flex-col gap-2 mb-4">
+      <div className="flex mb-4 justify-between">
         <Label className="text-emphasis-foreground text-md">Code</Label>
-      </div>
-
-      <div className="flex mb-2 gap-4">
-        <Button variant="outline" className="gap-1.5" onClick={compile}>
-          <Settings className="w-4 h-4" />
-          Compile
-        </Button>
-        <CompileStatusMessage compileStatus={compileStatus} />
+        {code.trim() && <CompileStatusMessage compileStatus={compileStatus} />}
       </div>
 
       <div className="h-96">
         <MonacoEditor
           prefix={prefix}
           suffix={suffix}
-          value={props.initialCode ?? ""}
+          value={code}
           onValueChange={(change) => {
             setCode(change);
             setCompileStatus({
               status: "empty",
+              code,
             });
           }}
           className="h-96 w-full"
@@ -158,7 +164,7 @@ interface CompileStatusMessageProps {
 function CompileStatusMessage(props: CompileStatusMessageProps) {
   const { compileStatus } = props;
 
-  if (compileStatus.status === "compiling") {
+  if (compileStatus.status === "empty") {
     return (
       <div className="flex items-center gap-1 text-xs">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -174,7 +180,7 @@ function CompileStatusMessage(props: CompileStatusMessageProps) {
     );
   } else if (compileStatus.status === "success") {
     return (
-      <div className="flex items-center gap-1 text-xs text-lime-400">
+      <div className="flex items-center gap-1 text-xs text-green-500">
         <CheckIcon className="h-4 w-4" />
         <span>{compileStatus.message}</span>
       </div>

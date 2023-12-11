@@ -6,6 +6,9 @@ import { toast } from "~/components/ui/use-toast";
 import { EditFeatureDef } from "~/components/features/EditFeatureDef";
 import { useRouter } from "next/router";
 import { FeatureDef } from "event-processing";
+import SettingsLayout from "~/components/SettingsLayout";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -61,14 +64,23 @@ const Page: NextPageWithLayout = () => {
   }
 
   return (
-    <EditFeatureDef
-      initialDef={data.find((v) => v.featureId === featureId)}
-      onFeatureDefSave={handleSave}
-      onFeatureRename={handleRename}
-    />
+    <div>
+      <Link
+        href="/settings/features"
+        className="text-sm text-muted-foreground flex items-center gap-1"
+      >
+        <ChevronLeft className="w-3 h-3" />
+        Back to features
+      </Link>
+      <EditFeatureDef
+        initialDef={data.find((v) => v.featureId === featureId)}
+        onFeatureDefSave={void handleSave}
+        onFeatureRename={void handleRename}
+      />
+    </div>
   );
 };
 
-Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
+Page.getLayout = (page) => <SettingsLayout>{page}</SettingsLayout>;
 
 export default Page;

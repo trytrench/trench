@@ -33,6 +33,27 @@ import {
 } from "../ui/dialog";
 import { EditCount } from "./feature-types/EditCount";
 import { EditUniqueCount } from "./feature-types/EditUniqueCount";
+import { SchemaDisplay } from "./SchemaDisplay";
+import { toast } from "../ui/use-toast";
+
+const DATA_TYPE_OPTIONS = [
+  {
+    label: "String",
+    value: DataType.String,
+  },
+  {
+    label: "Number",
+    value: DataType.Float64,
+  },
+  {
+    label: "Boolean",
+    value: DataType.Boolean,
+  },
+  {
+    label: "JSON",
+    value: DataType.Object,
+  },
+];
 
 const TYPE_DEFAULTS = {
   [FeatureType.Computed]: {
@@ -143,150 +164,175 @@ function EditFeatureDef(props: EditFeatureDefProps) {
     featureDef ?? {};
 
   return (
-    <div className="h-full w-full flex flex-col px-24 py-16">
-      <div className="my-4 flex flex-col gap-4">
-        <div className="flex justify-between items-start">
-          <h1 className="text-emphasis-foreground text-3xl mb-4">
-            {isEditingExistingFeature ? (
-              <>
-                <span className="italic">{featureName ?? ""}</span>
-              </>
-            ) : (
-              "Create Feature"
-            )}
-          </h1>
-
-          <div className="flex gap-2 items-center">
-            {isEditingExistingFeature && (
-              <RenameDialog
-                name={featureName}
-                onRename={(newName) => {
-                  onFeatureRename?.(newName);
-                  updateFeatureDef({ featureName: newName });
-                }}
-              />
-            )}
-            <Button
-              disabled={!everythingValid}
-              onClick={save}
-              className="gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save
-            </Button>
-          </div>
-        </div>
-
-        {/* Feature Name */}
-        <div className="flex items-end gap-3">
-          <div className="grid gap-1.5">
-            <Label>Name</Label>
-            <Input
-              placeholder="Feature Name"
-              className="w-[20rem]"
-              value={featureName}
-              disabled={isEditingExistingFeature}
-              onChange={(e) =>
-                updateFeatureDef({ featureName: e.target.value })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 items-end">
-          {/* Feature Type */}
-          <div className="flex flex-col gap-1.5">
-            <Label>Type</Label>
-            <Select
-              value={featureType}
-              onValueChange={(v) => handleFeatureTypeSelect(v as FeatureType)}
-              disabled={isEditingExistingFeature}
-            >
-              <SelectTrigger className="w-[20rem]">
-                <SelectValue placeholder="Select Feature Type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(FeatureType).map((typeOpt) => (
-                  <SelectItem key={typeOpt} value={typeOpt}>
-                    {typeOpt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Data Type */}
-          <div className="flex flex-col gap-1.5">
-            <Select
-              value={dataType}
-              onValueChange={(v) =>
-                updateFeatureDef({ dataType: v as DataType })
-              }
-              disabled={
-                featureType !== FeatureType.Computed || isEditingExistingFeature
-              }
-            >
-              <SelectTrigger className="w-[8rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(DataType).map((dataTypeOpt) => (
-                  <SelectItem key={dataTypeOpt} value={dataTypeOpt}>
-                    {dataTypeOpt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+    <div className="w-full h-full flex">
+      {/* Sidebar */}
+      <div className="w-[28rem] p-16 overflow-auto">
+        {eventTypes && (
+          <SchemaDisplay
+            basePath="input.event.data"
+            baseName="event.data"
+            eventTypes={eventTypes}
+            onItemClick={(path: string, name: string) => {
+              //  copy path to clipboard
+              navigator.clipboard.writeText(path);
+              toast({
+                title: "Copied to clipboard!",
+                description: path,
+              });
+            }}
+          />
+        )}
       </div>
 
-      <div className="h-8 shrink-0" />
+      <Separator orientation="vertical" className="h-full" />
 
-      <EventTypes
-        eventTypes={eventTypes}
-        onChange={(v) => {
-          updateFeatureDef({ eventTypes: v });
-        }}
-      />
+      {/* Editor Content */}
+      <div className="grow overflow-y-auto py-16 px-24">
+        <div className="my-4 flex flex-col gap-4">
+          <div className="flex justify-between items-start">
+            <h1 className="text-emphasis-foreground text-3xl mb-4">
+              {isEditingExistingFeature ? (
+                <>
+                  <span className="italic">{featureName ?? ""}</span>
+                </>
+              ) : (
+                "Create Feature"
+              )}
+            </h1>
 
-      <Separator className="my-12" />
+            <div className="flex gap-2 items-center">
+              {isEditingExistingFeature && (
+                <RenameDialog
+                  name={featureName}
+                  onRename={(newName) => {
+                    onFeatureRename?.(newName);
+                    updateFeatureDef({ featureName: newName });
+                  }}
+                />
+              )}
+              <Button
+                disabled={!everythingValid}
+                onClick={save}
+                className="gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </Button>
+            </div>
+          </div>
 
-      {featureDef.featureType && (
-        <>
-          {featureDef.featureType === FeatureType.Computed ? (
-            <EditComputed
-              featureDef={featureDef as FeatureDefs[FeatureType.Computed]}
-              onFeatureDefChange={setFeatureDef}
-              onValidChange={setTypeDetailsValid}
-            />
-          ) : featureDef.featureType === FeatureType.EntityAppearance ? (
-            <EditEntityAppearance
-              featureDef={
-                featureDef as FeatureDefs[FeatureType.EntityAppearance]
-              }
-              onFeatureDefChange={setFeatureDef}
-              onValidChange={setTypeDetailsValid}
-            />
-          ) : featureDef.featureType === FeatureType.Count ? (
-            <EditCount
-              featureDef={featureDef as FeatureDefs[FeatureType.Count]}
-              isEditingExistingFeature={isEditingExistingFeature}
-              onFeatureDefChange={setFeatureDef}
-              onValidChange={setTypeDetailsValid}
-            />
-          ) : featureDef.featureType === FeatureType.UniqueCount ? (
-            <EditUniqueCount
-              featureDef={featureDef as FeatureDefs[FeatureType.UniqueCount]}
-              isEditingExistingFeature={isEditingExistingFeature}
-              onFeatureDefChange={setFeatureDef}
-              onValidChange={setTypeDetailsValid}
-            />
-          ) : (
-            <div>TODO</div>
-          )}
-        </>
-      )}
+          {/* Feature Name */}
+          <div className="flex items-end gap-3">
+            <div className="grid gap-1.5">
+              <Label>Name</Label>
+              <Input
+                placeholder="Feature Name"
+                className="w-[20rem]"
+                value={featureName}
+                disabled={isEditingExistingFeature}
+                onChange={(e) =>
+                  updateFeatureDef({ featureName: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 items-end">
+            {/* Feature Type */}
+            <div className="flex flex-col gap-1.5">
+              <Label>Type</Label>
+              <Select
+                value={featureType}
+                onValueChange={(v) => handleFeatureTypeSelect(v as FeatureType)}
+                disabled={isEditingExistingFeature}
+              >
+                <SelectTrigger className="w-[20rem]">
+                  <SelectValue placeholder="Select Feature Type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(FeatureType).map((typeOpt) => (
+                    <SelectItem key={typeOpt} value={typeOpt}>
+                      {typeOpt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Data Type */}
+            <div className="flex flex-col gap-1.5">
+              <Select
+                value={dataType}
+                onValueChange={(v) =>
+                  updateFeatureDef({ dataType: v as DataType })
+                }
+                disabled={
+                  featureType !== FeatureType.Computed ||
+                  isEditingExistingFeature
+                }
+              >
+                <SelectTrigger className="w-[8rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATA_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-8 shrink-0" />
+
+        <EventTypes
+          eventTypes={eventTypes}
+          onChange={(v) => {
+            updateFeatureDef({ eventTypes: v });
+          }}
+        />
+
+        <Separator className="my-12" />
+
+        {featureDef.featureType && (
+          <>
+            {featureDef.featureType === FeatureType.Computed ? (
+              <EditComputed
+                featureDef={featureDef as FeatureDefs[FeatureType.Computed]}
+                onFeatureDefChange={setFeatureDef}
+                onValidChange={setTypeDetailsValid}
+              />
+            ) : featureDef.featureType === FeatureType.EntityAppearance ? (
+              <EditEntityAppearance
+                featureDef={
+                  featureDef as FeatureDefs[FeatureType.EntityAppearance]
+                }
+                onFeatureDefChange={setFeatureDef}
+                onValidChange={setTypeDetailsValid}
+              />
+            ) : featureDef.featureType === FeatureType.Count ? (
+              <EditCount
+                featureDef={featureDef as FeatureDefs[FeatureType.Count]}
+                isEditingExistingFeature={isEditingExistingFeature}
+                onFeatureDefChange={setFeatureDef}
+                onValidChange={setTypeDetailsValid}
+              />
+            ) : featureDef.featureType === FeatureType.UniqueCount ? (
+              <EditUniqueCount
+                featureDef={featureDef as FeatureDefs[FeatureType.UniqueCount]}
+                isEditingExistingFeature={isEditingExistingFeature}
+                onFeatureDefChange={setFeatureDef}
+                onValidChange={setTypeDetailsValid}
+              />
+            ) : (
+              <div>TODO</div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

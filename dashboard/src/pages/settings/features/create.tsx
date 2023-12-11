@@ -6,6 +6,9 @@ import { toast } from "~/components/ui/use-toast";
 import { EditFeatureDef } from "~/components/features/EditFeatureDef";
 import { FeatureDef } from "event-processing";
 import { useRouter } from "next/router";
+import SettingsLayout from "~/components/SettingsLayout";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 const Page: NextPageWithLayout = () => {
   const { mutateAsync: create } = api.featureDefs.create.useMutation();
@@ -13,8 +16,8 @@ const Page: NextPageWithLayout = () => {
 
   async function handleSave(def: FeatureDef) {
     try {
-      const res = await create({
-        name: def.featureName!,
+      await create({
+        name: def.featureName,
         featureType: def.featureType,
         dataType: def.dataType,
         eventTypes: [...def.eventTypes],
@@ -22,12 +25,11 @@ const Page: NextPageWithLayout = () => {
         config: def.config,
       });
 
-      router.push(`/settings/features`).then(() => {
-        toast({
-          variant: "default",
-          title: "FeatureDef created!",
-          description: `${def.featureName} (${def.featureType}))`,
-        });
+      void router.push(`/settings/features`);
+      toast({
+        variant: "default",
+        title: "FeatureDef created!",
+        description: `${def.featureName} (${def.featureType})`,
       });
     } catch (e) {
       toast({
@@ -37,9 +39,20 @@ const Page: NextPageWithLayout = () => {
     }
   }
 
-  return <EditFeatureDef onFeatureDefSave={handleSave} />;
+  return (
+    <div>
+      <Link
+        href="/settings/features"
+        className="text-sm text-muted-foreground flex items-center gap-1"
+      >
+        <ChevronLeft className="w-3 h-3" />
+        Back to features
+      </Link>
+      <EditFeatureDef onFeatureDefSave={handleSave} />
+    </div>
+  );
 };
 
-Page.getLayout = (page) => <AppLayout>{page}</AppLayout>;
+Page.getLayout = (page) => <SettingsLayout>{page}</SettingsLayout>;
 
 export default Page;

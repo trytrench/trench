@@ -164,7 +164,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <div>
       <Link
-        href={`/${router.query.project}/settings/lists`}
+        href="/settings/lists"
         className="text-sm text-muted-foreground flex items-center gap-1"
       >
         <ChevronLeft className="w-3 h-3" />
