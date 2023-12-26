@@ -1,4 +1,4 @@
-import { DataType, type TypedData } from "event-processing";
+import { DataType, type TypedDataMap } from "event-processing";
 import { EntityChip } from "./EntityChip";
 import { AlertCircle } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ type Result =
     }
   | {
       type: "success";
-      data: TypedData[DataType];
+      data: TypedDataMap[DataType];
     };
 
 export function RenderResult({ result }: { result: Result }) {
@@ -38,7 +38,7 @@ export function RenderResult({ result }: { result: Result }) {
       return <RenderTypedData data={result.data} />;
   }
 }
-export function RenderTypedData({ data }: { data: TypedData[DataType] }) {
+export function RenderTypedData({ data }: { data: TypedDataMap[DataType] }) {
   switch (data.type) {
     case DataType.Entity:
       return <EntityChip entity={data.value} />;

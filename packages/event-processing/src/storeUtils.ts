@@ -2,7 +2,7 @@ import { GlobalStateKey, db, prisma } from "databases";
 import { getUnixTime } from "date-fns";
 import { DataType, encodeTypedData } from "./dataTypes";
 import { EngineResult } from "./engine";
-import { TrenchEvent } from "./feature-type-defs/featureTypeDef";
+import { TrenchEvent } from "./feature-type-defs/nodeTypeDef";
 
 type FeatureTableRow = {
   engine_id: string;

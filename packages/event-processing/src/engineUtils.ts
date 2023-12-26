@@ -1,7 +1,7 @@
 import { GlobalStateKey, prisma } from "databases";
 import { DataType } from "./dataTypes";
 import { ExecutionEngine } from "./engine";
-import { FeatureDef } from "./feature-type-defs/featureTypeDef";
+import { FeatureDef } from "./feature-type-defs/nodeTypeDef";
 import { FeatureType } from "./feature-type-defs/types/_enum";
 
 export function getFeatureDefFromSnapshot({

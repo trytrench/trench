@@ -1,5 +1,5 @@
 export * from "./dataTypes";
-export * from "./feature-type-defs";
+export * from "./node-type-defs";
 
 export * from "./engineUtils";
 export * from "./eventUtils";

@@ -1,33 +1,41 @@
-import { DataType, TypedData, validateTypedData } from "./dataTypes";
+import { redis } from "./../../databases/src/redis";
+import { DataType, TypedDataMap, validateTypedData } from "./dataTypes";
+import { assert } from "common";
 import {
-  FEATURE_TYPE_DEFS,
-  FeatureDefs,
-  FeatureTypeDefs,
-} from "./feature-type-defs";
-import {
-  FeatureDef,
-  FeatureTypeDef,
+  NODE_TYPE_DEFS,
+  NodeDef,
+  NodeDefsMap,
+  NodeType,
+  NodeTypeContextMap,
+  NodeTypeDef,
+  NodeTypeDefsMap,
   Resolver,
   StateUpdater,
   TrenchEvent,
-} from "./feature-type-defs/featureTypeDef";
-import { printFDef } from "./feature-type-defs/lib/print";
-import { FeatureType } from "./feature-type-defs/types/_enum";
-import { assert } from "./utils";
-
+} from "./node-type-defs";
+import { printNodeDef } from "./node-type-defs/lib/print";
+import { db } from "databases";
 /**
  * Execution Engine
  *
- * The execution engine is responsible for computing feature values.
- * It is initialized with a set of feature instances, which are in-memory objects that define how to compute a
- * feature's value.
+ * The execution engine is responsible for computing node values.
+ * It is initialized with a set of node instances, which are in-memory objects that define how to compute a
+ * node's value.
  */
+
+const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
+  [NodeType.Computed]: {},
+  [NodeType.Counter]: { redis },
+  [NodeType.UniqueCounter]: { redis },
+  [NodeType.LogEntityFeature]: { clickhouse: db },
+  [NodeType.GetEntityFeature]: { clickhouse: db },
+};
 
 type TrenchError = {
   message: string;
 };
 
-function createError(message: string): FeatureResult {
+function createError(message: string): NodeResult {
   return {
     type: "error",
     output: {
@@ -36,14 +44,14 @@ function createError(message: string): FeatureResult {
   };
 }
 
-function createSuccess(output: ResolverOutput): FeatureResult {
+function createSuccess(output: ResolverOutput): NodeResult {
   return {
     type: "success",
     output,
   };
 }
 
-type FeatureResult =
+type NodeResult =
   | { type: "error"; output: TrenchError }
   | { type: "success"; output: ResolverOutput };
 
@@ -51,134 +59,133 @@ type ResolverPromise = ReturnType<Resolver<DataType>>;
 type ResolverOutput = Awaited<ResolverPromise>;
 
 type ExecutionState = {
-  featurePromises: Record<string, Promise<FeatureResult>>;
+  nodePromises: Record<string, Promise<NodeResult>>;
   stateUpdaters: Array<StateUpdater>;
   event: TrenchEvent;
 };
 
-type FeatureInstance = {
-  [TFeatureType in FeatureType]: {
-    featureDef: FeatureDefs[TFeatureType];
-    resolver: Resolver<
-      FeatureTypeDefs[TFeatureType]["allowedDataTypes"][number]
-    >;
+type NodeInstance = {
+  [TNodeType in NodeType]: {
+    nodeDef: NodeDefsMap[TNodeType];
+    resolver: Resolver<NodeTypeDefsMap[TNodeType]["allowedDataTypes"][number]>;
   };
 };
 
 export type EngineResult = {
-  featureResult: FeatureResult;
-  featureDef: FeatureDef;
+  nodeResult: NodeResult;
+  nodeDef: NodeDef;
   event: TrenchEvent;
   engineId: string;
 };
 export class ExecutionEngine {
   engineId: string;
 
-  featureInstances: Record<string, FeatureInstance[FeatureType]> = {};
+  nodeInstances: Record<string, NodeInstance[NodeType]> = {};
 
   state: ExecutionState | null = null;
 
-  constructor(props: { featureDefs: Array<FeatureDef>; engineId: string }) {
-    const { featureDefs, engineId } = props;
+  constructor(props: {
+    nodeDefs: Array<NodeDef>;
+    engineId: string;
+    getContext: () => any;
+  }) {
+    const { nodeDefs, engineId } = props;
 
     this.engineId = engineId;
 
-    const featureInstances: FeatureInstance[FeatureType][] = featureDefs.map(
-      (featureDef) => {
-        const featureType = featureDef.featureType;
-        const featureTypeDef = FEATURE_TYPE_DEFS[featureType] as FeatureTypeDef;
+    const nodeInstances: NodeInstance[NodeType][] = nodeDefs.map((nodeDef) => {
+      const nodeType = nodeDef.type;
+      const nodeTypeDef = NODE_TYPE_DEFS[nodeType] as NodeTypeDef;
 
-        const resolver = featureTypeDef.createResolver({
-          featureDef,
-          context: featureTypeDef.getContext?.(),
-        });
+      const resolver = nodeTypeDef.createResolver({
+        nodeDef,
+        context: MAP_NODE_TYPE_TO_CONTEXT[nodeDef.type],
+      });
 
-        return {
-          featureDef,
-          resolver,
-        } as FeatureInstance[FeatureType];
-      }
-    );
-
-    featureInstances.forEach((instance) => {
-      this.featureInstances[instance.featureDef.featureId] = instance;
+      return {
+        nodeDef,
+        resolver,
+      } as NodeInstance[NodeType];
     });
 
-    validateFeatureInstanceMap(this.featureInstances);
+    nodeInstances.forEach((instance) => {
+      this.nodeInstances[instance.nodeDef.id] = instance;
+    });
+
+    validateNodeInstanceMap(this.nodeInstances);
   }
 
   public initState(event: TrenchEvent) {
     this.state = {
       event,
-      featurePromises: {},
+      nodePromises: {},
       stateUpdaters: [],
     };
   }
 
-  private getFeatureInstance(featureId: string) {
-    const instance = this.featureInstances[featureId];
-    assert(instance, `No feature instance for id: ${featureId}`);
+  private getNodeInstance(nodeId: string) {
+    const instance = this.nodeInstances[nodeId];
+    assert(instance, `No node instance for id: ${nodeId}`);
     return instance;
   }
 
-  public async evaluateFeature(featureId: string): Promise<FeatureResult> {
+  public async evaluateNode(nodeId: string): Promise<NodeResult> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
-    const { event, featurePromises } = this.state;
+    const { event, nodePromises } = this.state;
 
-    // const instance = this.getFeatureInstance(featureId);
-    // if (instance.featureDef.eventTypes.has(event.type) === false) {
+    // const instance = this.getNodeInstance(nodeId);
+    // if (instance.nodeDef.eventTypes.has(event.type) === false) {
     //   return createError(
-    //     `Feature '${featureId}' does not support event type '${event.type}'`
+    //     `Node '${nodeId}' does not support event type '${event.type}'`
     //   );
     // }
 
-    // If feature processing has not started, start it
-    if (!featurePromises[featureId]) {
-      const processFeature = async () => {
+    // If node processing has not started, start it
+    if (!nodePromises[nodeId]) {
+      const processNode = async () => {
         assert(this.state, "No state");
 
         // Get dependencies
-        const instance = this.getFeatureInstance(featureId);
-        const { featureDef, resolver } = instance;
+        const instance = this.getNodeInstance(nodeId);
+        const { nodeDef, resolver } = instance;
 
-        const dependsOnValues: Record<string, TypedData[DataType]> = {};
-        for (const depFeatureId of featureDef.dependsOn) {
-          const output = await this.evaluateFeature(depFeatureId);
-          const depFeatureDef =
-            this.getFeatureInstance(depFeatureId).featureDef;
+        const dependsOnValues: Record<string, TypedDataMap[DataType]> = {};
+        for (const depNodeId of nodeDef.dependsOn) {
+          const output = await this.evaluateNode(depNodeId);
+          const depNodeDef = this.getNodeInstance(depNodeId).nodeDef;
           if (output.type === "error") {
             throw new Error(
-              `Feature ${printFDef(featureDef)} depends on ${printFDef(
-                depFeatureDef
+              `Node ${printNodeDef(nodeDef)} depends on ${printNodeDef(
+                depNodeDef
               )}, but it errored with message: ${output.output.message}`
             );
           }
-          dependsOnValues[depFeatureId] = output.output.data;
+          dependsOnValues[depNodeId] = output.output.data;
         }
 
         // Run getter
-        const resolvedFeature = await resolver({
+        const resolvedNode = await resolver({
           event,
 
-          getDependency: ({ featureId, expectedDataTypes }) => {
-            const depFeatureDef = this.getFeatureInstance(featureId).featureDef;
+          getDependency: ({ nodeId, expectedDataTypes }) => {
+            const depNodeDef = this.getNodeInstance(nodeId).nodeDef;
 
-            const value = dependsOnValues[featureId];
+            const value = dependsOnValues[nodeId];
             assert(
               value,
-              `Feature ${printFDef(featureDef)} depends on ${printFDef(
-                depFeatureDef
+              `Node ${printNodeDef(nodeDef)} depends on ${printNodeDef(
+                depNodeDef
               )}, but no value was found.`
             );
 
             if (expectedDataTypes) {
               assert(
                 expectedDataTypes.includes(value.type as any),
-                `Feature ${printFDef(
-                  featureDef
-                )} expects dependency ${printFDef(
-                  depFeatureDef
+                `Node ${printNodeDef(
+                  nodeDef
+                )} expects dependency ${printNodeDef(
+                  depNodeDef
                 )} to be of type ${expectedDataTypes.join(
                   ", "
                 )}, but it is of type ${value.type}`
@@ -189,23 +196,23 @@ export class ExecutionEngine {
           },
         });
 
-        validateTypedData(resolvedFeature.data);
+        validateTypedData(resolvedNode.data);
 
         // Register state updaters
-        this.state.stateUpdaters.push(...resolvedFeature.stateUpdaters);
+        this.state.stateUpdaters.push(...resolvedNode.stateUpdaters);
 
-        return createSuccess(resolvedFeature);
+        return createSuccess(resolvedNode);
       };
 
-      const promise = processFeature().catch((e) => {
+      const promise = processNode().catch((e) => {
         return createError(e.message);
       });
-      featurePromises[featureId] = promise;
+      nodePromises[nodeId] = promise;
     }
 
-    const featurePromise = featurePromises[featureId];
-    assert(featurePromise, "No feature promise... this should never happen");
-    return await featurePromise;
+    const nodePromise = nodePromises[nodeId];
+    assert(nodePromise, "No node promise... this should never happen");
+    return await nodePromise;
   }
 
   public async executeStateUpdates() {
@@ -217,27 +224,27 @@ export class ExecutionEngine {
   public async getAllEngineResults() {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
-    const allInstances = Object.values(this.featureInstances);
+    const allInstances = Object.values(this.nodeInstances);
 
     // Initialize all promises
     for (const instance of allInstances) {
-      this.evaluateFeature(instance.featureDef.featureId);
+      this.evaluateNode(instance.nodeDef.id);
     }
 
     // Await all promises
     const engineResults: Record<string, EngineResult> = {};
     for (const instance of allInstances) {
-      const { featureDef } = instance;
+      const { nodeDef } = instance;
 
-      // if (!featureDef.eventTypes.has(this.state.event.type)) {
+      // if (!nodeDef.eventTypes.has(this.state.event.type)) {
       //   continue;
       // }
 
-      const result = await this.evaluateFeature(featureDef.featureId);
+      const result = await this.evaluateNode(nodeDef.id);
 
-      engineResults[featureDef.featureId] = {
-        featureResult: result,
-        featureDef: instance.featureDef,
+      engineResults[nodeDef.id] = {
+        nodeResult: result,
+        nodeDef: instance.nodeDef,
         event: this.state.event,
         engineId: this.engineId,
       };
@@ -247,32 +254,30 @@ export class ExecutionEngine {
   }
 }
 
-function validateFeatureInstanceMap(
-  map: Record<string, FeatureInstance[FeatureType]>
-) {
+function validateNodeInstanceMap(map: Record<string, NodeInstance[NodeType]>) {
   // Check dependencies are valid
-  for (const feature of Object.values(map)) {
-    const def = feature.featureDef;
-    for (const depFeatureId of def.dependsOn) {
-      const depFeature = map[depFeatureId];
+  for (const node of Object.values(map)) {
+    const def = node.nodeDef;
+    for (const depNodeId of def.dependsOn) {
+      const depNode = map[depNodeId];
       assert(
-        depFeature,
-        `Feature ${printFDef(
+        depNode,
+        `Node ${printNodeDef(
           def
-        )} depends on feature of ID ${depFeatureId}, which is not included in the engine's feature set.`
+        )} depends on node of ID ${depNodeId}, which is not included in the engine's node set.`
       );
 
-      // Check that dependency's event types is a superset of this feature's event types
-      const depFeatureDef = depFeature.featureDef;
-      const depFeatureEventTypes = depFeatureDef.eventTypes;
-      const featureEventTypes = def.eventTypes;
-      for (const eventType of featureEventTypes) {
+      // Check that dependency's event types is a superset of this node's event types
+      const depNodeDef = depNode.nodeDef;
+      const depNodeEventTypes = depNodeDef.eventTypes;
+      const nodeEventTypes = def.eventTypes;
+      for (const eventType of nodeEventTypes) {
         assert(
-          depFeatureEventTypes.has(eventType),
-          `Feature ${printFDef(
+          depNodeEventTypes.has(eventType),
+          `Node ${printNodeDef(
             def
-          )} supports event type '${eventType}', but depends on feature ${printFDef(
-            depFeatureDef
+          )} supports event type '${eventType}', but depends on node ${printNodeDef(
+            depNodeDef
           )} which doesn't.`
         );
       }

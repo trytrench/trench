@@ -2,7 +2,7 @@ import {
   DataType,
   Entity,
   FeatureDef,
-  TypedData,
+  TypedDataMap,
   decodeTypedData,
   getFeatureDefFromSnapshot,
 } from "event-processing";
@@ -269,7 +269,7 @@ type AnnotatedFeature = {
       }
     | {
         type: "success";
-        data: TypedData[DataType];
+        data: TypedDataMap[DataType];
       };
 };
 

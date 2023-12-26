@@ -31,26 +31,24 @@ export function hashObject(obj: any): Buffer {
  */
 export function getPastNCountBucketHashes(props: {
   timeWindowMs: number;
-  countFeatureId: string;
-  countBy: {
-    stringValue: string;
-    featureId: string;
-  }[];
-  eventTimestamp: Date;
+  counterId: string;
+  countBy: string[];
+  currentTime: Date;
   n: number;
 }) {
-  const { timeWindowMs, countFeatureId, countBy, eventTimestamp, n } = props;
+  const { timeWindowMs, counterId, countBy, currentTime, n } = props;
 
-  const buckets = getPastNTimeBuckets({ timeWindowMs, eventTimestamp, n });
-  const sortedCountByFeatures = countBy.sort((a, b) => {
-    return a.featureId < b.featureId ? -1 : 1;
+  const buckets = getPastNTimeBuckets({
+    timeWindowMs,
+    eventTimestamp: currentTime,
+    n,
   });
 
   const bucketHashes = buckets.map((bucket) =>
     hashObject({
       bucket,
-      countFeatureId,
-      sortedCountByFeatures,
+      counterId,
+      countBy,
     })
   );
 

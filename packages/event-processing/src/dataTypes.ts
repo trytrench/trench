@@ -1,4 +1,4 @@
-import { assert } from "./utils";
+import { assert } from "common";
 
 export enum DataType {
   Int64 = "Int64",
@@ -7,6 +7,8 @@ export enum DataType {
   Boolean = "Boolean",
   Object = "Object",
   Entity = "Entity",
+  Record = "Record",
+  Array = "Array",
 }
 
 export type Entity = {
@@ -25,16 +27,21 @@ export interface DataTypeToTsType {
   [DataType.Boolean]: boolean;
   [DataType.Object]: object;
   [DataType.Entity]: Entity;
+  [DataType.Record]: Record<string, TypedData>;
+  [DataType.Array]: Array<TypedData>;
 }
 
-export type TypedData = {
+export type TypedDataMap = {
   [TDataType in DataType]: {
     type: TDataType;
     value: DataTypeToTsType[TDataType];
   };
 };
 
-export function validateTypedData(typedData: TypedData[DataType]) {
+export type TypedData<TDataType extends DataType = DataType> =
+  TypedDataMap[TDataType];
+
+export function validateTypedData(typedData: TypedDataMap[DataType]) {
   const { type, value } = typedData;
   switch (type) {
     case DataType.Int64:
@@ -65,7 +72,7 @@ export function validateTypedData(typedData: TypedData[DataType]) {
   }
 }
 
-export function encodeTypedData(data: TypedData[DataType]) {
+export function encodeTypedData(data: TypedDataMap[DataType]) {
   const { type, value } = data;
   switch (type) {
     case DataType.Boolean:
@@ -88,7 +95,7 @@ export function encodeTypedData(data: TypedData[DataType]) {
 export function decodeTypedData(
   dataType: DataType,
   value: string
-): TypedData[DataType] {
+): TypedDataMap[DataType] {
   switch (dataType) {
     case DataType.Boolean:
       return {

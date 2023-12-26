@@ -1,5 +1,5 @@
+import { assert } from "common";
 import Redis from "ioredis";
-import { assert } from "../../utils";
 
 export interface RedisInterface {
   increment(key: Buffer, amount?: number): Promise<number>;
@@ -94,14 +94,7 @@ class RedisService implements RedisInterface {
   }
 }
 
-var redis: RedisInterface | undefined = undefined;
-
-export function getRedisService() {
-  if (!redis) {
-    redis = new RedisService();
-  }
-  return redis;
-}
+export const redis = new RedisService();
 
 function addressToHostPort(
   address: string,

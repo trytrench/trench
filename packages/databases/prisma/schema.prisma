@@ -44,10 +44,38 @@ model Event {
   @@index([timestamp])
 }
 
+model FeatureToEntityType {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-// Once an FeatureDef is created, only the name can be modified.
+  featureId    String
+  feature      Feature @relation(fields: [featureId], references: [id])
+  entityTypeId String
+  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
+
+  orderIndex Int
+
+  @@unique([featureId, entityTypeId])
+}
+
+model Feature {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+
+  // Immutable
+  dataType String
+  belongsTo FeatureToEntityType[]
+}
+
+
+// Once an Node is created, only the name can be modified.
 // The type and dataType are immutable.
-model FeatureDef {
+model Node {
   id String @id @default(dbgenerated("nanoid()"))
 
   type     String
@@ -57,10 +85,10 @@ model FeatureDef {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  snapshots FeatureDefSnapshot[]
+  snapshots NodeSnapshot[]
 }
 
-model FeatureDefSnapshot {
+model NodeSnapshot {
   id String @id @default(dbgenerated("nanoid()"))
 
   eventTypes String[]
@@ -70,32 +98,32 @@ model FeatureDefSnapshot {
   createdAt DateTime @default(now())
 
 
-  featureDef   FeatureDef @relation(fields: [featureDefId], references: [id], onDelete: Cascade)
-  featureDefId String
+  node   Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  nodeId String
 
-  executionEngines ExecutionEngineToFeatureDefSnapshot[]
+  executionEngines ExecutionEngineToNodeSnapshot[]
 }
 
 
-model ExecutionEngineToFeatureDefSnapshot {
+model ExecutionEngineToNodeSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  featureDefSnapshotId String
-  featureDefSnapshot   FeatureDefSnapshot @relation(fields: [featureDefSnapshotId], references: [id])
+  nodeSnapshotId String
+  nodeSnapshot   NodeSnapshot @relation(fields: [nodeSnapshotId], references: [id])
 
   executionEngineId String
   executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
 
-  @@unique([featureDefSnapshotId, executionEngineId])
+  @@unique([nodeSnapshotId, executionEngineId])
 }
 
 model ExecutionEngine {
   id        String     @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  featureDefSnapshots ExecutionEngineToFeatureDefSnapshot[]  
+  nodeSnapshots ExecutionEngineToNodeSnapshot[]  
 
 }
 
@@ -112,6 +140,8 @@ model EntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  featureToEntityTypes FeatureToEntityType[]
 
   type String @unique
 }
