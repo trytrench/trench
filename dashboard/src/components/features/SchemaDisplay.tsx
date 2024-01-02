@@ -1,19 +1,25 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useMemo, useState } from "react";
-import { toast } from "../ui/use-toast";
 import { run } from "json_typegen_wasm";
-import { api } from "~/utils/api";
 import { merge } from "lodash";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { api } from "~/utils/api";
 
 interface SchemaDisplayProps {
   eventTypes: Set<string>;
   onItemClick?: (path: string, name: string) => void;
   basePath?: string;
   baseName?: string;
+  renderRightComponent: (path: string) => React.ReactNode;
 }
 
 export function SchemaDisplay(props: SchemaDisplayProps) {
-  const { eventTypes, onItemClick, basePath = "", baseName = "" } = props;
+  const {
+    eventTypes,
+    onItemClick,
+    basePath = "",
+    baseName = "",
+    renderRightComponent,
+  } = props;
   const schemaObj = useEventSchema({ eventTypes });
 
   return (
@@ -22,6 +28,7 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
       path={basePath}
       info={schemaObj}
       onItemClick={onItemClick}
+      renderRightComponent={renderRightComponent}
     />
   );
 }
@@ -67,10 +74,11 @@ interface SchemaEntryProps {
   path: string;
   info: InfoType;
   onItemClick?: (path: string, name: string) => void;
+  renderRightComponent: (path: string) => React.ReactNode;
 }
 
 function SchemaEntry(props: SchemaEntryProps) {
-  const { name, path, info, onItemClick } = props;
+  const { name, path, info, onItemClick, renderRightComponent } = props;
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -110,6 +118,7 @@ function SchemaEntry(props: SchemaEntryProps) {
                       path={entryPath}
                       info={value}
                       onItemClick={onItemClick}
+                      renderRightComponent={renderRightComponent}
                     />
                   </div>
                 );
@@ -123,15 +132,15 @@ function SchemaEntry(props: SchemaEntryProps) {
   }
 
   return (
-    <div className="pt-0.5">
+    <div className="pt-0.5 flex items-center">
       <button
         onClick={() => {
           onItemClick?.(path, name);
         }}
       >
-        {name}
+        {name}: <span className="opacity-50">{info.type ?? "?"}</span>
       </button>
-      : <span className="opacity-20">{info.type ?? "?"}</span>
+      {renderRightComponent(path)}
     </div>
   );
 }
