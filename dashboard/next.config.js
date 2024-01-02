@@ -52,7 +52,13 @@ const config = {
     );
 
     if (!isServer) {
-      config.resolve.fallback.fs = false;
+      config.resolve.fallback = {
+        fs: false,
+        dns: false,
+        net: false,
+        tls: false,
+      };
+
       config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
 
