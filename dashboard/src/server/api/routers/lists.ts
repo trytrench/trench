@@ -306,13 +306,13 @@ function getAnnotatedFeatures(
 }
 
 async function getLatestFeatureDefs() {
-  const latestSnapshots = await prisma.featureDefSnapshot.findMany({
-    distinct: ["featureDefId"],
+  const latestSnapshots = await prisma.nodeSnapshot.findMany({
+    distinct: ["nodeId"],
     orderBy: {
       createdAt: "desc",
     },
     include: {
-      featureDef: true,
+      node: true,
     },
   });
 

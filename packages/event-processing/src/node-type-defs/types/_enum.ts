@@ -5,3 +5,8 @@ export enum NodeType {
   LogEntityFeature = "LogEntityFeature",
   GetEntityFeature = "GetEntityFeature",
 }
+
+export enum ComputedNodeType {
+  Code = "Code",
+  Path = "Path",
+}

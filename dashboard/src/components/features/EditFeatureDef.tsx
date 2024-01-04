@@ -2,9 +2,10 @@ import React, { useMemo, useState } from "react";
 
 import {
   DataType,
-  FeatureDef,
-  FeatureDefs,
-  FeatureType,
+  NodeType,
+  // FeatureDef,
+  // FeatureDefs,
+  // FeatureType,
 } from "event-processing";
 
 import { EditComputed } from "~/components/features/feature-types/EditComputed";
@@ -56,7 +57,7 @@ const DATA_TYPE_OPTIONS = [
 ];
 
 const TYPE_DEFAULTS = {
-  [FeatureType.Computed]: {
+  [NodeType.Computed]: {
     dataType: DataType.Boolean,
     config: {
       code: "",
@@ -64,7 +65,7 @@ const TYPE_DEFAULTS = {
       assignedEntityFeatureIds: [],
     },
   },
-  [FeatureType.Count]: {
+  [NodeType.Counter]: {
     dataType: DataType.Int64,
     config: {
       timeWindow: {
@@ -73,9 +74,9 @@ const TYPE_DEFAULTS = {
       },
       countByFeatureIds: [],
       conditionFeatureId: undefined,
-    } as FeatureDefs[FeatureType.Count]["config"],
+    }, // as FeatureDefs[FeatureType.Count]["config"],
   },
-  [FeatureType.UniqueCount]: {
+  [NodeType.UniqueCounter]: {
     dataType: DataType.Int64,
     config: {
       timeWindow: {
@@ -85,9 +86,9 @@ const TYPE_DEFAULTS = {
       countByFeatureIds: [],
       countUniqueFeatureIds: [],
       conditionFeatureId: undefined,
-    } as FeatureDefs[FeatureType.UniqueCount]["config"],
+    }, // as FeatureDefs[FeatureType.UniqueCount]["config"],
   },
-  [FeatureType.EntityAppearance]: {
+  [NodeType.LogEntityFeature]: {
     dataType: DataType.Entity,
     config: {
       eventTypes: new Set(),
@@ -96,7 +97,7 @@ const TYPE_DEFAULTS = {
     },
   },
 } as Record<
-  FeatureType,
+  NodeType,
   {
     dataType: DataType;
     config: any;
@@ -221,7 +222,7 @@ function EditFeatureDef(props: EditFeatureDefProps) {
                 <SelectValue placeholder="Select Feature Type..." />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(FeatureType).map((typeOpt) => (
+                {Object.values(NodeType).map((typeOpt) => (
                   <SelectItem key={typeOpt} value={typeOpt}>
                     {typeOpt}
                   </SelectItem>
@@ -238,7 +239,7 @@ function EditFeatureDef(props: EditFeatureDefProps) {
                 updateFeatureDef({ dataType: v as DataType })
               }
               disabled={
-                featureType !== FeatureType.Computed || isEditingExistingFeature
+                featureType !== NodeType.Computed || isEditingExistingFeature
               }
             >
               <SelectTrigger className="w-[8rem]">
@@ -269,13 +270,13 @@ function EditFeatureDef(props: EditFeatureDefProps) {
 
       {featureDef.featureType && (
         <>
-          {featureDef.featureType === FeatureType.Computed ? (
+          {featureDef.featureType === NodeType.Computed ? (
             <EditComputed
               featureDef={featureDef as FeatureDefs[FeatureType.Computed]}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === FeatureType.EntityAppearance ? (
+          ) : featureDef.featureType === NodeType.LogEntityFeature ? (
             <EditEntityAppearance
               featureDef={
                 featureDef as FeatureDefs[FeatureType.EntityAppearance]
@@ -283,14 +284,14 @@ function EditFeatureDef(props: EditFeatureDefProps) {
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === FeatureType.Count ? (
+          ) : featureDef.featureType === NodeType.Counter ? (
             <EditCount
               featureDef={featureDef as FeatureDefs[FeatureType.Count]}
               isEditingExistingFeature={isEditingExistingFeature}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === FeatureType.UniqueCount ? (
+          ) : featureDef.featureType === NodeType.UniqueCounter ? (
             <EditUniqueCount
               featureDef={featureDef as FeatureDefs[FeatureType.UniqueCount]}
               isEditingExistingFeature={isEditingExistingFeature}

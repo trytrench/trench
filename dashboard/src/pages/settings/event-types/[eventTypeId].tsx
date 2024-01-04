@@ -1,4 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  DataType,
+  NodeType,
+  NODE_TYPE_DEFS,
+  ComputedNodeType,
+} from "event-processing";
 import { ChevronLeft, ChevronsUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -45,16 +51,110 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { useToast } from "~/components/ui/use-toast";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  //   entity: z.string(),
+  entity: z.string(),
   path: z.string(),
 });
+
+const EntityDialog = ({
+  title,
+  children,
+  onSubmit,
+  path,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  path: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      entity: "",
+      path,
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              setOpen(false);
+              form.reset();
+            })}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="entity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Entity</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Entity" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {entityTypes?.map((entityType) => (
+                            <SelectItem
+                              key={entityType.id}
+                              value={entityType.type}
+                            >
+                              {entityType.type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="path"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Path</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Dialog with form component
 const DialogWithForm = ({
@@ -239,21 +339,19 @@ const EntityCard = ({ name, path }: { name: string; path: string }) => {
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
+  const { toast } = useToast();
 
-  const [entities, setEntities] = useState<{ path: string; name: string }[]>([
-    {
-      path: "input.event.data.deviceId",
-      name: "Device",
-    },
-    {
-      path: "input.event.data.ipAddress",
-      name: "IP Address",
-    },
-  ]);
+  const { data: eventType } = api.eventTypes.get.useQuery(
+    { id: router.query.eventTypeId as string },
+    { enabled: !!router.query.eventTypeId }
+  );
 
-  const { data: eventType } = api.eventTypes.get.useQuery({
-    id: router.query.eventTypeId as string,
-  });
+  const { mutateAsync: createNodeDef } = api.featureDefs.create.useMutation();
+  const { data: nodes, refetch: refetchNodes } =
+    api.featureDefs.getEventTypeNodes.useQuery(
+      { eventTypeId: router.query.eventTypeId as string },
+      { enabled: !!router.query.eventTypeId }
+    );
 
   return (
     <div>
@@ -291,23 +389,48 @@ const Page: NextPageWithLayout = () => {
                   </DropdownMenuItem>
                 </DialogWithForm>
 
-                <DialogWithForm
+                <EntityDialog
                   path={path}
                   title="New Entity"
                   onSubmit={(values) => {
-                    setEntities([
-                      ...entities,
-                      {
-                        name: values.name,
-                        path: values.path,
-                      },
-                    ]);
+                    // Create entity appearance
+                    createNodeDef({
+                      eventTypes: [router.query.eventTypeId as string],
+                      name: values.entity,
+                      featureType: NodeType.Computed,
+                      dataType: DataType.Entity,
+                      deps: [],
+                      config: {
+                        type: ComputedNodeType.Path,
+                        paths: {
+                          [router.query.eventTypeId as string]: values.path,
+                        },
+                        compiledJs: "",
+                        tsCode: "",
+                        depsMap: {},
+                      } as z.infer<
+                        (typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]
+                      >,
+                    })
+                      .then(() => {
+                        toast({
+                          title: "FeatureDef created!",
+                          description: `${values.name} ()`,
+                        });
+                        refetchNodes();
+                      })
+                      .catch(() => {
+                        toast({
+                          variant: "destructive",
+                          title: "Failed to create FeatureDef",
+                        });
+                      });
                   }}
                 >
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     New Entity
                   </DropdownMenuItem>
-                </DialogWithForm>
+                </EntityDialog>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -324,9 +447,15 @@ const Page: NextPageWithLayout = () => {
       </Card>
       <div className="h-9" />
       <div className="space-y-4">
-        {entities.map((entity) => (
-          <EntityCard name={entity.name} path={entity.path} key={entity.name} />
-        ))}
+        {nodes
+          ?.filter((node) => node.node.dataType === DataType.Entity)
+          .map((node) => (
+            <EntityCard
+              name={node.node.name}
+              path={node.config?.paths?.[router.query.eventTypeId as string]}
+              key={node.id}
+            />
+          ))}
       </div>
     </div>
   );

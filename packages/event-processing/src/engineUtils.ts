@@ -12,7 +12,7 @@ export function getFeatureDefFromSnapshot({
     config: any;
     deps: string[];
     eventTypes: string[];
-    featureDef: {
+    node: {
       id: string;
       type: string;
       dataType: string;
@@ -21,13 +21,13 @@ export function getFeatureDefFromSnapshot({
   };
 }): FeatureDef {
   return {
-    featureId: featureDefSnapshot.featureDef.id,
-    featureType: featureDefSnapshot.featureDef.type as FeatureType,
-    featureName: featureDefSnapshot.featureDef.name,
+    featureId: featureDefSnapshot.node.id,
+    featureType: featureDefSnapshot.node.type as FeatureType,
+    featureName: featureDefSnapshot.node.name,
     dependsOn: new Set(featureDefSnapshot.deps),
     eventTypes: new Set(featureDefSnapshot.eventTypes),
     config: featureDefSnapshot.config as object,
-    dataType: featureDefSnapshot.featureDef.dataType as DataType,
+    dataType: featureDefSnapshot.node.dataType as DataType,
   };
 }
 
@@ -40,11 +40,11 @@ async function fetchFeatureDefSnapshots({
   const engineDef = await prisma.executionEngine.findUnique({
     where: { id: engineId },
     include: {
-      featureDefSnapshots: {
+      nodeSnapshots: {
         include: {
-          featureDefSnapshot: {
+          nodeSnapshot: {
             include: {
-              featureDef: true,
+              node: true,
             },
           },
         },
@@ -55,8 +55,8 @@ async function fetchFeatureDefSnapshots({
   if (!engineDef) {
     throw new Error(`No engine found for engineId ${engineId}`);
   }
-  const featureDefs = engineDef.featureDefSnapshots.map((item) => {
-    const snapshot = item.featureDefSnapshot;
+  const featureDefs = engineDef.nodeSnapshots.map((item) => {
+    const snapshot = item.nodeSnapshot;
     return getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot });
   });
 
@@ -71,6 +71,6 @@ export async function fetchCurrentEngineId() {
 }
 
 export async function createEngine({ engineId }: { engineId: string }) {
-  const featureDefs = await fetchFeatureDefSnapshots({ engineId });
-  return new ExecutionEngine({ featureDefs, engineId });
+  const nodeDefs = await fetchFeatureDefSnapshots({ engineId });
+  return new ExecutionEngine({ nodeDefs, engineId });
 }

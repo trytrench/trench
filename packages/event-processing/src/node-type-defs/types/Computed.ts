@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DataType } from "../../dataTypes";
-import { NodeType } from "./_enum";
+import { ComputedNodeType, NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 
 export const computedNodeDef = createNodeTypeDefBuilder()
@@ -10,6 +10,8 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       depsMap: z.record(z.string()),
       tsCode: z.string(),
       compiledJs: z.string(),
+      paths: z.record(z.string()),
+      type: z.nativeEnum(ComputedNodeType),
     })
   )
   .setAllowedDataTypes([

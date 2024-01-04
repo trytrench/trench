@@ -1,7 +1,7 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { DataType, FeatureDefs, FeatureType } from "event-processing";
+import { DataType, FeatureDefs, FeatureType, NodeType } from "event-processing";
 import { useMemo } from "react";
 import { api } from "~/utils/api";
 import { DepsMapEditor } from "../shared/DepsMapEditor";
@@ -53,7 +53,7 @@ function EditComputed(props: EditComputedProps) {
         onFeatureIdsChange={(val) => {
           updateConfigAndDeps({ assignedEntityFeatureIds: val });
         }}
-        filter={{ featureType: FeatureType.EntityAppearance }}
+        filter={{ featureType: NodeType.LogEntityFeature }}
         label="Assigned Entities"
       />
 

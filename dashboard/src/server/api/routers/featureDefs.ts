@@ -2,9 +2,9 @@ import { GlobalStateKey } from "databases";
 import {
   DataType,
   FEATURE_TYPE_DEFS,
-  FeatureType,
   getFeatureDefFromSnapshot,
-  type FeatureDef,
+  NODE_TYPE_DEFS,
+  NodeType,
 } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -13,12 +13,12 @@ export const featureDefsRouter = createTRPCRouter({
   allInfo: protectedProcedure
     .input(
       z.object({
-        featureType: z.nativeEnum(FeatureType).optional(),
+        featureType: z.nativeEnum(NodeType).optional(),
         dataType: z.nativeEnum(DataType).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const featureDefs = await ctx.prisma.featureDef.findMany({
+      const featureDefs = await ctx.prisma.node.findMany({
         where: {
           type: input.featureType,
           dataType: input.dataType,
@@ -28,11 +28,33 @@ export const featureDefsRouter = createTRPCRouter({
       return featureDefs;
     }),
 
+  getEventTypeNodes: protectedProcedure
+    .input(
+      z.object({
+        eventTypeId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const snapshots = await ctx.prisma.nodeSnapshot.findMany({
+        distinct: ["nodeId"],
+        where: {
+          eventTypes: {
+            has: input.eventTypeId,
+          },
+        },
+        include: {
+          node: true,
+        },
+      });
+
+      return snapshots;
+    }),
+
   getLatest: protectedProcedure.query(async ({ ctx, input }) => {
-    const snapshots = await ctx.prisma.featureDefSnapshot.findMany({
-      distinct: ["featureDefId"],
+    const snapshots = await ctx.prisma.nodeSnapshot.findMany({
+      distinct: ["nodeId"],
       include: {
-        featureDef: true,
+        node: true,
       },
     });
 
@@ -44,7 +66,7 @@ export const featureDefsRouter = createTRPCRouter({
   }),
 
   list: protectedProcedure.query(async ({ ctx, input }) => {
-    const featureDefs = await ctx.prisma.featureDef.findMany({
+    const featureDefs = await ctx.prisma.node.findMany({
       include: {
         snapshots: {
           orderBy: {
@@ -87,23 +109,23 @@ export const featureDefsRouter = createTRPCRouter({
         deps: z.array(z.string()),
 
         config: z.record(z.any()),
-        featureType: z.nativeEnum(FeatureType),
+        featureType: z.nativeEnum(NodeType),
         dataType: z.nativeEnum(DataType),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const featureTypeZod = FEATURE_TYPE_DEFS[input.featureType].configSchema;
+      const featureTypeZod = NODE_TYPE_DEFS[input.featureType].configSchema;
       featureTypeZod.parse(input.config);
 
       const allowedDataTypes: DataType[] =
-        FEATURE_TYPE_DEFS[input.featureType].allowedDataTypes;
+        NODE_TYPE_DEFS[input.featureType].allowedDataTypes;
       if (!allowedDataTypes.includes(input.dataType)) {
         throw new Error(
           `Feature type ${input.featureType} does not support data type ${input.dataType}`
         );
       }
 
-      const featureDef = await ctx.prisma.featureDef.create({
+      const featureDef = await ctx.prisma.node.create({
         data: {
           type: input.featureType,
           dataType: input.dataType,
@@ -121,7 +143,7 @@ export const featureDefsRouter = createTRPCRouter({
       });
 
       // Publish
-      const latestFeatureSnapshots = await ctx.prisma.featureDef.findMany({
+      const latestFeatureSnapshots = await ctx.prisma.node.findMany({
         include: {
           snapshots: {
             orderBy: {
@@ -134,10 +156,10 @@ export const featureDefsRouter = createTRPCRouter({
 
       const engine = await ctx.prisma.executionEngine.create({
         data: {
-          featureDefSnapshots: {
+          nodeSnapshots: {
             createMany: {
               data: latestFeatureSnapshots.map((featureDef) => ({
-                featureDefSnapshotId: featureDef.snapshots[0]!.id,
+                nodeSnapshotId: featureDef.snapshots[0]!.id,
               })),
             },
           },
@@ -170,7 +192,7 @@ export const featureDefsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.featureDef.update({
+      return ctx.prisma.node.update({
         where: {
           id: input.id,
         },
@@ -196,7 +218,7 @@ export const featureDefsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.featureDef.update({
+      return ctx.prisma.node.update({
         where: {
           id: input.id,
         },
@@ -213,7 +235,7 @@ export const featureDefsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.featureDef.delete({
+      return ctx.prisma.node.delete({
         where: {
           id: input.id,
         },
