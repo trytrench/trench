@@ -12,6 +12,7 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       compiledJs: z.string(),
       paths: z.record(z.string()),
       type: z.nativeEnum(ComputedNodeType),
+      featureId: z.string().optional(),
     })
   )
   .setAllowedDataTypes([

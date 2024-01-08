@@ -1,14 +1,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Feature } from "@prisma/client";
 import {
   DataType,
   NodeType,
   NODE_TYPE_DEFS,
   ComputedNodeType,
 } from "event-processing";
-import { ChevronLeft, ChevronsUpDown, MoreHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronsUpDown,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { string, z } from "zod";
 import SettingsLayout from "~/components/SettingsLayout";
@@ -58,6 +64,18 @@ import { api } from "~/utils/api";
 const formSchema = z.object({
   entity: z.string(),
   path: z.string(),
+});
+
+const featureSchema = z.object({
+  name: z.string(),
+  entityTypeId: z.string(),
+  dataType: z.nativeEnum(DataType),
+});
+
+const entityFeatureSchema = z.object({
+  path: z.string(),
+  entityTypeId: z.string(),
+  featureId: z.string(),
 });
 
 const EntityDialog = ({
@@ -140,6 +158,257 @@ const EntityDialog = ({
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const EntityFeatureDialog = ({
+  title,
+  children,
+  onSubmit,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onSubmit: (values: z.infer<typeof entityFeatureSchema>) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof entityFeatureSchema>>({
+    resolver: zodResolver(entityFeatureSchema),
+    defaultValues: {
+      path: "",
+      entityTypeId: "",
+      featureId: "",
+    },
+  });
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const { data: features } = api.features.list.useQuery();
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              setOpen(false);
+              form.reset();
+            })}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="path"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Path</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="entityTypeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Entity Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Entity" />
+                          </SelectTrigger>
+                        </FormControl>
+
+                        <SelectContent>
+                          {entityTypes?.map((entityType) => (
+                            <SelectItem
+                              key={entityType.id}
+                              value={entityType.id}
+                            >
+                              {entityType.type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="featureId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Entity Property</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Entity Property" />
+                          </SelectTrigger>
+                        </FormControl>
+
+                        <SelectContent>
+                          {features?.map((feature) => (
+                            <SelectItem key={feature.id} value={feature.id}>
+                              {feature.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const FeatureDialog = ({
+  title,
+  children,
+  onSubmit,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onSubmit: (values: z.infer<typeof featureSchema>) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof featureSchema>>({
+    resolver: zodResolver(featureSchema),
+    defaultValues: {
+      name: "",
+      entityTypeId: "",
+      dataType: DataType.String,
+    },
+  });
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              setOpen(false);
+              form.reset();
+            })}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="entityTypeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Entity Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Entity" />
+                          </SelectTrigger>
+                        </FormControl>
+
+                        <SelectContent>
+                          {entityTypes?.map((entityType) => (
+                            <SelectItem
+                              key={entityType.id}
+                              value={entityType.id}
+                            >
+                              {entityType.type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="dataType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Data Type" />
+                          </SelectTrigger>
+                        </FormControl>
+
+                        <SelectContent>
+                          {Object.values(DataType).map((dataType) => (
+                            <SelectItem key={dataType} value={dataType}>
+                              {dataType}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -270,12 +539,12 @@ const DialogWithForm = ({
   );
 };
 
-const FeatureCard = ({ name, path }: { name: string; path: string }) => {
+const FeatureCard = ({ name, path }: { name: string; path?: string }) => {
   return (
     <Card className="px-4 flex justify-between items-center">
       <div className="flex gap-2">
-        <div className="text-emphasis-foreground text-sm">Browser</div>
-        <div className="text-sm">input.event.data.deviceId</div>
+        <div className="text-emphasis-foreground text-sm">{name}</div>
+        <div className="text-sm">{path}</div>
       </div>
 
       <DropdownMenu>
@@ -313,7 +582,15 @@ const FeatureCard = ({ name, path }: { name: string; path: string }) => {
   );
 };
 
-const EntityCard = ({ name, path }: { name: string; path: string }) => {
+const EntityCard = ({
+  name,
+  path,
+  children,
+}: {
+  name: string;
+  path: string;
+  children: React.ReactNode;
+}) => {
   return (
     <Collapsible>
       <div className="flex justify-between items-center">
@@ -330,8 +607,7 @@ const EntityCard = ({ name, path }: { name: string; path: string }) => {
       </div>
       <Separator className="my-2" />
       <CollapsibleContent className="space-y-2 mb-8">
-        <FeatureCard name="Browser" path="input.event.data.deviceId" />
-        <FeatureCard name="IP Data" path="input.event.data.ipData" />
+        {children}
       </CollapsibleContent>
     </Collapsible>
   );
@@ -346,7 +622,12 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.eventTypeId }
   );
 
+  const { data: features, refetch: refetchFeatures } =
+    api.features.list.useQuery();
+
   const { mutateAsync: createNodeDef } = api.featureDefs.create.useMutation();
+  const { mutateAsync: createFeature } = api.features.create.useMutation();
+
   const { data: nodes, refetch: refetchNodes } =
     api.featureDefs.getEventTypeNodes.useQuery(
       { eventTypeId: router.query.eventTypeId as string },
@@ -398,7 +679,10 @@ const Page: NextPageWithLayout = () => {
                       eventTypes: [router.query.eventTypeId as string],
                       name: values.entity,
                       featureType: NodeType.Computed,
-                      dataType: DataType.Entity,
+                      dataType: {
+                        type: DataType.Entity,
+                        entityType: values.entity,
+                      },
                       deps: [],
                       config: {
                         type: ComputedNodeType.Path,
@@ -415,7 +699,7 @@ const Page: NextPageWithLayout = () => {
                       .then(() => {
                         toast({
                           title: "FeatureDef created!",
-                          description: `${values.name} ()`,
+                          description: `${values.entity}`,
                         });
                         refetchNodes();
                       })
@@ -448,13 +732,117 @@ const Page: NextPageWithLayout = () => {
       <div className="h-9" />
       <div className="space-y-4">
         {nodes
-          ?.filter((node) => node.node.dataType === DataType.Entity)
+          ?.filter((node) => node.node.dataType?.type === DataType.Entity)
           .map((node) => (
             <EntityCard
               name={node.node.name}
               path={node.config?.paths?.[router.query.eventTypeId as string]}
               key={node.id}
-            />
+            >
+              {nodes
+                ?.filter(
+                  (n) =>
+                    n.node.type === NodeType.Computed &&
+                    n.config?.entityTypeId === node.node.dataType.entityType
+                )
+                .map((n) => (
+                  <FeatureCard
+                    key={n.id}
+                    name={n.node.name}
+                    path={n.config?.paths?.[router.query.eventTypeId as string]}
+                  />
+                ))}
+
+              {features
+                ?.filter(
+                  (feature) =>
+                    feature.belongsTo[0]?.entityTypeId ===
+                      node.node.dataType?.entityType &&
+                    !nodes?.find(
+                      (n) =>
+                        n.node.type === NodeType.Computed &&
+                        n.config?.featureId === feature.id
+                    )
+                )
+                .map((feature) => (
+                  // <FeatureCard key={feature.id} name={feature.name} />
+                  <div key={feature.id} className="flex items-center space-x-2">
+                    <div className="text-emphasis-foreground text-sm">
+                      {feature.name}
+                    </div>
+                    <EntityFeatureDialog
+                      title="Assign Entity Property"
+                      onSubmit={(values) => {
+                        createNodeDef({
+                          eventTypes: [router.query.eventTypeId as string],
+                          name: feature.name,
+                          featureType: NodeType.Computed,
+                          dataType: feature.dataType,
+                          deps: [],
+                          config: {
+                            type: ComputedNodeType.Path,
+                            paths: {
+                              [router.query.eventTypeId as string]: values.path,
+                            },
+                            compiledJs: "",
+                            tsCode: "",
+                            depsMap: {},
+                            featureId: feature.id,
+                            entityTypeId: values.entityTypeId,
+                          } as z.infer<
+                            (typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]
+                          >,
+                        })
+                          .then(() => {
+                            toast({
+                              title: "FeatureDef created!",
+                              description: `${feature.name}`,
+                            });
+                            refetchNodes();
+                          })
+                          .catch(() => {
+                            toast({
+                              variant: "destructive",
+                              title: "Failed to create FeatureDef",
+                            });
+                          });
+                      }}
+                    >
+                      <Button size="iconXs" variant="outline">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </EntityFeatureDialog>
+                  </div>
+                ))}
+
+              <FeatureDialog
+                title="Create Entity Property"
+                onSubmit={(values) => {
+                  createFeature({
+                    name: values.name,
+                    entityTypeId: values.entityTypeId,
+                    dataType: {
+                      type: values.dataType,
+                    },
+                  })
+                    .then(() => {
+                      toast({
+                        title: "Feature created!",
+                        description: `${values.name}`,
+                      });
+                      refetchFeatures();
+                    })
+                    .catch(() => {
+                      toast({
+                        variant: "destructive",
+                        title: "Failed to create feature",
+                      });
+                    });
+                }}
+              >
+                <Button variant="outline">Create</Button>
+              </FeatureDialog>
+            </EntityCard>
           ))}
       </div>
     </div>

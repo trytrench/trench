@@ -110,18 +110,21 @@ export const featureDefsRouter = createTRPCRouter({
 
         config: z.record(z.any()),
         featureType: z.nativeEnum(NodeType),
-        dataType: z.nativeEnum(DataType),
+        // dataType: z.nativeEnum(DataType),
+        dataType: z.record(z.string()),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const featureTypeZod = NODE_TYPE_DEFS[input.featureType].configSchema;
       featureTypeZod.parse(input.config);
 
+      // TODO: Need to validate data type here
+
       const allowedDataTypes: DataType[] =
         NODE_TYPE_DEFS[input.featureType].allowedDataTypes;
-      if (!allowedDataTypes.includes(input.dataType)) {
+      if (!allowedDataTypes.includes(input.dataType.type)) {
         throw new Error(
-          `Feature type ${input.featureType} does not support data type ${input.dataType}`
+          `Feature type ${input.featureType} does not support data type ${input.dataType.type}`
         );
       }
 

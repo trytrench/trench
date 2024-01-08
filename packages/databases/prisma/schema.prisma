@@ -40,7 +40,6 @@ model Event {
   data      Json     @default("{}")
   options   Json     @default("{}")
 
-
   @@index([timestamp])
 }
 
@@ -50,7 +49,7 @@ model FeatureToEntityType {
   updatedAt DateTime @updatedAt
 
   featureId    String
-  feature      Feature @relation(fields: [featureId], references: [id])
+  feature      Feature    @relation(fields: [featureId], references: [id])
   entityTypeId String
   entityType   EntityType @relation(fields: [entityTypeId], references: [id])
 
@@ -68,10 +67,9 @@ model Feature {
   description String?
 
   // Immutable
-  dataType String
+  dataType  Json
   belongsTo FeatureToEntityType[]
 }
-
 
 // Once an Node is created, only the name can be modified.
 // The type and dataType are immutable.
@@ -80,7 +78,7 @@ model Node {
 
   type     String
   name     String
-  dataType String
+  dataType Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -97,13 +95,11 @@ model NodeSnapshot {
 
   createdAt DateTime @default(now())
 
-
-  node   Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  node   Node   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
   nodeId String
 
   executionEngines ExecutionEngineToNodeSnapshot[]
 }
-
 
 model ExecutionEngineToNodeSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -120,11 +116,10 @@ model ExecutionEngineToNodeSnapshot {
 }
 
 model ExecutionEngine {
-  id        String     @id @default(dbgenerated("nanoid()"))
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  nodeSnapshots ExecutionEngineToNodeSnapshot[]  
-
+  nodeSnapshots ExecutionEngineToNodeSnapshot[]
 }
 
 enum GlobalStateKey {
@@ -136,6 +131,7 @@ model GlobalState {
   key   GlobalStateKey @id
   value String
 }
+
 model EntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -151,13 +147,9 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type String @unique
+  type         String @unique
   exampleEvent Json?
 }
-
-
-
-
 
 // Necessary for Next auth
 model Account {
