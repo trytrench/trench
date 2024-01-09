@@ -3,8 +3,8 @@ import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
 import { toast } from "~/components/ui/use-toast";
-import { EditFeatureDef } from "~/components/features/EditFeatureDef";
-import { ComputedNodeType, NodeDef } from "event-processing";
+import { EditNodeDef } from "~/components/features/EditNodeDef";
+import { ComputedNodeType, NodeDef, NodeType } from "event-processing";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
 import Link from "next/link";
@@ -27,15 +27,17 @@ const Page: NextPageWithLayout = () => {
 
   function handleSave(def: NodeDef) {
     createNodeDef({
-      ...def,
+      name: def.name,
+      type: NodeType.Computed,
       deps: [],
-      eventTypes: Array.from(def.eventTypes),
+      eventTypes: [router.query.eventTypeId as string],
       dataType: {
         type: def.dataType,
       },
       config: {
         ...def.config,
         type: ComputedNodeType.Code,
+        depsMap: {},
       },
     })
       .then((nodeDef) => {
@@ -88,7 +90,7 @@ const Page: NextPageWithLayout = () => {
         <ChevronLeft className="w-3 h-3" />
         Back to {eventType?.type}
       </Link>
-      <EditFeatureDef onFeatureDefSave={handleSave} />
+      <EditNodeDef onSave={handleSave} />
     </div>
   );
 };

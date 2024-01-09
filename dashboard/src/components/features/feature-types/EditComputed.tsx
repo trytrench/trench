@@ -23,18 +23,15 @@ import { Card } from "~/components/ui/card";
 
 const FUNCTION_TEMPLATE = `export const handler: Handler = async (input) => {\n\n}`;
 
-// FIX
-type Config = NodeDef["config"];
-
-interface EditComputedProps {
+interface Props {
   nodeDef: NodeDef;
-  onFeatureDefChange?: (nodeDef: NodeDef) => void;
-  onValidChange?: (valid: boolean) => void;
+  onConfigChange: (config: NodeDef["config"]) => void;
+  onValidChange: (valid: boolean) => void;
 }
 
-function EditComputed(props: EditComputedProps) {
-  const { nodeDef, onFeatureDefChange, onValidChange } = props;
+function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
   const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
   const [compileStatus, setCompileStatus] = useState<CompileStatus>({
     status: "empty",
     code: "",
@@ -42,53 +39,35 @@ function EditComputed(props: EditComputedProps) {
 
   const [showTypes, setShowTypes] = useState(false);
 
-  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
-
   const { config } = nodeDef;
-  const { depsMap, assignedEntityFeatureIds } = config;
+  const { depsMap } = config;
 
   const prefix = usePrefix({
-    dataType: nodeDef.dataType,
+    dataType: nodeDef.dataType.type,
     dependencies: depsMap,
   });
 
   const eventTypes = useEventTypes();
-
-  function updateConfigAndDeps(val: Partial<Config>) {
-    const newConfig = {
-      ...config,
-      ...val,
-    };
-
-    onFeatureDefChange?.({
-      ...nodeDef,
-      config: newConfig,
-      dependsOn: new Set([
-        ...Object.values(newConfig.depsMap),
-        ...newConfig.assignedEntityFeatureIds,
-      ]),
-    });
-  }
 
   const onCompileStatusChange = useCallback(
     (compileStatus: CompileStatus) => {
       setCompileStatus(compileStatus);
 
       if (compileStatus.status === "success") {
-        onValidChange?.(true);
-        updateConfigAndDeps({
+        onValidChange(true);
+        onConfigChange({
           tsCode: compileStatus.code,
           compiledJs: compileStatus.compiled,
         });
       } else {
-        updateConfigAndDeps({
+        onConfigChange({
           tsCode: compileStatus.code,
           compiledJs: undefined,
         });
-        onValidChange?.(false);
+        onValidChange(false);
       }
     },
-    [setCompileStatus, onValidChange]
+    [setCompileStatus, onValidChange, onConfigChange]
   );
 
   return (

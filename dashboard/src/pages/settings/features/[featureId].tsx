@@ -3,7 +3,7 @@ import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 
 import { toast } from "~/components/ui/use-toast";
-import { EditFeatureDef } from "~/components/features/EditFeatureDef";
+import { EditNodeDef } from "~/components/features/EditNodeDef";
 import { useRouter } from "next/router";
 import { FeatureDef } from "event-processing";
 import SettingsLayout from "~/components/SettingsLayout";
@@ -72,10 +72,10 @@ const Page: NextPageWithLayout = () => {
         <ChevronLeft className="w-3 h-3" />
         Back to features
       </Link>
-      <EditFeatureDef
-        initialDef={data.find((v) => v.featureId === featureId)}
-        onFeatureDefSave={void handleSave}
-        onFeatureRename={void handleRename}
+      <EditNodeDef
+        initialNodeDef={data.find((v) => v.featureId === featureId)}
+        onSave={void handleSave}
+        onRename={void handleRename}
       />
     </div>
   );
