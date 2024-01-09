@@ -10,7 +10,7 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       depsMap: z.record(z.string()),
       tsCode: z.string(),
       compiledJs: z.string(),
-      paths: z.record(z.string()),
+      paths: z.record(z.string()).optional(),
       type: z.nativeEnum(ComputedNodeType),
       featureId: z.string().optional(),
     })

@@ -4,7 +4,7 @@ import {
   FeatureDef,
   TypedDataMap,
   decodeTypedData,
-  getFeatureDefFromSnapshot,
+  getNodeDefFromSnapshot,
 } from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
@@ -317,7 +317,7 @@ async function getLatestFeatureDefs() {
   });
 
   const featureDefs = latestSnapshots.map((snapshot) =>
-    getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot })
+    getNodeDefFromSnapshot({ featureDefSnapshot: snapshot })
   );
 
   return featureDefs;

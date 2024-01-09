@@ -28,7 +28,7 @@ interface DepsMapEditorProps {
 function DepsMapEditor(props: DepsMapEditorProps) {
   const { featureId, depsMap, onChange } = props;
 
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
   const addDependency = (depId: string) => {
     let alias = toCamelCase(

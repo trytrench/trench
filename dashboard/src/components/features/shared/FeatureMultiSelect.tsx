@@ -30,9 +30,7 @@ export function FeatureMultiSelect(props: {
   const { featureIds, onFeatureIdsChange, filter, label } = props;
   const { selfFeatureId, disabled } = props;
 
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
-    filter ?? {}
-  );
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery(filter ?? {});
 
   const featureOpts = allFeatureDefs?.filter(
     (v) => !featureIds.includes(v.id) && v.id !== selfFeatureId

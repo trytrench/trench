@@ -14,10 +14,10 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const featureId = router.query.featureId as string;
 
-  const { data } = api.featureDefs.getLatest.useQuery();
+  const { data } = api.nodeDefs.getLatest.useQuery();
 
-  const { mutateAsync: save } = api.featureDefs.save.useMutation();
-  const { mutateAsync: rename } = api.featureDefs.rename.useMutation();
+  const { mutateAsync: save } = api.nodeDefs.save.useMutation();
+  const { mutateAsync: rename } = api.nodeDefs.rename.useMutation();
 
   async function handleSave(def: FeatureDef) {
     try {

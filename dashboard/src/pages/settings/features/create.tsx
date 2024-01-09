@@ -11,14 +11,14 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 const Page: NextPageWithLayout = () => {
-  const { mutateAsync: create } = api.featureDefs.create.useMutation();
+  const { mutateAsync: create } = api.nodeDefs.create.useMutation();
   const router = useRouter();
 
   async function handleSave(def: FeatureDef) {
     try {
       await create({
         name: def.featureName,
-        featureType: def.featureType,
+        type: def.featureType,
         dataType: def.dataType,
         eventTypes: [...def.eventTypes],
         deps: [...def.dependsOn],

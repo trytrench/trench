@@ -30,12 +30,11 @@ const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
   const { data: featureDefs, refetch: refetchFeatureDefs } =
-    api.featureDefs.list.useQuery();
+    api.nodeDefs.list.useQuery();
 
-  const { mutateAsync: deleteFeatureDef } =
-    api.featureDefs.delete.useMutation();
+  const { mutateAsync: deleteFeatureDef } = api.nodeDefs.delete.useMutation();
 
-  const columns: ColumnDef<RouterOutputs["featureDefs"]["list"][number]>[] =
+  const columns: ColumnDef<RouterOutputs["nodeDefs"]["list"][number]>[] =
     useMemo(
       () => [
         {

@@ -133,7 +133,7 @@ const DataTypeToTsType: Record<DataType, string> = {
 
 function usePrefix(props: { dependencies: Record<string, string> }) {
   const { dependencies } = props;
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
   const depInterface = useMemo(() => {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {

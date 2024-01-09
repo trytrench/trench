@@ -1,15 +1,41 @@
 import { GlobalStateKey } from "databases";
 import {
   DataType,
-  FEATURE_TYPE_DEFS,
-  getFeatureDefFromSnapshot,
+  getNodeDefFromSnapshot,
   NODE_TYPE_DEFS,
   NodeType,
 } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
-export const featureDefsRouter = createTRPCRouter({
+export const nodeDefsRouter = createTRPCRouter({
+  get: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const node = await ctx.prisma.node.findUniqueOrThrow({
+        where: {
+          id: input.id,
+        },
+        include: {
+          snapshots: {
+            include: {
+              node: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+        },
+      });
+
+      return getNodeDefFromSnapshot(node.snapshots[0]!);
+    }),
+
   allInfo: protectedProcedure
     .input(
       z.object({
@@ -28,7 +54,7 @@ export const featureDefsRouter = createTRPCRouter({
       return featureDefs;
     }),
 
-  getEventTypeNodes: protectedProcedure
+  getNodesForEventType: protectedProcedure
     .input(
       z.object({
         eventTypeId: z.string(),
@@ -59,7 +85,7 @@ export const featureDefsRouter = createTRPCRouter({
     });
 
     const featureDefs = snapshots.map((snapshot) => {
-      return getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot });
+      return getNodeDefFromSnapshot({ featureDefSnapshot: snapshot });
     });
 
     return featureDefs;
@@ -109,28 +135,28 @@ export const featureDefsRouter = createTRPCRouter({
         deps: z.array(z.string()),
 
         config: z.record(z.any()),
-        featureType: z.nativeEnum(NodeType),
+        type: z.nativeEnum(NodeType),
         // dataType: z.nativeEnum(DataType),
         dataType: z.record(z.string()),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const featureTypeZod = NODE_TYPE_DEFS[input.featureType].configSchema;
+      const featureTypeZod = NODE_TYPE_DEFS[input.type].configSchema;
       featureTypeZod.parse(input.config);
 
       // TODO: Need to validate data type here
 
       const allowedDataTypes: DataType[] =
-        NODE_TYPE_DEFS[input.featureType].allowedDataTypes;
+        NODE_TYPE_DEFS[input.type].allowedDataTypes;
       if (!allowedDataTypes.includes(input.dataType.type)) {
         throw new Error(
-          `Feature type ${input.featureType} does not support data type ${input.dataType.type}`
+          `Feature type ${input.type} does not support data type ${input.dataType.type}`
         );
       }
 
       const featureDef = await ctx.prisma.node.create({
         data: {
-          type: input.featureType,
+          type: input.type,
           dataType: input.dataType,
           name: input.name,
           snapshots: {

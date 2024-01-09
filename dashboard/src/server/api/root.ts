@@ -4,7 +4,7 @@ import { entitiesRouter } from "./routers/entities";
 import { entityTypesRouter } from "./routers/entityTypes";
 import { eventTypesRouter } from "./routers/eventTypes";
 import { eventsRouter } from "./routers/events";
-import { featureDefsRouter } from "./routers/featureDefs";
+import { nodeDefsRouter } from "./routers/nodeDefs";
 import { labelsRouter } from "./routers/labels";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
@@ -25,7 +25,7 @@ export const appRouter = createTRPCRouter({
   links: linksRouter,
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,
-  featureDefs: featureDefsRouter,
+  nodeDefs: nodeDefsRouter,
   lists2: lists2Router,
   features: featuresRouter,
 });

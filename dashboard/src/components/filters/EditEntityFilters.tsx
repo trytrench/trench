@@ -24,7 +24,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
 
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
-  const { data: allFeatureDefs } = api.featureDefs.getLatest.useQuery();
+  const { data: allFeatureDefs } = api.nodeDefs.getLatest.useQuery();
 
   const { firstSeen, lastSeen, entityType, features: featureFilters } = value;
 

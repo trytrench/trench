@@ -1,33 +1,28 @@
 import { GlobalStateKey, prisma } from "databases";
 import { DataType } from "./dataTypes";
 import { ExecutionEngine } from "./engine";
-import { FeatureDef } from "./feature-type-defs/nodeTypeDef";
-import { FeatureType } from "./feature-type-defs/types/_enum";
+import { NodeDef, NodeType } from "./node-type-defs";
 
-export function getFeatureDefFromSnapshot({
-  featureDefSnapshot,
-}: {
-  featureDefSnapshot: {
+export function getNodeDefFromSnapshot(snapshot: {
+  id: string;
+  config: any;
+  deps: string[];
+  eventTypes: string[];
+  node: {
     id: string;
-    config: any;
-    deps: string[];
-    eventTypes: string[];
-    node: {
-      id: string;
-      type: string;
-      dataType: string;
-      name: string;
-    };
+    type: string;
+    dataType: any;
+    name: string;
   };
-}): FeatureDef {
+}): NodeDef {
   return {
-    featureId: featureDefSnapshot.node.id,
-    featureType: featureDefSnapshot.node.type as FeatureType,
-    featureName: featureDefSnapshot.node.name,
-    dependsOn: new Set(featureDefSnapshot.deps),
-    eventTypes: new Set(featureDefSnapshot.eventTypes),
-    config: featureDefSnapshot.config as object,
-    dataType: featureDefSnapshot.node.dataType as DataType,
+    id: snapshot.node.id,
+    type: snapshot.node.type as NodeType,
+    name: snapshot.node.name,
+    dependsOn: new Set(snapshot.deps),
+    eventTypes: new Set(snapshot.eventTypes),
+    config: snapshot.config as object,
+    dataType: snapshot.node.dataType as DataType,
   };
 }
 
@@ -35,7 +30,7 @@ async function fetchFeatureDefSnapshots({
   engineId,
 }: {
   engineId: string;
-}): Promise<FeatureDef[]> {
+}): Promise<NodeDef[]> {
   // Check for new engine
   const engineDef = await prisma.executionEngine.findUnique({
     where: { id: engineId },
@@ -57,7 +52,7 @@ async function fetchFeatureDefSnapshots({
   }
   const featureDefs = engineDef.nodeSnapshots.map((item) => {
     const snapshot = item.nodeSnapshot;
-    return getFeatureDefFromSnapshot({ featureDefSnapshot: snapshot });
+    return getNodeDefFromSnapshot(snapshot);
   });
 
   return featureDefs;

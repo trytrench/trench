@@ -2,8 +2,8 @@ import React, { useMemo, useState } from "react";
 
 import {
   DataType,
+  type NodeDef,
   NodeType,
-  // FeatureDef,
   // FeatureDefs,
   // FeatureType,
 } from "event-processing";
@@ -107,9 +107,9 @@ const TYPE_DEFAULTS = {
 //
 
 interface EditFeatureDefProps {
-  initialDef?: FeatureDef;
+  initialDef?: NodeDef;
   onFeatureRename?: (name: string) => void;
-  onFeatureDefSave?: (data: FeatureDef) => void;
+  onFeatureDefSave?: (data: NodeDef) => void;
 }
 
 function EditFeatureDef(props: EditFeatureDefProps) {
@@ -120,22 +120,22 @@ function EditFeatureDef(props: EditFeatureDefProps) {
   // fields are disabled.
   const isEditingExistingFeature = !!initialDef;
 
-  const [featureDef, setFeatureDef] = useState<Partial<FeatureDef>>(
+  const [featureDef, setFeatureDef] = useState<Partial<NodeDef>>(
     initialDef ?? {
       // defaults for some fields
-      featureName: "",
+      name: "",
       eventTypes: new Set(),
       dependsOn: new Set(),
     }
   );
-  const updateFeatureDef = (data: Partial<FeatureDef>) => {
+  const updateFeatureDef = (data: Partial<NodeDef>) => {
     if (!featureDef) return;
     setFeatureDef({ ...featureDef, ...data });
   };
 
-  const handleFeatureTypeSelect = (val: FeatureType) => {
+  const handleFeatureTypeSelect = (val: NodeType) => {
     updateFeatureDef({
-      featureType: val,
+      type: val,
       dataType: TYPE_DEFAULTS[val].dataType,
       config: TYPE_DEFAULTS[val].config,
     });
@@ -146,8 +146,8 @@ function EditFeatureDef(props: EditFeatureDefProps) {
 
   const everythingValid = useMemo(() => {
     return (
-      featureDef?.featureName &&
-      featureDef?.featureType &&
+      featureDef?.name &&
+      featureDef?.type &&
       featureDef?.dataType &&
       typeDetailsValid
     );
@@ -155,30 +155,29 @@ function EditFeatureDef(props: EditFeatureDefProps) {
 
   const save = () => {
     if (!featureDef || !everythingValid) return;
-    // TODO: validate that featureDef is a complete FeatureDef
-    onFeatureDefSave?.(featureDef as FeatureDef);
+    // TODO: validate that featureDef is a complete NodeDef
+    onFeatureDefSave?.(featureDef as NodeDef);
   };
 
   // TEMP
 
-  const { featureName, featureType, dataType, eventTypes, config } =
-    featureDef ?? {};
+  const { name, type, dataType, eventTypes, config } = featureDef ?? {};
 
   return (
     <div>
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <h1 className="text-emphasis-foreground text-2xl mt-1 mb-4">
-            {isEditingExistingFeature ? featureName : "Create Feature"}
+            {isEditingExistingFeature ? name : "Create Node"}
           </h1>
 
           <div className="flex gap-2 items-center">
             {isEditingExistingFeature && (
               <RenameDialog
-                name={featureName}
+                name={name}
                 onRename={(newName) => {
                   onFeatureRename?.(newName);
-                  updateFeatureDef({ featureName: newName });
+                  updateFeatureDef({ name: newName });
                 }}
               />
             )}
@@ -200,11 +199,9 @@ function EditFeatureDef(props: EditFeatureDefProps) {
             <Input
               placeholder="Feature Name"
               className="w-[20rem]"
-              value={featureName}
+              value={name}
               disabled={isEditingExistingFeature}
-              onChange={(e) =>
-                updateFeatureDef({ featureName: e.target.value })
-              }
+              onChange={(e) => updateFeatureDef({ name: e.target.value })}
             />
           </div>
         </div>
@@ -214,7 +211,7 @@ function EditFeatureDef(props: EditFeatureDefProps) {
           <div className="flex flex-col gap-1.5">
             <Label>Type</Label>
             <Select
-              value={featureType}
+              value={type}
               onValueChange={(v) => handleFeatureTypeSelect(v as FeatureType)}
               disabled={isEditingExistingFeature}
             >
@@ -238,9 +235,7 @@ function EditFeatureDef(props: EditFeatureDefProps) {
               onValueChange={(v) =>
                 updateFeatureDef({ dataType: v as DataType })
               }
-              disabled={
-                featureType !== NodeType.Computed || isEditingExistingFeature
-              }
+              disabled={type !== NodeType.Computed || isEditingExistingFeature}
             >
               <SelectTrigger className="w-[8rem]">
                 <SelectValue />
@@ -257,26 +252,26 @@ function EditFeatureDef(props: EditFeatureDefProps) {
         </div>
       </div>
 
-      <div className="h-8 shrink-0" />
+      {/* <div className="h-8 shrink-0" /> */}
 
-      <EventTypes
+      {/* <EventTypes
         eventTypes={eventTypes}
         onChange={(v) => {
           updateFeatureDef({ eventTypes: v });
         }}
-      />
+      /> */}
 
       <Separator className="my-12" />
 
-      {featureDef.featureType && (
+      {featureDef.type && (
         <>
-          {featureDef.featureType === NodeType.Computed ? (
+          {featureDef.type === NodeType.Computed ? (
             <EditComputed
-              featureDef={featureDef as FeatureDefs[FeatureType.Computed]}
+              nodeDef={featureDef as FeatureDefs[FeatureType.Computed]}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === NodeType.LogEntityFeature ? (
+          ) : featureDef.type === NodeType.LogEntityFeature ? (
             <EditEntityAppearance
               featureDef={
                 featureDef as FeatureDefs[FeatureType.EntityAppearance]
@@ -284,14 +279,14 @@ function EditFeatureDef(props: EditFeatureDefProps) {
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === NodeType.Counter ? (
+          ) : featureDef.type === NodeType.Counter ? (
             <EditCount
               featureDef={featureDef as FeatureDefs[FeatureType.Count]}
               isEditingExistingFeature={isEditingExistingFeature}
               onFeatureDefChange={setFeatureDef}
               onValidChange={setTypeDetailsValid}
             />
-          ) : featureDef.featureType === NodeType.UniqueCounter ? (
+          ) : featureDef.type === NodeType.UniqueCounter ? (
             <EditUniqueCount
               featureDef={featureDef as FeatureDefs[FeatureType.UniqueCount]}
               isEditingExistingFeature={isEditingExistingFeature}

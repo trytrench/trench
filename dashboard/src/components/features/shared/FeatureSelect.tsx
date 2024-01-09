@@ -34,9 +34,7 @@ export function FeatureSelect(props: {
 
   const [open, setOpen] = useState(false);
 
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery(
-    filter ?? {}
-  );
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery(filter ?? {});
 
   const selectedFeatureName = allFeatureDefs?.find((fd) => fd.id === value)
     ?.name;

@@ -110,7 +110,7 @@ function usePrefix(props: {
   dependencies: Record<string, string>;
 }) {
   const { dataType, dependencies } = props;
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
   const depInterface = useMemo(() => {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {

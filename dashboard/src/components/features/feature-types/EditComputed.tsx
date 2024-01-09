@@ -1,31 +1,33 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { DataType, FeatureDefs, FeatureType, NodeType } from "event-processing";
+import { DataType, NodeDef, NodeType, NODE_TYPE_DEFS } from "event-processing";
 import { useMemo } from "react";
 import { api } from "~/utils/api";
 import { DepsMapEditor } from "../shared/DepsMapEditor";
 import { CodeEditor } from "../shared/CodeEditor";
 import { FeatureMultiSelect } from "../shared/FeatureMultiSelect";
+import AssignEntities from "~/pages/settings/event-types/AssignEntities";
 
 // - the monaco editor ig? unsure
 
-type Config = FeatureDefs[FeatureType.Computed]["config"];
+// FIX
+type Config = NodeDef["config"];
 
 interface EditComputedProps {
-  featureDef: FeatureDefs[FeatureType.Computed];
-  onFeatureDefChange?: (featureDef: FeatureDefs[FeatureType.Computed]) => void;
+  nodeDef: NodeDef;
+  onFeatureDefChange?: (nodeDef: NodeDef) => void;
   onValidChange?: (valid: boolean) => void;
 }
 
 function EditComputed(props: EditComputedProps) {
-  const { featureDef, onFeatureDefChange, onValidChange } = props;
+  const { nodeDef, onFeatureDefChange, onValidChange } = props;
 
-  const { config } = featureDef;
+  const { config } = nodeDef;
   const { depsMap, assignedEntityFeatureIds } = config;
 
   const prefix = usePrefix({
-    dataType: featureDef.dataType,
+    dataType: nodeDef.dataType,
     dependencies: depsMap,
   });
 
@@ -36,7 +38,7 @@ function EditComputed(props: EditComputedProps) {
     };
 
     onFeatureDefChange?.({
-      ...featureDef,
+      ...nodeDef,
       config: newConfig,
       dependsOn: new Set([
         ...Object.values(newConfig.depsMap),
@@ -48,16 +50,16 @@ function EditComputed(props: EditComputedProps) {
   return (
     <>
       {/* Assigned Entities */}
-      <FeatureMultiSelect
+      {/* <FeatureMultiSelect
         featureIds={assignedEntityFeatureIds}
         onFeatureIdsChange={(val) => {
           updateConfigAndDeps({ assignedEntityFeatureIds: val });
         }}
         filter={{ featureType: NodeType.LogEntityFeature }}
         label="Assigned Entities"
-      />
+      /> */}
 
-      <div className="mt-16"></div>
+      {/* <div className="mt-16"></div>
 
       <DepsMapEditor
         depsMap={depsMap}
@@ -66,12 +68,12 @@ function EditComputed(props: EditComputedProps) {
         }}
       />
 
-      <div className="mt-16" />
+      <div className="mt-16" /> */}
 
       <CodeEditor
         prefix={prefix}
         suffix={"}"}
-        initialCode={featureDef.config?.tsCode ?? ""}
+        initialCode={nodeDef.config?.tsCode ?? ""}
         onCompileStatusChange={(compileStatus) => {
           if (compileStatus.status === "success") {
             onValidChange?.(true);
@@ -88,6 +90,8 @@ function EditComputed(props: EditComputedProps) {
           }
         }}
       />
+
+      <AssignEntities />
     </>
   );
 }
@@ -110,7 +114,7 @@ function usePrefix(props: {
   dependencies: Record<string, string>;
 }) {
   const { dataType, dependencies } = props;
-  const { data: allFeatureDefs } = api.featureDefs.allInfo.useQuery({});
+  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
   const depInterface = useMemo(() => {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {
