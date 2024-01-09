@@ -211,7 +211,7 @@ export const nodeDefsRouter = createTRPCRouter({
       return featureDef;
     }),
 
-  save: protectedProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string(),

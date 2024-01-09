@@ -38,17 +38,22 @@ const Page: NextPageWithLayout = () => {
         type: ComputedNodeType.Code,
       },
     })
-      .then(() => {
+      .then((nodeDef) => {
         toast({
-          title: "FeatureDef created!",
+          title: "Node created",
           // description: `${values.entity}`,
         });
+        void router.push(
+          `/settings/event-types/${router.query.eventTypeId as string}/node/${
+            nodeDef.id
+          } `
+        );
         return refetchNodes();
       })
       .catch(() => {
         toast({
           variant: "destructive",
-          title: "Failed to create FeatureDef",
+          title: "Failed to create node",
         });
       });
     // try {

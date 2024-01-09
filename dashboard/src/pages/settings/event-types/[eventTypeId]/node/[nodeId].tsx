@@ -28,34 +28,27 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.nodeId }
   );
 
-  //   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
+  const { mutateAsync: updateNodeDef } = api.nodeDefs.update.useMutation();
 
   function handleSave(def: NodeDef) {
-    // createNodeDef({
-    //   ...def,
-    //   deps: [],
-    //   eventTypes: Array.from(def.eventTypes),
-    //   dataType: {
-    //     type: def.dataType,
-    //   },
-    //   config: {
-    //     ...def.config,
-    //     type: ComputedNodeType.Code,
-    //   },
-    // })
-    //   .then(() => {
-    //     toast({
-    //       title: "FeatureDef created!",
-    //       // description: `${values.entity}`,
-    //     });
-    //     return refetchNodes();
-    //   })
-    //   .catch(() => {
-    //     toast({
-    //       variant: "destructive",
-    //       title: "Failed to create FeatureDef",
-    //     });
-    //   });
+    updateNodeDef({
+      ...def,
+      deps: [],
+      eventTypes: Array.from(def.eventTypes),
+    })
+      .then(() => {
+        toast({
+          title: "Node updated",
+          // description: `${values.entity}`,
+        });
+        return refetchNodes();
+      })
+      .catch(() => {
+        toast({
+          variant: "destructive",
+          title: "Failed to update node",
+        });
+      });
   }
 
   return (

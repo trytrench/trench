@@ -1,9 +1,9 @@
+import { Editor, useMonaco } from "@monaco-editor/react";
 import { CheckIcon, Loader2, XIcon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
 import { Diagnostic, Project, ts } from "ts-morph";
-import { MonacoEditor } from "~/components/ts-editor/MonacoEditor";
 import { COMPILER_OPTIONS } from "~/components/ts-editor/compilerOptions";
-import { Label } from "~/components/ui/label";
 import { useDebounce } from "~/hooks/useDebounce";
 
 export type CompileStatus =
@@ -30,38 +30,33 @@ export type CompileStatus =
     };
 
 interface CodeEditorProps {
-  prefix?: string;
-  suffix?: string;
   initialCode?: string;
-  libSource?: string;
+  typeDefs: string;
   onCompileStatusChange: (Status: CompileStatus) => void;
 }
 
 function CodeEditor({
-  prefix,
-  suffix,
   initialCode,
-  libSource,
   onCompileStatusChange,
+  typeDefs,
 }: CodeEditorProps) {
   // note:
   // - The monaco editor is not used as a controlled component
   const [code, setCode] = useState(initialCode ?? "");
   const debouncedCode = useDebounce(code, 1000);
 
-  const [compileStatus, setCompileStatus] = useState<CompileStatus>({
-    status: "empty",
-    code,
-  });
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
+
+  const monaco = useMonaco();
 
   useEffect(() => {
-    onCompileStatusChange(compileStatus);
-  }, [onCompileStatusChange, compileStatus]);
+    monaco?.languages.typescript.typescriptDefaults.addExtraLib(typeDefs, "");
+  }, [monaco, typeDefs]);
 
   const compile = useCallback(
     (code: string) => {
-      console.log("compiling");
-      setCompileStatus({
+      onCompileStatusChange({
         status: "compiling",
         message: "Compiling...",
         code,
@@ -69,14 +64,7 @@ function CodeEditor({
 
       // Assemble and compile the code
 
-      const LIB_SOURCE = `
-    type TrenchEvent = {
-      type: string;
-      timestamp: Date;
-      data: any;
-    };`;
-
-      const finalCode = [prefix, code, suffix, LIB_SOURCE].join("\n");
+      const finalCode = [code, typeDefs].join("\n");
 
       const project = new Project({
         useInMemoryFileSystem: true,
@@ -96,7 +84,7 @@ function CodeEditor({
           },
         });
 
-        setCompileStatus({
+        onCompileStatusChange({
           status: "success" as const,
           message: "Compiled successfully",
           code,
@@ -110,7 +98,7 @@ function CodeEditor({
         //   description: allDiagnostics[0]?.getMessageText().toString(),
         // });
 
-        setCompileStatus({
+        onCompileStatusChange({
           status: "error" as const,
           message: "There was an error compiling your code",
           diagnostics: allDiagnostics,
@@ -118,7 +106,7 @@ function CodeEditor({
         });
       }
     },
-    [setCompileStatus, prefix, suffix]
+    [onCompileStatusChange, typeDefs]
   );
 
   useEffect(() => {
@@ -126,34 +114,12 @@ function CodeEditor({
   }, [debouncedCode, compile]);
 
   return (
-    <>
-      <div className="flex mb-4 justify-between">
-        <Label className="text-emphasis-foreground text-md">Code</Label>
-        {code.trim() && <CompileStatusMessage compileStatus={compileStatus} />}
-      </div>
-
-      <div className="h-96">
-        <MonacoEditor
-          prefix={prefix}
-          suffix={suffix}
-          value={code}
-          onValueChange={(change) => {
-            setCode(change);
-            setCompileStatus({
-              status: "empty",
-              code,
-            });
-          }}
-          className="h-96 w-full"
-          options={{
-            padding: {
-              top: 16,
-              bottom: 16,
-            },
-          }}
-        />
-      </div>
-    </>
+    <Editor
+      theme={theme}
+      defaultLanguage="typescript"
+      defaultValue={initialCode}
+      onChange={(value) => setCode(value)}
+    />
   );
 }
 
@@ -161,7 +127,7 @@ interface CompileStatusMessageProps {
   compileStatus: CompileStatus;
 }
 
-function CompileStatusMessage(props: CompileStatusMessageProps) {
+export function CompileStatusMessage(props: CompileStatusMessageProps) {
   const { compileStatus } = props;
 
   if (compileStatus.status === "empty") {
