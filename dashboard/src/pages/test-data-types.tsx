@@ -1,6 +1,6 @@
 "use client";
 import { api } from "../utils/api";
-import { TSchema, TypeName, createType, getNamedTS } from "../lib/attempt2";
+import { TSchema, TypeName, createType, getNamedTS } from "../lib/data-types";
 import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
 

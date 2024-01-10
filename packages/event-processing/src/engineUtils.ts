@@ -1,5 +1,4 @@
 import { GlobalStateKey, prisma } from "databases";
-import { DataType } from "./dataTypes";
 import { ExecutionEngine } from "./engine";
 import { NodeDef, NodeType } from "./node-type-defs";
 
@@ -22,7 +21,6 @@ export function getNodeDefFromSnapshot(snapshot: {
     dependsOn: new Set(snapshot.deps),
     eventTypes: new Set(snapshot.eventTypes),
     config: snapshot.config as object,
-    dataType: snapshot.node.dataType as DataType,
   };
 }
 

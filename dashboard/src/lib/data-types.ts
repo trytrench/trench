@@ -1,4 +1,7 @@
-export enum DataTypeName {
+import { type } from "os";
+
+// Enums and Interfaces for DataType and Schemas
+export enum TypeName {
   Boolean = "Boolean",
   Entity = "Entity",
   Float64 = "Float64",
@@ -9,237 +12,239 @@ export enum DataTypeName {
   Array = "Array",
 }
 
-type Param = IDataTypeAny | string | number | boolean | undefined;
-
-type Params = {
-  [key: string]: Params | Param;
-};
-
-function getSerializableParams(
-  params: Params | undefined
-): Record<string, any> | undefined {
-  const result: Record<string, any> = {};
-  if (!params) return undefined;
-  for (const key in params) {
-    const value = params[key];
-    if (value instanceof IDataType) {
-      result[key] = value.getSchema();
-    } else if (typeof value === "object") {
-      result[key] = getSerializableParams(value);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
+interface TSchemaBase {
+  type: TypeName;
 }
 
-type BaseSchema<
-  TName extends DataTypeName = DataTypeName,
-  TParams extends Params | undefined = any,
-> = {
-  type: TName;
-  params?: TParams;
-};
-
-export abstract class IDataType<
-  T,
-  TName extends DataTypeName = DataTypeName,
-  TParams extends Params | undefined = any,
-  TSchema extends BaseSchema<TName, TParams> = BaseSchema<TName, TParams>,
-> {
-  abstract name: TName;
-  abstract parse(input: any): T;
-
-  getSchema(): TSchema {
-    return {
-      type: this.name,
-      params: getSerializableParams(this.params),
-    } as TSchema;
-  }
-
-  params: TParams;
-
-  constructor(...args: TParams extends undefined ? [] : [TParams]) {
-    this.params = args[0] as TParams;
-  }
+interface TBooleanSchema extends TSchemaBase {
+  type: TypeName.Boolean;
 }
 
-type IDataTypeAny = IDataType<any, any, any>;
+interface TFloat64Schema extends TSchemaBase {
+  type: TypeName.Float64;
+}
 
-export class StringDataType extends IDataType<
-  string,
-  DataTypeName.String,
-  undefined
-> {
-  name = DataTypeName.String as const;
+interface TInt64Schema extends TSchemaBase {
+  type: TypeName.Int64;
+}
 
-  parse(input: any): string {
+interface TStringSchema extends TSchemaBase {
+  type: TypeName.String;
+}
+
+interface TLocationSchema extends TSchemaBase {
+  type: TypeName.Location;
+}
+
+interface TEntitySchema<T extends string = string> extends TSchemaBase {
+  type: TypeName.Entity;
+  entityType?: T;
+}
+
+interface TArraySchema<TItems extends TSchemaBase = TSchema>
+  extends TSchemaBase {
+  type: TypeName.Array;
+  items: TItems;
+}
+
+interface TObjectSchema<
+  TProps extends Record<string, TSchemaBase> = Record<string, TSchema>,
+> extends TSchemaBase {
+  type: TypeName.Object;
+  properties: TProps;
+}
+
+type SchemaTypeMap = {
+  [TypeName.Boolean]: boolean;
+  [TypeName.Float64]: number;
+  [TypeName.Int64]: number;
+  [TypeName.String]: string;
+  [TypeName.Location]: { lat: number; lng: number };
+  [TypeName.Entity]: { type: string; id: string };
+  [TypeName.Array]: any[]; // Placeholder, will be refined later
+  [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
+};
+
+type InferSchemaType<T extends TSchemaBase> = T extends TArraySchema<infer U>
+  ? Array<InferSchemaType<U>>
+  : T extends TObjectSchema<infer U>
+  ? { [K in keyof U]: InferSchemaType<U[K]> }
+  : T["type"] extends keyof SchemaTypeMap
+  ? SchemaTypeMap[T["type"]]
+  : never;
+
+// Base class for data types
+abstract class IDataType<TS extends TSchemaBase> {
+  constructor(public schema: TS) {}
+  abstract parse(input: any): InferSchemaType<TS>;
+  abstract toTypescript(): string;
+}
+
+// Implementations for each data type
+class StringDataType extends IDataType<TStringSchema> {
+  parse(input: any) {
     if (typeof input !== "string")
       throw new Error("Invalid input for string type");
     return input;
   }
-}
-
-export class ArrayDataType<T> extends IDataType<
-  T[],
-  DataTypeName.Array,
-  { items: IDataType<T> }
-> {
-  name = DataTypeName.Array as const;
-
-  parse(input: any): T[] {
-    if (!Array.isArray(input)) throw new Error("Invalid input for array type");
-    return input.map((item) => this.params.items.parse(item));
+  toTypescript(): string {
+    return "string";
   }
 }
 
-export class ObjectDataType<
-  T extends Record<string, IDataType<any>>,
-> extends IDataType<
-  { [K in keyof T]: T[K] extends IDataType<infer U> ? U : never },
-  DataTypeName.Object,
-  { properties: T }
-> {
-  name = DataTypeName.Object as const;
-
-  parse(input: any): {
-    [K in keyof T]: T[K] extends IDataType<infer U> ? U : never;
-  } {
-    const result: any = {};
-    for (const key in this.params.properties) {
-      result[key] = this.params.properties[key]!.parse(input[key]);
-    }
-    return result;
-  }
-}
-
-export class EntityDataType<T extends string = string> extends IDataType<
-  { type: T; id: string },
-  DataTypeName.Entity,
-  { type?: T }
-> {
-  name = DataTypeName.Entity as const;
-
-  parse(input: any): { type: T; id: string } {
-    if (typeof input !== "object" || input === null || !("id" in input))
-      throw new Error("Invalid input for entity type");
-    if (this.params.type && input.type !== this.params.type)
-      throw new Error("Invalid entity type");
-    return input;
-  }
-}
-
-export class LocationDataType extends IDataType<
-  { lat: number; lng: number },
-  DataTypeName.Location,
-  undefined
-> {
-  name = DataTypeName.Location as const;
-
-  parse(input: any): { lat: number; lng: number } {
-    if (
-      typeof input !== "object" ||
-      input === null ||
-      !("lat" in input) ||
-      !("lng" in input)
-    )
-      throw new Error("Invalid input for location type");
-    return input;
-  }
-}
-
-export class BooleanDataType extends IDataType<
-  boolean,
-  DataTypeName.Boolean,
-  undefined
-> {
-  name = DataTypeName.Boolean as const;
-
+class BooleanDataType extends IDataType<TBooleanSchema> {
   parse(input: any): boolean {
     if (typeof input !== "boolean")
       throw new Error("Invalid input for boolean type");
     return input;
   }
-}
-
-export class Int64DataType extends IDataType<
-  number,
-  DataTypeName.Int64,
-  undefined
-> {
-  name = DataTypeName.Int64 as const;
-
-  parse(input: any): number {
-    if (typeof input !== "number")
-      throw new Error("Invalid input for int64 type");
-    return input;
+  toTypescript(): string {
+    return "boolean";
   }
 }
 
-export class Float64DataType extends IDataType<
-  number,
-  DataTypeName.Float64,
-  undefined
-> {
-  name = DataTypeName.Float64 as const;
-
+class Float64DataType extends IDataType<TFloat64Schema> {
   parse(input: any): number {
     if (typeof input !== "number")
       throw new Error("Invalid input for float64 type");
     return input;
   }
+  toTypescript(): string {
+    return "number";
+  }
 }
 
-const Type = {
-  [DataTypeName.String]: StringDataType,
-  [DataTypeName.Array]: ArrayDataType,
-  [DataTypeName.Object]: ObjectDataType,
-  [DataTypeName.Entity]: EntityDataType,
-  [DataTypeName.Location]: LocationDataType,
-  [DataTypeName.Boolean]: BooleanDataType,
-  [DataTypeName.Int64]: Int64DataType,
-  [DataTypeName.Float64]: Float64DataType,
+class Int64DataType extends IDataType<TInt64Schema> {
+  parse(input: any): number {
+    if (typeof input !== "number")
+      throw new Error("Invalid input for int64 type");
+    return input;
+  }
+  toTypescript(): string {
+    return "number";
+  }
+}
+
+class LocationDataType extends IDataType<TLocationSchema> {
+  parse(input: any): { lat: number; lng: number } {
+    if (typeof input !== "object" || !("lat" in input) || !("lng" in input)) {
+      throw new Error("Invalid input for location type");
+    }
+    return { lat: input.lat, lng: input.lng };
+  }
+  toTypescript(): string {
+    return "{ lat: number; lng: number }";
+  }
+}
+
+class EntityDataType<T extends string = string> extends IDataType<
+  TEntitySchema<T>
+> {
+  parse(input: any): { type: T; id: string } {
+    if (typeof input !== "object" || !("id" in input)) {
+      throw new Error("Invalid input for entity type");
+    }
+    return input;
+  }
+  toTypescript(): string {
+    // Handle entity type
+    if (this.schema.entityType) {
+      const entityType = this.schema.entityType.replace(/"/g, '\\"');
+      return `{ type: "${entityType}"; id: string }`;
+    } else {
+      return `{ type: string; id: string }`;
+    }
+  }
+}
+
+class ArrayDataType<TItems extends TSchemaBase> extends IDataType<
+  TArraySchema<TItems>
+> {
+  parse(input: any): InferSchemaType<TArraySchema<TItems>> {
+    if (!Array.isArray(input)) throw new Error("Invalid input for array type");
+    return input.map((item) => createDataType(this.schema.items).parse(item));
+  }
+  toTypescript(): string {
+    return `Array<${createDataType(this.schema.items).toTypescript()}>`;
+  }
+}
+
+class ObjectDataType<
+  TProps extends Record<string, TSchemaBase>,
+> extends IDataType<TObjectSchema<TProps>> {
+  parse(input: any) {
+    const result: Record<string, any> = {};
+    for (const key in this.schema.properties) {
+      result[key] = createDataType(this.schema.properties[key]!).parse(
+        input[key]
+      );
+    }
+    return result as InferSchemaType<TObjectSchema<TProps>>;
+  }
+  toTypescript(): string {
+    const result = [];
+    for (const key in this.schema.properties) {
+      result.push(
+        `${key}: ${createDataType(this.schema.properties[key]!).toTypescript()}`
+      );
+    }
+    return `{ ${result.join("; ")} }`;
+  }
+}
+
+// Registry and Factory Function
+const DATA_TYPES_REGISTRY = {
+  [TypeName.String]: StringDataType,
+  [TypeName.Boolean]: BooleanDataType,
+  [TypeName.Float64]: Float64DataType,
+  [TypeName.Int64]: Int64DataType,
+  [TypeName.Location]: LocationDataType,
+  [TypeName.Entity]: EntityDataType,
+  [TypeName.Object]: ObjectDataType,
+  [TypeName.Array]: ArrayDataType,
 } satisfies {
-  [K in DataTypeName]: new (...args: any) => IDataType<any, K>;
+  [K in TypeName]: new (schema: any) => IDataType<any>;
 };
 
-const DATA_TYPES_NORM: Record<
-  DataTypeName,
-  new (...args: any) => IDataType<any, DataTypeName>
-> = Type;
+const NORM_REGISTRY: {
+  [K in TypeName]: new (schema: any) => IDataType<any>;
+} = DATA_TYPES_REGISTRY;
 
+type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
 type DataTypesMap = {
-  [K in DataTypeName]: InstanceType<(typeof Type)[K]>;
+  [K in TypeName]: InstanceType<DataTypesConstructorMap[K]>;
 };
 
-new Type.String();
+export type TSchema =
+  | TStringSchema
+  | TBooleanSchema
+  | TFloat64Schema
+  | TInt64Schema
+  | TLocationSchema
+  | TEntitySchema
+  | TArraySchema
+  | TObjectSchema;
 
-type ParamsRequired<TName extends DataTypeName> =
-  undefined extends DataTypesMap[TName]["params"] ? false : true;
-
-type DataTypeSchema<TName extends DataTypeName> =
-  ParamsRequired<TName> extends true
-    ? { type: TName; params: DataTypesMap[TName]["params"] }
-    : { type: TName; params?: DataTypesMap[TName]["params"] };
-
-type DataTypeSchemaMap = {
-  [K in DataTypeName]: DataTypeSchema<K>;
-};
-
-// function buildDataType<
-//   TName extends DataTypeName,
-//   T extends DataTypeSchemaMap[TName],
-// >(schema: T): DataTypesMap[TName] {
-//   return new DATA_TYPES_NORM[schema.type](schema.params) as any;
-// }
-
-//  do better
-
-export function buildDataType<TName extends DataTypeName>(
-  schema: DataTypeSchema<TName>
-): DataTypesMap[TName] {
-  return "params" in schema
-    ? (new DATA_TYPES_NORM[schema.type](schema.params) as any)
-    : (new DATA_TYPES_NORM[schema.type]() as any);
+function createDataType<T extends TSchemaBase>(schema: T): IDataType<T> {
+  const DataType = NORM_REGISTRY[schema.type];
+  if (!DataType)
+    throw new Error(`No data type registered for type: ${schema.type}`);
+  return new DataType(schema) as IDataType<T>;
 }
+
+export function createType<T extends TSchema>(schema: T): IDataType<T> {
+  return createDataType<T>(schema);
+}
+
+export function getNamedTS(schema: TSchema, name = "Type"): string {
+  return `type ${name} = ${createDataType(schema).toTypescript()}`;
+}
+
+type TypedDataMap = {
+  [K in TypeName]: {
+    type: K;
+    data: InferSchemaType<{ type: K }>;
+  };
+};
+
+type TypedData = TypedDataMap[TypeName];

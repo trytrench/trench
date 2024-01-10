@@ -10,6 +10,7 @@ export enum TypeName {
   Location = "Location",
   Object = "Object",
   Array = "Array",
+  Any = "Any",
 }
 
 interface TSchemaBase {
@@ -41,17 +42,20 @@ interface TEntitySchema<T extends string = string> extends TSchemaBase {
   entityType?: T;
 }
 
-interface TArraySchema<TItems extends TSchemaBase = TSchema>
-  extends TSchemaBase {
+interface TArraySchema<TItems extends TSchema = TSchema> extends TSchemaBase {
   type: TypeName.Array;
   items: TItems;
 }
 
 interface TObjectSchema<
-  TProps extends Record<string, TSchemaBase> = Record<string, TSchema>,
+  TProps extends Record<string, TSchema> = Record<string, TSchema>,
 > extends TSchemaBase {
   type: TypeName.Object;
   properties: TProps;
+}
+
+interface TAnySchema extends TSchemaBase {
+  type: TypeName.Any;
 }
 
 type SchemaTypeMap = {
@@ -63,9 +67,10 @@ type SchemaTypeMap = {
   [TypeName.Entity]: { type: string; id: string };
   [TypeName.Array]: any[]; // Placeholder, will be refined later
   [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
+  [TypeName.Any]: any; // Placeholder, will be refined later
 };
 
-type InferSchemaType<T extends TSchemaBase> = T extends TArraySchema<infer U>
+export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
   ? Array<InferSchemaType<U>>
   : T extends TObjectSchema<infer U>
   ? { [K in keyof U]: InferSchemaType<U[K]> }
@@ -74,7 +79,7 @@ type InferSchemaType<T extends TSchemaBase> = T extends TArraySchema<infer U>
   : never;
 
 // Base class for data types
-abstract class IDataType<TS extends TSchemaBase> {
+abstract class IDataType<TS extends TSchema> {
   constructor(public schema: TS) {}
   abstract parse(input: any): InferSchemaType<TS>;
   abstract toTypescript(): string;
@@ -157,7 +162,7 @@ class EntityDataType<T extends string = string> extends IDataType<
   }
 }
 
-class ArrayDataType<TItems extends TSchemaBase> extends IDataType<
+class ArrayDataType<TItems extends TSchema> extends IDataType<
   TArraySchema<TItems>
 > {
   parse(input: any): InferSchemaType<TArraySchema<TItems>> {
@@ -169,9 +174,9 @@ class ArrayDataType<TItems extends TSchemaBase> extends IDataType<
   }
 }
 
-class ObjectDataType<
-  TProps extends Record<string, TSchemaBase>,
-> extends IDataType<TObjectSchema<TProps>> {
+class ObjectDataType<TProps extends Record<string, TSchema>> extends IDataType<
+  TObjectSchema<TProps>
+> {
   parse(input: any) {
     const result: Record<string, any> = {};
     for (const key in this.schema.properties) {
@@ -192,6 +197,15 @@ class ObjectDataType<
   }
 }
 
+class AnyDataType extends IDataType<TAnySchema> {
+  parse(input: any): any {
+    return input;
+  }
+  toTypescript(): string {
+    return "any";
+  }
+}
+
 // Registry and Factory Function
 const DATA_TYPES_REGISTRY = {
   [TypeName.String]: StringDataType,
@@ -202,6 +216,7 @@ const DATA_TYPES_REGISTRY = {
   [TypeName.Entity]: EntityDataType,
   [TypeName.Object]: ObjectDataType,
   [TypeName.Array]: ArrayDataType,
+  [TypeName.Any]: AnyDataType,
 } satisfies {
   [K in TypeName]: new (schema: any) => IDataType<any>;
 };
@@ -223,17 +238,14 @@ export type TSchema =
   | TLocationSchema
   | TEntitySchema
   | TArraySchema
-  | TObjectSchema;
+  | TObjectSchema
+  | TAnySchema;
 
-function createDataType<T extends TSchemaBase>(schema: T): IDataType<T> {
+export function createDataType<T extends TSchema>(schema: T): IDataType<T> {
   const DataType = NORM_REGISTRY[schema.type];
   if (!DataType)
     throw new Error(`No data type registered for type: ${schema.type}`);
   return new DataType(schema) as IDataType<T>;
-}
-
-export function createType<T extends TSchema>(schema: T): IDataType<T> {
-  return createDataType<T>(schema);
 }
 
 export function resolveSchemaType<T extends TSchema>(
@@ -246,13 +258,11 @@ export function getNamedTS(schema: TSchema, name = "Type"): string {
   return `type ${name} = ${createDataType(schema).toTypescript()}`;
 }
 
-type TypedDataMap = {
-  [K in TypeName]: {
-    type: K;
-    data: InferSchemaType<{ type: K }>;
-  };
-};
+// export type TypedDataMap = {
+//   [K in TypeName]: {
+//     type: K;
+//     data: InferSchemaType<{ type: K }>;
+//   };
+// };
 
-type TypedData = TypedDataMap[TypeName];
-
-type Ligma = TypedDataMap[TypeName.Object]["data"];
+// export type TypedData = TypedDataMap[TypeName];
