@@ -5,6 +5,7 @@ import { createNodeTypeDefBuilder } from "../builder";
 import { type ClickhouseClient } from "databases";
 import { TypeName, createDataType } from "../../data-types";
 import { getUnixTime } from "date-fns";
+import { insertFeatureRow } from "../lib/store";
 
 export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
@@ -61,7 +62,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       });
 
       const stateUpdater = async () => {
-        const data = {
+        await insertFeatureRow(db, {
           engine_id: engineId,
           created_at: getUnixTime(new Date()),
           event_type: event.type,
@@ -79,15 +80,6 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
           value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
           error: null,
           is_deleted: 0,
-        };
-
-        await db.insert({
-          table: "features",
-          values: [data],
-          format: "JSONEachRow",
-          clickhouse_settings: {
-            async_insert: 1,
-          },
         });
       };
 
