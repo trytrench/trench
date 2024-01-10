@@ -1,6 +1,11 @@
 "use client";
 import { api } from "../utils/api";
-import { TSchema, TypeName, createType, getNamedTS } from "../lib/data-types";
+import {
+  TSchema,
+  TypeName,
+  createDataType,
+  getNamedTS,
+} from "event-processing/src/data-types";
 import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
 
@@ -14,12 +19,12 @@ const ENTITY_TYPE_NAMES: Record<EntityType, string> = {
   [EntityType.Ip]: "Ip",
 };
 
-const cardEntity = createType({
+const cardEntity = createDataType({
   type: TypeName.Entity,
   entityType: EntityType.Card,
 });
 
-const location = createType({
+const location = createDataType({
   type: TypeName.Location,
 });
 
