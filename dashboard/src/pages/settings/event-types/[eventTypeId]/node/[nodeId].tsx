@@ -1,14 +1,12 @@
-import AppLayout from "~/components/AppLayout";
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-
-import { toast } from "~/components/ui/use-toast";
-import { EditNodeDef } from "~/components/features/EditNodeDef";
-import { ComputedNodeType, NodeDef } from "event-processing";
+import type { NodeDefsMap, NodeType } from "event-processing";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { EditNodeDef } from "~/components/features/EditNodeDef";
+import { toast } from "~/components/ui/use-toast";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -30,7 +28,7 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: updateNodeDef } = api.nodeDefs.update.useMutation();
 
-  function handleSave(def: NodeDef) {
+  function handleSave(def: NodeDefsMap[NodeType.Computed]) {
     updateNodeDef({
       ...def,
       dependsOn: [],

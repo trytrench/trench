@@ -1,12 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { NodeDefsMap, NodeType, TypeName } from "event-processing";
 import {
-  ComputedNodeType,
-  TypeName,
-  NODE_TYPE_DEFS,
-  NodeType,
-  NodeDefsMap,
-} from "event-processing";
-import { ChevronLeft, MoreHorizontal } from "lucide-react";
+  Check,
+  ChevronLeft,
+  ChevronsUpDown,
+  MoreHorizontal,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
@@ -49,8 +48,22 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import EntityFeatureDialog from "../EntityFeatureDialog";
 import AssignEntities from "../AssignEntities";
+import EntityFeatureDialog from "../EntityFeatureDialog";
+
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "~/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { cn } from "~/lib/utils";
 
 const entitySchema = z.object({
   entityTypeId: z.string(),
@@ -171,6 +184,8 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
+  const [open, setOpen] = useState(false);
+
   return (
     <div>
       <Link
@@ -205,17 +220,49 @@ const Page: NextPageWithLayout = () => {
           </SelectContent>
         </Select>
 
-        <Button
-          size="sm"
-          className="ml-auto"
-          onClick={() =>
-            void router.push(
-              `/settings/event-types/${router.query.eventTypeId as string}/node`
-            )
-          }
-        >
-          Create node
-        </Button>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              role="combobox"
+              className="ml-auto"
+              aria-expanded={open}
+            >
+              Create node
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0">
+            <Command>
+              <CommandInput placeholder="Search types..." />
+              <CommandEmpty>No framework found.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() =>
+                    void router.push(
+                      `/settings/event-types/${
+                        router.query.eventTypeId as string
+                      }/node`
+                    )
+                  }
+                >
+                  Code
+                </CommandItem>
+
+                <CommandItem
+                  onSelect={() =>
+                    void router.push(
+                      `/settings/event-types/${
+                        router.query.eventTypeId as string
+                      }/node?type=count`
+                    )
+                  }
+                >
+                  Count
+                </CommandItem>
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       <Card className="h-96 overflow-auto p-6">
         <SchemaDisplay

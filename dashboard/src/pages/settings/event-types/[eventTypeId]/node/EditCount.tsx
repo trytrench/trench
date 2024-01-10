@@ -1,12 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { NodeType, TypeName, type NodeDef } from "event-processing";
-import { Pencil, Save } from "lucide-react";
+import { Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { EditComputed } from "~/components/features/feature-types/EditComputed";
+import NodeCombobox from "~/components/NodeCombobox";
 import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -16,93 +25,8 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { Separator } from "~/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
-import { NodeDepSelector } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
-
-const DATA_TYPE_OPTIONS = [
-  {
-    label: "String",
-    value: TypeName.String,
-  },
-  {
-    label: "Number",
-    value: TypeName.Float64,
-  },
-  {
-    label: "Boolean",
-    value: TypeName.Boolean,
-  },
-  {
-    label: "JSON",
-    value: TypeName.Object,
-  },
-];
-
-const TYPE_DEFAULTS = {
-  [NodeType.Computed]: {
-    dataType: TypeName.Boolean,
-    config: {
-      code: "",
-      depsMap: {},
-      assignedEntityFeatureIds: [],
-    },
-  },
-  [NodeType.Counter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.Count]["config"],
-  },
-  [NodeType.UniqueCounter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      countUniqueFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.UniqueCount]["config"],
-  },
-  [NodeType.LogEntityFeature]: {
-    dataType: TypeName.Entity,
-    config: {
-      eventTypes: new Set(),
-      code: "",
-      depsMap: {},
-    },
-  },
-} as Record<
-  NodeType,
-  {
-    dataType: TypeName;
-    config: any;
-  }
->;
-
-//
+import { api } from "~/utils/api";
+import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
@@ -129,7 +53,7 @@ interface Props {
   onSave: (data: NodeDef) => void;
 }
 
-export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
+export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -148,6 +72,18 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       depsMap: {},
     }
   );
+
+  const [countUniqueFeatureDeps, setCountUniqueFeatureDeps] = useState<
+    FeatureDep[]
+  >([]);
+  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDep[]>([]);
+
+  const [countByFeatureDeps, setCountByFeatureDeps] = useState<FeatureDep[]>(
+    []
+  );
+  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDep[]>([]);
+
+  const [conditionNode, setConditionNode] = useState(null);
 
   // // If we're editing an existing feature then populate forms w/ data.
   // // Name, type, and datatype can't be changed after creation so the
@@ -224,11 +160,8 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               onSave({
                 ...initialNodeDef,
                 name: form.getValues("name"),
-                // dataType: form.getValues("dataType"),
-                config: {
-                  ...config,
-                  depsMap: {},
-                },
+                dataType: form.getValues("dataType"),
+                config,
               });
             }}
           >
@@ -255,47 +188,37 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="dataType"
-              render={({ field }) => (
-                <FormItem className="w-[16rem] mt-4">
-                  <FormLabel>Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an entity" />
-                      </SelectTrigger>
-                    </FormControl>
+            <div className="text-sm font-medium mt-4 mb-2">Count Unique</div>
 
-                    <SelectContent>
-                      {DATA_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="text-sm font-medium mt-4 mb-2">Dependencies</div>
-
-            <div className="flex space-x-2 mt-2">
+            <div className="flex items-center space-x-2 mt-2">
               <NodeDepSelector
-                nodeDeps={form.watch("nodeDeps")}
-                featureDeps={form.watch("featureDeps")}
-                onFeatureDepsChange={(deps) =>
-                  form.setValue("featureDeps", deps)
-                }
-                onNodeDepsChange={(deps) => form.setValue("nodeDeps", deps)}
+                nodeDeps={countUniqueNodeDeps}
+                featureDeps={countUniqueFeatureDeps}
+                onFeatureDepsChange={setCountUniqueFeatureDeps}
+                onNodeDepsChange={setCountUniqueNodeDeps}
                 eventTypeId={router.query.eventTypeId as string}
               />
+
+              <div className="text-sm">By</div>
+              <NodeDepSelector
+                nodeDeps={countByNodeDeps}
+                featureDeps={countByFeatureDeps}
+                onFeatureDepsChange={setCountByFeatureDeps}
+                onNodeDepsChange={setCountByNodeDeps}
+                eventTypeId={router.query.eventTypeId as string}
+              />
+              <div className="text-sm">Where</div>
+              <NodeCombobox
+                eventTypeId={router.query.eventTypeId as string}
+                onSelectFeature={(node, feature) => {}}
+                onSelectNode={(node) => {}}
+                selectedFeatureIds={[]}
+                selectedNodeIds={[]}
+              >
+                <Button variant="outline" size="xs">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </NodeCombobox>
             </div>
           </form>
         </Form>
@@ -308,12 +231,14 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
         }}
       /> */}
 
-      <Separator className="my-8" />
+      {/* <Separator className="my-8" /> */}
 
-      <EditComputed
+      {/* <EditComputed
         nodeDef={
           initialNodeDef ?? {
-            returnSchema: {},
+            dataType: {
+              type: form.watch("dataType"),
+            },
             config: {
               code: "",
               depsMap: {},
@@ -322,7 +247,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
         }
         onConfigChange={setConfig}
         onValidChange={setIsCodeValid}
-      />
+      /> */}
     </div>
   );
 }
