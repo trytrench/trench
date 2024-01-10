@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-
-import { TypeName, NodeType, type NodeDef } from "event-processing";
-
+import {
+  NodeDefsMap,
+  NodeType,
+  TypeName,
+  type NodeDef,
+} from "event-processing";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { uniqBy } from "lodash";
 import { Check, Pencil, Plus, Save, X } from "lucide-react";
@@ -161,7 +164,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
   const { data: features, refetch: refetchFeatures } =
     api.features.list.useQuery();
 
-  const { data: nodes } = api.nodeDefs.getNodesForEventType.useQuery(
+  const { data: nodes } = api.nodeDefs.list.useQuery(
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: !!router.query.eventTypeId }
   );
@@ -223,7 +226,9 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const isEditing = useMemo(() => !!initialNodeDef, [initialNodeDef]);
 
-  const [entityNode, setEntityNode] = useState<NodeDef | null>();
+  const [entityNode, setEntityNode] = useState<
+    NodeDefsMap[NodeType.EntityAppearance] | null
+  >();
   const [entityDepsDropdownOpen, setEntityDepsDropdownOpen] = useState(false);
   const [nodeDepsDropdownOpen, setNodeDepsDropdownOpen] = useState(false);
 
@@ -363,7 +368,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                           ?.filter(
                             (feature) =>
                               feature.belongsTo[0]?.entityTypeId ===
-                              entityNode?.node.dataType?.entityType
+                              entityNode?.returnSchema?.entityType
                           )
                           .map((feature) => (
                             <CommandItem
@@ -415,18 +420,17 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                       <CommandGroup>
                         {nodes
                           ?.filter(
-                            (node) =>
-                              node.node.dataType?.type === TypeName.Entity
+                            (node) => node.type === NodeType.EntityAppearance
                           )
                           .map((node) => (
                             <CommandItem
-                              value={node.node.name}
-                              key={node.node.id}
+                              value={node.name}
+                              key={node.id}
                               onSelect={() => {
                                 setEntityNode(node);
                               }}
                             >
-                              {node.node.name}
+                              {node.name}
                             </CommandItem>
                           ))}
                       </CommandGroup>
@@ -481,8 +485,8 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                         ?.filter((node) => !node.config?.paths)
                         .map((node) => (
                           <CommandItem
-                            value={node.node.name}
-                            key={node.node.id}
+                            value={node.name}
+                            key={node.id}
                             onSelect={() => {
                               setNodeDepsDropdownOpen(false);
                               form.setValue(
@@ -491,8 +495,8 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                                   [
                                     ...form.getValues("nodeDeps"),
                                     {
-                                      nodeId: node.node.id,
-                                      nodeName: node.node.name,
+                                      nodeId: node.id,
+                                      nodeName: node.name,
                                     },
                                   ],
                                   "nodeId"
@@ -505,12 +509,12 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                                 "mr-2 h-4 w-4",
                                 form
                                   .getValues("nodeDeps")
-                                  .some((dep) => dep.nodeId === node.node.id)
+                                  .some((dep) => dep.nodeId === node.id)
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
                             />
-                            {node.node.name}
+                            {node.name}
                           </CommandItem>
                         ))}
                     </CommandGroup>

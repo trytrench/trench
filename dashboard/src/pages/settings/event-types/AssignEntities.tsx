@@ -251,11 +251,11 @@ export default function AssignEntities() {
   return (
     <div className="space-y-4">
       {nodes
-        ?.filter((node) => node.returnSchema.type === TypeName.Entity)
+        ?.filter((node) => node.type === NodeType.EntityAppearance)
         .map((node) => (
           <EntityCard
             name={node.name}
-            path={node.config.paths?.[router.query.eventTypeId as string]}
+            path={`input.event.data.${node.config.valueAccessor.path}`}
             key={node.id}
           >
             {nodes
@@ -314,15 +314,15 @@ export default function AssignEntities() {
                 })
                   .then(() => {
                     toast({
-                      title: "Feature created!",
+                      title: "Entity property created",
                       description: `${values.name}`,
                     });
-                    refetchFeatures();
+                    return refetchFeatures();
                   })
                   .catch(() => {
                     toast({
                       variant: "destructive",
-                      title: "Failed to create feature",
+                      title: "Failed to create entity property",
                     });
                   });
               }}

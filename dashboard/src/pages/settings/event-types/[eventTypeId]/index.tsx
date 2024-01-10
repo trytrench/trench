@@ -251,13 +251,13 @@ const Page: NextPageWithLayout = () => {
                       returnSchema: {
                         type: TypeName.Entity,
                         entityType: values.entityTypeId,
-                      },
+                      } as NodeDefsMap[NodeType.EntityAppearance]["returnSchema"],
                       dependsOn: [],
                       config: {
                         entityType: values.entityTypeId,
                         valueAccessor: {
-                          nodeId: "",
-                          path: values.path,
+                          nodeId: null,
+                          path: values.path.replace("input.event.data.", ""),
                         },
                       } as NodeDefsMap[NodeType.EntityAppearance]["config"],
                     })
