@@ -4,7 +4,6 @@ import {
   fetchLastEventProcessedId,
   getEventsSince,
   setLastEventProcessedId,
-  writeEngineResultsToStore,
   writeEventsToStore,
 } from "event-processing";
 import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
@@ -50,7 +49,7 @@ async function initEventHandler() {
         allResults.push(...Object.values(results));
       }
 
-      await writeEngineResultsToStore({ results: allResults });
+      // await writeEngineResultsToStore({ results: allResults });
       await writeEventsToStore({ events: events.map((e) => e.event) });
 
       const lastEvent = events[events.length - 1]!;

@@ -19,7 +19,7 @@ export function getNodeDefFromSnapshot(snapshot: {
     type: snapshot.node.type as NodeType,
     name: snapshot.node.name,
     dependsOn: new Set(snapshot.deps),
-    eventTypes: new Set(snapshot.eventTypes),
+    returnSchema: snapshot.node.dataType as any,
     config: snapshot.config as object,
   };
 }
@@ -65,5 +65,5 @@ export async function fetchCurrentEngineId() {
 
 export async function createEngine({ engineId }: { engineId: string }) {
   const nodeDefs = await fetchFeatureDefSnapshots({ engineId });
-  return new ExecutionEngine({ nodeDefs, engineId });
+  return new ExecutionEngine({ nodeDefs, engineId, getContext: () => null });
 }

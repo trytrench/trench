@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
-import { printNodeDef } from "../lib/print";
 import { createNodeTypeDefBuilder } from "../builder";
-import { type ClickhouseClient } from "databases";
 import { TypeName } from "../../data-types";
 
 export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
@@ -10,7 +8,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
   .setConfigSchema(
     z.object({
       entityType: z.string(),
-      accessor: z.object({
+      valueAccessor: z.object({
         nodeId: z.string(),
         path: z.string().optional(),
       }),
@@ -19,14 +17,30 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
   .setReturnSchema({
     type: TypeName.Entity,
   })
-  .setContextType<{ clickhouse: ClickhouseClient }>()
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency }) => {
+      // Access node value
+      const { valueAccessor } = nodeDef.config;
+      const obj = await getDependency({
+        nodeId: valueAccessor.nodeId,
+        expectedSchema: {
+          type: TypeName.Any,
+        },
+      });
+
+      const value = valueAccessor.path ? obj[valueAccessor.path] : obj;
+
+      if (typeof value !== "string") {
+        throw new Error(
+          `Expected string value for entity id, got ${typeof value}`
+        );
+      }
+
       return {
         stateUpdaters: [],
         data: {
           type: nodeDef.config.entityType,
-          id: "",
+          id: value,
         },
       };
     };

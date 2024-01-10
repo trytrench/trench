@@ -27,6 +27,8 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.Counter]: { redis },
   [NodeType.UniqueCounter]: { redis },
   [NodeType.GetEntityFeature]: { clickhouse: db },
+  [NodeType.EntityAppearance]: {},
+  [NodeType.LogEntityFeature]: { clickhouse: db },
 };
 
 type TrenchError = {
@@ -144,7 +146,7 @@ export class ExecutionEngine {
         // Run getter
         const resolvedOutput = await resolver({
           event,
-
+          engineId: this.engineId,
           getDependency: async ({ nodeId, expectedSchema }) => {
             const depNodeDef = this.getNodeInstance(nodeId).nodeDef;
 
