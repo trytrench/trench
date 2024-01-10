@@ -164,31 +164,31 @@ export class ExecutionEngine {
           getDependency: async ({ nodeId, expectedSchema }) => {
             const depNodeDef = this.getNodeInstance(nodeId).nodeDef;
 
-            const value = await this.evaluateNode(nodeId);
-            if (value.type === "error") {
+            const result = await this.evaluateNode(nodeId);
+            if (result.type === "error") {
               throw new Error(
                 `Node ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
                   depNodeDef
-                )}, which failed with error: ${value.output.message}`
+                )}, which failed with error: ${result.output.message}`
               );
             } else {
               if (expectedSchema) {
                 const type = createDataType(expectedSchema);
                 try {
-                  type.parse(value);
+                  type.parse(result.output.data);
                 } catch (e: any) {
                   throw new Error(
                     `Node ${printNodeDef(
                       nodeDef
                     )} expects dependency ${printNodeDef(
                       depNodeDef
-                    )} to be of type ${expectedSchema}, but parsing failed with error: ${
-                      e.message
-                    }`
+                    )} to be of type ${JSON.stringify(
+                      expectedSchema
+                    )}, but parsing failed with error: ${e.message}`
                   );
                 }
               }
-              return value.output.data;
+              return result.output.data;
             }
           },
         });

@@ -43,6 +43,7 @@ model Event {
   @@index([timestamp])
 }
 
+// TODO: Change to one to many
 model FeatureToEntityType {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -67,7 +68,7 @@ model Feature {
   description String?
 
   // Immutable
-  dataType  Json
+  schema    Json
   belongsTo FeatureToEntityType[]
 }
 

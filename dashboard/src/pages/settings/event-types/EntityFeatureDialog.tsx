@@ -1,10 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NODE_TYPE_DEFS, NodeType } from "event-processing";
+import { NodeDefsMap, NodeType, TypeName } from "event-processing";
+import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "~/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -23,19 +31,22 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { useToast } from "~/components/ui/use-toast";
+import { cn } from "~/lib/utils";
 import { api } from "~/utils/api";
 
 const entityFeatureSchema = z.object({
   path: z.string(),
-  entityTypeId: z.string(),
-  featureId: z.string(),
+  entityProperty: z.object({
+    entityNodeId: z.string(),
+    entityName: z.string(),
+    featureId: z.string(),
+    featureName: z.string(),
+  }),
 });
 
 export default function EntityFeatureDialog({
@@ -59,11 +70,8 @@ export default function EntityFeatureDialog({
     resolver: zodResolver(entityFeatureSchema),
     defaultValues: {
       path,
-      entityTypeId,
-      featureId,
     },
   });
-  const { data: entityTypes } = api.entityTypes.list.useQuery();
   const { data: features } = api.features.list.useQuery();
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
@@ -72,40 +80,48 @@ export default function EntityFeatureDialog({
     { enabled: !!router.query.eventTypeId }
   );
 
-  const createEntityFeature = (values: z.infer<typeof entityFeatureSchema>) => {
-    const feature = features?.find((f) => f.id === values.featureId);
+  const [entityNode, setEntityNode] = useState<
+    NodeDefsMap[NodeType.EntityAppearance] | null
+  >();
+  const [entityDepsDropdownOpen, setEntityDepsDropdownOpen] = useState(false);
 
-    //   createNodeDef({
-    //     eventTypes: [router.query.eventTypeId as string],
-    //     name: feature.name,
-    //     type: NodeType.Computed,
-    //     dataType: feature.dataType,
-    //     deps: [],
-    //     config: {
-    //       type: ComputedNodeType.Path,
-    //       paths: {
-    //         [router.query.eventTypeId as string]: values.path,
-    //       },
-    //       compiledJs: "",
-    //       tsCode: "",
-    //       depsMap: {},
-    //       featureId: feature.id,
-    //       entityTypeId: values.entityTypeId,
-    //     } as z.infer<(typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]>,
-    //   })
-    //     .then(() => {
-    //       toast({
-    //         title: "FeatureDef created!",
-    //         description: `${feature.name}`,
-    //       });
-    //       refetchNodes();
-    //     })
-    //     .catch(() => {
-    //       toast({
-    //         variant: "destructive",
-    //         title: "Failed to create FeatureDef",
-    //       });
-    //     });
+  const createEntityFeature = (values: z.infer<typeof entityFeatureSchema>) => {
+    const feature = features?.find(
+      (f) => f.id === values.entityProperty?.featureId
+    );
+    if (!feature) throw new Error("Feature not found");
+
+    createNodeDef({
+      eventTypes: [router.query.eventTypeId as string],
+      name: feature.name,
+      type: NodeType.LogEntityFeature,
+      returnSchema: {
+        type: TypeName.Any,
+      } as NodeDefsMap[NodeType.LogEntityFeature]["returnSchema"],
+      dependsOn: [],
+      config: {
+        featureId: feature.id,
+        entityAppearanceNodeId: values.entityProperty?.entityNodeId,
+        featureSchema: feature.dataType,
+        valueAccessor: {
+          nodeId: null,
+          paths: values.path.replace("input.event.data.", ""),
+        },
+      } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+    })
+      .then(() => {
+        toast({
+          title: "Entity property assigned",
+          // description: `${feature.name}`,
+        });
+        return refetchNodes();
+      })
+      .catch(() => {
+        toast({
+          variant: "destructive",
+          title: "Failed to assign entity property",
+        });
+      });
   };
 
   return (
@@ -139,77 +155,102 @@ export default function EntityFeatureDialog({
                   )}
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <FormField
-                  control={form.control}
-                  name="entityTypeId"
-                  render={({ field }) => (
-                    <FormItem className="col-span-3">
-                      <FormLabel>Entity Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+
+              <FormField
+                control={form.control}
+                name="entityProperty"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Entity Property</FormLabel>
+
+                    <Popover
+                      open={entityDepsDropdownOpen}
+                      onOpenChange={(open) => {
+                        setEntityDepsDropdownOpen(open);
+                        if (!open) setEntityNode(null);
+                      }}
+                    >
+                      <PopoverTrigger asChild>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an entity" />
-                          </SelectTrigger>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-[16rem] justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? `${field.value.entityName} - ${field.value.featureName}`
+                              : "Select entity property"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
                         </FormControl>
-
-                        <SelectContent>
-                          {entityTypes?.map((entityType) => (
-                            <SelectItem
-                              key={entityType.id}
-                              value={entityType.id}
-                            >
-                              {entityType.type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              {form.watch("entityTypeId") && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <FormField
-                    control={form.control}
-                    name="featureId"
-                    render={({ field }) => (
-                      <FormItem className="col-span-3">
-                        <FormLabel>Entity Property</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an entity property" />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent>
-                            {features
-                              ?.filter(
-                                (feature) =>
-                                  feature.belongsTo[0]?.entityTypeId ===
-                                  form.watch("entityTypeId")
-                              )
-                              .map((feature) => (
-                                <SelectItem key={feature.id} value={feature.id}>
-                                  {feature.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[16rem] p-0">
+                        {entityNode ? (
+                          <Command>
+                            <CommandInput placeholder="Search properties..." />
+                            <CommandEmpty>No properties found.</CommandEmpty>
+                            <CommandGroup>
+                              {features
+                                ?.filter(
+                                  (feature) =>
+                                    feature.belongsTo[0]?.entityTypeId ===
+                                    entityNode?.returnSchema?.entityType
+                                )
+                                .map((feature) => (
+                                  <CommandItem
+                                    value={feature.name}
+                                    key={feature.id}
+                                    onSelect={() => {
+                                      setEntityDepsDropdownOpen(false);
+                                      form.setValue("entityProperty", {
+                                        entityNodeId: entityNode.id,
+                                        entityName: entityNode.name,
+                                        featureId: feature.id,
+                                        featureName: feature.name,
+                                      });
+                                      setEntityNode(null);
+                                    }}
+                                  >
+                                    {feature.name}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </Command>
+                        ) : (
+                          <Command>
+                            <CommandInput placeholder="Search nodes..." />
+                            <CommandEmpty>No entities found.</CommandEmpty>
+                            <CommandGroup>
+                              {nodes
+                                ?.filter(
+                                  (node) =>
+                                    node.type === NodeType.EntityAppearance
+                                )
+                                .map((node) => (
+                                  <CommandItem
+                                    value={node.name}
+                                    key={node.id}
+                                    onSelect={() => {
+                                      setEntityNode(
+                                        node as NodeDefsMap[NodeType.EntityAppearance]
+                                      );
+                                    }}
+                                  >
+                                    {node.name}
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </Command>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <DialogFooter>
               <Button type="submit">Save</Button>
