@@ -54,8 +54,6 @@ export const nodeDefsRouter = createTRPCRouter({
       const { configSchema, returnSchema } = NODE_TYPE_DEFS[input.type];
       configSchema.parse(input.config);
 
-      createDataType(returnSchema).parse(input.returnSchema);
-
       const nodeDef = await ctx.prisma.node.create({ data: input });
 
       // Publish

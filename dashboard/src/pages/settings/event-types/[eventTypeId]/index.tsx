@@ -252,7 +252,7 @@ const Page: NextPageWithLayout = () => {
                         type: TypeName.Entity,
                         entityType: values.entityTypeId,
                       },
-                      deps: [],
+                      dependsOn: [],
                       config: {
                         entityType: values.entityTypeId,
                         valueAccessor: {
