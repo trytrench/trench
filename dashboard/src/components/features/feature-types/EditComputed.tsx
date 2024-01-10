@@ -72,26 +72,6 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
 
   return (
     <>
-      {/* Assigned Entities */}
-      {/* <FeatureMultiSelect
-        featureIds={assignedEntityFeatureIds}
-        onFeatureIdsChange={(val) => {
-          updateConfigAndDeps({ assignedEntityFeatureIds: val });
-        }}
-        filter={{ featureType: NodeType.LogEntityFeature }}
-        label="Assigned Entities"
-      /> */}
-      {/* <div className="mt-16"></div>
-
-      <DepsMapEditor
-        depsMap={depsMap}
-        onChange={(val) => {
-          updateConfigAndDeps({ depsMap: val });
-        }}
-      />
-
-      <div className="mt-16" /> */}
-
       <div className="flex mb-4 items-center">
         <div className="text-emphasis-foreground text-md">Code</div>
         <Button
