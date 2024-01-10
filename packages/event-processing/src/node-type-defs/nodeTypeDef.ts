@@ -1,6 +1,7 @@
 import { ZodType, z } from "zod";
 import { NodeType } from "./types/_enum";
 import { InferSchemaType, TSchema } from "../data-types";
+import { StoreRow } from "./lib/store";
 
 export type NodeDef<
   TNodeType extends NodeType = NodeType,
@@ -32,7 +33,8 @@ export type Resolver<TReturn extends TSchema = TSchema> = (input: {
     expectedSchema?: TR;
   }): Promise<InferSchemaType<TR>>;
 }) => Promise<{
-  stateUpdaters: readonly StateUpdater[];
+  stateUpdaters?: readonly StateUpdater[];
+  savedStoreRows?: StoreRow[];
   data: InferSchemaType<TReturn>;
 }>;
 

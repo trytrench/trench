@@ -14,6 +14,8 @@ import {
 import { printNodeDef } from "./node-type-defs/lib/print";
 import { db } from "databases";
 import { TSchema, createDataType } from "./data-types";
+import { StoreRow, StoreTable } from "./node-type-defs/lib/store";
+import { getUnixTime } from "date-fns";
 /**
  * Execution Engine
  *
@@ -27,8 +29,8 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.Counter]: { redis },
   [NodeType.UniqueCounter]: { redis },
   [NodeType.GetEntityFeature]: { clickhouse: db },
-  [NodeType.EntityAppearance]: { clickhouse: db },
-  [NodeType.LogEntityFeature]: { clickhouse: db },
+  [NodeType.EntityAppearance]: {},
+  [NodeType.LogEntityFeature]: {},
 };
 
 type TrenchError = {
@@ -61,6 +63,7 @@ type ResolverOutput = Awaited<ResolverPromise>;
 type ExecutionState = {
   nodePromises: Record<string, Promise<NodeResult>>;
   stateUpdaters: Array<StateUpdater>;
+  savedStoreRows: StoreRow[];
   event: TrenchEvent;
 };
 
@@ -120,6 +123,17 @@ export class ExecutionEngine {
       event,
       nodePromises: {},
       stateUpdaters: [],
+      savedStoreRows: [
+        {
+          table: StoreTable.Events,
+          row: {
+            id: event.id,
+            type: event.type,
+            timestamp: getUnixTime(event.timestamp),
+            data: event.data,
+          },
+        },
+      ],
     };
   }
 
@@ -183,7 +197,12 @@ export class ExecutionEngine {
         dataType.parse(resolvedOutput.data);
 
         // Register state updaters
-        this.state.stateUpdaters.push(...resolvedOutput.stateUpdaters);
+        this.state.stateUpdaters.push(...(resolvedOutput.stateUpdaters ?? []));
+
+        // Register saved store rows
+        this.state.savedStoreRows.push(
+          ...(resolvedOutput.savedStoreRows ?? [])
+        );
 
         return createSuccess(resolvedOutput);
       };

@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
-import { printNodeDef } from "../lib/print";
 import { createNodeTypeDefBuilder } from "../builder";
-import { type ClickhouseClient } from "databases";
 import { TypeName, createDataType } from "../../data-types";
 import { getUnixTime } from "date-fns";
-import { insertFeatureRow } from "../lib/store";
+import { StoreTable } from "../lib/store";
 
 export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
@@ -31,10 +29,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setReturnSchema({
     type: TypeName.Any,
   })
-  .setContextType<{ clickhouse: ClickhouseClient }>()
   .setCreateResolver(({ nodeDef, context }) => {
-    const db = context.clickhouse;
-
     return async ({ event, getDependency, engineId }) => {
       const {
         featureId,
@@ -65,30 +60,28 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         },
       });
 
-      const stateUpdater = async () => {
-        await insertFeatureRow(db, {
-          engine_id: engineId,
-          created_at: getUnixTime(new Date()),
-          event_type: event.type,
-          event_id: event.id,
-          event_timestamp: getUnixTime(event.timestamp),
-          feature_type: nodeDef.type,
-          feature_id: featureId,
-          entity_type: [assignToEntity.type],
-          entity_id: [assignToEntity.id],
-          data_type: featureSchema.type,
-          value: JSON.stringify(parsedValue),
-          value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
-          value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
-          value_String: topLevelType === TypeName.String ? parsedValue : null,
-          value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
-          error: null,
-          is_deleted: 0,
-        });
+      const rowToSave = {
+        engine_id: engineId,
+        created_at: getUnixTime(new Date()),
+        event_type: event.type,
+        event_id: event.id,
+        event_timestamp: getUnixTime(event.timestamp),
+        feature_type: nodeDef.type,
+        feature_id: featureId,
+        entity_type: [assignToEntity.type],
+        entity_id: [assignToEntity.id],
+        data_type: featureSchema.type,
+        value: JSON.stringify(parsedValue),
+        value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
+        value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
+        value_String: topLevelType === TypeName.String ? parsedValue : null,
+        value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
+        error: null,
+        is_deleted: 0,
       };
 
       return {
-        stateUpdaters: [stateUpdater],
+        savedStoreRows: [{ table: StoreTable.Features, row: rowToSave }],
         data: parsedValue,
       };
     };

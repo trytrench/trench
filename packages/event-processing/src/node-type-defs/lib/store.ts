@@ -1,4 +1,6 @@
-import { ClickhouseClient } from "databases";
+import { db } from "databases";
+import { TrenchEvent } from "../nodeTypeDef";
+import { getUnixTime } from "date-fns";
 
 type FeatureRow = {
   engine_id: string;
@@ -20,13 +22,58 @@ type FeatureRow = {
   is_deleted: number;
 };
 
-export async function insertFeatureRow(db: ClickhouseClient, row: FeatureRow) {
-  await db.insert({
-    table: "features",
-    values: [row],
-    format: "JSONEachRow",
-    clickhouse_settings: {
-      async_insert: 1,
-    },
-  });
+type EventTableRow = {
+  id: string;
+  type: string;
+  timestamp: number;
+  data: object;
+};
+
+export enum StoreTable {
+  Features = "features",
+  Events = "events",
+}
+
+// export async function insertFeatureRow(db: ClickhouseClient, row: FeatureRow) {
+//   await db.insert({
+//     table: StoreTable.Features,
+//     values: [row],
+//     format: "JSONEachRow",
+//     clickhouse_settings: {
+//       async_insert: 1,
+//       wait_for_async_insert: 0,
+//     },
+//   });
+// }
+
+export type StoreRow =
+  | {
+      table: StoreTable.Features;
+      row: FeatureRow;
+    }
+  | {
+      table: StoreTable.Events;
+      row: EventTableRow;
+    };
+
+const ALL_TABLES = [StoreTable.Features, StoreTable.Events];
+
+export async function writeStoreRows({ rows }: { rows: StoreRow[] }) {
+  await Promise.all(
+    ALL_TABLES.map((table) => {
+      const rowsForTable = rows.filter((r) => r.table === table);
+      if (rowsForTable.length === 0) {
+        return;
+      }
+      return db.insert({
+        table,
+        values: rowsForTable.map((r) => r.row),
+        format: "JSONEachRow",
+        clickhouse_settings: {
+          async_insert: 1,
+          wait_for_async_insert: 0,
+        },
+      });
+    })
+  );
 }

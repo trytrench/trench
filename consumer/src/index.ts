@@ -8,6 +8,10 @@ import {
 } from "event-processing";
 import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
 import { recordEventType } from "./recordEventType";
+import {
+  StoreRow,
+  writeStoreRows,
+} from "event-processing/src/node-type-defs/lib/store";
 
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
@@ -40,17 +44,16 @@ async function initEventHandler() {
     }
 
     try {
-      const allResults: EngineResult[] = [];
+      const storeRows: StoreRow[] = [];
       for (const eventObj of events) {
         engine.initState(eventObj.event);
         await recordEventType(eventObj.event.type, eventObj.event.data);
         const results = await engine.getAllEngineResults();
         await engine.executeStateUpdates();
-        allResults.push(...Object.values(results));
+        storeRows.push(...(engine.state?.savedStoreRows ?? []));
       }
 
-      // await writeEngineResultsToStore({ results: allResults });
-      await writeEventsToStore({ events: events.map((e) => e.event) });
+      await writeStoreRows({ rows: storeRows });
 
       const lastEvent = events[events.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);

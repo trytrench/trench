@@ -37,7 +37,6 @@ export const computedNodeDef = createNodeTypeDefBuilder()
 
       return {
         data: value,
-        stateUpdaters: [],
       };
     };
   })
