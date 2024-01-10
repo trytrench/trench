@@ -1,16 +1,16 @@
 import { ZodType, z } from "zod";
-import { DataType, TypedData, TypedDataMap } from "../dataTypes";
 import { NodeType } from "./types/_enum";
+import { InferSchemaType, TSchema } from "../data-types";
 
 export type NodeDef<
   TNodeType extends NodeType = NodeType,
-  TDataType extends DataType = DataType,
+  TReturnSchema extends TSchema = TSchema,
   TConfig = any,
 > = {
   id: string;
   name: string;
   type: TNodeType;
-  dataType: TDataType;
+  returnSchema: TReturnSchema;
   config: TConfig;
   dependsOn: Set<string>;
   eventTypes: Set<string>;
@@ -25,28 +25,28 @@ export type TrenchEvent = {
 
 export type StateUpdater = () => Promise<void>;
 
-export type Resolver<TDataType extends DataType> = (input: {
+export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   event: TrenchEvent;
-  getDependency<TDataType extends DataType>(props: {
+  getDependency<TR extends TSchema>(props: {
     nodeId: string;
-    expectedDataTypes?: TDataType[];
-  }): Promise<TypedDataMap[TDataType]>;
+    expectedSchema?: TR;
+  }): Promise<InferSchemaType<TR>>;
 }) => Promise<{
   stateUpdaters: readonly StateUpdater[];
-  data: TypedDataMap[TDataType];
+  data: InferSchemaType<TReturn>;
 }>;
 
 export type NodeTypeDef<
   TNodeType extends NodeType = any,
-  TDataType extends DataType = any,
+  TReturn extends TSchema = any,
   TConfigSchema extends ZodType = any,
   TContext = unknown,
 > = {
   nodeType: TNodeType;
   configSchema: TConfigSchema;
-  allowedDataTypes: TDataType[];
+  returnSchema: TReturn;
   createResolver: (options: {
-    nodeDef: NodeDef<TNodeType, TDataType, z.infer<TConfigSchema>>;
+    nodeDef: NodeDef<TNodeType, TReturn, z.infer<TConfigSchema>>;
     context: TContext;
-  }) => Resolver<TDataType>;
+  }) => Resolver<TReturn>;
 };

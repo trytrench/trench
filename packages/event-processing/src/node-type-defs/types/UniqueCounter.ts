@@ -1,12 +1,12 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { DataType, encodeTypedData } from "../../dataTypes";
 import { StateUpdater } from "../nodeTypeDef";
 import { getPastNCountBucketHashes, hashObject } from "../lib/counts";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { type RedisInterface } from "databases";
+import { TypeName } from "../../data-types";
 
 const N_BUCKETS = 10;
 
@@ -21,7 +21,9 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       conditionFeatureId: z.string().optional(),
     })
   )
-  .setAllowedDataTypes([DataType.Int64])
+  .setReturnSchema({
+    type: TypeName.Int64,
+  })
   .setContextType<{
     redis: RedisInterface;
   }>()
@@ -37,19 +39,19 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
 
       let shouldUpdateCount = true;
       if (conditionFeatureId) {
-        const featureData = await getDependency({
+        shouldUpdateCount = await getDependency({
           nodeId: conditionFeatureId,
-          expectedDataTypes: [DataType.Boolean],
+          expectedSchema: {
+            type: TypeName.Boolean,
+          },
         });
-
-        shouldUpdateCount = featureData.value;
       }
 
       const countBy = await Promise.all(
         countByNodeIds.map((nodeId) => {
           return getDependency({
             nodeId: nodeId,
-          }).then((data) => encodeTypedData(data));
+          }).then((data) => JSON.stringify(data));
         })
       );
 
@@ -65,7 +67,7 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
         countUniqueNodeIds.map((featureId) => {
           return getDependency({
             nodeId: featureId,
-          }).then((data) => encodeTypedData(data));
+          }).then((data) => JSON.stringify(data));
         })
       );
 
@@ -100,10 +102,7 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       }
 
       return {
-        data: {
-          type: DataType.Int64,
-          value: uniqueCount,
-        },
+        data: uniqueCount,
         stateUpdaters,
       };
     };

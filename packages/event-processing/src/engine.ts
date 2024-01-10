@@ -1,5 +1,4 @@
 import { redis } from "./../../databases/src/redis";
-import { DataType, TypedDataMap, validateTypedData } from "./dataTypes";
 import { assert } from "common";
 import {
   NODE_TYPE_DEFS,
@@ -15,6 +14,7 @@ import {
 } from "./node-type-defs";
 import { printNodeDef } from "./node-type-defs/lib/print";
 import { db } from "databases";
+import { TSchema, createDataType } from "./data-types";
 /**
  * Execution Engine
  *
@@ -27,7 +27,6 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.Computed]: {},
   [NodeType.Counter]: { redis },
   [NodeType.UniqueCounter]: { redis },
-  [NodeType.LogEntityFeature]: { clickhouse: db },
   [NodeType.GetEntityFeature]: { clickhouse: db },
 };
 
@@ -55,7 +54,7 @@ type NodeResult =
   | { type: "error"; output: TrenchError }
   | { type: "success"; output: ResolverOutput };
 
-type ResolverPromise = ReturnType<Resolver<DataType>>;
+type ResolverPromise = ReturnType<Resolver>;
 type ResolverOutput = Awaited<ResolverPromise>;
 
 type ExecutionState = {
@@ -67,7 +66,7 @@ type ExecutionState = {
 type NodeInstance = {
   [TNodeType in NodeType]: {
     nodeDef: NodeDefsMap[TNodeType];
-    resolver: Resolver<NodeTypeDefsMap[TNodeType]["allowedDataTypes"][number]>;
+    resolver: Resolver;
   };
 };
 
@@ -134,13 +133,6 @@ export class ExecutionEngine {
 
     const { event, nodePromises } = this.state;
 
-    // const instance = this.getNodeInstance(nodeId);
-    // if (instance.nodeDef.eventTypes.has(event.type) === false) {
-    //   return createError(
-    //     `Node '${nodeId}' does not support event type '${event.type}'`
-    //   );
-    // }
-
     // If node processing has not started, start it
     if (!nodePromises[nodeId]) {
       const processNode = async () => {
@@ -150,58 +142,49 @@ export class ExecutionEngine {
         const instance = this.getNodeInstance(nodeId);
         const { nodeDef, resolver } = instance;
 
-        const dependsOnValues: Record<string, TypedDataMap[DataType]> = {};
-        for (const depNodeId of nodeDef.dependsOn) {
-          const output = await this.evaluateNode(depNodeId);
-          const depNodeDef = this.getNodeInstance(depNodeId).nodeDef;
-          if (output.type === "error") {
-            throw new Error(
-              `Node ${printNodeDef(nodeDef)} depends on ${printNodeDef(
-                depNodeDef
-              )}, but it errored with message: ${output.output.message}`
-            );
-          }
-          dependsOnValues[depNodeId] = output.output.data;
-        }
-
         // Run getter
-        const resolvedNode = await resolver({
+        const resolvedOutput = await resolver({
           event,
 
-          getDependency: ({ nodeId, expectedDataTypes }) => {
+          getDependency: async ({ nodeId, expectedSchema }) => {
             const depNodeDef = this.getNodeInstance(nodeId).nodeDef;
 
-            const value = dependsOnValues[nodeId];
-            assert(
-              value,
-              `Node ${printNodeDef(nodeDef)} depends on ${printNodeDef(
-                depNodeDef
-              )}, but no value was found.`
-            );
-
-            if (expectedDataTypes) {
-              assert(
-                expectedDataTypes.includes(value.type as any),
-                `Node ${printNodeDef(
-                  nodeDef
-                )} expects dependency ${printNodeDef(
+            const value = await this.evaluateNode(nodeId);
+            if (value.type === "error") {
+              throw new Error(
+                `Node ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
                   depNodeDef
-                )} to be of type ${expectedDataTypes.join(
-                  ", "
-                )}, but it is of type ${value.type}`
+                )}, which failed with error: ${value.output.message}`
               );
+            } else {
+              if (expectedSchema) {
+                const type = createDataType(expectedSchema);
+                try {
+                  type.parse(value);
+                } catch (e: any) {
+                  throw new Error(
+                    `Node ${printNodeDef(
+                      nodeDef
+                    )} expects dependency ${printNodeDef(
+                      depNodeDef
+                    )} to be of type ${expectedSchema}, but parsing failed with error: ${
+                      e.message
+                    }`
+                  );
+                }
+              }
+              return value.output.data;
             }
-
-            return value as any;
           },
         });
 
-        validateTypedData(resolvedNode.data);
+        const dataType = createDataType(instance.nodeDef.returnSchema);
+        dataType.parse(resolvedOutput.data);
 
         // Register state updaters
-        this.state.stateUpdaters.push(...resolvedNode.stateUpdaters);
+        this.state.stateUpdaters.push(...resolvedOutput.stateUpdaters);
 
-        return createSuccess(resolvedNode);
+        return createSuccess(resolvedOutput);
       };
 
       const promise = processNode().catch((e) => {

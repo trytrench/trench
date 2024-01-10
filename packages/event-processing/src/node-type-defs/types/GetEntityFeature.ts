@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { DataType, Entity } from "../../dataTypes";
 import { NodeType } from "./_enum";
 import { printNodeDef } from "../lib/print";
 import { createNodeTypeDefBuilder } from "../builder";
 import { type ClickhouseClient } from "databases";
+import { TypeName } from "../../data-types";
 
 export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.GetEntityFeature)
@@ -13,22 +13,15 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
       featureId: z.string(),
     })
   )
-  .setAllowedDataTypes([
-    DataType.Int64,
-    DataType.Float64,
-    DataType.Boolean,
-    DataType.Entity,
-    DataType.String,
-  ])
+  .setReturnSchema({
+    type: TypeName.Any,
+  })
   .setContextType<{ clickhouse: ClickhouseClient }>()
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency }) => {
       return {
         stateUpdaters: [],
-        data: {
-          type: DataType.String,
-          value: "test",
-        },
+        data: "test",
       };
     };
   })

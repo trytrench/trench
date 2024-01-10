@@ -1,53 +1,53 @@
 import { ZodType, z } from "zod";
-import { DataType } from "../dataTypes";
 import { NodeDef, NodeTypeDef, Resolver } from "./nodeTypeDef";
 import { NodeType } from "./types/_enum";
+import { TSchema } from "../data-types";
 
 // NodeTypeDefBuilder interface
 export interface NodeTypeDefBuilder<
   TNodeType extends NodeType = any,
-  TDataType extends DataType = any,
+  TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends ZodType = any,
   TContext = unknown,
 > {
   _partialDef: Partial<
-    NodeTypeDef<TNodeType, TDataType, TConfigSchema, TContext>
+    NodeTypeDef<TNodeType, TReturnSchema, TConfigSchema, TContext>
   >;
   setNodeType<TNT extends NodeType>(
     nodeType: TNT
-  ): NodeTypeDefBuilder<TNT, TDataType, TConfigSchema, TContext>;
+  ): NodeTypeDefBuilder<TNT, TReturnSchema, TConfigSchema, TContext>;
   setConfigSchema<TCS extends ZodType<any, any>>(
     configSchema: TCS
-  ): NodeTypeDefBuilder<TNodeType, TDataType, TCS, TContext>;
-  setAllowedDataTypes<TDT extends DataType>(
-    allowedDataTypes: TDT[]
-  ): NodeTypeDefBuilder<TNodeType, TDT, TConfigSchema, TContext>;
+  ): NodeTypeDefBuilder<TNodeType, TReturnSchema, TCS, TContext>;
+  setReturnSchema<TRS extends TSchema>(
+    returnSchema: TRS
+  ): NodeTypeDefBuilder<TNodeType, TRS, TConfigSchema, TContext>;
   setCreateResolver<
     TCR extends (options: {
-      nodeDef: NodeDef<TNodeType, TDataType, z.infer<TConfigSchema>>;
+      nodeDef: NodeDef<TNodeType, TReturnSchema, z.infer<TConfigSchema>>;
       context: TContext;
-    }) => Resolver<TDataType>,
+    }) => Resolver<TReturnSchema>,
   >(
     createResolver: TCR
-  ): NodeTypeDefBuilder<TNodeType, TDataType, TConfigSchema, TContext>;
+  ): NodeTypeDefBuilder<TNodeType, TReturnSchema, TConfigSchema, TContext>;
   setContextType<TCtx>(): NodeTypeDefBuilder<
     TNodeType,
-    TDataType,
+    TReturnSchema,
     TConfigSchema,
     TCtx
   >;
-  build(): NodeTypeDef<TNodeType, TDataType, TConfigSchema, TContext>;
+  build(): NodeTypeDef<TNodeType, TReturnSchema, TConfigSchema, TContext>;
 }
 
 // createNodeTypeDefBuilder function
 export function createNodeTypeDefBuilder<
   TNodeType extends NodeType = any,
-  TDataType extends DataType = any,
+  TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends ZodType = any,
   TContext = unknown,
 >(
   def?: Partial<NodeTypeDef>
-): NodeTypeDefBuilder<TNodeType, TDataType, TConfigSchema, TContext> {
+): NodeTypeDefBuilder<TNodeType, TReturnSchema, TConfigSchema, TContext> {
   const partialDef = def || {};
 
   return {
@@ -58,13 +58,13 @@ export function createNodeTypeDefBuilder<
     setConfigSchema(configSchema) {
       return createNewNodeTypeDefBuilder(partialDef, { configSchema });
     },
-    setAllowedDataTypes(allowedDataTypes) {
-      return createNewNodeTypeDefBuilder(partialDef, { allowedDataTypes });
+    setReturnSchema(returnSchema) {
+      return createNewNodeTypeDefBuilder(partialDef, { returnSchema });
     },
     setContextType<TC>() {
       return createNewNodeTypeDefBuilder<
         TNodeType,
-        TDataType,
+        TReturnSchema,
         TConfigSchema,
         TC
       >(partialDef, {});
@@ -76,14 +76,14 @@ export function createNodeTypeDefBuilder<
       if (
         !partialDef.nodeType ||
         !partialDef.configSchema ||
-        !partialDef.allowedDataTypes ||
+        !partialDef.returnSchema ||
         !partialDef.createResolver
       ) {
         throw new Error("Missing required properties to build NodeTypeDef");
       }
       return partialDef as NodeTypeDef<
         TNodeType,
-        TDataType,
+        TReturnSchema,
         TConfigSchema,
         TContext
       >;
@@ -94,16 +94,18 @@ export function createNodeTypeDefBuilder<
 // createNewNodeTypeDefBuilder function
 function createNewNodeTypeDefBuilder<
   TNodeType extends NodeType,
-  TDataType extends DataType,
+  TReturnSchema extends TSchema,
   TConfigSchema extends ZodType,
   TContext = unknown,
 >(
   prevDef: Partial<NodeTypeDef<any, any, any, any>>,
-  newDef: Partial<NodeTypeDef<TNodeType, TDataType, TConfigSchema, TContext>>
-): NodeTypeDefBuilder<TNodeType, TDataType, TConfigSchema, TContext> {
+  newDef: Partial<
+    NodeTypeDef<TNodeType, TReturnSchema, TConfigSchema, TContext>
+  >
+): NodeTypeDefBuilder<TNodeType, TReturnSchema, TConfigSchema, TContext> {
   return createNodeTypeDefBuilder<
     TNodeType,
-    TDataType,
+    TReturnSchema,
     TConfigSchema,
     TContext
   >({

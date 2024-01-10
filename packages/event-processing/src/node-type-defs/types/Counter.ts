@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { DataType, Entity, encodeTypedData } from "../../dataTypes";
 import { StateUpdater } from "../nodeTypeDef";
 import { getPastNCountBucketHashes } from "../lib/counts";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { RedisInterface } from "databases";
+import { TypeName } from "../../data-types";
 
 const N_BUCKETS = 10;
 
@@ -19,7 +19,9 @@ export const counterNodeDef = createNodeTypeDefBuilder()
       conditionNodeId: z.string().optional(),
     })
   )
-  .setAllowedDataTypes([DataType.Int64])
+  .setReturnSchema({
+    type: TypeName.Int64,
+  })
   .setContextType<{
     redis: RedisInterface;
   }>()
@@ -38,16 +40,18 @@ export const counterNodeDef = createNodeTypeDefBuilder()
       if (conditionNodeId) {
         const conditionValue = await getDependency({
           nodeId: conditionNodeId,
-          expectedDataTypes: [DataType.Boolean],
+          expectedSchema: {
+            type: TypeName.Boolean,
+          },
         });
-        shouldIncrementCount = conditionValue.value;
+        shouldIncrementCount = conditionValue;
       }
 
       const valuesToCountBy = await Promise.all(
         countByNodeIds.map((nodeId) => {
           return getDependency({
             nodeId,
-          }).then((value) => encodeTypedData(value));
+          }).then((value) => JSON.stringify(value));
         })
       );
 
@@ -78,10 +82,7 @@ export const counterNodeDef = createNodeTypeDefBuilder()
       }
 
       return {
-        data: {
-          type: DataType.Int64,
-          value: totalCount,
-        },
+        data: totalCount,
         stateUpdaters,
       };
     };
