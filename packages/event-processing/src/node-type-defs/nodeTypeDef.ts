@@ -26,6 +26,7 @@ export type StateUpdater = () => Promise<void>;
 
 export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   event: TrenchEvent;
+  engineId: string;
   getDependency<TR extends TSchema>(props: {
     nodeId: string;
     expectedSchema?: TR;
