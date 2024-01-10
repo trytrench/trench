@@ -22,6 +22,9 @@ export interface NodeTypeDefBuilder<
   setReturnSchema<TRS extends TSchema>(
     returnSchema: TRS
   ): NodeTypeDefBuilder<TNodeType, TRS, TConfigSchema, TContext>;
+  setGetDependencies(
+    getDependencies: (config: z.infer<TConfigSchema>) => Set<string>
+  ): NodeTypeDefBuilder<TNodeType, TReturnSchema, TConfigSchema, TContext>;
   setCreateResolver<
     TCR extends (options: {
       nodeDef: NodeDef<TNodeType, TReturnSchema, z.infer<TConfigSchema>>;
@@ -57,6 +60,9 @@ export function createNodeTypeDefBuilder<
     },
     setConfigSchema(configSchema) {
       return createNewNodeTypeDefBuilder(partialDef, { configSchema });
+    },
+    setGetDependencies(getDependencies) {
+      return createNewNodeTypeDefBuilder(partialDef, { getDependencies });
     },
     setReturnSchema(returnSchema) {
       return createNewNodeTypeDefBuilder(partialDef, { returnSchema });

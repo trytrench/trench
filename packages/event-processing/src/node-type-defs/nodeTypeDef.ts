@@ -13,7 +13,6 @@ export type NodeDef<
   returnSchema: TReturnSchema;
   config: TConfig;
   dependsOn: Set<string>;
-  eventTypes: Set<string>;
 };
 
 export type TrenchEvent = {
@@ -49,4 +48,5 @@ export type NodeTypeDef<
     nodeDef: NodeDef<TNodeType, TReturn, z.infer<TConfigSchema>>;
     context: TContext;
   }) => Resolver<TReturn>;
+  getDependencies: (config: TConfigSchema) => Set<string>;
 };

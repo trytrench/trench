@@ -18,9 +18,22 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       timeWindowMs: z.number(),
       countUniqueNodeIds: z.array(z.string()),
       countByNodeIds: z.array(z.string()),
-      conditionFeatureId: z.string().optional(),
+      conditionNodeId: z.string().optional(),
     })
   )
+  .setGetDependencies((config) => {
+    const set = new Set<string>();
+    for (const nodeId of config.countByNodeIds) {
+      set.add(nodeId);
+    }
+    for (const nodeId of config.countUniqueNodeIds) {
+      set.add(nodeId);
+    }
+    if (config.conditionNodeId) {
+      set.add(config.conditionNodeId);
+    }
+    return set;
+  })
   .setReturnSchema({
     type: TypeName.Int64,
   })
@@ -34,13 +47,13 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
         counterId,
         countByNodeIds,
         countUniqueNodeIds,
-        conditionFeatureId,
+        conditionNodeId,
       } = featureDef.config;
 
       let shouldUpdateCount = true;
-      if (conditionFeatureId) {
+      if (conditionNodeId) {
         shouldUpdateCount = await getDependency({
-          nodeId: conditionFeatureId,
+          nodeId: conditionNodeId,
           expectedSchema: {
             type: TypeName.Boolean,
           },

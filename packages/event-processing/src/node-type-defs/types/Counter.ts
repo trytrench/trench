@@ -22,6 +22,16 @@ export const counterNodeDef = createNodeTypeDefBuilder()
   .setReturnSchema({
     type: TypeName.Int64,
   })
+  .setGetDependencies((config) => {
+    const set = new Set<string>();
+    for (const nodeId of config.countByNodeIds) {
+      set.add(nodeId);
+    }
+    if (config.conditionNodeId) {
+      set.add(config.conditionNodeId);
+    }
+    return set;
+  })
   .setContextType<{
     redis: RedisInterface;
   }>()

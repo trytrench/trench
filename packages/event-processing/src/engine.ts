@@ -7,7 +7,6 @@ import {
   NodeType,
   NodeTypeContextMap,
   NodeTypeDef,
-  NodeTypeDefsMap,
   Resolver,
   StateUpdater,
   TrenchEvent,
@@ -249,21 +248,6 @@ function validateNodeInstanceMap(map: Record<string, NodeInstance[NodeType]>) {
           def
         )} depends on node of ID ${depNodeId}, which is not included in the engine's node set.`
       );
-
-      // Check that dependency's event types is a superset of this node's event types
-      const depNodeDef = depNode.nodeDef;
-      const depNodeEventTypes = depNodeDef.eventTypes;
-      const nodeEventTypes = def.eventTypes;
-      for (const eventType of nodeEventTypes) {
-        assert(
-          depNodeEventTypes.has(eventType),
-          `Node ${printNodeDef(
-            def
-          )} supports event type '${eventType}', but depends on node ${printNodeDef(
-            depNodeDef
-          )} which doesn't.`
-        );
-      }
     }
   }
 }

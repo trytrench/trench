@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ComputedNodeType, NodeType } from "./_enum";
+import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 import { TypeName } from "../../data-types";
 
@@ -10,11 +10,11 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       depsMap: z.record(z.string()),
       tsCode: z.string(),
       compiledJs: z.string(),
-      paths: z.record(z.string()).optional(),
-      type: z.nativeEnum(ComputedNodeType),
-      featureId: z.string().optional(),
     })
   )
+  .setGetDependencies((config) => {
+    return new Set(Object.values(config.depsMap));
+  })
   .setReturnSchema({
     type: TypeName.Any,
   })

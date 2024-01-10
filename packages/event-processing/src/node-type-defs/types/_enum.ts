@@ -3,9 +3,6 @@ export enum NodeType {
   Counter = "Counter",
   UniqueCounter = "UniqueCounter",
   GetEntityFeature = "GetEntityFeature",
-}
-
-export enum ComputedNodeType {
-  Code = "Code",
-  Path = "Path",
+  EntityAppearance = "EntityAppearance",
+  LogEntityFeature = "LogEntityFeature",
 }

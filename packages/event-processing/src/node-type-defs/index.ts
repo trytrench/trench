@@ -1,7 +1,9 @@
 import { NodeDef, NodeTypeDef } from "./nodeTypeDef";
 import { computedNodeDef } from "./types/Computed";
 import { counterNodeDef } from "./types/Counter";
+import { entityAppearanceNodeDef } from "./types/EntityAppearance";
 import { getEntityFeatureNodeDef } from "./types/GetEntityFeature";
+import { logEntityFeatureNodeDef } from "./types/LogEntityFeature";
 import { uniqueCounterNodeDef } from "./types/UniqueCounter";
 import { NodeType } from "./types/_enum";
 
@@ -10,6 +12,8 @@ export const NODE_TYPE_DEFS = {
   [NodeType.Counter]: counterNodeDef,
   [NodeType.UniqueCounter]: uniqueCounterNodeDef,
   [NodeType.GetEntityFeature]: getEntityFeatureNodeDef,
+  [NodeType.EntityAppearance]: entityAppearanceNodeDef,
+  [NodeType.LogEntityFeature]: logEntityFeatureNodeDef,
 } satisfies {
   [TNodeType in NodeType]: NodeTypeDef<TNodeType, any, any, any>;
 };

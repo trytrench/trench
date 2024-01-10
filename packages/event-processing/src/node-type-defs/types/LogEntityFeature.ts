@@ -5,17 +5,24 @@ import { createNodeTypeDefBuilder } from "../builder";
 import { type ClickhouseClient } from "databases";
 import { TypeName } from "../../data-types";
 
-export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.GetEntityFeature)
+export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
+  .setNodeType(NodeType.LogEntityFeature)
   .setConfigSchema(
     z.object({
-      entityAppearanceNodeId: z.string(),
       featureId: z.string(),
+      entityAppearanceNodeId: z.string(),
+      accessor: z.object({
+        nodeId: z.string().nullable(),
+        path: z.string().optional(),
+      }),
     })
   )
   .setGetDependencies((config) => {
     const set = new Set<string>();
     set.add(config.entityAppearanceNodeId);
+    if (config.accessor.nodeId) {
+      set.add(config.accessor.nodeId);
+    }
     return set;
   })
   .setReturnSchema({
