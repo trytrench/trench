@@ -71,55 +71,42 @@ model Feature {
   belongsTo FeatureToEntityType[]
 }
 
-// Once an Node is created, only the name can be modified.
-// The type and dataType are immutable.
 model Node {
   id String @id @default(dbgenerated("nanoid()"))
-
-  type     String
-  name     String
-  dataType Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  snapshots NodeSnapshot[]
-}
-
-model NodeSnapshot {
-  id String @id @default(dbgenerated("nanoid()"))
+  type         String
+  name         String
+  returnSchema Json
 
   eventTypes String[]
-  deps       String[]
+  dependsOn  String[]
   config     Json
 
-  createdAt DateTime @default(now())
-
-  node   Node   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
-  nodeId String
-
-  executionEngines ExecutionEngineToNodeSnapshot[]
+  executionEngines ExecutionEngineToNode[]
 }
 
-model ExecutionEngineToNodeSnapshot {
+model ExecutionEngineToNode {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  nodeSnapshotId String
-  nodeSnapshot   NodeSnapshot @relation(fields: [nodeSnapshotId], references: [id])
+  nodeId String
+  node   Node   @relation(fields: [nodeId], references: [id])
 
   executionEngineId String
   executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
 
-  @@unique([nodeSnapshotId, executionEngineId])
+  @@unique([nodeId, executionEngineId])
 }
 
 model ExecutionEngine {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  nodeSnapshots ExecutionEngineToNodeSnapshot[]
+  nodes ExecutionEngineToNode[]
 }
 
 enum GlobalStateKey {

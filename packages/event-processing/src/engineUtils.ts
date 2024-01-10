@@ -33,13 +33,9 @@ async function fetchFeatureDefSnapshots({
   const engineDef = await prisma.executionEngine.findUnique({
     where: { id: engineId },
     include: {
-      nodeSnapshots: {
+      nodes: {
         include: {
-          nodeSnapshot: {
-            include: {
-              node: true,
-            },
-          },
+          node: true,
         },
       },
     },
@@ -48,12 +44,7 @@ async function fetchFeatureDefSnapshots({
   if (!engineDef) {
     throw new Error(`No engine found for engineId ${engineId}`);
   }
-  const featureDefs = engineDef.nodeSnapshots.map((item) => {
-    const snapshot = item.nodeSnapshot;
-    return getNodeDefFromSnapshot(snapshot);
-  });
-
-  return featureDefs;
+  return engineDef.nodes.map((node) => node.node);
 }
 
 export async function fetchCurrentEngineId() {

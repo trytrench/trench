@@ -18,7 +18,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.eventTypeId }
   );
 
-  const { refetch: refetchNodes } = api.nodeDefs.getNodesForEventType.useQuery(
+  const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: false }
   );
@@ -33,7 +33,7 @@ const Page: NextPageWithLayout = () => {
   function handleSave(def: NodeDef) {
     updateNodeDef({
       ...def,
-      deps: [],
+      dependsOn: [],
       eventTypes: [router.query.eventTypeId as string],
     })
       .then(() => {

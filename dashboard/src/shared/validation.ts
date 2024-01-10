@@ -1,4 +1,4 @@
-import { DataType, FeatureType } from "event-processing";
+import { TypeName } from "event-processing";
 import { z } from "zod";
 import { jsonFilterZod } from "./jsonFilter";
 
@@ -13,7 +13,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.enum([DataType.Float64, DataType.Int64]),
+    dataType: z.enum([TypeName.Float64, TypeName.Int64]),
     value: z.object({
       eq: z.number().optional(),
       gt: z.number().optional(),
@@ -25,7 +25,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.literal(DataType.String),
+    dataType: z.literal(TypeName.String),
     value: z.object({
       eq: z.string().optional(),
       contains: z.string().optional(),
@@ -34,7 +34,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.literal(DataType.Boolean),
+    dataType: z.literal(TypeName.Boolean),
     value: z.object({
       eq: z.boolean().optional(),
     }),
@@ -42,7 +42,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.literal(DataType.Entity),
+    dataType: z.literal(TypeName.Entity),
     value: z.object({
       eq: z
         .object({
@@ -55,7 +55,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.literal(DataType.Object),
+    dataType: z.literal(TypeName.Object),
     value: z.object({}),
   }),
 ]);

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { DataType, NodeType, type NodeDef } from "event-processing";
+import { TypeName, NodeType, type NodeDef } from "event-processing";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { uniqBy } from "lodash";
@@ -54,25 +54,25 @@ import {
 const DATA_TYPE_OPTIONS = [
   {
     label: "String",
-    value: DataType.String,
+    value: TypeName.String,
   },
   {
     label: "Number",
-    value: DataType.Float64,
+    value: TypeName.Float64,
   },
   {
     label: "Boolean",
-    value: DataType.Boolean,
+    value: TypeName.Boolean,
   },
   {
     label: "JSON",
-    value: DataType.Object,
+    value: TypeName.Object,
   },
 ];
 
 const TYPE_DEFAULTS = {
   [NodeType.Computed]: {
-    dataType: DataType.Boolean,
+    dataType: TypeName.Boolean,
     config: {
       code: "",
       depsMap: {},
@@ -80,7 +80,7 @@ const TYPE_DEFAULTS = {
     },
   },
   [NodeType.Counter]: {
-    dataType: DataType.Int64,
+    dataType: TypeName.Int64,
     config: {
       timeWindow: {
         number: 1,
@@ -91,7 +91,7 @@ const TYPE_DEFAULTS = {
     }, // as FeatureDefs[FeatureType.Count]["config"],
   },
   [NodeType.UniqueCounter]: {
-    dataType: DataType.Int64,
+    dataType: TypeName.Int64,
     config: {
       timeWindow: {
         number: 1,
@@ -103,7 +103,7 @@ const TYPE_DEFAULTS = {
     }, // as FeatureDefs[FeatureType.UniqueCount]["config"],
   },
   [NodeType.LogEntityFeature]: {
-    dataType: DataType.Entity,
+    dataType: TypeName.Entity,
     config: {
       eventTypes: new Set(),
       code: "",
@@ -113,7 +113,7 @@ const TYPE_DEFAULTS = {
 } as Record<
   NodeType,
   {
-    dataType: DataType;
+    dataType: TypeName;
     config: any;
   }
 >;
@@ -122,7 +122,7 @@ const TYPE_DEFAULTS = {
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  dataType: z.nativeEnum(DataType),
+  dataType: z.nativeEnum(TypeName),
   featureDeps: z.array(
     z.object({
       featureId: z.string(),
@@ -150,7 +150,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dataType: DataType.String,
+      dataType: TypeName.String,
       featureDeps: [],
       nodeDeps: [],
     },
@@ -416,7 +416,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                         {nodes
                           ?.filter(
                             (node) =>
-                              node.node.dataType?.type === DataType.Entity
+                              node.node.dataType?.type === TypeName.Entity
                           )
                           .map((node) => (
                             <CommandItem

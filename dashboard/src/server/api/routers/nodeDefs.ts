@@ -1,10 +1,6 @@
 import { GlobalStateKey } from "databases";
-import {
-  DataType,
-  getNodeDefFromSnapshot,
-  NODE_TYPE_DEFS,
-  NodeType,
-} from "event-processing";
+import { NODE_TYPE_DEFS, NodeDefsMap, NodeType } from "event-processing";
+import { createDataType } from "event-processing/src/data-types";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
@@ -15,180 +11,62 @@ export const nodeDefsRouter = createTRPCRouter({
         id: z.string(),
       })
     )
-    .query(async ({ ctx, input }) => {
-      const node = await ctx.prisma.node.findUniqueOrThrow({
+    .query(({ ctx, input }) => {
+      return ctx.prisma.node.findUniqueOrThrow({
         where: {
           id: input.id,
         },
-        include: {
-          snapshots: {
-            include: {
-              node: true,
-            },
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
-        },
-      });
-
-      return getNodeDefFromSnapshot(node.snapshots[0]!);
+      }) as unknown as NodeDefsMap[keyof NodeDefsMap];
     }),
 
-  allInfo: protectedProcedure
+  list: protectedProcedure
     .input(
       z.object({
-        featureType: z.nativeEnum(NodeType).optional(),
-        dataType: z.nativeEnum(DataType).optional(),
+        eventTypeId: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const featureDefs = await ctx.prisma.node.findMany({
-        where: {
-          type: input.featureType,
-          dataType: input.dataType,
-        },
-      });
-
-      return featureDefs;
-    }),
-
-  getNodesForEventType: protectedProcedure
-    .input(
-      z.object({
-        eventTypeId: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const snapshots = await ctx.prisma.nodeSnapshot.findMany({
-        distinct: ["nodeId"],
+      const nodeDefs = await ctx.prisma.node.findMany({
         where: {
           eventTypes: {
             has: input.eventTypeId,
           },
         },
-        include: {
-          node: true,
-        },
       });
 
-      return snapshots;
+      return nodeDefs.map(
+        (nodeDef) => nodeDef as unknown as NodeDefsMap[keyof NodeDefsMap]
+      );
     }),
 
-  getLatest: protectedProcedure.query(async ({ ctx, input }) => {
-    const snapshots = await ctx.prisma.nodeSnapshot.findMany({
-      distinct: ["nodeId"],
-      include: {
-        node: true,
-      },
-    });
-
-    const featureDefs = snapshots.map((snapshot) => {
-      return getNodeDefFromSnapshot({ featureDefSnapshot: snapshot });
-    });
-
-    return featureDefs;
-  }),
-
-  list: protectedProcedure.query(async ({ ctx, input }) => {
-    const featureDefs = await ctx.prisma.node.findMany({
-      include: {
-        snapshots: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    });
-
-    return featureDefs.map((featureDef) => {
-      if (!featureDef.snapshots[0]) {
-        throw new Error("Feature has no snapshots");
-      }
-
-      const latestSnapshot = featureDef.snapshots[0];
-
-      return {
-        ...({
-          featureId: featureDef.id,
-          featureName: featureDef.name,
-          dependsOn: new Set(latestSnapshot.deps),
-          featureType: featureDef.type,
-          eventTypes: new Set(latestSnapshot.eventTypes),
-          dataType: featureDef.dataType,
-          config: featureDef.snapshots[0].config,
-        } as FeatureDef),
-
-        updatedAt: featureDef.snapshots[0].createdAt,
-        createdAt: featureDef.createdAt,
-      };
-    });
-  }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-
-        eventTypes: z.array(z.string()),
-        deps: z.array(z.string()),
-
-        config: z.record(z.any()),
         type: z.nativeEnum(NodeType),
-        // dataType: z.nativeEnum(DataType),
-        dataType: z.record(z.string()),
+        eventTypes: z.array(z.string()),
+        dependsOn: z.array(z.string()),
+        config: z.record(z.any()),
+        returnSchema: z.record(z.string()),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const featureTypeZod = NODE_TYPE_DEFS[input.type].configSchema;
-      featureTypeZod.parse(input.config);
+      const { configSchema, returnSchema } = NODE_TYPE_DEFS[input.type];
+      configSchema.parse(input.config);
 
-      // TODO: Need to validate data type here
+      createDataType(returnSchema).parse(input.returnSchema);
 
-      const allowedDataTypes: DataType[] =
-        NODE_TYPE_DEFS[input.type].allowedDataTypes;
-      if (!allowedDataTypes.includes(input.dataType.type)) {
-        throw new Error(
-          `Feature type ${input.type} does not support data type ${input.dataType.type}`
-        );
-      }
-
-      const featureDef = await ctx.prisma.node.create({
-        data: {
-          type: input.type,
-          dataType: input.dataType,
-          name: input.name,
-          snapshots: {
-            create: [
-              {
-                eventTypes: input.eventTypes,
-                deps: input.deps,
-                config: input.config,
-              },
-            ],
-          },
-        },
-      });
+      const nodeDef = await ctx.prisma.node.create({ data: input });
 
       // Publish
-      const latestFeatureSnapshots = await ctx.prisma.node.findMany({
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
-        },
-      });
+      const nodeDefs = await ctx.prisma.node.findMany();
 
       const engine = await ctx.prisma.executionEngine.create({
         data: {
-          nodeSnapshots: {
+          nodes: {
             createMany: {
-              data: latestFeatureSnapshots.map((featureDef) => ({
-                nodeSnapshotId: featureDef.snapshots[0]!.id,
+              data: nodeDefs.map((nodeDef) => ({
+                nodeId: nodeDef.id,
               })),
             },
           },
@@ -208,66 +86,45 @@ export const nodeDefsRouter = createTRPCRouter({
         },
       });
 
-      return featureDef;
+      return nodeDef;
     }),
 
   update: protectedProcedure
     .input(
       z.object({
         id: z.string(),
-        deps: z.array(z.string()),
-        eventTypes: z.array(z.string()),
-        config: z.record(z.any()),
+        name: z.string().optional(),
+        dependsOn: z.array(z.string()).optional(),
+        eventTypes: z.array(z.string()).optional(),
+        config: z.record(z.any()).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.node.update({
-        where: {
-          id: input.id,
-        },
-        data: {
-          snapshots: {
-            create: [
-              {
-                deps: input.deps,
-                config: input.config,
-                eventTypes: input.eventTypes,
-              },
-            ],
-          },
-        },
+      const nodeDef = await ctx.prisma.node.findUniqueOrThrow({
+        where: { id: input.id },
       });
-    }),
 
-  rename: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
+      const { configSchema } = NODE_TYPE_DEFS[nodeDef.type as NodeType];
+      configSchema.parse(input.config);
+
       return ctx.prisma.node.update({
         where: {
           id: input.id,
         },
         data: {
           name: input.name,
+          dependsOn: input.dependsOn,
+          config: input.config,
+          eventTypes: input.eventTypes,
         },
       });
     }),
 
   delete: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.node.delete({
-        where: {
-          id: input.id,
-        },
+        where: { id: input.id },
       });
     }),
 });

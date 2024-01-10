@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ComputedNodeType,
-  DataType,
+  TypeName,
   NODE_TYPE_DEFS,
   NodeType,
+  NodeDefsMap,
 } from "event-processing";
 import { ChevronLeft, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
@@ -50,6 +51,11 @@ import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import EntityFeatureDialog from "../EntityFeatureDialog";
 import AssignEntities from "../AssignEntities";
+
+const entitySchema = z.object({
+  entityTypeId: z.string(),
+  path: z.string(),
+});
 
 const EntityDialog = ({
   title,
@@ -156,11 +162,10 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.eventTypeId }
   );
 
-  const { data: nodes, refetch: refetchNodes } =
-    api.nodeDefs.getNodesForEventType.useQuery(
-      { eventTypeId: router.query.eventTypeId as string },
-      { enabled: !!router.query.eventTypeId }
-    );
+  const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery(
+    { eventTypeId: router.query.eventTypeId as string },
+    { enabled: !!router.query.eventTypeId }
+  );
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
@@ -193,8 +198,8 @@ const Page: NextPageWithLayout = () => {
             {nodes
               ?.filter((node) => !node.config?.paths)
               .map((node) => (
-                <SelectItem key={node.id} value={node.nodeId}>
-                  {node.node.name}
+                <SelectItem key={node.id} value={node.id}>
+                  {node.name}
                 </SelectItem>
               ))}
           </SelectContent>
@@ -242,35 +247,31 @@ const Page: NextPageWithLayout = () => {
                       name: entityTypes?.find(
                         (entityType) => entityType.id === values.entityTypeId
                       )?.type,
-                      type: NodeType.Computed,
-                      dataType: {
-                        type: DataType.Entity,
+                      type: NodeType.EntityAppearance,
+                      returnSchema: {
+                        type: TypeName.Entity,
                         entityType: values.entityTypeId,
                       },
                       deps: [],
                       config: {
-                        type: ComputedNodeType.Path,
-                        paths: {
-                          [router.query.eventTypeId as string]: values.path,
+                        entityType: values.entityTypeId,
+                        valueAccessor: {
+                          nodeId: "",
+                          path: values.path,
                         },
-                        compiledJs: "",
-                        tsCode: "",
-                        depsMap: {},
-                      } as z.infer<
-                        (typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]
-                      >,
+                      } as NodeDefsMap[NodeType.EntityAppearance]["config"],
                     })
                       .then(() => {
                         toast({
-                          title: "FeatureDef created!",
-                          description: `${values.entity}`,
+                          title: "Entity created",
+                          // description: `${values.entity}`,
                         });
                         return refetchNodes();
                       })
                       .catch(() => {
                         toast({
                           variant: "destructive",
-                          title: "Failed to create FeatureDef",
+                          title: "Failed to create entity",
                         });
                       });
                   }}

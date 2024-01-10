@@ -1,7 +1,7 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { DataType, NodeDef, NodeType, NODE_TYPE_DEFS } from "event-processing";
+import { NodeDef, NodeType, NODE_TYPE_DEFS, TypeName } from "event-processing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 import { DepsMapEditor } from "../shared/DepsMapEditor";
@@ -113,17 +113,17 @@ export { EditComputed };
 
 //
 
-const DataTypeToTsType: Record<DataType, string> = {
-  [DataType.Boolean]: "boolean",
-  [DataType.Int64]: "number",
-  [DataType.Float64]: "number",
-  [DataType.String]: "string",
-  [DataType.Entity]: "string",
-  [DataType.Object]: "any",
+const DataTypeToTsType: Record<TypeName, string> = {
+  [TypeName.Boolean]: "boolean",
+  [TypeName.Int64]: "number",
+  [TypeName.Float64]: "number",
+  [TypeName.String]: "string",
+  [TypeName.Entity]: "string",
+  [TypeName.Object]: "any",
 };
 
 function usePrefix(props: {
-  dataType: DataType;
+  dataType: TypeName;
   dependencies: Record<string, string>;
 }) {
   const { dataType, dependencies } = props;
@@ -133,7 +133,7 @@ function usePrefix(props: {
     const lines = Object.entries(dependencies).map(([alias, featureId]) => {
       const feature = allFeatureDefs?.find((v) => v.id === featureId);
       if (!feature) return;
-      return `  ${alias}: ${DataTypeToTsType[feature.dataType as DataType]};\n`;
+      return `  ${alias}: ${DataTypeToTsType[feature.dataType as TypeName]};\n`;
     });
 
     return `interface Dependencies {\n${lines.join("")}}`;

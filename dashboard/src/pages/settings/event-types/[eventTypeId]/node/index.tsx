@@ -4,7 +4,7 @@ import { api } from "~/utils/api";
 
 import { toast } from "~/components/ui/use-toast";
 import { EditNodeDef } from "~/components/features/EditNodeDef";
-import { ComputedNodeType, NodeDef, NodeType } from "event-processing";
+import { NodeDef, NodeType } from "event-processing";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
 import Link from "next/link";
@@ -18,7 +18,7 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!router.query.eventTypeId }
   );
 
-  const { refetch: refetchNodes } = api.nodeDefs.getNodesForEventType.useQuery(
+  const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: false }
   );
@@ -26,59 +26,38 @@ const Page: NextPageWithLayout = () => {
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
   function handleSave(def: NodeDef) {
-    createNodeDef({
-      name: def.name,
-      type: NodeType.Computed,
-      deps: [],
-      eventTypes: [router.query.eventTypeId as string],
-      dataType: {
-        type: def.dataType,
-      },
-      config: {
-        ...def.config,
-        type: ComputedNodeType.Code,
-        depsMap: {},
-      },
-    })
-      .then((nodeDef) => {
-        toast({
-          title: "Node created",
-          // description: `${values.entity}`,
-        });
-        void router.push(
-          `/settings/event-types/${router.query.eventTypeId as string}/node/${
-            nodeDef.id
-          } `
-        );
-        return refetchNodes();
-      })
-      .catch(() => {
-        toast({
-          variant: "destructive",
-          title: "Failed to create node",
-        });
-      });
-    // try {
-    //   await create({
-    //     name: def.featureName,
-    //     featureType: def.featureType,
-    //     dataType: def.dataType,
-    //     eventTypes: [...def.eventTypes],
-    //     deps: [...def.dependsOn],
-    //     config: def.config,
+    // createNodeDef({
+    //   name: def.name,
+    //   type: NodeType.Computed,
+    //   deps: [],
+    //   eventTypes: [router.query.eventTypeId as string],
+    //   dataType: {
+    //     type: def.dataType,
+    //   },
+    //   config: {
+    //     ...def.config,
+    //     type: ComputedNodeType.Code,
+    //     depsMap: {},
+    //   },
+    // })
+    //   .then((nodeDef) => {
+    //     toast({
+    //       title: "Node created",
+    //       // description: `${values.entity}`,
+    //     });
+    //     void router.push(
+    //       `/settings/event-types/${router.query.eventTypeId as string}/node/${
+    //         nodeDef.id
+    //       } `
+    //     );
+    //     return refetchNodes();
+    //   })
+    //   .catch(() => {
+    //     toast({
+    //       variant: "destructive",
+    //       title: "Failed to create node",
+    //     });
     //   });
-    //   void router.push(`/settings/features`);
-    //   toast({
-    //     variant: "default",
-    //     title: "FeatureDef created!",
-    //     description: `${def.featureName} (${def.featureType})`,
-    //   });
-    // } catch (e) {
-    //   toast({
-    //     variant: "destructive",
-    //     title: "Failed to create FeatureDef",
-    //   });
-    // }
   }
 
   return (

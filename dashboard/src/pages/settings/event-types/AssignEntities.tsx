@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DataType, NodeType } from "event-processing";
+import { NodeType, TypeName } from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
@@ -47,15 +47,10 @@ import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
 import EntityFeatureDialog from "./EntityFeatureDialog";
 
-const entitySchema = z.object({
-  entityTypeId: z.string(),
-  path: z.string(),
-});
-
 const featureSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
-  dataType: z.nativeEnum(DataType),
+  dataType: z.nativeEnum(TypeName),
 });
 
 const FeatureDialog = ({
@@ -75,7 +70,7 @@ const FeatureDialog = ({
     defaultValues: {
       name: "",
       entityTypeId,
-      dataType: DataType.String,
+      dataType: TypeName.String,
     },
   });
   const { data: entityTypes } = api.entityTypes.list.useQuery();
@@ -162,7 +157,7 @@ const FeatureDialog = ({
                         </FormControl>
 
                         <SelectContent>
-                          {Object.values(DataType).map((dataType) => (
+                          {Object.values(TypeName).map((dataType) => (
                             <SelectItem key={dataType} value={dataType}>
                               {dataType}
                             </SelectItem>
@@ -248,7 +243,7 @@ export default function AssignEntities() {
 
   const { mutateAsync: createFeature } = api.features.create.useMutation();
 
-  const { data: nodes } = api.nodeDefs.getNodesForEventType.useQuery(
+  const { data: nodes } = api.nodeDefs.list.useQuery(
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: !!router.query.eventTypeId }
   );
@@ -256,23 +251,23 @@ export default function AssignEntities() {
   return (
     <div className="space-y-4">
       {nodes
-        ?.filter((node) => node.node.dataType?.type === DataType.Entity)
+        ?.filter((node) => node.returnSchema.type === TypeName.Entity)
         .map((node) => (
           <EntityCard
-            name={node.node.name}
-            path={node.config?.paths?.[router.query.eventTypeId as string]}
+            name={node.name}
+            path={node.config.paths?.[router.query.eventTypeId as string]}
             key={node.id}
           >
             {nodes
               ?.filter(
                 (n) =>
-                  n.node.type === NodeType.Computed &&
-                  n.config?.entityTypeId === node.node.dataType.entityType
+                  n.type === NodeType.Computed &&
+                  n.config?.entityTypeId === node.returnSchema.entityType
               )
               .map((n) => (
                 <FeatureCard
                   key={n.id}
-                  name={n.node.name}
+                  name={n.name}
                   path={n.config?.paths?.[router.query.eventTypeId as string]}
                 />
               ))}
@@ -281,10 +276,10 @@ export default function AssignEntities() {
               ?.filter(
                 (feature) =>
                   feature.belongsTo[0]?.entityTypeId ===
-                    node.node.dataType?.entityType &&
+                    node.returnSchema?.entityType &&
                   !nodes?.find(
                     (n) =>
-                      n.node.type === NodeType.Computed &&
+                      n.type === NodeType.Computed &&
                       n.config?.featureId === feature.id
                   )
               )
@@ -296,7 +291,7 @@ export default function AssignEntities() {
                   </div>
                   <EntityFeatureDialog
                     title="Assign Entity Property"
-                    entityTypeId={node.node.dataType?.entityType}
+                    entityTypeId={node.returnSchema?.entityType}
                     featureId={feature.id}
                   >
                     <Button size="iconXs" variant="outline">
@@ -308,7 +303,7 @@ export default function AssignEntities() {
 
             <FeatureDialog
               title="Create Entity Property"
-              entityTypeId={node.node.dataType?.entityType}
+              entityTypeId={node.returnSchema?.entityType}
               onSubmit={(values) => {
                 createFeature({
                   name: values.name,

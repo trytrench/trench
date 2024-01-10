@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ComputedNodeType, NODE_TYPE_DEFS, NodeType } from "event-processing";
+import { NODE_TYPE_DEFS, NodeType } from "event-processing";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -67,46 +67,45 @@ export default function EntityFeatureDialog({
   const { data: features } = api.features.list.useQuery();
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
-  const { data: nodes, refetch: refetchNodes } =
-    api.nodeDefs.getNodesForEventType.useQuery(
-      { eventTypeId: router.query.eventTypeId as string },
-      { enabled: !!router.query.eventTypeId }
-    );
+  const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery(
+    { eventTypeId: router.query.eventTypeId as string },
+    { enabled: !!router.query.eventTypeId }
+  );
 
   const createEntityFeature = (values: z.infer<typeof entityFeatureSchema>) => {
     const feature = features?.find((f) => f.id === values.featureId);
 
-    createNodeDef({
-      eventTypes: [router.query.eventTypeId as string],
-      name: feature.name,
-      type: NodeType.Computed,
-      dataType: feature.dataType,
-      deps: [],
-      config: {
-        type: ComputedNodeType.Path,
-        paths: {
-          [router.query.eventTypeId as string]: values.path,
-        },
-        compiledJs: "",
-        tsCode: "",
-        depsMap: {},
-        featureId: feature.id,
-        entityTypeId: values.entityTypeId,
-      } as z.infer<(typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]>,
-    })
-      .then(() => {
-        toast({
-          title: "FeatureDef created!",
-          description: `${feature.name}`,
-        });
-        refetchNodes();
-      })
-      .catch(() => {
-        toast({
-          variant: "destructive",
-          title: "Failed to create FeatureDef",
-        });
-      });
+    //   createNodeDef({
+    //     eventTypes: [router.query.eventTypeId as string],
+    //     name: feature.name,
+    //     type: NodeType.Computed,
+    //     dataType: feature.dataType,
+    //     deps: [],
+    //     config: {
+    //       type: ComputedNodeType.Path,
+    //       paths: {
+    //         [router.query.eventTypeId as string]: values.path,
+    //       },
+    //       compiledJs: "",
+    //       tsCode: "",
+    //       depsMap: {},
+    //       featureId: feature.id,
+    //       entityTypeId: values.entityTypeId,
+    //     } as z.infer<(typeof NODE_TYPE_DEFS)[NodeType.Computed]["configSchema"]>,
+    //   })
+    //     .then(() => {
+    //       toast({
+    //         title: "FeatureDef created!",
+    //         description: `${feature.name}`,
+    //       });
+    //       refetchNodes();
+    //     })
+    //     .catch(() => {
+    //       toast({
+    //         variant: "destructive",
+    //         title: "Failed to create FeatureDef",
+    //       });
+    //     });
   };
 
   return (
