@@ -27,7 +27,7 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.Counter]: { redis },
   [NodeType.UniqueCounter]: { redis },
   [NodeType.GetEntityFeature]: { clickhouse: db },
-  [NodeType.EntityAppearance]: {},
+  [NodeType.EntityAppearance]: { clickhouse: db },
   [NodeType.LogEntityFeature]: { clickhouse: db },
 };
 

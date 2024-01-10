@@ -15,7 +15,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       featureSchema: z.any(),
       entityAppearanceNodeId: z.string(),
       valueAccessor: z.object({
-        nodeId: z.string(),
+        nodeId: z.string().nullable(),
         path: z.string().optional(),
       }),
     })
@@ -43,12 +43,16 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         entityAppearanceNodeId,
       } = nodeDef.config;
 
-      const value = await getDependency({
-        nodeId: valueAccessor.nodeId,
-        expectedSchema: {
-          type: TypeName.Any,
-        },
-      });
+      const { nodeId, path } = valueAccessor;
+      const obj = nodeId
+        ? await getDependency({
+            nodeId: nodeId,
+            expectedSchema: {
+              type: TypeName.Any,
+            },
+          })
+        : event.data;
+      const value = path ? obj[path] : obj;
 
       const topLevelType = featureSchema.type as TypeName;
       const dataType = createDataType(featureSchema);
@@ -73,7 +77,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
           entity_type: [assignToEntity.type],
           entity_id: [assignToEntity.id],
           data_type: featureSchema.type,
-          value: JSON.stringify(value),
+          value: JSON.stringify(parsedValue),
           value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
           value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
           value_String: topLevelType === TypeName.String ? parsedValue : null,

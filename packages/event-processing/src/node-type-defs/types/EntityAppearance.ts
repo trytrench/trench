@@ -12,7 +12,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
     z.object({
       entityType: z.string(),
       valueAccessor: z.object({
-        nodeId: z.string(),
+        nodeId: z.string().nullable(),
         path: z.string().optional(),
       }),
     })
@@ -26,14 +26,16 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
     return async ({ event, getDependency, engineId }) => {
       // Access node value
       const { valueAccessor } = nodeDef.config;
-      const obj = await getDependency({
-        nodeId: valueAccessor.nodeId,
-        expectedSchema: {
-          type: TypeName.Any,
-        },
-      });
-
-      const value = valueAccessor.path ? obj[valueAccessor.path] : obj;
+      const { nodeId, path } = valueAccessor;
+      const obj = nodeId
+        ? await getDependency({
+            nodeId: nodeId,
+            expectedSchema: {
+              type: TypeName.Any,
+            },
+          })
+        : event.data;
+      const value = path ? obj[path] : obj;
 
       if (typeof value !== "string") {
         throw new Error(
