@@ -9,7 +9,7 @@ interface SchemaDisplayProps {
   onItemClick?: (path: string, name: string) => void;
   basePath?: string;
   baseName?: string;
-  renderRightComponent: (path: string) => React.ReactNode;
+  renderRightComponent?: (path: string) => React.ReactNode;
 }
 
 export function SchemaDisplay(props: SchemaDisplayProps) {
@@ -74,7 +74,7 @@ interface SchemaEntryProps {
   path: string;
   info: InfoType;
   onItemClick?: (path: string, name: string) => void;
-  renderRightComponent: (path: string) => React.ReactNode;
+  renderRightComponent?: (path: string) => React.ReactNode;
 }
 
 function SchemaEntry(props: SchemaEntryProps) {
@@ -140,7 +140,7 @@ function SchemaEntry(props: SchemaEntryProps) {
       >
         {name}: <span className="opacity-50">{info.type ?? "?"}</span>
       </button>
-      {renderRightComponent(path)}
+      {renderRightComponent?.(path)}
     </div>
   );
 }

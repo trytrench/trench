@@ -1,22 +1,21 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { NodeDef, createDataType } from "event-processing";
+import { type NodeDef, createDataType } from "event-processing";
 import { ChevronsUpDown } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useRouter } from "next/router";
 import { useCallback, useState } from "react";
 import { useEventTypes } from "~/components/ts-editor/useEventTypes";
 import { Button } from "~/components/ui/button";
-import AssignEntities from "~/pages/settings/event-types/AssignEntities";
+import { Card } from "~/components/ui/card";
+import { SchemaDisplay } from "../SchemaDisplay";
 import {
   CodeEditor,
-  CompileStatus,
+  type CompileStatus,
   CompileStatusMessage,
 } from "../shared/CodeEditor";
 
-// - the monaco editor ig? unsure
-
-const FUNCTION_TEMPLATE = `const getFeature: FeatureGetter = async (input) => {\n\n}`;
+const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 interface Props {
   nodeDef: NodeDef;
@@ -25,21 +24,20 @@ interface Props {
 }
 
 function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
-  const { resolvedTheme } = useTheme();
-  const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
+  const router = useRouter();
   const [compileStatus, setCompileStatus] = useState<CompileStatus>({
     status: "empty",
     code: "",
   });
 
-  const [showTypes, setShowTypes] = useState(false);
+  const [showSchema, setShowSchema] = useState(false);
 
   const { config } = nodeDef;
   const { depsMap } = config;
 
   const prefix = usePrefix(nodeDef.returnSchema, depsMap);
 
-  const eventTypes = useEventTypes();
+  const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
   const onCompileStatusChange = useCallback(
     (compileStatus: CompileStatus) => {
@@ -72,24 +70,24 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
           variant="outline"
           size="sm"
           className="ml-4"
-          onClick={() => setShowTypes(!showTypes)}
+          onClick={() => setShowSchema(!showSchema)}
         >
-          Types
+          Schema
           <ChevronsUpDown className="w-4 h-4 ml-1" />
         </Button>
         <div className="ml-auto" />
         <CompileStatusMessage compileStatus={compileStatus} />
       </div>
 
-      {/* {showTypes && (
-        <Card className="h-40 mb-4">
-          <Editor
-            theme={theme}
-            defaultLanguage="typescript"
-            defaultValue={prefix}
+      {showSchema && (
+        <Card className="h-96 overflow-auto p-6 mb-4">
+          <SchemaDisplay
+            basePath="input.event.data"
+            baseName="event.data"
+            eventTypes={new Set([router.query.eventTypeId as string])}
           />
         </Card>
-      )} */}
+      )}
 
       <div className="h-96">
         <CodeEditor
@@ -123,7 +121,7 @@ function usePrefix(
   const depInterface = `interface Dependencies {\n}`;
 
   const inputInterface = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
-  const functionType = `type FeatureGetter = (input: Input) => Promise<${createDataType(
+  const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
     returnSchema
   ).toTypescript()}>;`;
 

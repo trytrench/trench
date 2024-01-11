@@ -59,56 +59,6 @@ const DATA_TYPE_OPTIONS = [
   },
 ];
 
-const TYPE_DEFAULTS = {
-  [NodeType.Computed]: {
-    dataType: TypeName.Boolean,
-    config: {
-      code: "",
-      depsMap: {},
-      assignedEntityFeatureIds: [],
-    },
-  },
-  [NodeType.Counter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.Count]["config"],
-  },
-  [NodeType.UniqueCounter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      countUniqueFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.UniqueCount]["config"],
-  },
-  [NodeType.LogEntityFeature]: {
-    dataType: TypeName.Entity,
-    config: {
-      eventTypes: new Set(),
-      code: "",
-      depsMap: {},
-    },
-  },
-} as Record<
-  NodeType,
-  {
-    dataType: TypeName;
-    config: any;
-  }
->;
-
-//
-
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   dataType: z.nativeEnum(TypeName),
@@ -154,48 +104,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     }
   );
 
-  // // If we're editing an existing feature then populate forms w/ data.
-  // // Name, type, and datatype can't be changed after creation so the
-  // // fields are disabled.
-  // const isEditingExistingFeature = !!initialDef;
-
-  // const [featureDef, setFeatureDef] = useState<Partial<NodeDef>>(
-  //   initialDef ?? {
-  //     // defaults for some fields
-  //     name: "",
-  //     eventTypes: new Set(),
-  //     dependsOn: new Set(),
-  //     type: NodeType.Computed,
-  //     dataType: DataType.Boolean,
-  //     config: TYPE_DEFAULTS[NodeType.Computed].config,
-  //   }
-  // );
-  // const updateFeatureDef = (data: Partial<NodeDef>) => {
-  //   if (!featureDef) return;
-  //   setFeatureDef({ ...featureDef, ...data });
-  // };
-
-  // // Whether or not the featureType-specific config is valid
   const [isCodeValid, setIsCodeValid] = useState(false);
-
-  // const everythingValid = useMemo(() => {
-  //   return (
-  //     featureDef?.name &&
-  //     featureDef?.type &&
-  //     featureDef?.dataType &&
-  //     typeDetailsValid
-  //   );
-  // }, [featureDef, typeDetailsValid]);
-
-  // const save = () => {
-  //   if (!featureDef || !everythingValid) return;
-  //   // TODO: validate that featureDef is a complete NodeDef
-  //   onFeatureDefSave?.(featureDef as NodeDef);
-  // };
-
-  // TEMP
-
-  // const { name, type, dataType, eventTypes, config } = featureDef ?? {};
 
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
@@ -231,6 +140,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
+              // TODO: Clean this up
               onSave(
                 {
                   ...initialNodeDef,
@@ -334,7 +244,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
           />
         ))}
         <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-          <DialogTrigger>
+          <DialogTrigger asChild>
             <Button variant="outline" size="xs">
               <Plus className="h-4 w-4" />
             </Button>

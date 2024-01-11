@@ -1,48 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { run } from "json_typegen_wasm";
+import { useMemo } from "react";
 import { api } from "../../utils/api";
 
-export function useEventTypes() {
+export function useEventTypes(eventTypeIds: string[]) {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
 
-  const [eventTypeCode, setEventTypeCode] = useState<
-    { eventTypeName: string; typeName: string; code: string }[]
-  >([]);
+  const eventTypeCode = useMemo(() => {
+    if (!eventTypes) return [];
 
-  useEffect(() => {
-    const get = async () => {
-      const { run } = await import("json_typegen_wasm");
-
-      const eTypeCode =
-        eventTypes?.map((eventType, idx) => {
-          const typeName = `EventType${idx}`;
-          return {
-            eventTypeName: eventType.type,
+    return eventTypes
+      ?.filter((eventType) => eventTypeIds.includes(eventType.id))
+      .map((eventType, index) => {
+        const typeName = `EventType${index}`;
+        return {
+          eventTypeName: eventType.type,
+          typeName,
+          code: run(
             typeName,
-            code: run(
-              typeName,
-              JSON.stringify(eventType.exampleEvent),
-              JSON.stringify({
-                output_mode: "typescript/typealias",
-              })
-            ).replace("export type", "type"),
-          };
-        }) ?? [];
-
-      setEventTypeCode(eTypeCode);
-    };
-
-    void get();
-  }, [eventTypes]);
+            JSON.stringify(eventType.exampleEvent),
+            JSON.stringify({
+              output_mode: "typescript/typealias",
+            })
+          ).replace("export type", "type"),
+        };
+      });
+  }, [eventTypes, eventTypeIds]);
 
   const finalCode = useMemo(() => {
-    return eventTypeCode?.map((eventType) => {
-      return `
+    return eventTypeCode.map(
+      (eventType) =>
+        `
         {
             type: "${eventType.eventTypeName}";
             data: ${eventType.typeName};
         }
-        `;
-    });
+        `
+    );
   }, [eventTypeCode]);
 
   if (!eventTypeCode || !finalCode) {

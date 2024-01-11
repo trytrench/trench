@@ -28,9 +28,9 @@ export const nodeDefsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const nodeDefs = await ctx.prisma.node.findMany({
         where: {
-          eventTypes: {
-            has: input.eventTypeId,
-          },
+          eventTypes: input.eventTypeId
+            ? { has: input.eventTypeId }
+            : undefined,
         },
       });
 
