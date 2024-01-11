@@ -1,33 +1,22 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import {
-  NodeDef,
-  NodeType,
-  NODE_TYPE_DEFS,
-  TypeName,
-  NodeDefsMap,
-} from "event-processing";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "~/utils/api";
-import { DepsMapEditor } from "../shared/DepsMapEditor";
+import { NodeDef, createDataType } from "event-processing";
+import { ChevronsUpDown } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useCallback, useState } from "react";
+import { useEventTypes } from "~/components/ts-editor/useEventTypes";
+import { Button } from "~/components/ui/button";
+import AssignEntities from "~/pages/settings/event-types/AssignEntities";
 import {
   CodeEditor,
   CompileStatus,
   CompileStatusMessage,
 } from "../shared/CodeEditor";
-import { FeatureMultiSelect } from "../shared/FeatureMultiSelect";
-import AssignEntities from "~/pages/settings/event-types/AssignEntities";
-import { Editor, useMonaco } from "@monaco-editor/react";
-import { useTheme } from "next-themes";
-import { Button } from "~/components/ui/button";
-import { useEventTypes } from "~/components/ts-editor/useEventTypes";
-import { ChevronsUpDown } from "lucide-react";
-import { Card } from "~/components/ui/card";
 
 // - the monaco editor ig? unsure
 
-const FUNCTION_TEMPLATE = `export const handler: Handler = async (input) => {\n\n}`;
+const FUNCTION_TEMPLATE = `const getFeature: FeatureGetter = async (input) => {\n\n}`;
 
 interface Props {
   nodeDef: NodeDef;
@@ -48,10 +37,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
   const { config } = nodeDef;
   const { depsMap } = config;
 
-  const prefix = usePrefix({
-    returnSchema: nodeDef.returnSchema,
-    dependencies: depsMap,
-  });
+  const prefix = usePrefix(nodeDef.returnSchema, depsMap);
 
   const eventTypes = useEventTypes();
 
@@ -63,7 +49,9 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
         onValidChange(true);
         onConfigChange({
           tsCode: compileStatus.code,
-          compiledJs: compileStatus.compiled,
+          compiledJs: compileStatus.compiled
+            .slice(compileStatus.compiled.indexOf("async"))
+            .replace(/;$/, ""),
         });
       } else {
         onConfigChange({
@@ -110,17 +98,16 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
           onCompileStatusChange={onCompileStatusChange}
         />
       </div>
-      <AssignEntities />
     </>
   );
 }
 
 export { EditComputed };
 
-function usePrefix(props: {
-  returnSchema: NodeDefsMap[NodeType.Computed]["returnSchema"];
-  dependencies: Record<string, string>;
-}) {
+function usePrefix(
+  returnSchema: Record<string, unknown>,
+  dependencies: Record<string, string>
+) {
   // const { dataType, dependencies } = props;
   // const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
@@ -136,7 +123,9 @@ function usePrefix(props: {
   const depInterface = `interface Dependencies {\n}`;
 
   const inputInterface = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
-  const functionType = `type Handler = (input: Input) => Promise<any>;`;
+  const functionType = `type FeatureGetter = (input: Input) => Promise<${createDataType(
+    returnSchema
+  ).toTypescript()}>;`;
 
   return [depInterface, inputInterface, functionType].join("\n\n");
 }
