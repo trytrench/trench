@@ -4,6 +4,7 @@ import { createNodeTypeDefBuilder } from "../builder";
 import { TypeName, createDataType } from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
+import { get } from "lodash";
 
 export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
@@ -47,7 +48,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
             },
           })
         : event.data;
-      const value = path ? obj[path] : obj;
+      const value = path ? get(obj, path) : obj;
 
       const topLevelType = featureSchema.type as TypeName;
       const dataType = createDataType(featureSchema);

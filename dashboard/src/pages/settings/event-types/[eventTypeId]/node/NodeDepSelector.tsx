@@ -19,7 +19,7 @@ interface NodeDepProps {
   onDelete: () => void;
 }
 
-const NodeDep = ({ nodeName, onDelete }: NodeDepProps) => {
+export const NodeDep = ({ nodeName, onDelete }: NodeDepProps) => {
   return (
     <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
       <div className="text-sm">{nodeName}</div>
@@ -34,7 +34,11 @@ interface FeatureDepProps {
   onDelete: () => void;
 }
 
-const FeatureDep = ({ nodeName, featureName, onDelete }: FeatureDepProps) => {
+export const FeatureDep = ({
+  nodeName,
+  featureName,
+  onDelete,
+}: FeatureDepProps) => {
   return (
     <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
       <div className="text-sm">{nodeName}</div>

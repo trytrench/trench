@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeType, TypeName } from "event-processing";
+import { NodeDef, NodeType, TypeName } from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
@@ -46,6 +46,7 @@ import { Separator } from "~/components/ui/separator";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
 import EntityFeatureDialog from "./EntityFeatureDialog";
+import { Feature } from "@prisma/client";
 
 const featureSchema = z.object({
   name: z.string(),
@@ -234,7 +235,11 @@ const EntityCard = ({
   );
 };
 
-export default function AssignEntities() {
+interface Props {
+  onAssign?: (node: NodeDef, feature: Feature) => void;
+}
+
+export default function AssignEntities({ onAssign }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -289,15 +294,26 @@ export default function AssignEntities() {
                   <div className="text-emphasis-foreground text-sm">
                     {feature.name}
                   </div>
-                  <EntityFeatureDialog
-                    title="Assign Entity Property"
-                    entityTypeId={node.returnSchema?.entityType}
-                    featureId={feature.id}
-                  >
-                    <Button size="iconXs" variant="outline">
+
+                  {onAssign ? (
+                    <Button
+                      size="iconXs"
+                      variant="outline"
+                      onClick={() => onAssign(node, feature)}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
-                  </EntityFeatureDialog>
+                  ) : (
+                    <EntityFeatureDialog
+                      title="Assign Entity Property"
+                      entityTypeId={node.returnSchema?.entityType}
+                      featureId={feature.id}
+                    >
+                      <Button size="iconXs" variant="outline">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </EntityFeatureDialog>
+                  )}
                 </div>
               ))}
 

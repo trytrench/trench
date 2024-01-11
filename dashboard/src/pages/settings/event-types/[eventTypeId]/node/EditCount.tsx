@@ -1,5 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeType, TypeName, type NodeDef } from "event-processing";
+import {
+  NodeDefsMap,
+  NodeType,
+  TypeName,
+  type NodeDef,
+} from "event-processing";
 import { Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -25,7 +30,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { api } from "~/utils/api";
+import AssignEntities from "../../AssignEntities";
 import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
 
 const formSchema = z.object({
@@ -50,7 +55,10 @@ const formSchema = z.object({
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
-  onSave: (data: NodeDef) => void;
+  onSave: (
+    def: Partial<NodeDefsMap[NodeType.UniqueCounter]>,
+    assignedToFeatures: FeatureDep[]
+  ) => void;
 }
 
 export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
@@ -106,9 +114,6 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   //   setFeatureDef({ ...featureDef, ...data });
   // };
 
-  // // Whether or not the featureType-specific config is valid
-  const [isCodeValid, setIsCodeValid] = useState(false);
-
   // const everythingValid = useMemo(() => {
   //   return (
   //     featureDef?.name &&
@@ -129,11 +134,17 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   // const { name, type, dataType, eventTypes, config } = featureDef ?? {};
 
   const isValid = useMemo(
-    () => form.formState.isValid && isCodeValid,
-    [form.formState.isValid, isCodeValid]
+    () => form.formState.isValid,
+    [form.formState.isValid]
   );
 
   const isEditing = useMemo(() => !!initialNodeDef, [initialNodeDef]);
+
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+
+  const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
+    []
+  );
 
   return (
     <div>
@@ -157,12 +168,21 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
-              onSave({
-                ...initialNodeDef,
-                name: form.getValues("name"),
-                dataType: form.getValues("dataType"),
-                config,
-              });
+              onSave(
+                {
+                  // ...initialNodeDef,
+
+                  name: form.getValues("name"),
+                  config: {
+                    timeWindowMs: 1000 * 60 * 60,
+                    countByNodeIds: countByNodeDeps.map((dep) => dep.nodeId),
+                    countUniqueNodeIds: countUniqueNodeDeps.map(
+                      (dep) => dep.nodeId
+                    ),
+                  } as Partial<NodeDefsMap[NodeType.UniqueCounter]["config"]>,
+                },
+                assignedToFeatures
+              );
             }}
           >
             <Save className="w-4 h-4 mr-2" />
@@ -172,56 +192,110 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
       </div>
 
       {!isEditing && (
-        <Form {...form}>
-          <form>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="w-[16rem]">
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="text-sm font-medium mt-4 mb-2">Count Unique</div>
-
-            <div className="flex items-center space-x-2 mt-2">
-              <NodeDepSelector
-                nodeDeps={countUniqueNodeDeps}
-                featureDeps={countUniqueFeatureDeps}
-                onFeatureDepsChange={setCountUniqueFeatureDeps}
-                onNodeDepsChange={setCountUniqueNodeDeps}
-                eventTypeId={router.query.eventTypeId as string}
+        <>
+          <Form {...form}>
+            <form>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="w-[16rem]">
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+            </form>
+          </Form>
 
-              <div className="text-sm">By</div>
-              <NodeDepSelector
-                nodeDeps={countByNodeDeps}
-                featureDeps={countByFeatureDeps}
-                onFeatureDepsChange={setCountByFeatureDeps}
-                onNodeDepsChange={setCountByNodeDeps}
-                eventTypeId={router.query.eventTypeId as string}
+          <div className="text-sm font-medium mt-4 mb-2">Assign</div>
+
+          <div className="flex items-center space-x-2 mt-2">
+            {assignedToFeatures.map((featureDep) => (
+              <FeatureDep
+                key={featureDep.featureId + featureDep.nodeId}
+                nodeName={featureDep.nodeName}
+                featureName={featureDep.featureName}
+                onDelete={() => {
+                  setAssignedToFeatures(
+                    assignedToFeatures.filter(
+                      (dep) =>
+                        dep.nodeId !== featureDep.nodeId ||
+                        dep.featureId !== featureDep.featureId
+                    )
+                  );
+                }}
               />
-              <div className="text-sm">Where</div>
-              <NodeCombobox
-                eventTypeId={router.query.eventTypeId as string}
-                onSelectFeature={(node, feature) => {}}
-                onSelectNode={(node) => {}}
-                selectedFeatureIds={[]}
-                selectedNodeIds={[]}
-              >
+            ))}
+
+            <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+              <DialogTrigger>
                 <Button variant="outline" size="xs">
                   <Plus className="h-4 w-4" />
                 </Button>
-              </NodeCombobox>
-            </div>
-          </form>
-        </Form>
+              </DialogTrigger>
+              <DialogContent>
+                {/* <DialogHeader>
+      <DialogTitle>Are you absolutely sure?</DialogTitle>
+      <DialogDescription>
+        This action cannot be undone. This will permanently delete your account
+        and remove your data from our servers.
+      </DialogDescription>
+    </DialogHeader> */}
+                <AssignEntities
+                  onAssign={(node, feature) => {
+                    setAssignedToFeatures([
+                      ...assignedToFeatures,
+                      {
+                        featureId: feature.id,
+                        featureName: feature.name,
+                        nodeId: node.id,
+                        nodeName: node.name,
+                      },
+                    ]);
+                    setAssignDialogOpen(false);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="text-sm font-medium mt-4 mb-2">Count Unique</div>
+
+          <div className="flex items-center space-x-2 mt-2">
+            <NodeDepSelector
+              nodeDeps={countUniqueNodeDeps}
+              featureDeps={countUniqueFeatureDeps}
+              onFeatureDepsChange={setCountUniqueFeatureDeps}
+              onNodeDepsChange={setCountUniqueNodeDeps}
+              eventTypeId={router.query.eventTypeId as string}
+            />
+
+            <div className="text-sm">By</div>
+            <NodeDepSelector
+              nodeDeps={countByNodeDeps}
+              featureDeps={countByFeatureDeps}
+              onFeatureDepsChange={setCountByFeatureDeps}
+              onNodeDepsChange={setCountByNodeDeps}
+              eventTypeId={router.query.eventTypeId as string}
+            />
+            <div className="text-sm">Where</div>
+            <NodeCombobox
+              eventTypeId={router.query.eventTypeId as string}
+              onSelectFeature={(node, feature) => {}}
+              onSelectNode={(node) => {}}
+              selectedFeatureIds={[]}
+              selectedNodeIds={[]}
+            >
+              <Button variant="outline" size="xs">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </NodeCombobox>
+          </div>
+        </>
       )}
 
       {/* <EventTypes
