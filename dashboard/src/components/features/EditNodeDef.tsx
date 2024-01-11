@@ -25,6 +25,10 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import {
+  FeatureDep,
+  NodeDepSelector,
+} from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,7 +37,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { NodeDepSelector } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import { Plus } from "lucide-react";
+import AssignEntities from "~/pages/settings/event-types/AssignEntities";
 
 const DATA_TYPE_OPTIONS = [
   {
@@ -126,7 +131,7 @@ const formSchema = z.object({
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
-  onSave: (data: NodeDef) => void;
+  onSave: (data: NodeDef, assignedToFeatures: FeatureDep[]) => void;
 }
 
 export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
@@ -192,6 +197,11 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   // const { name, type, dataType, eventTypes, config } = featureDef ?? {};
 
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
+    []
+  );
+
   const isValid = useMemo(
     () => form.formState.isValid && isCodeValid,
     [form.formState.isValid, isCodeValid]
@@ -221,15 +231,18 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
-              onSave({
-                ...initialNodeDef,
-                name: form.getValues("name"),
-                // dataType: form.getValues("dataType"),
-                config: {
-                  ...config,
-                  depsMap: {},
+              onSave(
+                {
+                  ...initialNodeDef,
+                  name: form.getValues("name"),
+                  // dataType: form.getValues("dataType"),
+                  config: {
+                    ...config,
+                    depsMap: {},
+                  },
                 },
-              });
+                assignedToFeatures
+              );
             }}
           >
             <Save className="w-4 h-4 mr-2" />
@@ -301,6 +314,50 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
         </Form>
       )}
 
+      <div className="text-sm font-medium mt-4 mb-2">Assign</div>
+
+      <div className="flex items-center space-x-2 mt-2">
+        {assignedToFeatures.map((featureDep) => (
+          <FeatureDep
+            key={featureDep.featureId + featureDep.nodeId}
+            nodeName={featureDep.nodeName}
+            featureName={featureDep.featureName}
+            onDelete={() => {
+              setAssignedToFeatures(
+                assignedToFeatures.filter(
+                  (dep) =>
+                    dep.nodeId !== featureDep.nodeId ||
+                    dep.featureId !== featureDep.featureId
+                )
+              );
+            }}
+          />
+        ))}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogTrigger>
+            <Button variant="outline" size="xs">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <AssignEntities
+              onAssign={(node, feature) => {
+                setAssignedToFeatures([
+                  ...assignedToFeatures,
+                  {
+                    featureId: feature.id,
+                    featureName: feature.name,
+                    nodeId: node.id,
+                    nodeName: node.name,
+                  },
+                ]);
+                setAssignDialogOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {/* <EventTypes
         eventTypes={eventTypes}
         onChange={(v) => {
@@ -313,7 +370,9 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <EditComputed
         nodeDef={
           initialNodeDef ?? {
-            returnSchema: {},
+            returnSchema: {
+              type: form.watch("dataType"),
+            },
             config: {
               code: "",
               depsMap: {},

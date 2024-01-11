@@ -25,38 +25,6 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
-  function handleSave(def: NodeDefsMap[NodeType.Computed]) {
-    createNodeDef({
-      name: def.name,
-      type: NodeType.Computed,
-      dependsOn: [],
-      eventTypes: [router.query.eventTypeId as string],
-      // returnSchema: def.returnSchema,
-      returnSchema: {
-        type: TypeName.String,
-      },
-      config: def.config,
-    })
-      .then((nodeDef) => {
-        toast({
-          title: "Node created",
-          // description: `${values.entity}`,
-        });
-        void router.push(
-          `/settings/event-types/${router.query.eventTypeId as string}/node/${
-            nodeDef.id
-          } `
-        );
-        return refetchNodes();
-      })
-      .catch(() => {
-        toast({
-          variant: "destructive",
-          title: "Failed to create node",
-        });
-      });
-  }
-
   return (
     <div>
       <Link
@@ -130,7 +98,65 @@ const Page: NextPageWithLayout = () => {
           }}
         />
       ) : (
-        <EditNodeDef onSave={handleSave} />
+        <EditNodeDef
+          onSave={(def, assignedToFeatures) => {
+            createNodeDef({
+              name: def.name,
+              type: NodeType.Computed,
+              dependsOn: [],
+              eventTypes: [router.query.eventTypeId as string],
+              // returnSchema: def.returnSchema,
+              returnSchema: {
+                type: TypeName.String,
+              },
+              config: def.config,
+            })
+              .then((nodeDef) => {
+                return Promise.all(
+                  assignedToFeatures.map((featureDep) =>
+                    createNodeDef({
+                      name: featureDep.featureName,
+                      type: NodeType.LogEntityFeature,
+                      dependsOn: [nodeDef.id],
+                      eventTypes: [router.query.eventTypeId as string],
+                      // returnSchema: def.returnSchema,
+                      returnSchema: {
+                        type: TypeName.Any,
+                      } as NodeDefsMap[NodeType.LogEntityFeature]["returnSchema"],
+                      config: {
+                        featureId: featureDep.featureId,
+                        featureSchema: {
+                          type: TypeName.String,
+                        },
+                        entityAppearanceNodeId: featureDep.nodeId,
+                        valueAccessor: {
+                          nodeId: nodeDef.id,
+                        },
+                      } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+                    })
+                  )
+                );
+              })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+                // void router.push(
+                //   `/settings/event-types/${
+                //     router.query.eventTypeId as string
+                //   }/node/${nodeDef.id} `
+                // );
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
       )}
     </div>
   );
