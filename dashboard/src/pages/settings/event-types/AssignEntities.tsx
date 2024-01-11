@@ -1,8 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeDef, NodeType, TypeName } from "event-processing";
+import { NodeDef, NodeDefsMap, NodeType, TypeName } from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -253,27 +253,44 @@ export default function AssignEntities({ onAssign }: Props) {
     { enabled: !!router.query.eventTypeId }
   );
 
+  const featureToNodeMap = useMemo(() => {
+    if (!nodes) return {};
+    return nodes.reduce(
+      (acc, node) => {
+        if (node.type === NodeType.LogEntityFeature) {
+          return { ...acc, [node.config.featureId]: node };
+        }
+        return acc;
+      },
+      {} as Record<string, NodeDefsMap[NodeType.LogEntityFeature]>
+    );
+  }, [nodes]);
+
   return (
     <div className="space-y-4">
-      {nodes
-        ?.filter((node) => node.type === NodeType.EntityAppearance)
-        .map((node) => (
+      {nodes?.map((node) =>
+        node.type === NodeType.EntityAppearance ? (
           <EntityCard
             name={node.name}
             path={`input.event.data.${node.config.valueAccessor.path}`}
             key={node.id}
           >
-            {nodes
+            {features
               ?.filter(
-                (n) =>
-                  n.type === NodeType.Computed &&
-                  n.config?.entityTypeId === node.returnSchema.entityType
+                (feature) =>
+                  feature.belongsTo[0]?.entityTypeId ===
+                    node.returnSchema.entityType && featureToNodeMap[feature.id]
               )
-              .map((n) => (
+              .map((feature) => (
                 <FeatureCard
-                  key={n.id}
-                  name={n.name}
-                  path={n.config?.paths?.[router.query.eventTypeId as string]}
+                  key={feature.id}
+                  name={feature.name}
+                  path={
+                    featureToNodeMap[feature.id]?.config.valueAccessor.path
+                      ? `input.event.data.${featureToNodeMap[feature.id]?.config
+                          .valueAccessor.path}`
+                      : undefined
+                  }
                 />
               ))}
 
@@ -282,14 +299,9 @@ export default function AssignEntities({ onAssign }: Props) {
                 (feature) =>
                   feature.belongsTo[0]?.entityTypeId ===
                     node.returnSchema?.entityType &&
-                  !nodes?.find(
-                    (n) =>
-                      n.type === NodeType.Computed &&
-                      n.config?.featureId === feature.id
-                  )
+                  !featureToNodeMap[feature.id]
               )
               .map((feature) => (
-                // <FeatureCard key={feature.id} name={feature.name} />
                 <div key={feature.id} className="flex items-center space-x-2">
                   <div className="text-emphasis-foreground text-sm">
                     {feature.name}
@@ -346,7 +358,8 @@ export default function AssignEntities({ onAssign }: Props) {
               <Button variant="outline">Create</Button>
             </FeatureDialog>
           </EntityCard>
-        ))}
+        ) : null
+      )}
     </div>
   );
 }
