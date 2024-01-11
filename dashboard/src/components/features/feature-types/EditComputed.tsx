@@ -1,7 +1,13 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { NodeDef, NodeType, NODE_TYPE_DEFS, TypeName } from "event-processing";
+import {
+  NodeDef,
+  NodeType,
+  NODE_TYPE_DEFS,
+  TypeName,
+  NodeDefsMap,
+} from "event-processing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 import { DepsMapEditor } from "../shared/DepsMapEditor";
@@ -43,7 +49,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
   const { depsMap } = config;
 
   const prefix = usePrefix({
-    dataType: nodeDef.dataType.type,
+    returnSchema: nodeDef.returnSchema,
     dependencies: depsMap,
   });
 
@@ -87,7 +93,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
         <CompileStatusMessage compileStatus={compileStatus} />
       </div>
 
-      {showTypes && (
+      {/* {showTypes && (
         <Card className="h-40 mb-4">
           <Editor
             theme={theme}
@@ -95,7 +101,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
             defaultValue={prefix}
           />
         </Card>
-      )}
+      )} */}
 
       <div className="h-96">
         <CodeEditor
@@ -111,36 +117,26 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
 
 export { EditComputed };
 
-//
-
-const DataTypeToTsType: Record<TypeName, string> = {
-  [TypeName.Boolean]: "boolean",
-  [TypeName.Int64]: "number",
-  [TypeName.Float64]: "number",
-  [TypeName.String]: "string",
-  [TypeName.Entity]: "string",
-  [TypeName.Object]: "any",
-};
-
 function usePrefix(props: {
-  dataType: TypeName;
+  returnSchema: NodeDefsMap[NodeType.Computed]["returnSchema"];
   dependencies: Record<string, string>;
 }) {
-  const { dataType, dependencies } = props;
-  const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
+  // const { dataType, dependencies } = props;
+  // const { data: allFeatureDefs } = api.nodeDefs.allInfo.useQuery({});
 
-  const depInterface = useMemo(() => {
-    const lines = Object.entries(dependencies).map(([alias, featureId]) => {
-      const feature = allFeatureDefs?.find((v) => v.id === featureId);
-      if (!feature) return;
-      return `  ${alias}: ${DataTypeToTsType[feature.dataType as TypeName]};\n`;
-    });
+  // const depInterface = useMemo(() => {
+  //   const lines = Object.entries(dependencies).map(([alias, featureId]) => {
+  //     const feature = allFeatureDefs?.find((v) => v.id === featureId);
+  //     if (!feature) return;
+  //     return `  ${alias}: ${DataTypeToTsType[feature.dataType as TypeName]};\n`;
+  //   });
 
-    return `interface Dependencies {\n${lines.join("")}}`;
-  }, [dependencies, allFeatureDefs]);
+  //   return `interface Dependencies {\n${lines.join("")}}`;
+  // }, [dependencies, allFeatureDefs]);
+  const depInterface = `interface Dependencies {\n}`;
 
   const inputInterface = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
-  const functionType = `type Handler = (input: Input) => Promise<${DataTypeToTsType[dataType]}>;`;
+  const functionType = `type Handler = (input: Input) => Promise<any>;`;
 
   return [depInterface, inputInterface, functionType].join("\n\n");
 }

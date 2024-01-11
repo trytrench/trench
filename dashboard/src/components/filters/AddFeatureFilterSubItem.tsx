@@ -1,4 +1,4 @@
-import { DataType, type FeatureDef } from "event-processing";
+import { TypeName, type FeatureDef } from "event-processing";
 import {
   BoxIcon,
   BracesIcon,
@@ -28,13 +28,13 @@ import {
 type FeatureFilter = NonNullable<NonNullable<EventFilters>["features"]>[number];
 
 const DATA_TYPE_TO_ICON = {
-  [DataType.Float64]: Hash,
-  [DataType.Int64]: Hash,
-  [DataType.String]: TypeIcon,
-  [DataType.Boolean]: ToggleLeft,
-  [DataType.Entity]: BoxIcon,
-  [DataType.Object]: BracesIcon,
-} satisfies Record<DataType, LucideIcon>;
+  [TypeName.Float64]: Hash,
+  [TypeName.Int64]: Hash,
+  [TypeName.String]: TypeIcon,
+  [TypeName.Boolean]: ToggleLeft,
+  [TypeName.Entity]: BoxIcon,
+  [TypeName.Object]: BracesIcon,
+} satisfies Record<TypeName, LucideIcon>;
 
 export function AddFeatureFilterSubItem(props: {
   featureDefs: FeatureDef[];

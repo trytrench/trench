@@ -1,25 +1,12 @@
-import { useMemo, useState } from "react";
-import {
-  NodeDefsMap,
-  NodeType,
-  TypeName,
-  type NodeDef,
-} from "event-processing";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { uniqBy } from "lodash";
-import { Check, Pencil, Plus, Save, X } from "lucide-react";
+import { NodeType, TypeName, type NodeDef } from "event-processing";
+import { Pencil, Save } from "lucide-react";
 import { useRouter } from "next/router";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { EditComputed } from "~/components/features/feature-types/EditComputed";
 import { Button } from "~/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "~/components/ui/command";
 import {
   Form,
   FormControl,
@@ -30,11 +17,6 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,8 +24,6 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { cn } from "~/lib/utils";
-import { api } from "~/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +33,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
+import { NodeDepSelector } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
 
 const DATA_TYPE_OPTIONS = [
   {
@@ -161,14 +142,6 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const router = useRouter();
 
-  const { data: features, refetch: refetchFeatures } =
-    api.features.list.useQuery();
-
-  const { data: nodes } = api.nodeDefs.list.useQuery(
-    { eventTypeId: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
-  );
-
   const [config, setConfig] = useState(
     initialNodeDef?.config ?? {
       code: "",
@@ -226,12 +199,6 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const isEditing = useMemo(() => !!initialNodeDef, [initialNodeDef]);
 
-  const [entityNode, setEntityNode] = useState<
-    NodeDefsMap[NodeType.EntityAppearance] | null
-  >();
-  const [entityDepsDropdownOpen, setEntityDepsDropdownOpen] = useState(false);
-  const [nodeDepsDropdownOpen, setNodeDepsDropdownOpen] = useState(false);
-
   return (
     <div>
       <div className="flex justify-between items-center">
@@ -257,8 +224,11 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               onSave({
                 ...initialNodeDef,
                 name: form.getValues("name"),
-                dataType: form.getValues("dataType"),
-                config,
+                // dataType: form.getValues("dataType"),
+                config: {
+                  ...config,
+                  depsMap: {},
+                },
               });
             }}
           >
@@ -290,7 +260,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               name="dataType"
               render={({ field }) => (
                 <FormItem className="w-[16rem] mt-4">
-                  <FormLabel>Entity Type</FormLabel>
+                  <FormLabel>Type</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -314,213 +284,18 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               )}
             />
 
-            <div className="text-sm font-medium mt-4 mb-2">
-              Entity Dependencies
-            </div>
+            <div className="text-sm font-medium mt-4 mb-2">Dependencies</div>
 
             <div className="flex space-x-2 mt-2">
-              {form
-                .watch("featureDeps")
-                .map(({ nodeName, featureName, nodeId, featureId }, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center space-x-2 rounded-md border px-2 py-1"
-                  >
-                    <div className="text-sm">{nodeName}</div>
-                    <div className="text-sm">{featureName}</div>
-                    <X
-                      className="h-4 w-4"
-                      onClick={() =>
-                        form.setValue(
-                          "featureDeps",
-                          form
-                            .getValues("featureDeps")
-                            .filter(
-                              (dep) =>
-                                dep.nodeId !== nodeId ||
-                                dep.featureId !== featureId
-                            )
-                        )
-                      }
-                    />
-                  </div>
-                ))}
-
-              <Popover
-                open={entityDepsDropdownOpen}
-                onOpenChange={(open) => {
-                  setEntityDepsDropdownOpen(open);
-                  if (!open) setEntityNode(null);
-                }}
-              >
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="xs">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[16rem] p-0">
-                  {entityNode ? (
-                    <Command>
-                      <CommandInput placeholder="Search properties..." />
-                      <CommandEmpty>No properties found.</CommandEmpty>
-                      <CommandGroup>
-                        {features
-                          ?.filter(
-                            (feature) =>
-                              feature.belongsTo[0]?.entityTypeId ===
-                              entityNode?.returnSchema?.entityType
-                          )
-                          .map((feature) => (
-                            <CommandItem
-                              value={feature.name}
-                              key={feature.id}
-                              onSelect={() => {
-                                setEntityDepsDropdownOpen(false);
-                                form.setValue(
-                                  "featureDeps",
-                                  uniqBy(
-                                    [
-                                      ...form.getValues("featureDeps"),
-                                      {
-                                        nodeId: entityNode.nodeId,
-                                        nodeName: entityNode.node.name,
-                                        featureId: feature.id,
-                                        featureName: feature.name,
-                                      },
-                                    ],
-                                    (dep) => dep.featureId + dep.nodeId
-                                  )
-                                );
-                                setEntityNode(null);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  form
-                                    .getValues("featureDeps")
-                                    .some(
-                                      (dep) =>
-                                        dep.nodeId === entityNode.nodeId &&
-                                        dep.featureId === feature.id
-                                    )
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {feature.name}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </Command>
-                  ) : (
-                    <Command>
-                      <CommandInput placeholder="Search nodes..." />
-                      <CommandEmpty>No entities found.</CommandEmpty>
-                      <CommandGroup>
-                        {nodes
-                          ?.filter(
-                            (node) => node.type === NodeType.EntityAppearance
-                          )
-                          .map((node) => (
-                            <CommandItem
-                              value={node.name}
-                              key={node.id}
-                              onSelect={() => {
-                                setEntityNode(node);
-                              }}
-                            >
-                              {node.name}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </Command>
-                  )}
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="text-sm font-medium mt-4 mb-2">
-              Node Dependencies
-            </div>
-
-            <div className="flex space-x-2 mt-2">
-              {form.watch("nodeDeps").map(({ nodeName, nodeId }) => (
-                <div
-                  key={nodeId}
-                  className="flex items-center space-x-2 rounded-md border px-2 py-1"
-                >
-                  <div className="text-sm">{nodeName}</div>
-                  <X
-                    className="h-4 w-4"
-                    onClick={() =>
-                      form.setValue(
-                        "nodeDeps",
-                        form
-                          .getValues("nodeDeps")
-                          .filter((dep) => dep.nodeId !== nodeId)
-                      )
-                    }
-                  />
-                </div>
-              ))}
-              <Popover
-                open={nodeDepsDropdownOpen}
-                onOpenChange={setNodeDepsDropdownOpen}
-              >
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button variant="outline" size="xs">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[16rem] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search nodes..." />
-                    <CommandEmpty>No nodes found.</CommandEmpty>
-
-                    <CommandGroup>
-                      {nodes
-                        ?.filter((node) => !node.config?.paths)
-                        .map((node) => (
-                          <CommandItem
-                            value={node.name}
-                            key={node.id}
-                            onSelect={() => {
-                              setNodeDepsDropdownOpen(false);
-                              form.setValue(
-                                "nodeDeps",
-                                uniqBy(
-                                  [
-                                    ...form.getValues("nodeDeps"),
-                                    {
-                                      nodeId: node.id,
-                                      nodeName: node.name,
-                                    },
-                                  ],
-                                  "nodeId"
-                                )
-                              );
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                form
-                                  .getValues("nodeDeps")
-                                  .some((dep) => dep.nodeId === node.id)
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            {node.name}
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <NodeDepSelector
+                nodeDeps={form.watch("nodeDeps")}
+                featureDeps={form.watch("featureDeps")}
+                onFeatureDepsChange={(deps) =>
+                  form.setValue("featureDeps", deps)
+                }
+                onNodeDepsChange={(deps) => form.setValue("nodeDeps", deps)}
+                eventTypeId={router.query.eventTypeId as string}
+              />
             </div>
           </form>
         </Form>
@@ -538,9 +313,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <EditComputed
         nodeDef={
           initialNodeDef ?? {
-            dataType: {
-              type: form.watch("dataType"),
-            },
+            returnSchema: {},
             config: {
               code: "",
               depsMap: {},

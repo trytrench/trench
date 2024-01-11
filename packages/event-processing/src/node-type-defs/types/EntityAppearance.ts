@@ -5,6 +5,7 @@ import { TypeName } from "../../data-types";
 import { ClickhouseClient } from "databases";
 import { StoreTable } from "../lib/store";
 import { getUnixTime } from "date-fns";
+import { get } from "lodash";
 
 export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.EntityAppearance)
@@ -33,7 +34,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
             },
           })
         : event.data;
-      const value = path ? obj[path] : obj;
+      const value = path ? get(obj, path) : obj;
 
       if (typeof value !== "string") {
         throw new Error(
