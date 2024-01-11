@@ -51,7 +51,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
           tsCode: compileStatus.code,
           compiledJs: compileStatus.compiled
             .slice(compileStatus.compiled.indexOf("async"))
-            .replace(/;$/, ""),
+            .replace(/[;\n]+$/, ""),
         });
       } else {
         onConfigChange({
