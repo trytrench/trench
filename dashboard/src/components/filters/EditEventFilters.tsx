@@ -80,7 +80,7 @@ export function EditEventFilters(props: EditEventFiltersProps) {
 
             {/* Feature Filter*/}
             <AddFeatureFilterSubItem
-              featureDefs={allFeatureDefs ?? []}
+              nodeDefs={allFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
                 onChange({

@@ -1,14 +1,13 @@
 import { Check, ChevronDown, Sparkles, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { cn } from "~/lib/utils";
-import { JsonFilter } from "~/shared/jsonFilter";
+import { type JsonFilter } from "~/shared/jsonFilter";
 import { getAvailableOps, getParamSchema } from "../ListFilter/helpers";
 import { Badge } from "../ui/badge";
 
-import { DataType } from "event-processing";
 import { useEffect, useMemo, useState } from "react";
-import { EventFilters, eventFiltersZod } from "../../shared/validation";
-import { ParamSchema } from "../ListFilter/typeData";
+import { type EventFilters, eventFiltersZod } from "../../shared/validation";
+import { type ParamSchema } from "../ListFilter/typeData";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { TypeName } from "event-processing";
 
 // Type
 
@@ -162,6 +162,7 @@ const JsonFilterChip = ({
           <DropdownMenuContent align="start">
             {availableOps.map((op) => (
               <DropdownMenuItem
+                key={op}
                 onSelect={() => {
                   if (op === value?.filter?.op) return;
 
@@ -223,7 +224,7 @@ const JsonFilterChip = ({
 
 interface ValuePickerProps {
   schema: ParamSchema;
-  value: any | undefined;
+  value: any;
   onValueChange: (value: any) => void;
 }
 
@@ -319,8 +320,8 @@ export function FeatureFilterChip(props: {
   const { filter, onChange, onDelete } = props;
 
   switch (filter?.dataType) {
-    case DataType.Int64:
-    case DataType.Float64: {
+    case TypeName.Int64:
+    case TypeName.Float64: {
       return (
         <NumberFilterChip
           filter={filter}
@@ -329,7 +330,7 @@ export function FeatureFilterChip(props: {
         />
       );
     }
-    case DataType.String: {
+    case TypeName.String: {
       return (
         <StringFilterChip
           filter={filter}
@@ -338,7 +339,7 @@ export function FeatureFilterChip(props: {
         />
       );
     }
-    case DataType.Boolean: {
+    case TypeName.Boolean: {
       return (
         <BooleanFilterChip
           filter={filter}
@@ -364,7 +365,7 @@ type OpKey = (typeof NUMBER_FILTER_OPS)[number]["key"];
 
 type NumberFilter = Extract<
   FeatureFilter,
-  { dataType: DataType.Int64 | DataType.Float64 }
+  { dataType: TypeName.Int64 | TypeName.Float64 }
 >;
 function NumberFilterChip(props: {
   filter: NumberFilter;
@@ -461,7 +462,7 @@ function NumberFilterChip(props: {
   );
 }
 
-type StringFilter = Extract<FeatureFilter, { dataType: DataType.String }>;
+type StringFilter = Extract<FeatureFilter, { dataType: TypeName.String }>;
 
 const STRING_FILTER_OPS = [
   { key: "eq", label: "=" },
@@ -564,7 +565,7 @@ function StringFilterChip(props: {
   );
 }
 
-type BooleanFilter = Extract<FeatureFilter, { dataType: DataType.Boolean }>;
+type BooleanFilter = Extract<FeatureFilter, { dataType: TypeName.Boolean }>;
 
 const BOOLEAN_FILTER_OPS = [{ key: "eq", label: "=" }] as const;
 
@@ -591,7 +592,7 @@ function BooleanFilterChip(props: {
       const val = filter.value[op.key];
       if (val !== undefined) {
         setKey(op.key);
-        setValue(val);
+        setValue(val ? "true" : "false");
         return;
       }
     }
@@ -675,6 +676,6 @@ function BooleanFilterChip(props: {
   );
 }
 
-type EntityFilter = Extract<FeatureFilter, { dataType: DataType.Entity }>;
+type EntityFilter = Extract<FeatureFilter, { dataType: TypeName.Entity }>;
 
 export { DateRangeChip, JsonFilterChip, LabelChip, TypeChip };

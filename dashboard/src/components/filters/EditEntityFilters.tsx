@@ -100,7 +100,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
             {/* Feature Filter*/}
             <AddFeatureFilterSubItem
-              featureDefs={allFeatureDefs ?? []}
+              nodeDefs={allFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
                 onChange({
