@@ -1,10 +1,4 @@
-import type {
-  EntityFeature,
-  EntityType,
-  EventFeature,
-  EventType,
-  Feature,
-} from "@prisma/client";
+import type { EntityType, EventType, Feature } from "@prisma/client";
 
 type CommonArgs = {
   features: Feature[];

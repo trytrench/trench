@@ -25,7 +25,7 @@ export function EditEventFilters(props: EditEventFiltersProps) {
   const { value, onChange } = props;
 
   const { data: allEventTypes } = api.eventTypes.list.useQuery();
-  const { data: allFeatureDefs } = api.nodeDefs.getLatest.useQuery();
+  const { data: allFeatureDefs } = api.features.list.useQuery();
 
   const { dateRange, eventType, features: featureFilters } = value;
 
@@ -80,7 +80,7 @@ export function EditEventFilters(props: EditEventFiltersProps) {
 
             {/* Feature Filter*/}
             <AddFeatureFilterSubItem
-              nodeDefs={allFeatureDefs ?? []}
+              featureDefs={allFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
                 onChange({

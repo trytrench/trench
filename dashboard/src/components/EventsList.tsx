@@ -15,7 +15,7 @@ import { FeatureGrid } from "./ui/custom/feature-grid";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { DataType, Entity } from "event-processing";
+import { Entity } from "event-processing";
 import { RenderResult, RenderTypedData } from "./RenderResult";
 
 interface EventsListProps {

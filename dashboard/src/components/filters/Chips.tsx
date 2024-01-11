@@ -350,7 +350,7 @@ export function FeatureFilterChip(props: {
     }
   }
 
-  return <div></div>;
+  return <div>not implemented</div>;
 }
 
 const NUMBER_FILTER_OPS = [

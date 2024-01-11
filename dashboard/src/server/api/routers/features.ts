@@ -1,20 +1,29 @@
-import { DataType } from "event-processing";
+import { TSchema } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const featuresRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.prisma.feature.findMany({
+    const result = await ctx.prisma.feature.findMany({
       include: {
         belongsTo: true,
       },
+    });
+
+    return result.map((f) => {
+      return {
+        id: f.id,
+        name: f.name,
+        description: f.description ?? undefined,
+        schema: f.schema as unknown as TSchema,
+      };
     });
   }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-        dataType: z.record(z.string()),
+        schema: z.any(),
         entityTypeId: z.string(),
       })
     )
@@ -22,7 +31,7 @@ export const featuresRouter = createTRPCRouter({
       const feature = await ctx.prisma.feature.create({
         data: {
           name: input.name,
-          dataType: input.dataType,
+          schema: input.schema,
         },
       });
 

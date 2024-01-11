@@ -13,6 +13,11 @@ export enum TypeName {
   Any = "Any",
 }
 
+export type Entity = {
+  type: string;
+  id: string;
+};
+
 interface TSchemaBase {
   type: TypeName;
 }
@@ -64,7 +69,7 @@ type SchemaTypeMap = {
   [TypeName.Int64]: number;
   [TypeName.String]: string;
   [TypeName.Location]: { lat: number; lng: number };
-  [TypeName.Entity]: { type: string; id: string };
+  [TypeName.Entity]: Entity;
   [TypeName.Array]: any[]; // Placeholder, will be refined later
   [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
   [TypeName.Any]: any; // Placeholder, will be refined later
@@ -145,7 +150,7 @@ class LocationDataType extends IDataType<TLocationSchema> {
 class EntityDataType<T extends string = string> extends IDataType<
   TEntitySchema<T>
 > {
-  parse(input: any): { type: T; id: string } {
+  parse(input: any): Entity {
     if (typeof input !== "object" || !("id" in input)) {
       throw new Error("Invalid input for entity type");
     }
@@ -258,6 +263,20 @@ export function getNamedTS(schema: TSchema, name = "Type"): string {
   return `type ${name} = ${createDataType(schema).toTypescript()}`;
 }
 
+export type TypedData<T extends TSchema = TSchema> = {
+  schema: T;
+  data: InferSchemaType<T>;
+};
+
+export function getTypedData<T extends TSchema = TSchema>(
+  data: any,
+  schema: T
+): TypedData<T> {
+  return {
+    schema,
+    data: createDataType(schema).parse(data),
+  };
+}
 // export type TypedDataMap = {
 //   [K in TypeName]: {
 //     type: K;

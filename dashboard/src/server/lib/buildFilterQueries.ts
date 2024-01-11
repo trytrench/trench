@@ -1,5 +1,4 @@
 import { getUnixTime } from "date-fns";
-import { DataType } from "event-processing";
 import { type z } from "zod";
 import {
   type DateRange,
@@ -8,6 +7,7 @@ import {
   type featureFiltersZod,
 } from "../../shared/validation";
 import { db } from "databases";
+import { TypeName } from "event-processing";
 
 type EventFilterfilters = z.infer<typeof eventFiltersZod>;
 
@@ -31,7 +31,7 @@ const getWhereClausesForDateRange = (
   const whereClauses = [];
   if (dateRange.from)
     whereClauses.push(
-      `${columnName} >= ${getUnixTime(new Date(dateRange.from))})`
+      `${columnName} >= ${getUnixTime(new Date(dateRange.from))}`
     );
   if (dateRange.to) {
     whereClauses.push(
@@ -53,10 +53,10 @@ const buildWhereClauseForFeatureFilter = (
 
   conditions.push(`feature_id = '${featureId}'`);
   switch (dataType) {
-    case DataType.Float64:
-    case DataType.Int64: {
+    case TypeName.Float64:
+    case TypeName.Int64: {
       const column =
-        dataType === DataType.Float64 ? "value_Float64" : "value_Int64";
+        dataType === TypeName.Float64 ? "value_Float64" : "value_Int64";
       checkAtMostOneIsDefined(value);
       if (value.eq !== undefined) conditions.push(`${column} = ${value.eq}`);
       if (value.gt !== undefined) conditions.push(`${column} > ${value.gt}`);
@@ -65,7 +65,7 @@ const buildWhereClauseForFeatureFilter = (
       if (value.lte !== undefined) conditions.push(`${column} <= ${value.lte}`);
       break;
     }
-    case DataType.String: {
+    case TypeName.String: {
       const column = "value_String";
       checkAtMostOneIsDefined(value);
       if (value.eq !== undefined) conditions.push(`${column} = '${value.eq}'`);
@@ -73,14 +73,14 @@ const buildWhereClauseForFeatureFilter = (
         conditions.push(`${column} LIKE '%${value.contains}%'`);
       break;
     }
-    case DataType.Boolean: {
+    case TypeName.Boolean: {
       const column = "value_Bool";
       if (value.eq !== undefined) {
         conditions.push(`${column} = ${value.eq}`);
       }
       break;
     }
-    case DataType.Entity: {
+    case TypeName.Entity: {
       const column = "value"; // String type, should be a JSON encoding of {type: string; id: string;}
       if (value.eq !== undefined) {
         conditions.push(`${column}->>'type' = '${value.eq.entityType}'`);
@@ -227,7 +227,7 @@ export const getEventsList = async (options: {
     }
 
     if (filter.eventType) {
-      whereClauses.push(`event_type = '${filter.eventType}'`);
+      whereClauses.push(`events.type = '${filter.eventType}'`);
     }
 
     if (filter.entities && filter.entities.length > 0) {
@@ -262,12 +262,12 @@ export const getEventsList = async (options: {
       GROUP BY event_id, entity_type, entity_id
     ), 
     desired_event_ids AS (
-        SELECT DISTINCT event_id
-        FROM features
+        SELECT DISTINCT events.id as event_id
+        FROM events
         FINAL
-        JOIN events ON features.event_id = events.id
+        LEFT JOIN features ON features.event_id = events.id
         ${whereClause}
-        ORDER BY event_id DESC
+        ORDER BY events.id DESC
         LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
     ), 
     event_features AS (

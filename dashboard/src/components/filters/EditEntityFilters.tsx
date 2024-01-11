@@ -24,7 +24,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
 
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
-  const { data: allFeatureDefs } = api.nodeDefs.getLatest.useQuery();
+  const { data: allFeatureDefs } = api.features.list.useQuery();
 
   const { firstSeen, lastSeen, entityType, features: featureFilters } = value;
 
@@ -100,7 +100,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
             {/* Feature Filter*/}
             <AddFeatureFilterSubItem
-              nodeDefs={allFeatureDefs ?? []}
+              featureDefs={allFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
                 onChange({

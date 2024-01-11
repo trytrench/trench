@@ -1,10 +1,11 @@
 import {
-  DataType,
   Entity,
   FeatureDef,
-  TypedDataMap,
-  decodeTypedData,
+  TSchema,
+  TypedData,
+  createDataType,
   getNodeDefFromSnapshot,
+  getTypedData,
 } from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
 import { z } from "zod";
@@ -14,7 +15,6 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import { db, prisma } from "~/server/db";
-import { getOrderedFeatures } from "~/server/lib/features";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { getEntitiesList, getEventsList } from "../../lib/buildFilterQueries";
@@ -93,147 +93,7 @@ export const listsRouter = createTRPCRouter({
         })),
       };
     }),
-
-  // prob doesnt work
-  getFeatureColumnsForEventType: protectedProcedure
-    .input(
-      z.object({
-        eventType: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const vals = await ctx.prisma.eventFeature.findMany({
-        where: {
-          eventType: input.eventType,
-        },
-      });
-      return vals;
-    }),
-
-  getEvent: protectedProcedure
-    .input(
-      z.object({
-        eventId: z.string(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const event = await ctx.prisma.event.findUnique({
-        where: {
-          id: input.eventId,
-        },
-        include: {
-          eventLabels: true,
-          eventType: true,
-          entityLinks: {
-            include: {
-              entity: {
-                include: {
-                  entityLabels: true,
-                },
-              },
-            },
-          },
-        },
-      });
-      return event;
-    }),
-
-  getEventsOfType: protectedProcedure
-    .input(
-      z.object({
-        eventTypeId: z.string(),
-        limit: z.number().optional(),
-        offset: z.number().optional(),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const [count, rows] = await Promise.all([
-        ctx.prisma.event.count({
-          where: {
-            eventType: {
-              id: input.eventTypeId,
-            },
-          },
-        }),
-        ctx.prisma.event.findMany({
-          where: {
-            eventType: {
-              id: input.eventTypeId,
-            },
-          },
-          include: {
-            eventLabels: true,
-            eventType: true,
-          },
-          orderBy: {
-            timestamp: "desc",
-          },
-          take: input.limit,
-          skip: input.offset,
-        }),
-      ]);
-      return {
-        count,
-        rows,
-      };
-    }),
 });
-
-const getFeatureSortKey = (
-  column: string,
-  sortBy: {
-    feature: string;
-    direction: "asc" | "desc";
-    dataType: "text" | "number" | "boolean";
-  }
-) => {
-  const { feature, direction, dataType } = sortBy;
-  return dataType === "number"
-    ? `toInt32OrZero(JSONExtractString(${column}, '${feature}')) ${direction}`
-    : `JSONExtractString(${column}, '${feature}') ${direction}`;
-};
-
-const getFeatureQuery = (filter: JsonFilter, column: string) => {
-  const { path, op, value, dataType } = filter;
-  const feature =
-    dataType === "number"
-      ? `toInt32OrZero(JSONExtractString(${column}, '${path}'))`
-      : `JSONExtractString(${column}, '${path}')`;
-
-  if (op === JsonFilterOp.IsEmpty) {
-    if (dataType === "text")
-      return `AND (${feature} IS NULL OR ${feature} = '')`;
-    else return `AND ${feature} IS NULL`;
-  }
-  if (op === JsonFilterOp.NotEmpty) {
-    if (dataType === "text")
-      return `AND (${feature} IS NOT NULL AND ${feature} != '')`;
-    else return `AND ${feature} IS NOT NULL`;
-  }
-
-  if (value === undefined) return "";
-
-  const comparisonOps = {
-    [JsonFilterOp.Equal]: "=",
-    [JsonFilterOp.NotEqual]: "!=",
-    [JsonFilterOp.GreaterThan]: ">",
-    [JsonFilterOp.LessThan]: "<",
-  };
-
-  if (comparisonOps[op])
-    return `AND ${feature} ${comparisonOps[op]} ${
-      dataType === "number" ? value : `'${value}'`
-    }`;
-
-  const stringOps = {
-    [JsonFilterOp.Contains]: `LIKE '%${value}%'`,
-    [JsonFilterOp.DoesNotContain]: `NOT LIKE '%${value}%'`,
-    [JsonFilterOp.StartsWith]: `LIKE '${value}%'`,
-    [JsonFilterOp.EndsWith]: `LIKE '%${value}'`,
-  };
-
-  if (stringOps[op]) return `AND ${feature} ${stringOps[op]}`;
-};
 
 function getUniqueEntities(
   entities_array: Array<[string[], string[]]>
@@ -260,7 +120,6 @@ function getUniqueEntities(
 
 type AnnotatedFeature = {
   featureId: string;
-  featureType: string;
   featureName: string;
   result:
     | {
@@ -269,7 +128,7 @@ type AnnotatedFeature = {
       }
     | {
         type: "success";
-        data: TypedDataMap[DataType];
+        data: TypedData;
       };
 };
 
@@ -279,7 +138,7 @@ function getAnnotatedFeatures(
 ) {
   const featureDefsMap = new Map<string, FeatureDef>();
   for (const featureDef of featureDefs) {
-    featureDefsMap.set(featureDef.featureId, featureDef);
+    featureDefsMap.set(featureDef.id, featureDef);
   }
 
   const annotatedFeatures: AnnotatedFeature[] = [];
@@ -289,15 +148,16 @@ function getAnnotatedFeatures(
       continue;
     }
 
+    const parsed = JSON.parse(value ?? "null");
+
     annotatedFeatures.push({
       featureId,
-      featureType: featureDef.featureType,
-      featureName: featureDef.featureName,
+      featureName: featureDef.name,
       result: error
         ? { type: "error", message: error }
         : {
             type: "success",
-            data: decodeTypedData(featureDef.dataType, value ?? ""),
+            data: getTypedData(featureDef.schema, parsed),
           },
     });
   }
@@ -305,20 +165,17 @@ function getAnnotatedFeatures(
   return annotatedFeatures;
 }
 
-async function getLatestFeatureDefs() {
-  const latestSnapshots = await prisma.nodeSnapshot.findMany({
-    distinct: ["nodeId"],
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      node: true,
-    },
+async function getLatestFeatureDefs(): Promise<FeatureDef[]> {
+  const result = await prisma.feature.findMany({
+    orderBy: { createdAt: "desc" },
   });
 
-  const featureDefs = latestSnapshots.map((snapshot) =>
-    getNodeDefFromSnapshot({ featureDefSnapshot: snapshot })
-  );
-
-  return featureDefs;
+  return result.map((f) => {
+    return {
+      id: f.id,
+      name: f.name,
+      description: f.description ?? undefined,
+      schema: f.schema as unknown as TSchema,
+    };
+  });
 }
