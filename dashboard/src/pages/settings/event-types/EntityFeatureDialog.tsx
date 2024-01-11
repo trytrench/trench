@@ -105,7 +105,7 @@ export default function EntityFeatureDialog({
         featureSchema: feature.dataType,
         valueAccessor: {
           nodeId: null,
-          paths: values.path.replace("input.event.data.", ""),
+          path: values.path.replace("input.event.data.", ""),
         },
       } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
     })
