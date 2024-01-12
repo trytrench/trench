@@ -97,7 +97,7 @@ export default function EntityFeatureDialog({
       type: NodeType.LogEntityFeature,
       returnSchema: {
         type: TypeName.Any,
-      } as NodeDefsMap[NodeType.LogEntityFeature]["returnSchema"],
+      },
       dependsOn: [],
       config: {
         featureId: feature.id,

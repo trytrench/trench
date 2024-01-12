@@ -68,7 +68,12 @@ export function EditEventFilters(props: EditEventFiltersProps) {
 
             {/* Type Filter */}
             <TypeSelectorSubItem
-              types={allEventTypes?.map((e) => e.type) ?? []}
+              types={
+                allEventTypes?.map((e) => ({
+                  id: e.type,
+                  name: e.type,
+                })) ?? []
+              }
               value={eventType ?? null}
               onChange={(type) => {
                 onChange({
