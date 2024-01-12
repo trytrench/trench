@@ -1,5 +1,4 @@
-import { Feature } from "@prisma/client";
-import { NodeDef, NodeDefsMap, NodeType } from "event-processing";
+import { FeatureDef, NodeDef, NodeDefsMap, NodeType } from "event-processing";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import {
@@ -21,7 +20,7 @@ import { api } from "~/utils/api";
 interface Props {
   eventTypeId: string;
   onSelectNode: (node: NodeDef) => void;
-  onSelectFeature: (node: NodeDef, feature: Feature) => void;
+  onSelectFeature: (node: NodeDef, feature: FeatureDef) => void;
   selectedFeatureIds: string[];
   selectedNodeIds: string[];
   children: React.ReactNode;
@@ -61,7 +60,7 @@ export default function NodeCombobox({
               {features
                 ?.filter(
                   (feature) =>
-                    feature.belongsTo[0]?.entityTypeId ===
+                    feature.entityTypeId ===
                     entityNode?.returnSchema?.entityType
                 )
                 .map((feature) => (

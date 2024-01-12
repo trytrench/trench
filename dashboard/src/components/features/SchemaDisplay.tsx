@@ -2,7 +2,10 @@ import { createDataType } from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import { NodeDep } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import {
+  FeatureDep,
+  NodeDep,
+} from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
 import { api } from "~/utils/api";
 
 interface SchemaDisplayProps {
@@ -51,12 +54,44 @@ export function useEventSchema(eventTypeId: string) {
   }, [eventType]);
 }
 
-export function useDepsSchema(eventTypeId: string, nodeDeps: NodeDep[]) {
+// TODO: Support object types
+export function useDepsSchema(
+  eventTypeId: string,
+  nodeDeps: NodeDep[],
+  featureDeps: FeatureDep[]
+) {
   const { data: nodeDefs } = api.nodeDefs.list.useQuery({
     eventTypeId,
   });
+  const { data: featureDefs } = api.features.list.useQuery();
 
-  const properties = useMemo(() => {
+  const featureProperties = useMemo(
+    () =>
+      featureDeps.reduce(
+        (acc, dep) => {
+          const featureDef = featureDefs?.find(
+            (def) => def.id === dep.featureId
+          );
+          if (!featureDef) return acc;
+
+          if (!acc[dep.nodeName]) {
+            acc[dep.nodeName] = { type: "object", properties: {} };
+          }
+
+          acc[dep.nodeName]!.properties[dep.featureName] = {
+            type: createDataType(featureDef.schema).toTypescript(),
+          };
+          return acc;
+        },
+        {} as Record<
+          string,
+          { type: string; properties: Record<string, unknown> }
+        >
+      ),
+    [featureDeps, featureDefs]
+  );
+
+  const nodeProperties = useMemo(() => {
     return nodeDeps.reduce(
       (acc, dep) => {
         const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
@@ -71,28 +106,67 @@ export function useDepsSchema(eventTypeId: string, nodeDeps: NodeDep[]) {
     );
   }, [nodeDeps, nodeDefs]);
 
-  return { type: "object", properties };
+  return {
+    type: "object",
+    properties: {
+      ...featureProperties,
+      ...nodeProperties,
+    },
+  };
 }
 
-export function useDepsTypes(eventTypeId: string, nodeDeps: NodeDep[]) {
+export function useDepsTypes(
+  eventTypeId: string,
+  nodeDeps: NodeDep[],
+  featureDeps: FeatureDep[]
+) {
   const { data: nodeDefs } = api.nodeDefs.list.useQuery({
     eventTypeId,
   });
+  const { data: featureDefs } = api.features.list.useQuery();
 
   return useMemo(() => {
-    const types = nodeDeps.reduce((acc, dep) => {
-      const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
-      if (!nodeDef) return acc;
+    let typeDef = "interface Dependencies {\n";
 
-      return (
-        acc +
-        `"${nodeDef.name}": ${createDataType(
-          nodeDef.returnSchema
-        ).toTypescript()};\n`
-      );
-    }, "");
-    return `interface Dependencies {\n${types}}`;
-  }, [nodeDeps, nodeDefs]);
+    const nodeNames = featureDeps.reduce(
+      (acc, dep) => {
+        const featureDef = featureDefs?.find((def) => def.id === dep.featureId);
+        if (!featureDef) return acc;
+
+        if (!acc[dep.nodeName]) acc[dep.nodeName] = [];
+
+        acc[dep.nodeName]!.push(
+          `"${dep.featureName}": ${createDataType(
+            featureDef.schema
+          ).toTypescript()}`
+        );
+        return acc;
+      },
+      {} as Record<string, string[]>
+    );
+
+    for (const nodeName in nodeNames) {
+      typeDef += `  "${nodeName}": {\n`;
+      typeDef +=
+        nodeNames[nodeName]
+          .map((featureName) => `    ${featureName}`)
+          .join(";\n") + ";\n";
+
+      typeDef += "  };\n";
+    }
+
+    for (const dep of nodeDeps) {
+      const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
+      if (!nodeDef) continue;
+
+      typeDef += `  "${nodeDef.name}": ${createDataType(
+        nodeDef.returnSchema
+      ).toTypescript()};\n`;
+    }
+    typeDef += "}";
+
+    return typeDef;
+  }, [nodeDefs, featureDefs, nodeDeps, featureDeps]);
 }
 
 type InfoType = {

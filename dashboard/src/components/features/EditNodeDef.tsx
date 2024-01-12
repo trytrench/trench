@@ -147,14 +147,17 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
   ).toTypescript()}>;`;
   const depsType = useDepsTypes(
     router.query.eventTypeId as string,
-    form.watch("nodeDeps")
+    form.watch("nodeDeps"),
+    form.watch("featureDeps")
   );
+  console.log(depsType);
 
   const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
   const deps = useDepsSchema(
     router.query.eventTypeId as string,
-    form.watch("nodeDeps")
+    form.watch("nodeDeps"),
+    form.watch("featureDeps")
   );
 
   const onCompileStatusChange = useCallback(
