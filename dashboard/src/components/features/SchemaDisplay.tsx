@@ -1,26 +1,26 @@
+import { createDataType } from "event-processing";
 import { run } from "json_typegen_wasm";
-import { merge } from "lodash";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
+import { NodeDep } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
 import { api } from "~/utils/api";
 
 interface SchemaDisplayProps {
-  eventTypes: Set<string>;
+  eventTypeId: string;
   onItemClick?: (path: string, name: string) => void;
   basePath?: string;
   baseName?: string;
   renderRightComponent?: (path: string) => React.ReactNode;
 }
 
-export function SchemaDisplay(props: SchemaDisplayProps) {
-  const {
-    eventTypes,
-    onItemClick,
-    basePath = "",
-    baseName = "",
-    renderRightComponent,
-  } = props;
-  const schemaObj = useEventSchema({ eventTypes });
+export function SchemaDisplay({
+  eventTypeId,
+  onItemClick,
+  basePath = "",
+  baseName = "",
+  renderRightComponent,
+}: SchemaDisplayProps) {
+  const schemaObj = useEventSchema(eventTypeId);
 
   return (
     <SchemaEntry
@@ -35,33 +35,64 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
 
 //
 
-function useEventSchema(props: { eventTypes: Set<string> }) {
-  const { eventTypes } = props;
-  const { data } = api.eventTypes.list.useQuery();
-
-  const applicableEventTypes = useMemo(() => {
-    return data?.filter((et) => eventTypes.has(et.id)) ?? [];
-  }, [data, eventTypes]);
-
-  // merge all the example events into one
-  // and then infer the schema from that
-  const schemaJSON = useMemo(() => {
-    const mergedEvent = merge(
-      {},
-      ...applicableEventTypes.map((et) => et.exampleEvent)
-    );
-
-    return run(
-      "Root",
-      JSON.stringify(mergedEvent),
-      JSON.stringify({ output_mode: "json_schema" })
-    );
-  }, [applicableEventTypes]);
+export function useEventSchema(eventTypeId: string) {
+  const { data: eventType } = api.eventTypes.get.useQuery({ id: eventTypeId });
 
   return useMemo(() => {
-    if (!schemaJSON) return {};
-    return JSON.parse(schemaJSON);
-  }, [schemaJSON]);
+    if (!eventType) return {};
+
+    return JSON.parse(
+      run(
+        "Root",
+        JSON.stringify(eventType.exampleEvent),
+        JSON.stringify({ output_mode: "json_schema" })
+      )
+    );
+  }, [eventType]);
+}
+
+export function useDepsSchema(eventTypeId: string, nodeDeps: NodeDep[]) {
+  const { data: nodeDefs } = api.nodeDefs.list.useQuery({
+    eventTypeId,
+  });
+
+  const properties = useMemo(() => {
+    return nodeDeps.reduce(
+      (acc, dep) => {
+        const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
+        if (!nodeDef) return acc;
+
+        acc[nodeDef.name] = {
+          type: createDataType(nodeDef.returnSchema).toTypescript(),
+        };
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }, [nodeDeps, nodeDefs]);
+
+  return { type: "object", properties };
+}
+
+export function useDepsTypes(eventTypeId: string, nodeDeps: NodeDep[]) {
+  const { data: nodeDefs } = api.nodeDefs.list.useQuery({
+    eventTypeId,
+  });
+
+  return useMemo(() => {
+    const types = nodeDeps.reduce((acc, dep) => {
+      const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
+      if (!nodeDef) return acc;
+
+      return (
+        acc +
+        `"${nodeDef.name}": ${createDataType(
+          nodeDef.returnSchema
+        ).toTypescript()};\n`
+      );
+    }, "");
+    return `interface Dependencies {\n${types}}`;
+  }, [nodeDeps, nodeDefs]);
 }
 
 type InfoType = {
@@ -77,7 +108,7 @@ interface SchemaEntryProps {
   renderRightComponent?: (path: string) => React.ReactNode;
 }
 
-function SchemaEntry(props: SchemaEntryProps) {
+export function SchemaEntry(props: SchemaEntryProps) {
   const { name, path, info, onItemClick, renderRightComponent } = props;
 
   const [collapsed, setCollapsed] = useState(false);

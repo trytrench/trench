@@ -268,7 +268,7 @@ const Page: NextPageWithLayout = () => {
         <SchemaDisplay
           basePath="input.event.data"
           baseName="event.data"
-          eventTypes={new Set([router.query.eventTypeId as string])}
+          eventTypeId={router.query.eventTypeId as string}
           renderRightComponent={(path) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

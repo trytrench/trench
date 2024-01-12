@@ -1,12 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeType, TypeName, type NodeDef } from "event-processing";
-import { Pencil, Save } from "lucide-react";
+import { TypeName, createDataType, type NodeDef } from "event-processing";
+import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { EditComputed } from "~/components/features/feature-types/EditComputed";
 import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import {
   Form,
   FormControl,
@@ -24,10 +24,12 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import AssignEntities from "~/pages/settings/event-types/AssignEntities";
 import {
   FeatureDep,
   NodeDepSelector,
 } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import { useEventTypes } from "../ts-editor/useEventTypes";
 import {
   Dialog,
   DialogContent,
@@ -37,8 +39,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { Plus } from "lucide-react";
-import AssignEntities from "~/pages/settings/event-types/AssignEntities";
+import {
+  SchemaDisplay,
+  SchemaEntry,
+  useDepsSchema,
+  useDepsTypes,
+} from "./SchemaDisplay";
+import {
+  CodeEditor,
+  CompileStatus,
+  CompileStatusMessage,
+} from "./shared/CodeEditor";
+
+const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 const DATA_TYPE_OPTIONS = [
   {
@@ -117,6 +130,55 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
   );
 
   const isEditing = useMemo(() => !!initialNodeDef, [initialNodeDef]);
+
+  const [compileStatus, setCompileStatus] = useState<CompileStatus>({
+    status: "empty",
+    code: "",
+  });
+
+  const [showSchema, setShowSchema] = useState(false);
+
+  const inputType = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
+  const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
+    // TODO: Fix
+    { type: form.watch("dataType") }
+  ).toTypescript()}>;`;
+  const depsType = useDepsTypes(
+    router.query.eventTypeId as string,
+    form.watch("nodeDeps")
+  );
+
+  const eventTypes = useEventTypes([router.query.eventTypeId as string]);
+
+  const deps = useDepsSchema(
+    router.query.eventTypeId as string,
+    form.watch("nodeDeps")
+  );
+
+  const onCompileStatusChange = useCallback(
+    (compileStatus: CompileStatus) => {
+      setCompileStatus(compileStatus);
+
+      if (compileStatus.status === "success") {
+        setIsCodeValid(true);
+        setConfig({
+          ...config,
+          tsCode: compileStatus.code,
+          compiledJs: compileStatus.compiled
+            .slice(compileStatus.compiled.indexOf("async"))
+            .replace(/[;\n]+$/, ""),
+        });
+      } else {
+        setConfig({
+          ...config,
+          tsCode: compileStatus.code,
+          compiledJs: undefined,
+        });
+        setIsCodeValid(false);
+      }
+    },
+    [setCompileStatus]
+  );
 
   return (
     <div>
@@ -277,26 +339,44 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
       <Separator className="my-8" />
 
-      <EditComputed
-        nodeDef={
-          initialNodeDef ?? {
-            returnSchema: {
-              type: form.watch("dataType"),
-            },
-            config: {
-              code: "",
-              depsMap: {},
-            },
-          }
-        }
-        onConfigChange={setConfig}
-        onValidChange={setIsCodeValid}
-      />
+      <div className="flex mb-4 items-center">
+        <div className="text-emphasis-foreground text-md">Code</div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-4"
+          onClick={() => setShowSchema(!showSchema)}
+        >
+          Schema
+          <ChevronsUpDown className="w-4 h-4 ml-1" />
+        </Button>
+        <div className="ml-auto" />
+        <CompileStatusMessage compileStatus={compileStatus} />
+      </div>
+
+      {showSchema && (
+        <Card className="h-96 overflow-auto p-6 mb-4">
+          <SchemaDisplay
+            basePath="input.event.data"
+            baseName="event.data"
+            eventTypeId={router.query.eventTypeId as string}
+          />
+          <SchemaEntry name="deps" path="input.deps" info={deps} />
+        </Card>
+      )}
+
+      <div className="h-96">
+        <CodeEditor
+          typeDefs={[depsType, eventTypes, inputType, functionType].join(
+            "\n\n"
+          )}
+          initialCode={config?.tsCode ?? FUNCTION_TEMPLATE}
+          onCompileStatusChange={onCompileStatusChange}
+        />
+      </div>
     </div>
   );
 }
-
-//
 
 function RenameDialog(props: {
   name?: string;
