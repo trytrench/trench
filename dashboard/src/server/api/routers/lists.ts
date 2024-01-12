@@ -3,7 +3,6 @@ import {
   FeatureDef,
   TSchema,
   TypedData,
-  createDataType,
   getNodeDefFromSnapshot,
   getTypedData,
 } from "event-processing";
@@ -157,7 +156,7 @@ function getAnnotatedFeatures(
         ? { type: "error", message: error }
         : {
             type: "success",
-            data: getTypedData(featureDef.schema, parsed),
+            data: getTypedData(parsed, featureDef.schema),
           },
     });
   }
@@ -176,6 +175,7 @@ async function getLatestFeatureDefs(): Promise<FeatureDef[]> {
       name: f.name,
       description: f.description ?? undefined,
       schema: f.schema as unknown as TSchema,
+      entityTypeId: f.entityTypeId,
     };
   });
 }

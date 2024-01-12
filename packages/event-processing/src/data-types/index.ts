@@ -83,11 +83,18 @@ export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
   ? SchemaTypeMap[T["type"]]
   : never;
 
+function throwParseError(type: TypeName, input: any): never {
+  throw new Error(`Invalid input for ${type} type: ${JSON.stringify(input)}`);
+}
+
 // Base class for data types
 abstract class IDataType<TS extends TSchema> {
   constructor(public schema: TS) {}
   abstract parse(input: any): InferSchemaType<TS>;
   abstract toTypescript(): string;
+  throwParseError(input: any): never {
+    throwParseError(this.schema.type, input);
+  }
 }
 
 // Implementations for each data type
@@ -104,8 +111,7 @@ class StringDataType extends IDataType<TStringSchema> {
 
 class BooleanDataType extends IDataType<TBooleanSchema> {
   parse(input: any): boolean {
-    if (typeof input !== "boolean")
-      throw new Error("Invalid input for boolean type");
+    if (typeof input !== "boolean") this.throwParseError(input);
     return input;
   }
   toTypescript(): string {
@@ -115,8 +121,7 @@ class BooleanDataType extends IDataType<TBooleanSchema> {
 
 class Float64DataType extends IDataType<TFloat64Schema> {
   parse(input: any): number {
-    if (typeof input !== "number")
-      throw new Error("Invalid input for float64 type");
+    if (typeof input !== "number") this.throwParseError(input);
     return input;
   }
   toTypescript(): string {
@@ -126,8 +131,7 @@ class Float64DataType extends IDataType<TFloat64Schema> {
 
 class Int64DataType extends IDataType<TInt64Schema> {
   parse(input: any): number {
-    if (typeof input !== "number")
-      throw new Error("Invalid input for int64 type");
+    if (typeof input !== "number") this.throwParseError(input);
     return input;
   }
   toTypescript(): string {
@@ -137,9 +141,12 @@ class Int64DataType extends IDataType<TInt64Schema> {
 
 class LocationDataType extends IDataType<TLocationSchema> {
   parse(input: any): { lat: number; lng: number } {
-    if (typeof input !== "object" || !("lat" in input) || !("lng" in input)) {
-      throw new Error("Invalid input for location type");
-    }
+    if (typeof input !== "object") this.throwParseError(input);
+    if (!("lat" in input) || typeof input.lat !== "number")
+      this.throwParseError(input);
+    if (!("lng" in input) || typeof input.lng !== "number")
+      this.throwParseError(input);
+
     return { lat: input.lat, lng: input.lng };
   }
   toTypescript(): string {
@@ -151,8 +158,11 @@ class EntityDataType<T extends string = string> extends IDataType<
   TEntitySchema<T>
 > {
   parse(input: any): Entity {
-    if (typeof input !== "object" || !("id" in input)) {
-      throw new Error("Invalid input for entity type");
+    if (typeof input !== "object") {
+      this.throwParseError(input);
+    }
+    if (!("id" in input) || typeof input.id !== "string") {
+      this.throwParseError(input);
     }
     return input;
   }
@@ -171,7 +181,7 @@ class ArrayDataType<TItems extends TSchema> extends IDataType<
   TArraySchema<TItems>
 > {
   parse(input: any): InferSchemaType<TArraySchema<TItems>> {
-    if (!Array.isArray(input)) throw new Error("Invalid input for array type");
+    if (!Array.isArray(input)) this.throwParseError(input);
     return input.map((item) => createDataType(this.schema.items).parse(item));
   }
   toTypescript(): string {
@@ -184,6 +194,7 @@ class ObjectDataType<TProps extends Record<string, TSchema>> extends IDataType<
 > {
   parse(input: any) {
     const result: Record<string, any> = {};
+    if (typeof input !== "object") this.throwParseError(input);
     for (const key in this.schema.properties) {
       result[key] = createDataType(this.schema.properties[key]!).parse(
         input[key]
@@ -294,7 +305,7 @@ export function getNamedTS(schema: TSchema, name = "Type"): string {
 
 export type TypedData<T extends TSchema = TSchema> = {
   schema: T;
-  data: InferSchemaType<T>;
+  value: InferSchemaType<T>;
 };
 
 export function getTypedData<T extends TSchema = TSchema>(
@@ -303,6 +314,6 @@ export function getTypedData<T extends TSchema = TSchema>(
 ): TypedData<T> {
   return {
     schema,
-    data: createDataType(schema).parse(data),
+    value: createDataType(schema).parse(data),
   };
 }

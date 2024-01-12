@@ -90,8 +90,6 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     },
   });
 
-  console.log("Lmao");
-  console.log(form.getValues());
   const router = useRouter();
 
   const [config, setConfig] = useState(

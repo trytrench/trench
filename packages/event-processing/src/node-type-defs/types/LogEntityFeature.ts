@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
-import { TypeName, createDataType } from "../../data-types";
+import { TSchema, TypeName, createDataType } from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
@@ -11,7 +11,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setConfigSchema(
     z.object({
       featureId: z.string(),
-      featureSchema: z.any(),
+      featureSchema: z.record(z.any()),
       entityAppearanceNodeId: z.string(),
       valueAccessor: z.object({
         nodeId: z.string().nullable(),
@@ -47,10 +47,6 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         : event.data;
       const value = path ? get(obj, path) : obj;
 
-      const topLevelType = featureSchema.type as TypeName;
-      const dataType = createDataType(featureSchema);
-      const parsedValue = dataType.parse(value);
-
       const assignToEntity = await getDependency({
         nodeId: entityAppearanceNodeId,
         expectedSchema: {
@@ -58,7 +54,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         },
       });
 
-      const rowToSave = {
+      const baseData = {
         engine_id: engineId,
         created_at: getUnixTime(new Date()),
         event_type: event.type,
@@ -69,19 +65,41 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         entity_type: [assignToEntity.type],
         entity_id: [assignToEntity.id],
         data_type: featureSchema.type,
-        value: JSON.stringify(parsedValue),
-        value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
-        value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
-        value_String: topLevelType === TypeName.String ? parsedValue : null,
-        value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
-        error: null,
         is_deleted: 0,
       };
+      try {
+        const topLevelType = featureSchema.type as TypeName;
+        const dataType = createDataType(featureSchema as TSchema);
+        const parsedValue = dataType.parse(value);
 
-      return {
-        savedStoreRows: [{ table: StoreTable.Features, row: rowToSave }],
-        data: parsedValue,
-      };
+        const rowToSave = {
+          ...baseData,
+          value: JSON.stringify(parsedValue),
+          value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
+          value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
+          value_String: topLevelType === TypeName.String ? parsedValue : null,
+          value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
+          error: null,
+        };
+        return {
+          savedStoreRows: [{ table: StoreTable.Features, row: rowToSave }],
+          data: parsedValue,
+        };
+      } catch (e: any) {
+        const rowToSave = {
+          ...baseData,
+          value: null,
+          value_Int64: null,
+          value_Float64: null,
+          value_String: null,
+          value_Bool: null,
+          error: e.message,
+        };
+        return {
+          savedStoreRows: [{ table: StoreTable.Features, row: rowToSave }],
+          data: null,
+        };
+      }
     };
   })
   .build();
