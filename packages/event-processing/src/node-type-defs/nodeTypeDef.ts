@@ -46,7 +46,6 @@ export type NodeTypeDef<
 > = {
   nodeType: TNodeType;
   configSchema: TConfigSchema;
-  returnSchema: TReturn;
   createResolver: (options: {
     nodeDef: NodeDef<TNodeType, TReturn, z.infer<TConfigSchema>>;
     context: TContext;

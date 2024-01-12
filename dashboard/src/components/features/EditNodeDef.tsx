@@ -1,5 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TypeName, createDataType, type NodeDef } from "event-processing";
+import {
+  TSchema,
+  TypeName,
+  createDataType,
+  type NodeDef,
+} from "event-processing";
 import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useMemo, useState } from "react";
@@ -16,19 +21,13 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import AssignEntities from "~/pages/settings/event-types/AssignEntities";
 import {
   FeatureDep,
   NodeDepSelector,
 } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import { SchemaBuilder } from "../SchemaBuilder";
 import { useEventTypes } from "../ts-editor/useEventTypes";
 import {
   Dialog,
@@ -74,7 +73,7 @@ const DATA_TYPE_OPTIONS = [
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  dataType: z.nativeEnum(TypeName),
+  schema: z.object({}),
   featureDeps: z.array(
     z.object({
       featureId: z.string(),
@@ -102,12 +101,16 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dataType: TypeName.String,
       featureDeps: [],
+      schema: {
+        type: TypeName.String,
+      },
       nodeDeps: [],
     },
   });
 
+  console.log("Lmao");
+  console.log(form.getValues());
   const router = useRouter();
 
   const [config, setConfig] = useState(
@@ -242,28 +245,18 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
             <FormField
               control={form.control}
-              name="dataType"
+              name="schema"
               render={({ field }) => (
                 <FormItem className="w-[16rem] mt-4">
                   <FormLabel>Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an entity" />
-                      </SelectTrigger>
-                    </FormControl>
-
-                    <SelectContent>
-                      {DATA_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div>
+                    <SchemaBuilder
+                      value={field.value as TSchema}
+                      onChange={(newSchema) => {
+                        field.onChange(newSchema);
+                      }}
+                    />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

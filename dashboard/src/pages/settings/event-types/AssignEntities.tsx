@@ -1,5 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeDef, NodeDefsMap, NodeType, TypeName } from "event-processing";
+import {
+  FeatureDef,
+  NodeDef,
+  NodeDefsMap,
+  NodeType,
+  TSchema,
+  TypeName,
+} from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useMemo, useState } from "react";
@@ -46,12 +53,12 @@ import { Separator } from "~/components/ui/separator";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
 import EntityFeatureDialog from "./EntityFeatureDialog";
-import { Feature } from "@prisma/client";
+import { SchemaBuilder } from "../../../components/SchemaBuilder";
 
 const featureSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
-  dataType: z.nativeEnum(TypeName),
+  schema: z.object({}),
 });
 
 const FeatureDialog = ({
@@ -61,7 +68,7 @@ const FeatureDialog = ({
   onSubmit,
 }: {
   title: string;
-  entityTypeId: string;
+  entityTypeId?: string;
   children: React.ReactNode;
   onSubmit: (values: z.infer<typeof featureSchema>) => void;
 }) => {
@@ -71,7 +78,9 @@ const FeatureDialog = ({
     defaultValues: {
       name: "",
       entityTypeId,
-      dataType: TypeName.String,
+      schema: {
+        type: TypeName.String,
+      },
     },
   });
   const { data: entityTypes } = api.entityTypes.list.useQuery();
@@ -85,11 +94,13 @@ const FeatureDialog = ({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((values) => {
-              onSubmit(values);
-              setOpen(false);
-              form.reset();
-            })}
+            onSubmit={
+              void form.handleSubmit((values) => {
+                onSubmit(values);
+                setOpen(false);
+                form.reset();
+              })
+            }
           >
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -143,28 +154,16 @@ const FeatureDialog = ({
               <div className="grid grid-cols-4 items-center gap-4">
                 <FormField
                   control={form.control}
-                  name="dataType"
+                  name="schema"
                   render={({ field }) => (
                     <FormItem className="col-span-3">
                       <FormLabel>Data Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a data type" />
-                          </SelectTrigger>
-                        </FormControl>
-
-                        <SelectContent>
-                          {Object.values(TypeName).map((dataType) => (
-                            <SelectItem key={dataType} value={dataType}>
-                              {dataType}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div>
+                        <SchemaBuilder
+                          value={field.value as TSchema}
+                          onChange={field.onChange}
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -236,7 +235,7 @@ const EntityCard = ({
 };
 
 interface Props {
-  onAssign?: (node: NodeDef, feature: Feature) => void;
+  onAssign?: (node: NodeDef, feature: FeatureDef) => void;
 }
 
 export default function AssignEntities({ onAssign }: Props) {
@@ -278,8 +277,8 @@ export default function AssignEntities({ onAssign }: Props) {
             {features
               ?.filter(
                 (feature) =>
-                  feature.belongsTo[0]?.entityTypeId ===
-                    node.returnSchema.entityType && featureToNodeMap[feature.id]
+                  feature.entityTypeId === node.returnSchema.entityType &&
+                  featureToNodeMap[feature.id]
               )
               .map((feature) => (
                 <FeatureCard
@@ -297,8 +296,7 @@ export default function AssignEntities({ onAssign }: Props) {
             {features
               ?.filter(
                 (feature) =>
-                  feature.belongsTo[0]?.entityTypeId ===
-                    node.returnSchema?.entityType &&
+                  feature.entityTypeId === node.returnSchema?.entityType &&
                   !featureToNodeMap[feature.id]
               )
               .map((feature) => (
@@ -336,9 +334,7 @@ export default function AssignEntities({ onAssign }: Props) {
                 createFeature({
                   name: values.name,
                   entityTypeId: values.entityTypeId,
-                  dataType: {
-                    type: values.dataType,
-                  },
+                  schema: values.schema,
                 })
                   .then(() => {
                     toast({

@@ -58,6 +58,24 @@ export const featureFiltersZod = z.union([
     dataType: z.literal(TypeName.Object),
     value: z.object({}),
   }),
+  z.object({
+    featureId: z.string(),
+    featureName: z.string().optional(),
+    dataType: z.literal(TypeName.Array),
+    value: z.any(),
+  }),
+  z.object({
+    featureId: z.string(),
+    featureName: z.string().optional(),
+    dataType: z.literal(TypeName.Any),
+    value: z.any(),
+  }),
+  z.object({
+    featureId: z.string(),
+    featureName: z.string().optional(),
+    dataType: z.literal(TypeName.Location),
+    value: z.any(),
+  }),
 ]);
 
 export const genericFiltersZod = z

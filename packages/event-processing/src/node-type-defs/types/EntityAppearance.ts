@@ -18,9 +18,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
       }),
     })
   )
-  .setReturnSchema({
-    type: TypeName.Entity,
-  })
+  .setReturnSchema(TypeName.Entity)
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
       // Access node value

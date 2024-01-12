@@ -8,6 +8,7 @@ import {
 } from "event-processing/src/data-types";
 import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
+import { SchemaBuilder } from "../components/SchemaBuilder";
 
 enum EntityType {
   Card = "card_type_id",
@@ -144,10 +145,15 @@ function ShowSchema({ schema }: { schema: TSchema }) {
 export default function Page() {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
 
+  const [schema, setSchema] = useState<TSchema>({
+    type: TypeName.Any,
+  });
   return (
-    <div className="text-sm p-4 flex flex-col gap-4">
-      <ShowSchema schema={cardEntity.schema} />
-      <ShowSchema schema={location.schema} />
+    <div className="text-sm p-4 flex flex-col items-start gap-4">
+      {/* <ShowSchema schema={cardEntity.schema} />
+      <ShowSchema schema={location.schema} /> */}
+      <SchemaBuilder value={schema} onChange={setSchema} />
+      <ShowSchema schema={schema} />
     </div>
   );
 }

@@ -47,11 +47,11 @@ export const nodeDefsRouter = createTRPCRouter({
         eventTypes: z.array(z.string()),
         dependsOn: z.array(z.string()),
         config: z.record(z.any()),
-        returnSchema: z.record(z.string()),
+        returnSchema: z.object({}),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { configSchema, returnSchema } = NODE_TYPE_DEFS[input.type];
+      const { configSchema } = NODE_TYPE_DEFS[input.type];
       configSchema.parse(input.config);
 
       const nodeDef = await ctx.prisma.node.create({ data: input });

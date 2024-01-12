@@ -1,4 +1,3 @@
-import { TypeName, type FeatureDef } from "event-processing";
 import {
   BoxIcon,
   BracesIcon,
@@ -24,6 +23,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "../ui/dropdown-menu";
+import { FeatureDef, TypeName } from "event-processing";
 
 type FeatureFilter = NonNullable<NonNullable<EventFilters>["features"]>[number];
 
@@ -34,6 +34,9 @@ const DATA_TYPE_TO_ICON = {
   [TypeName.Boolean]: ToggleLeft,
   [TypeName.Entity]: BoxIcon,
   [TypeName.Object]: BracesIcon,
+  [TypeName.Array]: BracesIcon,
+  [TypeName.Any]: TypeIcon,
+  [TypeName.Location]: TypeIcon,
 } satisfies Record<TypeName, LucideIcon>;
 
 export function AddFeatureFilterSubItem(props: {
@@ -53,23 +56,23 @@ export function AddFeatureFilterSubItem(props: {
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup>
               {featureDefs.map((fDef) => {
-                const DataTypeIcon = DATA_TYPE_TO_ICON[fDef.dataType];
+                const TypeIcon = DATA_TYPE_TO_ICON[fDef.schema.type];
                 return (
                   <CommandItem
-                    key={fDef.featureId}
-                    value={fDef.featureId}
+                    key={fDef.id}
+                    value={fDef.id}
                     className="pl-8"
                     onSelect={() => {
                       onAdd({
-                        featureId: fDef.featureId,
-                        dataType: fDef.dataType,
-                        featureName: fDef.featureName,
+                        featureId: fDef.id,
+                        dataType: fDef.schema.type,
+                        featureName: fDef.name,
                         value: {},
                       });
                     }}
                   >
-                    <DataTypeIcon className="w-4 h-4 absolute left-2 top-2" />
-                    {fDef.featureName}
+                    <TypeIcon className="w-4 h-4 absolute left-2 top-2" />
+                    {fDef.name}
                   </CommandItem>
                 );
               })}

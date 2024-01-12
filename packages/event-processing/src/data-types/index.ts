@@ -13,6 +13,11 @@ export enum TypeName {
   Any = "Any",
 }
 
+export type Entity = {
+  type: string;
+  id: string;
+};
+
 interface TSchemaBase {
   type: TypeName;
 }
@@ -64,7 +69,7 @@ type SchemaTypeMap = {
   [TypeName.Int64]: number;
   [TypeName.String]: string;
   [TypeName.Location]: { lat: number; lng: number };
-  [TypeName.Entity]: { type: string; id: string };
+  [TypeName.Entity]: Entity;
   [TypeName.Array]: any[]; // Placeholder, will be refined later
   [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
   [TypeName.Any]: any; // Placeholder, will be refined later
@@ -145,7 +150,7 @@ class LocationDataType extends IDataType<TLocationSchema> {
 class EntityDataType<T extends string = string> extends IDataType<
   TEntitySchema<T>
 > {
-  parse(input: any): { type: T; id: string } {
+  parse(input: any): Entity {
     if (typeof input !== "object" || !("id" in input)) {
       throw new Error("Invalid input for entity type");
     }
@@ -206,28 +211,56 @@ class AnyDataType extends IDataType<TAnySchema> {
   }
 }
 
-// Registry and Factory Function
-const DATA_TYPES_REGISTRY = {
-  [TypeName.String]: StringDataType,
-  [TypeName.Boolean]: BooleanDataType,
-  [TypeName.Float64]: Float64DataType,
-  [TypeName.Int64]: Int64DataType,
-  [TypeName.Location]: LocationDataType,
-  [TypeName.Entity]: EntityDataType,
-  [TypeName.Object]: ObjectDataType,
-  [TypeName.Array]: ArrayDataType,
-  [TypeName.Any]: AnyDataType,
-} satisfies {
-  [K in TypeName]: new (schema: any) => IDataType<any>;
+type RegistryConfig = {
+  [K in TypeName]: {
+    type: new (schema: any) => IDataType<any>;
+    defaultSchema: Extract<TSchema, { type: K }>;
+  };
 };
 
-const NORM_REGISTRY: {
-  [K in TypeName]: new (schema: any) => IDataType<any>;
-} = DATA_TYPES_REGISTRY;
+// Registry and Factory Function
+export const DATA_TYPES_REGISTRY = {
+  [TypeName.String]: {
+    type: StringDataType,
+    defaultSchema: { type: TypeName.String },
+  },
+  [TypeName.Boolean]: {
+    type: BooleanDataType,
+    defaultSchema: { type: TypeName.Boolean },
+  },
+  [TypeName.Float64]: {
+    type: Float64DataType,
+    defaultSchema: { type: TypeName.Float64 },
+  },
+  [TypeName.Int64]: {
+    type: Int64DataType,
+    defaultSchema: { type: TypeName.Int64 },
+  },
+  [TypeName.Location]: {
+    type: LocationDataType,
+    defaultSchema: { type: TypeName.Location },
+  },
+  [TypeName.Entity]: {
+    type: EntityDataType,
+    defaultSchema: { type: TypeName.Entity },
+  },
+  [TypeName.Array]: {
+    type: ArrayDataType,
+    defaultSchema: { type: TypeName.Array, items: { type: TypeName.Any } },
+  },
+  [TypeName.Object]: {
+    type: ObjectDataType,
+    defaultSchema: { type: TypeName.Object, properties: {} },
+  },
+  [TypeName.Any]: {
+    type: AnyDataType,
+    defaultSchema: { type: TypeName.Any },
+  },
+} satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
 type DataTypesMap = {
-  [K in TypeName]: InstanceType<DataTypesConstructorMap[K]>;
+  [K in TypeName]: InstanceType<DataTypesConstructorMap[K]["type"]>;
 };
 
 export type TSchema =
@@ -242,7 +275,8 @@ export type TSchema =
   | TAnySchema;
 
 export function createDataType<T extends TSchema>(schema: T): IDataType<T> {
-  const DataType = NORM_REGISTRY[schema.type];
+  const registry: RegistryConfig = DATA_TYPES_REGISTRY;
+  const DataType = registry[schema.type]?.type;
   if (!DataType)
     throw new Error(`No data type registered for type: ${schema.type}`);
   return new DataType(schema) as IDataType<T>;
@@ -258,11 +292,17 @@ export function getNamedTS(schema: TSchema, name = "Type"): string {
   return `type ${name} = ${createDataType(schema).toTypescript()}`;
 }
 
-// export type TypedDataMap = {
-//   [K in TypeName]: {
-//     type: K;
-//     data: InferSchemaType<{ type: K }>;
-//   };
-// };
+export type TypedData<T extends TSchema = TSchema> = {
+  schema: T;
+  data: InferSchemaType<T>;
+};
 
-// export type TypedData = TypedDataMap[TypeName];
+export function getTypedData<T extends TSchema = TSchema>(
+  data: any,
+  schema: T
+): TypedData<T> {
+  return {
+    schema,
+    data: createDataType(schema).parse(data),
+  };
+}

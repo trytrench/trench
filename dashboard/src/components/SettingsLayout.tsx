@@ -49,7 +49,6 @@ export default function SettingsLayout({ children }: Props) {
           </div>
         </div>
       </div>
-      <Toaster />
     </div>
   );
 }

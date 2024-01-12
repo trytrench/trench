@@ -18,9 +18,6 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
     set.add(config.entityAppearanceNodeId);
     return set;
   })
-  .setReturnSchema({
-    type: TypeName.Any,
-  })
   .setContextType<{ clickhouse: ClickhouseClient }>()
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency }) => {
