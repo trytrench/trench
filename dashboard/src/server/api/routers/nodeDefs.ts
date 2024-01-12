@@ -1,8 +1,17 @@
 import { GlobalStateKey } from "databases";
 import { NODE_TYPE_DEFS, NodeDefsMap, NodeType } from "event-processing";
-import { createDataType } from "event-processing/src/data-types";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+
+export const nodeDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.nativeEnum(NodeType),
+  eventTypes: z.array(z.string()),
+  dependsOn: z.array(z.string()),
+  config: z.record(z.any()),
+  returnSchema: z.record(z.any()),
+});
 
 export const nodeDefsRouter = createTRPCRouter({
   get: protectedProcedure
@@ -40,16 +49,7 @@ export const nodeDefsRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .input(
-      z.object({
-        name: z.string(),
-        type: z.nativeEnum(NodeType),
-        eventTypes: z.array(z.string()),
-        dependsOn: z.array(z.string()),
-        config: z.record(z.any()),
-        returnSchema: z.record(z.any()),
-      })
-    )
+    .input(nodeDefSchema.omit({ id: true }))
     .mutation(async ({ ctx, input }) => {
       const { configSchema } = NODE_TYPE_DEFS[input.type];
       configSchema.parse(input.config);

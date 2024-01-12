@@ -4,6 +4,7 @@ import {
   TypeName,
   createDataType,
   type NodeDef,
+  NodeType,
 } from "event-processing";
 import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -52,23 +53,34 @@ import {
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
+// TODO: Move to separate file
+export const featureDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  schema: z.record(z.unknown()),
+  entityTypeId: z.string(),
+});
+
+export const nodeDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.nativeEnum(NodeType),
+  eventTypes: z.array(z.string()),
+  dependsOn: z.array(z.string()),
+  config: z.record(z.any()),
+  returnSchema: z.record(z.any()),
+});
+
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   schema: z.record(z.any()),
   featureDeps: z.array(
     z.object({
-      featureId: z.string(),
-      featureName: z.string(),
-      nodeId: z.string(),
-      nodeName: z.string(),
+      feature: featureDefSchema,
+      node: nodeDefSchema,
     })
   ),
-  nodeDeps: z.array(
-    z.object({
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
+  nodeDeps: z.array(nodeDefSchema),
 });
 
 interface Props {
@@ -90,8 +102,6 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     },
   });
 
-  console.log("Lmao");
-  console.log(form.getValues());
   const router = useRouter();
 
   const [config, setConfig] = useState(
@@ -127,19 +137,13 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     form.watch("schema")
   ).toTypescript()}>;`;
   const depsType = useDepsTypes(
-    router.query.eventTypeId as string,
     form.watch("nodeDeps"),
     form.watch("featureDeps")
   );
-  console.log(depsType);
 
   const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
-  const deps = useDepsSchema(
-    router.query.eventTypeId as string,
-    form.watch("nodeDeps"),
-    form.watch("featureDeps")
-  );
+  const deps = useDepsSchema(form.watch("nodeDeps"), form.watch("featureDeps"));
 
   const onCompileStatusChange = useCallback(
     (compileStatus: CompileStatus) => {
@@ -267,15 +271,15 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <div className="flex items-center space-x-2 mt-2">
         {assignedToFeatures.map((featureDep) => (
           <FeatureDep
-            key={featureDep.featureId + featureDep.nodeId}
-            nodeName={featureDep.nodeName}
-            featureName={featureDep.featureName}
+            key={featureDep.feature.id + featureDep.node.id}
+            nodeName={featureDep.node.name}
+            featureName={featureDep.feature.name}
             onDelete={() => {
               setAssignedToFeatures(
                 assignedToFeatures.filter(
                   (dep) =>
-                    dep.nodeId !== featureDep.nodeId ||
-                    dep.featureId !== featureDep.featureId
+                    dep.node.id !== featureDep.node.id ||
+                    dep.feature.id !== featureDep.feature.id
                 )
               );
             }}
@@ -292,12 +296,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               onAssign={(node, feature) => {
                 setAssignedToFeatures([
                   ...assignedToFeatures,
-                  {
-                    featureId: feature.id,
-                    featureName: feature.name,
-                    nodeId: node.id,
-                    nodeName: node.name,
-                  },
+                  { node, feature },
                 ]);
                 setAssignDialogOpen(false);
               }}

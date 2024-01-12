@@ -31,7 +31,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import AssignEntities from "../../AssignEntities";
-import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
+import { FeatureDep, NodeDepSelector } from "./NodeDepSelector";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
@@ -84,12 +84,12 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   const [countUniqueFeatureDeps, setCountUniqueFeatureDeps] = useState<
     FeatureDep[]
   >([]);
-  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDep[]>([]);
+  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDef[]>([]);
 
   const [countByFeatureDeps, setCountByFeatureDeps] = useState<FeatureDep[]>(
     []
   );
-  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDep[]>([]);
+  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDef[]>([]);
 
   const [conditionNode, setConditionNode] = useState(null);
 
@@ -175,9 +175,9 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                   name: form.getValues("name"),
                   config: {
                     timeWindowMs: 1000 * 60 * 60,
-                    countByNodeIds: countByNodeDeps.map((dep) => dep.nodeId),
+                    countByNodeIds: countByNodeDeps.map((dep) => dep.id),
                     countUniqueNodeIds: countUniqueNodeDeps.map(
-                      (dep) => dep.nodeId
+                      (dep) => dep.id
                     ),
                   } as Partial<NodeDefsMap[NodeType.UniqueCounter]["config"]>,
                 },
@@ -216,15 +216,15 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
           <div className="flex items-center space-x-2 mt-2">
             {assignedToFeatures.map((featureDep) => (
               <FeatureDep
-                key={featureDep.featureId + featureDep.nodeId}
-                nodeName={featureDep.nodeName}
-                featureName={featureDep.featureName}
+                key={featureDep.feature.id + featureDep.node.id}
+                nodeName={featureDep.node.name}
+                featureName={featureDep.feature.name}
                 onDelete={() => {
                   setAssignedToFeatures(
                     assignedToFeatures.filter(
                       (dep) =>
-                        dep.nodeId !== featureDep.nodeId ||
-                        dep.featureId !== featureDep.featureId
+                        dep.node.id !== featureDep.node.id ||
+                        dep.feature.id !== featureDep.feature.id
                     )
                   );
                 }}
@@ -249,12 +249,7 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                   onAssign={(node, feature) => {
                     setAssignedToFeatures([
                       ...assignedToFeatures,
-                      {
-                        featureId: feature.id,
-                        featureName: feature.name,
-                        nodeId: node.id,
-                        nodeName: node.name,
-                      },
+                      { node, feature },
                     ]);
                     setAssignDialogOpen(false);
                   }}
