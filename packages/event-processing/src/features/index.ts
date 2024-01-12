@@ -5,4 +5,5 @@ export type FeatureDef = {
   name: string;
   description?: string;
   schema: TSchema;
+  entityTypeId: string;
 };

@@ -1,7 +1,7 @@
 // For the feature editor: name, type, and import alias.
 // These properties are common to all feature types.
 
-import { NodeDef, createDataType } from "event-processing";
+import { NodeDef, TSchema, createDataType } from "event-processing";
 import { ChevronsUpDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
@@ -105,7 +105,7 @@ function EditComputed({ nodeDef, onConfigChange, onValidChange }: Props) {
 export { EditComputed };
 
 function usePrefix(
-  returnSchema: Record<string, unknown>,
+  returnSchema: TSchema,
   dependencies: Record<string, string>
 ) {
   // const { dataType, dependencies } = props;

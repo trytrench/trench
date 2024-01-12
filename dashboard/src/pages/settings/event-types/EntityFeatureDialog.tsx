@@ -102,7 +102,7 @@ export default function EntityFeatureDialog({
       config: {
         featureId: feature.id,
         entityAppearanceNodeId: values.entityProperty?.entityNodeId,
-        featureSchema: feature.dataType,
+        featureSchema: feature.schema,
         valueAccessor: {
           nodeId: null,
           path: values.path.replace("input.event.data.", ""),
@@ -133,11 +133,13 @@ export default function EntityFeatureDialog({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((values) => {
-              createEntityFeature(values);
-              setOpen(false);
-              form.reset();
-            })}
+            onSubmit={
+              void form.handleSubmit((values) => {
+                createEntityFeature(values);
+                setOpen(false);
+                form.reset();
+              })
+            }
           >
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -196,7 +198,7 @@ export default function EntityFeatureDialog({
                               {features
                                 ?.filter(
                                   (feature) =>
-                                    feature.belongsTo[0]?.entityTypeId ===
+                                    feature.entityTypeId ===
                                     entityNode?.returnSchema?.entityType
                                 )
                                 .map((feature) => (

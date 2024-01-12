@@ -276,7 +276,7 @@ export type TSchema =
 
 export function createDataType<T extends TSchema>(schema: T): IDataType<T> {
   const registry: RegistryConfig = DATA_TYPES_REGISTRY;
-  const DataType = registry[schema.type].type;
+  const DataType = registry[schema.type]?.type;
   if (!DataType)
     throw new Error(`No data type registered for type: ${schema.type}`);
   return new DataType(schema) as IDataType<T>;

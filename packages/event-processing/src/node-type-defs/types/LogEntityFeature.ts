@@ -27,9 +27,6 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
     }
     return set;
   })
-  .setReturnSchema({
-    type: TypeName.Any,
-  })
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
       const {

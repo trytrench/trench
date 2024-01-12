@@ -67,6 +67,7 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
       {value.type === TypeName.Object && (
         <>
           <button
+            type="button"
             className="font-mono inline ml-4 text-blue-300"
             onClick={() => {
               let num = 1;
@@ -112,6 +113,7 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
                     }
                   />
                   <button
+                    type="button"
                     className="text-red-300 mr-4"
                     onClick={() => {
                       const newProperties = {

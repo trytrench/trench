@@ -15,9 +15,6 @@ export const computedNodeDef = createNodeTypeDefBuilder()
   .setGetDependencies((config) => {
     return new Set(Object.values(config.depsMap));
   })
-  .setReturnSchema({
-    type: TypeName.Any,
-  })
   .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency }) => {
       const { depsMap, compiledJs } = nodeDef.config;

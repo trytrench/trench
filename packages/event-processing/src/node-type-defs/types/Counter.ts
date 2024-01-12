@@ -19,9 +19,7 @@ export const counterNodeDef = createNodeTypeDefBuilder()
       conditionNodeId: z.string().optional(),
     })
   )
-  .setReturnSchema({
-    type: TypeName.Int64,
-  })
+  .setReturnSchema(TypeName.Int64)
   .setGetDependencies((config) => {
     const set = new Set<string>();
     for (const nodeId of config.countByNodeIds) {

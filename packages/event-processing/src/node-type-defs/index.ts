@@ -23,7 +23,14 @@ export type NodeTypeDefsMap = typeof NODE_TYPE_DEFS;
 export type NodeDefsMap = {
   [TNodeType in NodeType]: NodeDef<
     TNodeType,
-    NodeTypeDefsMap[TNodeType]["returnSchema"],
+    NodeTypeDefsMap[TNodeType] extends NodeTypeDef<
+      any,
+      infer TReturnSchema,
+      any,
+      any
+    >
+      ? TReturnSchema
+      : never,
     NodeTypeDefsMap[TNodeType]["configSchema"]["_input"]
   >;
 };

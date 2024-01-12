@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeType, TypeName, type NodeDef } from "event-processing";
+import { NodeType, TypeName, type NodeDef, TSchema } from "event-processing";
 import { Pencil, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -39,79 +39,11 @@ import {
 } from "../ui/dialog";
 import { Plus } from "lucide-react";
 import AssignEntities from "~/pages/settings/event-types/AssignEntities";
-
-const DATA_TYPE_OPTIONS = [
-  {
-    label: "String",
-    value: TypeName.String,
-  },
-  {
-    label: "Number",
-    value: TypeName.Float64,
-  },
-  {
-    label: "Boolean",
-    value: TypeName.Boolean,
-  },
-  {
-    label: "JSON",
-    value: TypeName.Object,
-  },
-];
-
-const TYPE_DEFAULTS = {
-  [NodeType.Computed]: {
-    dataType: TypeName.Boolean,
-    config: {
-      code: "",
-      depsMap: {},
-      assignedEntityFeatureIds: [],
-    },
-  },
-  [NodeType.Counter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.Count]["config"],
-  },
-  [NodeType.UniqueCounter]: {
-    dataType: TypeName.Int64,
-    config: {
-      timeWindow: {
-        number: 1,
-        unit: "hours",
-      },
-      countByFeatureIds: [],
-      countUniqueFeatureIds: [],
-      conditionFeatureId: undefined,
-    }, // as FeatureDefs[FeatureType.UniqueCount]["config"],
-  },
-  [NodeType.LogEntityFeature]: {
-    dataType: TypeName.Entity,
-    config: {
-      eventTypes: new Set(),
-      code: "",
-      depsMap: {},
-    },
-  },
-} as Record<
-  NodeType,
-  {
-    dataType: TypeName;
-    config: any;
-  }
->;
-
-//
+import { SchemaBuilder } from "../SchemaBuilder";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  dataType: z.nativeEnum(TypeName),
+  schema: z.object({}),
   featureDeps: z.array(
     z.object({
       featureId: z.string(),
@@ -139,12 +71,16 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dataType: TypeName.String,
       featureDeps: [],
+      schema: {
+        type: TypeName.String,
+      },
       nodeDeps: [],
     },
   });
 
+  console.log("Lmao");
+  console.log(form.getValues());
   const router = useRouter();
 
   const [config, setConfig] = useState(
@@ -270,28 +206,18 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
             <FormField
               control={form.control}
-              name="dataType"
+              name="schema"
               render={({ field }) => (
                 <FormItem className="w-[16rem] mt-4">
                   <FormLabel>Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an entity" />
-                      </SelectTrigger>
-                    </FormControl>
-
-                    <SelectContent>
-                      {DATA_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div>
+                    <SchemaBuilder
+                      value={field.value as TSchema}
+                      onChange={(newSchema) => {
+                        field.onChange(newSchema);
+                      }}
+                    />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -334,7 +260,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
           />
         ))}
         <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-          <DialogTrigger>
+          <DialogTrigger asChild>
             <Button variant="outline" size="xs">
               <Plus className="h-4 w-4" />
             </Button>
@@ -370,9 +296,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <EditComputed
         nodeDef={
           initialNodeDef ?? {
-            returnSchema: {
-              type: form.watch("dataType"),
-            },
+            returnSchema: form.watch("schema"),
             config: {
               code: "",
               depsMap: {},

@@ -1,7 +1,7 @@
 import { ZodType, z } from "zod";
 import { NodeDef, NodeTypeDef, Resolver } from "./nodeTypeDef";
 import { NodeType } from "./types/_enum";
-import { TSchema } from "../data-types";
+import { TSchema, TypeName } from "../data-types";
 
 // NodeTypeDefBuilder interface
 export interface NodeTypeDefBuilder<
@@ -19,9 +19,14 @@ export interface NodeTypeDefBuilder<
   setConfigSchema<TCS extends ZodType<any, any>>(
     configSchema: TCS
   ): NodeTypeDefBuilder<TNodeType, TReturnSchema, TCS, TContext>;
-  setReturnSchema<TRS extends TSchema>(
-    returnSchema: TRS
-  ): NodeTypeDefBuilder<TNodeType, TRS, TConfigSchema, TContext>;
+  setReturnSchema<T extends TypeName>(
+    returnType: T
+  ): NodeTypeDefBuilder<
+    TNodeType,
+    Extract<TSchema, { type: T }>,
+    TConfigSchema,
+    TContext
+  >;
   setGetDependencies(
     getDependencies: (config: z.infer<TConfigSchema>) => Set<string>
   ): NodeTypeDefBuilder<TNodeType, TReturnSchema, TConfigSchema, TContext>;
@@ -65,7 +70,7 @@ export function createNodeTypeDefBuilder<
       return createNewNodeTypeDefBuilder(partialDef, { getDependencies });
     },
     setReturnSchema(returnSchema) {
-      return createNewNodeTypeDefBuilder(partialDef, { returnSchema });
+      return createNewNodeTypeDefBuilder(partialDef, {});
     },
     setContextType<TC>() {
       return createNewNodeTypeDefBuilder<
@@ -82,7 +87,6 @@ export function createNodeTypeDefBuilder<
       if (
         !partialDef.nodeType ||
         !partialDef.configSchema ||
-        !partialDef.returnSchema ||
         !partialDef.createResolver
       ) {
         throw new Error("Missing required properties to build NodeTypeDef");

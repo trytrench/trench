@@ -44,20 +44,7 @@ model Event {
 }
 
 // TODO: Change to one to many
-model FeatureToEntityType {
-  id        String   @id @default(dbgenerated("nanoid()"))
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  featureId    String
-  feature      Feature    @relation(fields: [featureId], references: [id])
-  entityTypeId String
-  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
-
-  orderIndex Int
-
-  @@unique([featureId, entityTypeId])
-}
 
 model Feature {
   id        String   @id @default(dbgenerated("nanoid()"))
@@ -69,7 +56,10 @@ model Feature {
 
   // Immutable
   schema    Json
-  belongsTo FeatureToEntityType[]
+
+  
+  entityType EntityType @relation(fields: [entityTypeId], references: [id])
+  entityTypeId String
 }
 
 model Node {
@@ -125,7 +115,7 @@ model EntityType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  featureToEntityTypes FeatureToEntityType[]
+  features Feature[]
 
   type String @unique
 }
