@@ -143,8 +143,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const inputType = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
   const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
-    // TODO: Fix
-    { type: form.watch("dataType") }
+    form.watch("schema")
   ).toTypescript()}>;`;
   const depsType = useDepsTypes(
     router.query.eventTypeId as string,
