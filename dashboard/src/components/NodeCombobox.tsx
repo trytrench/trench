@@ -1,6 +1,6 @@
 import { FeatureDef, NodeDef, NodeDefsMap, NodeType } from "event-processing";
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -24,6 +24,8 @@ interface Props {
   children: React.ReactNode;
   nodes: NodeDef[];
   features: FeatureDef[];
+  entityNode?: NodeDefsMap[NodeType.EntityAppearance];
+  onSelectEntityNode?: (node: NodeDefsMap[NodeType.EntityAppearance]) => void;
 }
 
 export default function NodeCombobox({
@@ -34,11 +36,17 @@ export default function NodeCombobox({
   children,
   nodes,
   features,
+  entityNode: initialEntityNode,
+  onSelectEntityNode,
 }: Props) {
   const [entityNode, setEntityNode] = useState<
     NodeDefsMap[NodeType.EntityAppearance] | null
-  >();
+  >(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialEntityNode) setEntityNode(initialEntityNode);
+  }, [initialEntityNode]);
 
   return (
     <Popover
@@ -97,6 +105,13 @@ export default function NodeCombobox({
                     value={node.name}
                     key={node.id}
                     onSelect={() => {
+                      if (onSelectEntityNode) {
+                        setOpen(false);
+                        return onSelectEntityNode(
+                          node as NodeDefsMap[NodeType.EntityAppearance]
+                        );
+                      }
+
                       setEntityNode(
                         node as NodeDefsMap[NodeType.EntityAppearance]
                       );

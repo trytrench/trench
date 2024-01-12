@@ -232,6 +232,7 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
               featureDeps={countUniqueFeatureDeps}
               onFeatureDepsChange={setCountUniqueFeatureDeps}
               onNodeDepsChange={setCountUniqueNodeDeps}
+              canSelectEntityNode
             />
 
             <div className="text-sm">By</div>
@@ -242,6 +243,7 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
               featureDeps={countByFeatureDeps}
               onFeatureDepsChange={setCountByFeatureDeps}
               onNodeDepsChange={setCountByNodeDeps}
+              canSelectEntityNode
             />
             <div className="text-sm">Where</div>
 
