@@ -47,7 +47,7 @@ async function initEventHandler() {
       for (const eventObj of events) {
         engine.initState(eventObj.event);
         await recordEventType(eventObj.event.type, eventObj.event.data);
-        const results = await engine.getAllEngineResults();
+        await engine.getAllEngineResults();
         await engine.executeStateUpdates();
         storeRows.push(...(engine.state?.savedStoreRows ?? []));
       }

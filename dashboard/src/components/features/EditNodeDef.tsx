@@ -52,25 +52,6 @@ import {
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
-const DATA_TYPE_OPTIONS = [
-  {
-    label: "String",
-    value: TypeName.String,
-  },
-  {
-    label: "Number",
-    value: TypeName.Float64,
-  },
-  {
-    label: "Boolean",
-    value: TypeName.Boolean,
-  },
-  {
-    label: "JSON",
-    value: TypeName.Object,
-  },
-];
-
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   schema: z.record(z.any()),
@@ -209,7 +190,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                 {
                   ...initialNodeDef,
                   name: form.getValues("name"),
-                  // dataType: form.getValues("dataType"),
+                  returnSchema: form.getValues("schema") as TSchema,
                   config: {
                     ...config,
                     depsMap: {},
