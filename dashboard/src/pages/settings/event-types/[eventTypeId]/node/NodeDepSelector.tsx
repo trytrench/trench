@@ -1,17 +1,16 @@
+import type {
+  FeatureDef,
+  NodeDef,
+  NodeDefsMap,
+  NodeType,
+} from "event-processing";
 import { Plus, X } from "lucide-react";
 import NodeCombobox from "~/components/NodeCombobox";
 import { Button } from "~/components/ui/button";
 
 export type FeatureDep = {
-  featureId: string;
-  featureName: string;
-  nodeId: string;
-  nodeName: string;
-};
-
-export type NodeDep = {
-  nodeId: string;
-  nodeName: string;
+  feature: FeatureDef;
+  node: NodeDef;
 };
 
 interface NodeDepProps {
@@ -50,10 +49,12 @@ export const FeatureDep = ({
 
 interface NodeDepSelectorProps {
   featureDeps: FeatureDep[];
-  nodeDeps: NodeDep[];
+  nodeDeps: NodeDef[];
   onFeatureDepsChange: (deps: FeatureDep[]) => void;
-  onNodeDepsChange: (deps: NodeDep[]) => void;
-  eventTypeId: string;
+  onNodeDepsChange: (deps: NodeDef[]) => void;
+  nodes: NodeDef[];
+  features: FeatureDef[];
+  canSelectEntityNode?: boolean;
 }
 
 export function NodeDepSelector({
@@ -61,61 +62,78 @@ export function NodeDepSelector({
   nodeDeps,
   onFeatureDepsChange,
   onNodeDepsChange,
-  eventTypeId,
+  nodes,
+  features,
+  canSelectEntityNode,
 }: NodeDepSelectorProps) {
   return (
     <>
       {featureDeps.map((featureDep) => (
         <FeatureDep
-          key={featureDep.featureId + featureDep.nodeId}
-          nodeName={featureDep.nodeName}
-          featureName={featureDep.featureName}
+          key={featureDep.feature.id + featureDep.node.id}
+          nodeName={featureDep.node.name}
+          featureName={featureDep.feature.name}
           onDelete={() => {
             onFeatureDepsChange(
               featureDeps.filter(
                 (dep) =>
-                  dep.nodeId !== featureDep.nodeId ||
-                  dep.featureId !== featureDep.featureId
+                  dep.node.id !== featureDep.node.id ||
+                  dep.feature.id !== featureDep.feature.id
               )
             );
           }}
         />
       ))}
-      {nodeDeps.map((nodeDep) => (
-        <NodeDep
-          key={nodeDep.nodeId}
-          nodeName={nodeDep.nodeName}
-          onDelete={() =>
-            onNodeDepsChange(
-              nodeDeps.filter((dep) => dep.nodeId !== nodeDep.nodeId)
-            )
-          }
-        />
+      {nodeDeps.map((nodeDep, index) => (
+        <div
+          key={nodeDep.id}
+          className="flex items-center space-x-2 rounded-md border px-2 py-1"
+        >
+          <NodeCombobox
+            nodes={nodes}
+            features={features}
+            onSelectFeature={(node, feature) => {
+              onNodeDepsChange(nodeDeps.filter((dep, i) => i !== index));
+              onFeatureDepsChange([...featureDeps, { feature, node }]);
+            }}
+            onSelectNode={(node) => {
+              onNodeDepsChange([...nodeDeps, node]);
+            }}
+            selectedFeatureIds={featureDeps.map((dep) => dep.feature.id)}
+            selectedNodeIds={nodeDeps.map((dep) => dep.id)}
+            onSelectEntityNode={
+              canSelectEntityNode
+                ? (node) => onNodeDepsChange([...nodeDeps, node])
+                : undefined
+            }
+            entityNode={nodeDep as NodeDefsMap[NodeType.EntityAppearance]}
+          >
+            <div className="text-sm">{nodeDep.name}</div>
+          </NodeCombobox>
+          <X
+            className="h-4 w-4"
+            onClick={() =>
+              onNodeDepsChange(nodeDeps.filter((dep) => dep.id !== nodeDep.id))
+            }
+          />
+        </div>
       ))}
       <NodeCombobox
-        eventTypeId={eventTypeId}
+        nodes={nodes}
+        features={features}
         onSelectFeature={(node, feature) => {
-          onFeatureDepsChange([
-            ...featureDeps,
-            {
-              featureId: feature.id,
-              featureName: feature.name,
-              nodeId: node.id,
-              nodeName: node.name,
-            },
-          ]);
+          onFeatureDepsChange([...featureDeps, { feature, node }]);
         }}
         onSelectNode={(node) => {
-          onNodeDepsChange([
-            ...nodeDeps,
-            {
-              nodeId: node.id,
-              nodeName: node.name,
-            },
-          ]);
+          onNodeDepsChange([...nodeDeps, node]);
         }}
-        selectedFeatureIds={featureDeps.map((dep) => dep.featureId)}
-        selectedNodeIds={nodeDeps.map((dep) => dep.nodeId)}
+        selectedFeatureIds={featureDeps.map((dep) => dep.feature.id)}
+        selectedNodeIds={nodeDeps.map((dep) => dep.id)}
+        onSelectEntityNode={
+          canSelectEntityNode
+            ? (node) => onNodeDepsChange([...nodeDeps, node])
+            : undefined
+        }
       >
         <Button variant="outline" size="xs">
           <Plus className="h-4 w-4" />

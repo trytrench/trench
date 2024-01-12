@@ -1,8 +1,8 @@
-import { createDataType } from "event-processing";
+import { NodeDef, createDataType } from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import { NodeDep } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+import type { FeatureDep } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
 import { api } from "~/utils/api";
 
 interface SchemaDisplayProps {
@@ -51,48 +51,87 @@ export function useEventSchema(eventTypeId: string) {
   }, [eventType]);
 }
 
-export function useDepsSchema(eventTypeId: string, nodeDeps: NodeDep[]) {
-  const { data: nodeDefs } = api.nodeDefs.list.useQuery({
-    eventTypeId,
-  });
+// TODO: Support object types
+export function useDepsSchema(nodeDeps: NodeDef[], featureDeps: FeatureDep[]) {
+  const featureProperties = useMemo(
+    () =>
+      featureDeps.reduce(
+        (acc, dep) => {
+          if (!acc[dep.node.name]) {
+            acc[dep.node.name] = { type: "object", properties: {} };
+          }
 
-  const properties = useMemo(() => {
+          acc[dep.node.name]!.properties[dep.feature.name] = {
+            type: createDataType(dep.feature.schema).toTypescript(),
+          };
+          return acc;
+        },
+        {} as Record<
+          string,
+          { type: string; properties: Record<string, unknown> }
+        >
+      ),
+    [featureDeps]
+  );
+
+  const nodeProperties = useMemo(() => {
     return nodeDeps.reduce(
       (acc, dep) => {
-        const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
-        if (!nodeDef) return acc;
-
-        acc[nodeDef.name] = {
-          type: createDataType(nodeDef.returnSchema).toTypescript(),
+        acc[dep.name] = {
+          type: createDataType(dep.returnSchema).toTypescript(),
         };
         return acc;
       },
       {} as Record<string, unknown>
     );
-  }, [nodeDeps, nodeDefs]);
+  }, [nodeDeps]);
 
-  return { type: "object", properties };
+  return {
+    type: "object",
+    properties: {
+      ...featureProperties,
+      ...nodeProperties,
+    },
+  };
 }
 
-export function useDepsTypes(eventTypeId: string, nodeDeps: NodeDep[]) {
-  const { data: nodeDefs } = api.nodeDefs.list.useQuery({
-    eventTypeId,
-  });
-
+export function useDepsTypes(nodeDeps: NodeDef[], featureDeps: FeatureDep[]) {
   return useMemo(() => {
-    const types = nodeDeps.reduce((acc, dep) => {
-      const nodeDef = nodeDefs?.find((def) => def.id === dep.nodeId);
-      if (!nodeDef) return acc;
+    let typeDef = "interface Dependencies {\n";
 
-      return (
-        acc +
-        `"${nodeDef.name}": ${createDataType(
-          nodeDef.returnSchema
-        ).toTypescript()};\n`
-      );
-    }, "");
-    return `interface Dependencies {\n${types}}`;
-  }, [nodeDeps, nodeDefs]);
+    const nodeNames = featureDeps.reduce(
+      (acc, dep) => {
+        if (!acc[dep.node.name]) acc[dep.node.name] = [];
+
+        acc[dep.node.name]!.push(
+          `"${dep.feature.name}": ${createDataType(
+            dep.feature.schema
+          ).toTypescript()}`
+        );
+        return acc;
+      },
+      {} as Record<string, string[]>
+    );
+
+    for (const nodeName in nodeNames) {
+      typeDef += `  "${nodeName}": {\n`;
+      typeDef +=
+        nodeNames[nodeName]
+          .map((featureName) => `    ${featureName}`)
+          .join(";\n") + ";\n";
+
+      typeDef += "  };\n";
+    }
+
+    for (const dep of nodeDeps) {
+      typeDef += `  "${dep.name}": ${createDataType(
+        dep.returnSchema
+      ).toTypescript()};\n`;
+    }
+    typeDef += "}";
+
+    return typeDef;
+  }, [nodeDeps, featureDeps]);
 }
 
 type InfoType = {

@@ -9,6 +9,7 @@ import SettingsLayout from "~/components/SettingsLayout";
 import { EditNodeDef } from "~/components/features/EditNodeDef";
 import { toast } from "~/components/ui/use-toast";
 import { EditCount } from "./EditCount";
+import { create } from "lodash";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -25,6 +26,12 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
+  const { mutateAsync: createUniqueCount } =
+    api.nodeDefs.createUniqueCount.useMutation();
+
+  const { mutateAsync: createComputed } =
+    api.nodeDefs.createComputed.useMutation();
+
   return (
     <div>
       <Link
@@ -36,57 +43,46 @@ const Page: NextPageWithLayout = () => {
       </Link>
       {router.query.type === "count" ? (
         <EditCount
-          onSave={(def, assignedToFeatures) => {
-            createNodeDef({
-              name: def.name,
-              type: NodeType.UniqueCounter,
-              dependsOn: [],
-              eventTypes: [router.query.eventTypeId as string],
-              // returnSchema: def.returnSchema,
-              returnSchema: {
-                type: TypeName.Int64,
-              } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"],
-              config: {
-                ...def.config,
-                counterId: "1",
-              } as NodeDefsMap[NodeType.UniqueCounter]["config"],
+          onSave={(
+            def,
+            assignedToFeatures,
+            countUniqueFeatureDeps,
+            countByFeatureDeps,
+            countUniqueNodeDeps,
+            countByNodeDeps,
+            conditionFeatureDep,
+            conditionNodeDep
+          ) => {
+            createUniqueCount({
+              nodeDef: {
+                name: def.name,
+                type: NodeType.UniqueCounter,
+                eventTypes: [router.query.eventTypeId as string],
+                returnSchema: {
+                  type: TypeName.Int64,
+                } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"],
+                config: {
+                  timeWindowMs: def.config.timeWindowMs,
+                  // Unused
+                  counterId: "",
+                  countUniqueNodeIds: [],
+                  countByNodeIds: [],
+                } as NodeDefsMap[NodeType.UniqueCounter]["config"],
+              },
+              assignedToFeatures,
+              countUniqueFeatureDeps,
+              countByFeatureDeps,
+              countUniqueNodeDeps,
+              countByNodeDeps,
+              conditionFeatureDep: conditionFeatureDep ?? undefined,
+              conditionNodeDep: conditionNodeDep ?? undefined,
             })
-              .then((nodeDef) => {
-                return Promise.all(
-                  assignedToFeatures.map((featureDep) =>
-                    createNodeDef({
-                      name: featureDep.featureName,
-                      type: NodeType.LogEntityFeature,
-                      dependsOn: [nodeDef.id],
-                      eventTypes: [router.query.eventTypeId as string],
-                      // returnSchema: def.returnSchema,
-                      returnSchema: {
-                        type: TypeName.Any,
-                      } as NodeDefsMap[NodeType.LogEntityFeature]["returnSchema"],
-                      config: {
-                        featureId: featureDep.featureId,
-                        featureSchema: {
-                          type: TypeName.Int64,
-                        },
-                        entityAppearanceNodeId: featureDep.nodeId,
-                        valueAccessor: {
-                          nodeId: nodeDef.id,
-                        },
-                      } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
-                    })
-                  )
-                );
-              })
               .then(() => {
                 toast({
                   title: "Node created",
                   // description: `${values.entity}`,
                 });
-                // void router.push(
-                //   `/settings/event-types/${
-                //     router.query.eventTypeId as string
-                //   }/node/${nodeDef.id} `
-                // );
+
                 return refetchNodes();
               })
               .catch(() => {
@@ -99,54 +95,25 @@ const Page: NextPageWithLayout = () => {
         />
       ) : (
         <EditNodeDef
-          onSave={(def, assignedToFeatures) => {
-            createNodeDef({
-              name: def.name,
-              type: NodeType.Computed,
-              dependsOn: [],
-              eventTypes: [router.query.eventTypeId as string],
-              // returnSchema: def.returnSchema,
-              returnSchema: {
-                type: TypeName.String,
+          onRename={() => {}}
+          onSave={(def, assignedToFeatures, featureDeps, nodeDeps) => {
+            createComputed({
+              nodeDef: {
+                name: def.name,
+                type: NodeType.Computed,
+                eventTypes: [router.query.eventTypeId as string],
+                returnSchema: def.returnSchema,
+                config: def.config,
               },
-              config: def.config,
+              featureDeps,
+              nodeDeps,
+              assignedToFeatures,
             })
-              .then((nodeDef) => {
-                return Promise.all(
-                  assignedToFeatures.map((featureDep) =>
-                    createNodeDef({
-                      name: featureDep.featureName,
-                      type: NodeType.LogEntityFeature,
-                      dependsOn: [nodeDef.id],
-                      eventTypes: [router.query.eventTypeId as string],
-                      // returnSchema: def.returnSchema,
-                      returnSchema: {
-                        type: TypeName.Any,
-                      } as NodeDefsMap[NodeType.LogEntityFeature]["returnSchema"],
-                      config: {
-                        featureId: featureDep.featureId,
-                        featureSchema: {
-                          type: TypeName.String,
-                        },
-                        entityAppearanceNodeId: featureDep.nodeId,
-                        valueAccessor: {
-                          nodeId: nodeDef.id,
-                        },
-                      } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
-                    })
-                  )
-                );
-              })
               .then(() => {
                 toast({
                   title: "Node created",
                   // description: `${values.entity}`,
                 });
-                // void router.push(
-                //   `/settings/event-types/${
-                //     router.query.eventTypeId as string
-                //   }/node/${nodeDef.id} `
-                // );
                 return refetchNodes();
               })
               .catch(() => {

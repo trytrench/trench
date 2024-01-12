@@ -49,9 +49,6 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  alias: z.string().min(2, {
-    message: "Alias must be at least 2 characters.",
-  }),
 });
 
 const Page: NextPageWithLayout = () => {
@@ -70,7 +67,6 @@ const Page: NextPageWithLayout = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      alias: "",
     },
   });
 
@@ -211,21 +207,6 @@ const Page: NextPageWithLayout = () => {
                           render={({ field }) => (
                             <FormItem className="col-span-3">
                               <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <FormField
-                          control={form.control}
-                          name="alias"
-                          render={({ field }) => (
-                            <FormItem className="col-span-3">
-                              <FormLabel>Alias</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>

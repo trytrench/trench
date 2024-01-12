@@ -4,6 +4,7 @@ import {
   TypeName,
   createDataType,
   type NodeDef,
+  NodeType,
 } from "event-processing";
 import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -49,32 +50,49 @@ import {
   CompileStatus,
   CompileStatusMessage,
 } from "./shared/CodeEditor";
+import { api } from "~/utils/api";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
+
+// TODO: Move to separate file
+export const featureDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  schema: z.record(z.unknown()),
+  entityTypeId: z.string(),
+});
+
+export const nodeDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.nativeEnum(NodeType),
+  eventTypes: z.array(z.string()),
+  dependsOn: z.array(z.string()),
+  config: z.record(z.any()),
+  returnSchema: z.record(z.any()),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   schema: z.record(z.any()),
   featureDeps: z.array(
     z.object({
-      featureId: z.string(),
-      featureName: z.string(),
-      nodeId: z.string(),
-      nodeName: z.string(),
+      feature: featureDefSchema,
+      node: nodeDefSchema,
     })
   ),
-  nodeDeps: z.array(
-    z.object({
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
+  nodeDeps: z.array(nodeDefSchema),
 });
 
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
-  onSave: (data: NodeDef, assignedToFeatures: FeatureDep[]) => void;
+  onSave: (
+    data: NodeDef,
+    assignedToFeatures: FeatureDep[],
+    featureDeps: FeatureDep[],
+    nodeDeps: NodeDef[]
+  ) => void;
 }
 
 export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
@@ -91,6 +109,11 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
   });
 
   const router = useRouter();
+
+  const { data: features } = api.features.list.useQuery();
+  const { data: nodes } = api.nodeDefs.list.useQuery({
+    eventTypeId: router.query.eventTypeId as string,
+  });
 
   const [config, setConfig] = useState(
     initialNodeDef?.config ?? {
@@ -125,16 +148,14 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     form.watch("schema")
   ).toTypescript()}>;`;
   const depsType = useDepsTypes(
-    router.query.eventTypeId as string,
-    form.watch("nodeDeps")
+    // TODO: Convert between nodeDef schema and type
+    form.watch("nodeDeps"),
+    form.watch("featureDeps")
   );
 
   const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
-  const deps = useDepsSchema(
-    router.query.eventTypeId as string,
-    form.watch("nodeDeps")
-  );
+  const deps = useDepsSchema(form.watch("nodeDeps"), form.watch("featureDeps"));
 
   const onCompileStatusChange = useCallback(
     (compileStatus: CompileStatus) => {
@@ -142,19 +163,19 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
       if (compileStatus.status === "success") {
         setIsCodeValid(true);
-        setConfig({
+        setConfig((config) => ({
           ...config,
           tsCode: compileStatus.code,
           compiledJs: compileStatus.compiled
             .slice(compileStatus.compiled.indexOf("async"))
             .replace(/[;\n]+$/, ""),
-        });
+        }));
       } else {
-        setConfig({
+        setConfig((config) => ({
           ...config,
           tsCode: compileStatus.code,
           compiledJs: undefined,
-        });
+        }));
         setIsCodeValid(false);
       }
     },
@@ -170,6 +191,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
         <div className="flex gap-2 items-center">
           {isEditing && (
+            // TODO: Fix this
             <RenameDialog
               name={name}
               onRename={(newName) => {
@@ -194,7 +216,9 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                     depsMap: {},
                   },
                 },
-                assignedToFeatures
+                assignedToFeatures,
+                form.getValues("featureDeps"),
+                form.getValues("nodeDeps")
               );
             }}
           >
@@ -244,6 +268,8 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
             <div className="flex space-x-2 mt-2">
               <NodeDepSelector
+                nodes={nodes ?? []}
+                features={features ?? []}
                 nodeDeps={form.watch("nodeDeps")}
                 featureDeps={form.watch("featureDeps")}
                 onFeatureDepsChange={(deps) =>
@@ -262,15 +288,15 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <div className="flex items-center space-x-2 mt-2">
         {assignedToFeatures.map((featureDep) => (
           <FeatureDep
-            key={featureDep.featureId + featureDep.nodeId}
-            nodeName={featureDep.nodeName}
-            featureName={featureDep.featureName}
+            key={featureDep.feature.id + featureDep.node.id}
+            nodeName={featureDep.node.name}
+            featureName={featureDep.feature.name}
             onDelete={() => {
               setAssignedToFeatures(
                 assignedToFeatures.filter(
                   (dep) =>
-                    dep.nodeId !== featureDep.nodeId ||
-                    dep.featureId !== featureDep.featureId
+                    dep.node.id !== featureDep.node.id ||
+                    dep.feature.id !== featureDep.feature.id
                 )
               );
             }}
@@ -287,12 +313,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
               onAssign={(node, feature) => {
                 setAssignedToFeatures([
                   ...assignedToFeatures,
-                  {
-                    featureId: feature.id,
-                    featureName: feature.name,
-                    nodeId: node.id,
-                    nodeName: node.name,
-                  },
+                  { node, feature },
                 ]);
                 setAssignDialogOpen(false);
               }}

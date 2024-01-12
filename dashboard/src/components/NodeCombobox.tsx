@@ -1,7 +1,6 @@
-import { Feature } from "@prisma/client";
-import { NodeDef, NodeDefsMap, NodeType } from "event-processing";
+import { FeatureDef, NodeDef, NodeDefsMap, NodeType } from "event-processing";
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -16,39 +15,45 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import { api } from "~/utils/api";
 
 interface Props {
-  eventTypeId: string;
   onSelectNode: (node: NodeDef) => void;
-  onSelectFeature: (node: NodeDef, feature: Feature) => void;
+  onSelectFeature: (node: NodeDef, feature: FeatureDef) => void;
   selectedFeatureIds: string[];
   selectedNodeIds: string[];
   children: React.ReactNode;
+  nodes: NodeDef[];
+  features: FeatureDef[];
+  entityNode?: NodeDefsMap[NodeType.EntityAppearance];
+  onSelectEntityNode?: (node: NodeDefsMap[NodeType.EntityAppearance]) => void;
 }
 
 export default function NodeCombobox({
-  eventTypeId,
   onSelectFeature,
   onSelectNode,
   selectedFeatureIds,
   selectedNodeIds,
   children,
+  nodes,
+  features,
+  entityNode: initialEntityNode,
+  onSelectEntityNode,
 }: Props) {
-  const { data: features } = api.features.list.useQuery();
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventTypeId });
-
   const [entityNode, setEntityNode] = useState<
     NodeDefsMap[NodeType.EntityAppearance] | null
-  >();
+  >(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialEntityNode) setEntityNode(initialEntityNode);
+  }, [initialEntityNode]);
 
   return (
     <Popover
       open={open}
       onOpenChange={(open) => {
         setOpen(open);
-        if (!open) setEntityNode(null);
+        if (!open && !initialEntityNode) setEntityNode(null);
       }}
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -59,9 +64,9 @@ export default function NodeCombobox({
             <CommandEmpty>No properties found.</CommandEmpty>
             <CommandGroup>
               {features
-                ?.filter(
+                .filter(
                   (feature) =>
-                    feature.belongsTo[0]?.entityTypeId ===
+                    feature.entityTypeId ===
                     entityNode?.returnSchema?.entityType
                 )
                 .map((feature) => (
@@ -94,12 +99,19 @@ export default function NodeCombobox({
 
             <CommandGroup>
               {nodes
-                ?.filter((node) => node.type === NodeType.EntityAppearance)
+                .filter((node) => node.type === NodeType.EntityAppearance)
                 .map((node) => (
                   <CommandItem
                     value={node.name}
                     key={node.id}
                     onSelect={() => {
+                      if (onSelectEntityNode) {
+                        setOpen(false);
+                        return onSelectEntityNode(
+                          node as NodeDefsMap[NodeType.EntityAppearance]
+                        );
+                      }
+
                       setEntityNode(
                         node as NodeDefsMap[NodeType.EntityAppearance]
                       );
@@ -115,7 +127,7 @@ export default function NodeCombobox({
 
             <CommandGroup>
               {nodes
-                ?.filter((node) => node.type === NodeType.Computed)
+                .filter((node) => node.type === NodeType.Computed)
                 .map((node) => (
                   <CommandItem
                     value={node.name}

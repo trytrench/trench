@@ -5,7 +5,7 @@ import {
   TypeName,
   type NodeDef,
 } from "event-processing";
-import { Pencil, Plus, Save } from "lucide-react";
+import { Pencil, Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -30,34 +30,29 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { api } from "~/utils/api";
 import AssignEntities from "../../AssignEntities";
 import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
+import { TimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
+import { add } from "date-fns";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   dataType: z.nativeEnum(TypeName),
-  featureDeps: z.array(
-    z.object({
-      featureId: z.string(),
-      featureName: z.string(),
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
-  nodeDeps: z.array(
-    z.object({
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
 });
 
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
   onSave: (
-    def: Partial<NodeDefsMap[NodeType.UniqueCounter]>,
-    assignedToFeatures: FeatureDep[]
+    def: NodeDef,
+    assignedToFeatures: FeatureDep[],
+    countUniqueFeatureDeps: FeatureDep[],
+    countByFeatureDeps: FeatureDep[],
+    countUniqueNodeDeps: NodeDef[],
+    countByNodeDeps: NodeDef[],
+    conditionFeatureDep: FeatureDep | null,
+    conditionNodeDep: NodeDef | null
   ) => void;
 }
 
@@ -67,71 +62,31 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
     defaultValues: {
       name: "",
       dataType: TypeName.String,
-      featureDeps: [],
-      nodeDeps: [],
     },
   });
 
   const router = useRouter();
 
-  const [config, setConfig] = useState(
-    initialNodeDef?.config ?? {
-      code: "",
-      depsMap: {},
-    }
-  );
+  const { data: features } = api.features.list.useQuery();
+  const { data: nodes } = api.nodeDefs.list.useQuery({
+    eventTypeId: router.query.eventTypeId as string,
+  });
 
   const [countUniqueFeatureDeps, setCountUniqueFeatureDeps] = useState<
     FeatureDep[]
   >([]);
-  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDep[]>([]);
+  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDef[]>([]);
 
   const [countByFeatureDeps, setCountByFeatureDeps] = useState<FeatureDep[]>(
     []
   );
-  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDep[]>([]);
+  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDef[]>([]);
 
-  const [conditionNode, setConditionNode] = useState(null);
-
-  // // If we're editing an existing feature then populate forms w/ data.
-  // // Name, type, and datatype can't be changed after creation so the
-  // // fields are disabled.
-  // const isEditingExistingFeature = !!initialDef;
-
-  // const [featureDef, setFeatureDef] = useState<Partial<NodeDef>>(
-  //   initialDef ?? {
-  //     // defaults for some fields
-  //     name: "",
-  //     eventTypes: new Set(),
-  //     dependsOn: new Set(),
-  //     type: NodeType.Computed,
-  //     dataType: DataType.Boolean,
-  //     config: TYPE_DEFAULTS[NodeType.Computed].config,
-  //   }
-  // );
-  // const updateFeatureDef = (data: Partial<NodeDef>) => {
-  //   if (!featureDef) return;
-  //   setFeatureDef({ ...featureDef, ...data });
-  // };
-
-  // const everythingValid = useMemo(() => {
-  //   return (
-  //     featureDef?.name &&
-  //     featureDef?.type &&
-  //     featureDef?.dataType &&
-  //     typeDetailsValid
-  //   );
-  // }, [featureDef, typeDetailsValid]);
-
-  // const save = () => {
-  //   if (!featureDef || !everythingValid) return;
-  //   // TODO: validate that featureDef is a complete NodeDef
-  //   onFeatureDefSave?.(featureDef as NodeDef);
-  // };
-
-  // TEMP
-
-  // const { name, type, dataType, eventTypes, config } = featureDef ?? {};
+  const [conditionNodeDep, setConditionNodeDep] = useState<NodeDef | null>(
+    null
+  );
+  const [conditionFeatureDep, setConditionFeatureDep] =
+    useState<FeatureDep | null>(null);
 
   const isValid = useMemo(
     () => form.formState.isValid,
@@ -145,6 +100,8 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
     []
   );
+
+  const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
 
   return (
     <div>
@@ -168,20 +125,30 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
+              const date = new Date();
               onSave(
                 {
                   // ...initialNodeDef,
-
                   name: form.getValues("name"),
                   config: {
-                    timeWindowMs: 1000 * 60 * 60,
-                    countByNodeIds: countByNodeDeps.map((dep) => dep.nodeId),
+                    timeWindowMs:
+                      add(date, {
+                        [timeWindow.unit]: timeWindow.value,
+                      }).getTime() - date.getTime(),
+                    countByNodeIds: countByNodeDeps.map((dep) => dep.id),
                     countUniqueNodeIds: countUniqueNodeDeps.map(
-                      (dep) => dep.nodeId
+                      (dep) => dep.id
                     ),
+                    conditionNodeId: conditionFeatureDep?.id,
                   } as Partial<NodeDefsMap[NodeType.UniqueCounter]["config"]>,
                 },
-                assignedToFeatures
+                assignedToFeatures,
+                countUniqueFeatureDeps,
+                countByFeatureDeps,
+                countUniqueNodeDeps,
+                countByNodeDeps,
+                conditionFeatureDep,
+                conditionNodeDep
               );
             }}
           >
@@ -216,15 +183,15 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
           <div className="flex items-center space-x-2 mt-2">
             {assignedToFeatures.map((featureDep) => (
               <FeatureDep
-                key={featureDep.featureId + featureDep.nodeId}
-                nodeName={featureDep.nodeName}
-                featureName={featureDep.featureName}
+                key={featureDep.feature.id + featureDep.node.id}
+                nodeName={featureDep.node.name}
+                featureName={featureDep.feature.name}
                 onDelete={() => {
                   setAssignedToFeatures(
                     assignedToFeatures.filter(
                       (dep) =>
-                        dep.nodeId !== featureDep.nodeId ||
-                        dep.featureId !== featureDep.featureId
+                        dep.node.id !== featureDep.node.id ||
+                        dep.feature.id !== featureDep.feature.id
                     )
                   );
                 }}
@@ -238,23 +205,11 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                {/* <DialogHeader>
-      <DialogTitle>Are you absolutely sure?</DialogTitle>
-      <DialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
-      </DialogDescription>
-    </DialogHeader> */}
                 <AssignEntities
                   onAssign={(node, feature) => {
                     setAssignedToFeatures([
                       ...assignedToFeatures,
-                      {
-                        featureId: feature.id,
-                        featureName: feature.name,
-                        nodeId: node.id,
-                        nodeName: node.name,
-                      },
+                      { node, feature },
                     ]);
                     setAssignDialogOpen(false);
                   }}
@@ -267,61 +222,83 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
           <div className="flex items-center space-x-2 mt-2">
             <NodeDepSelector
+              nodes={nodes ?? []}
+              features={features ?? []}
               nodeDeps={countUniqueNodeDeps}
               featureDeps={countUniqueFeatureDeps}
               onFeatureDepsChange={setCountUniqueFeatureDeps}
               onNodeDepsChange={setCountUniqueNodeDeps}
-              eventTypeId={router.query.eventTypeId as string}
+              canSelectEntityNode
             />
 
             <div className="text-sm">By</div>
             <NodeDepSelector
+              nodes={nodes ?? []}
+              features={features ?? []}
               nodeDeps={countByNodeDeps}
               featureDeps={countByFeatureDeps}
               onFeatureDepsChange={setCountByFeatureDeps}
               onNodeDepsChange={setCountByNodeDeps}
-              eventTypeId={router.query.eventTypeId as string}
+              canSelectEntityNode
             />
             <div className="text-sm">Where</div>
-            <NodeCombobox
-              eventTypeId={router.query.eventTypeId as string}
-              onSelectFeature={(node, feature) => {}}
-              onSelectNode={(node) => {}}
-              selectedFeatureIds={[]}
-              selectedNodeIds={[]}
-            >
-              <Button variant="outline" size="xs">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </NodeCombobox>
+
+            {conditionNodeDep ? (
+              <NodeDep
+                nodeName={conditionNodeDep.name}
+                onDelete={() => setConditionNodeDep(null)}
+              />
+            ) : conditionFeatureDep ? (
+              <FeatureDep
+                nodeName={conditionFeatureDep.node.name}
+                featureName={conditionFeatureDep.feature.name}
+                onDelete={() => setConditionFeatureDep(null)}
+              />
+            ) : (
+              <NodeCombobox
+                nodes={
+                  nodes?.filter(
+                    (node) =>
+                      node.returnSchema.type === TypeName.Boolean ||
+                      node.type === NodeType.EntityAppearance
+                  ) ?? []
+                }
+                features={
+                  features?.filter(
+                    (feature) => feature.schema.type === TypeName.Boolean
+                  ) ?? []
+                }
+                onSelectFeature={(node, feature) =>
+                  setConditionFeatureDep({ node, feature })
+                }
+                onSelectNode={setConditionNodeDep}
+                selectedFeatureIds={[]}
+                selectedNodeIds={[]}
+              >
+                <Button variant="outline" size="xs">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </NodeCombobox>
+            )}
+
+            <div className="text-sm">In the last</div>
+
+            {timeWindow ? (
+              <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
+                <div className="text-sm">{timeWindow.value}</div>
+                <div className="text-sm">{timeWindow.unit}</div>
+                <X className="h-4 w-4" onClick={() => setTimeWindow(null)} />
+              </div>
+            ) : (
+              <TimeWindowDialog onSubmit={setTimeWindow}>
+                <Button variant="outline" size="xs">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TimeWindowDialog>
+            )}
           </div>
         </>
       )}
-
-      {/* <EventTypes
-        eventTypes={eventTypes}
-        onChange={(v) => {
-          updateFeatureDef({ eventTypes: v });
-        }}
-      /> */}
-
-      {/* <Separator className="my-8" /> */}
-
-      {/* <EditComputed
-        nodeDef={
-          initialNodeDef ?? {
-            dataType: {
-              type: form.watch("dataType"),
-            },
-            config: {
-              code: "",
-              depsMap: {},
-            },
-          }
-        }
-        onConfigChange={setConfig}
-        onValidChange={setIsCodeValid}
-      /> */}
     </div>
   );
 }

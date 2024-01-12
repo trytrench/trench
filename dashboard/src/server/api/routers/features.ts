@@ -2,6 +2,13 @@ import { FeatureDef, TSchema } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+export const featureDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  schema: z.record(z.unknown()),
+  entityTypeId: z.string(),
+});
+
 export const featuresRouter = createTRPCRouter({
   list: protectedProcedure
     .input(
@@ -31,13 +38,7 @@ export const featuresRouter = createTRPCRouter({
       return ret;
     }),
   create: protectedProcedure
-    .input(
-      z.object({
-        name: z.string(),
-        schema: z.any(),
-        entityTypeId: z.string(),
-      })
-    )
+    .input(featureDefSchema.omit({ id: true }))
     .mutation(async ({ ctx, input }) => {
       const feature = await ctx.prisma.feature.create({
         data: {
