@@ -58,7 +58,7 @@ import { SchemaBuilder } from "../../../components/SchemaBuilder";
 const featureSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
-  schema: z.object({}),
+  schema: z.record(z.any()),
 });
 
 const FeatureDialog = ({
@@ -94,13 +94,12 @@ const FeatureDialog = ({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={
-              void form.handleSubmit((values) => {
-                onSubmit(values);
-                setOpen(false);
-                form.reset();
-              })
-            }
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              setOpen(false);
+              form.reset();
+            })}
           >
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">

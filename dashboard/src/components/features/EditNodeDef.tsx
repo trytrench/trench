@@ -43,7 +43,7 @@ import { SchemaBuilder } from "../SchemaBuilder";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  schema: z.object({}),
+  schema: z.record(z.any()),
   featureDeps: z.array(
     z.object({
       featureId: z.string(),

@@ -47,7 +47,7 @@ export const nodeDefsRouter = createTRPCRouter({
         eventTypes: z.array(z.string()),
         dependsOn: z.array(z.string()),
         config: z.record(z.any()),
-        returnSchema: z.object({}),
+        returnSchema: z.record(z.any()),
       })
     )
     .mutation(async ({ ctx, input }) => {

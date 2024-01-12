@@ -291,9 +291,10 @@ const Page: NextPageWithLayout = () => {
                     // Create entity appearance
                     createNodeDef({
                       eventTypes: [router.query.eventTypeId as string],
-                      name: entityTypes?.find(
-                        (entityType) => entityType.id === values.entityTypeId
-                      )?.type,
+                      name:
+                        entityTypes?.find(
+                          (entityType) => entityType.id === values.entityTypeId
+                        )?.type ?? "Entity",
                       type: NodeType.EntityAppearance,
                       returnSchema: {
                         type: TypeName.Entity,

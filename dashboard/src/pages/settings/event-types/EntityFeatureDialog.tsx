@@ -133,13 +133,12 @@ export default function EntityFeatureDialog({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={
-              void form.handleSubmit((values) => {
-                createEntityFeature(values);
-                setOpen(false);
-                form.reset();
-              })
-            }
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            onSubmit={form.handleSubmit((values) => {
+              createEntityFeature(values);
+              setOpen(false);
+              form.reset();
+            })}
           >
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
