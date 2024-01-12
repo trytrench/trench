@@ -50,6 +50,7 @@ import {
   CompileStatus,
   CompileStatusMessage,
 } from "./shared/CodeEditor";
+import { api } from "~/utils/api";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
@@ -109,6 +110,11 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const router = useRouter();
 
+  const { data: features } = api.features.list.useQuery();
+  const { data: nodes } = api.nodeDefs.list.useQuery({
+    eventTypeId: router.query.eventTypeId as string,
+  });
+
   const [config, setConfig] = useState(
     initialNodeDef?.config ?? {
       code: "",
@@ -157,19 +163,19 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
       if (compileStatus.status === "success") {
         setIsCodeValid(true);
-        setConfig({
+        setConfig((config) => ({
           ...config,
           tsCode: compileStatus.code,
           compiledJs: compileStatus.compiled
             .slice(compileStatus.compiled.indexOf("async"))
             .replace(/[;\n]+$/, ""),
-        });
+        }));
       } else {
-        setConfig({
+        setConfig((config) => ({
           ...config,
           tsCode: compileStatus.code,
           compiledJs: undefined,
-        });
+        }));
         setIsCodeValid(false);
       }
     },
@@ -185,6 +191,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
         <div className="flex gap-2 items-center">
           {isEditing && (
+            // TODO: Fix this
             <RenameDialog
               name={name}
               onRename={(newName) => {
@@ -261,6 +268,8 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
             <div className="flex space-x-2 mt-2">
               <NodeDepSelector
+                nodes={nodes ?? []}
+                features={features ?? []}
                 nodeDeps={form.watch("nodeDeps")}
                 featureDeps={form.watch("featureDeps")}
                 onFeatureDepsChange={(deps) =>

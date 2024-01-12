@@ -47,7 +47,8 @@ interface NodeDepSelectorProps {
   nodeDeps: NodeDef[];
   onFeatureDepsChange: (deps: FeatureDep[]) => void;
   onNodeDepsChange: (deps: NodeDef[]) => void;
-  eventTypeId: string;
+  nodes: NodeDef[];
+  features: FeatureDef[];
 }
 
 export function NodeDepSelector({
@@ -55,7 +56,8 @@ export function NodeDepSelector({
   nodeDeps,
   onFeatureDepsChange,
   onNodeDepsChange,
-  eventTypeId,
+  nodes,
+  features,
 }: NodeDepSelectorProps) {
   return (
     <>
@@ -85,7 +87,8 @@ export function NodeDepSelector({
         />
       ))}
       <NodeCombobox
-        eventTypeId={eventTypeId}
+        nodes={nodes}
+        features={features}
         onSelectFeature={(node, feature) => {
           onFeatureDepsChange([...featureDeps, { feature, node }]);
         }}

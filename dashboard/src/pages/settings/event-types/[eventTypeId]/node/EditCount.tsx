@@ -5,7 +5,7 @@ import {
   TypeName,
   type NodeDef,
 } from "event-processing";
-import { Pencil, Plus, Save } from "lucide-react";
+import { Pencil, Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -30,8 +30,10 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { api } from "~/utils/api";
 import AssignEntities from "../../AssignEntities";
-import { FeatureDep, NodeDepSelector } from "./NodeDepSelector";
+import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
+import { TimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
@@ -74,6 +76,11 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
   const router = useRouter();
 
+  const { data: features } = api.features.list.useQuery();
+  const { data: nodes } = api.nodeDefs.list.useQuery({
+    eventTypeId: router.query.eventTypeId as string,
+  });
+
   const [config, setConfig] = useState(
     initialNodeDef?.config ?? {
       code: "",
@@ -91,47 +98,9 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   );
   const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDef[]>([]);
 
-  const [conditionNode, setConditionNode] = useState(null);
-
-  // // If we're editing an existing feature then populate forms w/ data.
-  // // Name, type, and datatype can't be changed after creation so the
-  // // fields are disabled.
-  // const isEditingExistingFeature = !!initialDef;
-
-  // const [featureDef, setFeatureDef] = useState<Partial<NodeDef>>(
-  //   initialDef ?? {
-  //     // defaults for some fields
-  //     name: "",
-  //     eventTypes: new Set(),
-  //     dependsOn: new Set(),
-  //     type: NodeType.Computed,
-  //     dataType: DataType.Boolean,
-  //     config: TYPE_DEFAULTS[NodeType.Computed].config,
-  //   }
-  // );
-  // const updateFeatureDef = (data: Partial<NodeDef>) => {
-  //   if (!featureDef) return;
-  //   setFeatureDef({ ...featureDef, ...data });
-  // };
-
-  // const everythingValid = useMemo(() => {
-  //   return (
-  //     featureDef?.name &&
-  //     featureDef?.type &&
-  //     featureDef?.dataType &&
-  //     typeDetailsValid
-  //   );
-  // }, [featureDef, typeDetailsValid]);
-
-  // const save = () => {
-  //   if (!featureDef || !everythingValid) return;
-  //   // TODO: validate that featureDef is a complete NodeDef
-  //   onFeatureDefSave?.(featureDef as NodeDef);
-  // };
-
-  // TEMP
-
-  // const { name, type, dataType, eventTypes, config } = featureDef ?? {};
+  const [conditionNode, setConditionNode] = useState<
+    FeatureDep | NodeDef | null
+  >(null);
 
   const isValid = useMemo(
     () => form.formState.isValid,
@@ -145,6 +114,8 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
     []
   );
+
+  const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
 
   return (
     <div>
@@ -238,13 +209,6 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                {/* <DialogHeader>
-      <DialogTitle>Are you absolutely sure?</DialogTitle>
-      <DialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
-      </DialogDescription>
-    </DialogHeader> */}
                 <AssignEntities
                   onAssign={(node, feature) => {
                     setAssignedToFeatures([
@@ -262,61 +226,81 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
           <div className="flex items-center space-x-2 mt-2">
             <NodeDepSelector
+              nodes={nodes ?? []}
+              features={features ?? []}
               nodeDeps={countUniqueNodeDeps}
               featureDeps={countUniqueFeatureDeps}
               onFeatureDepsChange={setCountUniqueFeatureDeps}
               onNodeDepsChange={setCountUniqueNodeDeps}
-              eventTypeId={router.query.eventTypeId as string}
             />
 
             <div className="text-sm">By</div>
             <NodeDepSelector
+              nodes={nodes ?? []}
+              features={features ?? []}
               nodeDeps={countByNodeDeps}
               featureDeps={countByFeatureDeps}
               onFeatureDepsChange={setCountByFeatureDeps}
               onNodeDepsChange={setCountByNodeDeps}
-              eventTypeId={router.query.eventTypeId as string}
             />
             <div className="text-sm">Where</div>
-            <NodeCombobox
-              eventTypeId={router.query.eventTypeId as string}
-              onSelectFeature={(node, feature) => {}}
-              onSelectNode={(node) => {}}
-              selectedFeatureIds={[]}
-              selectedNodeIds={[]}
-            >
-              <Button variant="outline" size="xs">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </NodeCombobox>
+
+            {!conditionNode ? (
+              <NodeCombobox
+                nodes={
+                  nodes?.filter(
+                    (node) =>
+                      node.returnSchema.type === TypeName.Boolean ||
+                      node.type === NodeType.EntityAppearance
+                  ) ?? []
+                }
+                features={
+                  features?.filter(
+                    (feature) => feature.schema.type === TypeName.Boolean
+                  ) ?? []
+                }
+                onSelectFeature={(node, feature) =>
+                  setConditionNode({ node, feature })
+                }
+                onSelectNode={setConditionNode}
+                selectedFeatureIds={[]}
+                selectedNodeIds={[]}
+              >
+                <Button variant="outline" size="xs">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </NodeCombobox>
+            ) : "feature" in conditionNode ? (
+              <FeatureDep
+                nodeName={conditionNode.node.name}
+                featureName={conditionNode.feature.name}
+                onDelete={() => setConditionNode(conditionNode)}
+              />
+            ) : (
+              <NodeDep
+                nodeName={conditionNode.name}
+                onDelete={() => setConditionNode(null)}
+              />
+            )}
+
+            <div className="text-sm">In the last</div>
+
+            {timeWindow ? (
+              <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
+                <div className="text-sm">{timeWindow.value}</div>
+                <div className="text-sm">{timeWindow.unit}</div>
+                <X className="h-4 w-4" onClick={() => setTimeWindow(null)} />
+              </div>
+            ) : (
+              <TimeWindowDialog onSubmit={setTimeWindow}>
+                <Button variant="outline" size="xs">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TimeWindowDialog>
+            )}
           </div>
         </>
       )}
-
-      {/* <EventTypes
-        eventTypes={eventTypes}
-        onChange={(v) => {
-          updateFeatureDef({ eventTypes: v });
-        }}
-      /> */}
-
-      {/* <Separator className="my-8" /> */}
-
-      {/* <EditComputed
-        nodeDef={
-          initialNodeDef ?? {
-            dataType: {
-              type: form.watch("dataType"),
-            },
-            config: {
-              code: "",
-              depsMap: {},
-            },
-          }
-        }
-        onConfigChange={setConfig}
-        onValidChange={setIsCodeValid}
-      /> */}
     </div>
   );
 }

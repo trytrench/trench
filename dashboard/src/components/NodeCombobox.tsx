@@ -15,28 +15,26 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import { api } from "~/utils/api";
 
 interface Props {
-  eventTypeId: string;
   onSelectNode: (node: NodeDef) => void;
   onSelectFeature: (node: NodeDef, feature: FeatureDef) => void;
   selectedFeatureIds: string[];
   selectedNodeIds: string[];
   children: React.ReactNode;
+  nodes: NodeDef[];
+  features: FeatureDef[];
 }
 
 export default function NodeCombobox({
-  eventTypeId,
   onSelectFeature,
   onSelectNode,
   selectedFeatureIds,
   selectedNodeIds,
   children,
+  nodes,
+  features,
 }: Props) {
-  const { data: features } = api.features.list.useQuery();
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventTypeId });
-
   const [entityNode, setEntityNode] = useState<
     NodeDefsMap[NodeType.EntityAppearance] | null
   >();
@@ -58,7 +56,7 @@ export default function NodeCombobox({
             <CommandEmpty>No properties found.</CommandEmpty>
             <CommandGroup>
               {features
-                ?.filter(
+                .filter(
                   (feature) =>
                     feature.entityTypeId ===
                     entityNode?.returnSchema?.entityType
@@ -93,7 +91,7 @@ export default function NodeCombobox({
 
             <CommandGroup>
               {nodes
-                ?.filter((node) => node.type === NodeType.EntityAppearance)
+                .filter((node) => node.type === NodeType.EntityAppearance)
                 .map((node) => (
                   <CommandItem
                     value={node.name}
@@ -114,7 +112,7 @@ export default function NodeCombobox({
 
             <CommandGroup>
               {nodes
-                ?.filter((node) => node.type === NodeType.Computed)
+                .filter((node) => node.type === NodeType.Computed)
                 .map((node) => (
                   <CommandItem
                     value={node.name}
