@@ -3,21 +3,33 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const featuresRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const result = await ctx.prisma.feature.findMany({});
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          entityTypeId: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.prisma.feature.findMany({
+        where: {
+          entityTypeId: input?.entityTypeId ?? undefined,
+        },
+      });
 
-    const ret: FeatureDef[] = result.map((f) => {
-      return {
-        id: f.id,
-        name: f.name,
-        description: f.description ?? undefined,
-        schema: f.schema as unknown as TSchema,
-        entityTypeId: f.entityTypeId,
-      };
-    });
+      const ret: FeatureDef[] = result.map((f) => {
+        return {
+          id: f.id,
+          name: f.name,
+          description: f.description ?? undefined,
+          schema: f.schema as unknown as TSchema,
+          entityTypeId: f.entityTypeId,
+        };
+      });
 
-    return ret;
-  }),
+      return ret;
+    }),
   create: protectedProcedure
     .input(
       z.object({

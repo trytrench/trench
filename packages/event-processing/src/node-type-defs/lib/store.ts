@@ -13,7 +13,7 @@ type FeatureRow = {
   entity_type: string[];
   entity_id: string[];
   data_type: string;
-  value: string;
+  value: string | null;
   value_Int64: number | null;
   value_Float64: number | null;
   value_String: string | null;

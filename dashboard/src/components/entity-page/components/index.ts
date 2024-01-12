@@ -5,6 +5,7 @@ import { TitleComponent } from "./Title";
 import { VerticalListComponent } from "./VerticalList";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
+import { FeatureComponent } from "./Feature";
 
 // Utility type to extract the 'config' type from a component's props
 type InferConfig<TComponent> = TComponent extends EntityPageComponent<
@@ -27,9 +28,7 @@ export const COMPONENT_REGISTRY = {
   [ComponentType.Entity]: config({
     type: ComponentType.Entity,
     component: EntityComponent,
-    defaultConfig: {
-      entityFeatureId: null,
-    },
+    defaultConfig: {},
   }),
   [ComponentType.Map]: config({
     type: ComponentType.Map,
@@ -50,6 +49,13 @@ export const COMPONENT_REGISTRY = {
     component: VerticalListComponent,
     defaultConfig: {
       items: [],
+    },
+  }),
+  [ComponentType.Feature]: config({
+    type: ComponentType.Feature,
+    component: FeatureComponent,
+    defaultConfig: {
+      featureId: null,
     },
   }),
 } satisfies {

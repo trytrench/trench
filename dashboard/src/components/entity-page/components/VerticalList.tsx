@@ -16,7 +16,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { EntityPageComponent } from "./types";
 import { Button } from "../../ui/button";
-import { entityPageStateAtom } from "../state";
+import { entityPageStateAtom, isEditModeAtom } from "../state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,8 @@ const SortableItem = ({ id }: { id: string }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
+  const [isEditMode] = useAtom(isEditModeAtom);
+
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -62,10 +64,12 @@ const SortableItem = ({ id }: { id: string }) => {
     >
       {/* Render your item based on id */}
       <RenderComponent id={id} />
-      <div
-        {...listeners}
-        className="absolute bottom-0 right-0 h-4 w-4 bg-gray-200"
-      ></div>
+      {isEditMode && (
+        <div
+          {...listeners}
+          className="absolute bottom-0 right-0 h-4 w-4 bg-gray-200"
+        ></div>
+      )}
     </div>
   );
 };

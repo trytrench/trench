@@ -52,7 +52,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
         feature_type: nodeDef.type,
-        feature_id: "entity_appearance",
+        feature_id: entity.type,
         entity_type: [entity.type],
         entity_id: [entity.id],
         data_type: TypeName.Entity,

@@ -1,13 +1,17 @@
 import React, { useContext } from "react";
+import { AnnotatedFeature } from "../../../shared/types";
+import { api } from "../../../utils/api";
 
 type EntityContextType = {
   entityId: string;
   entityType: string;
+  features: AnnotatedFeature[];
 };
 
 const EntityContext = React.createContext<EntityContextType>({
   entityId: "",
   entityType: "",
+  features: [],
 });
 
 export const EntityProvider = ({
@@ -19,8 +23,18 @@ export const EntityProvider = ({
   entityId: string;
   entityType: string;
 }) => {
+  const { data: features } = api.lists.getEntitiesList.useQuery({
+    entityFilters: { entityId, entityType },
+  });
+
   return (
-    <EntityContext.Provider value={{ entityId, entityType }}>
+    <EntityContext.Provider
+      value={{
+        entityId,
+        entityType,
+        features: features?.rows[0]?.features ?? [],
+      }}
+    >
       {children}
     </EntityContext.Provider>
   );

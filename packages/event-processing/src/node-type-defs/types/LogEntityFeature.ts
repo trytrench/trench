@@ -27,7 +27,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
     }
     return set;
   })
-  .setCreateResolver(({ nodeDef, context }) => {
+  .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency, engineId }) => {
       const {
         featureId,
@@ -37,15 +37,6 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       } = nodeDef.config;
 
       const { nodeId, path } = valueAccessor;
-      const obj = nodeId
-        ? await getDependency({
-            nodeId: nodeId,
-            expectedSchema: {
-              type: TypeName.Any,
-            },
-          })
-        : event.data;
-      const value = path ? get(obj, path) : obj;
 
       const assignToEntity = await getDependency({
         nodeId: entityAppearanceNodeId,
@@ -68,6 +59,16 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         is_deleted: 0,
       };
       try {
+        const obj = nodeId
+          ? await getDependency({
+              nodeId: nodeId,
+              expectedSchema: {
+                type: TypeName.Any,
+              },
+            })
+          : event.data;
+        const value = path ? get(obj, path) : obj;
+
         const topLevelType = featureSchema.type as TypeName;
         const dataType = createDataType(featureSchema as TSchema);
         const parsedValue = dataType.parse(value);

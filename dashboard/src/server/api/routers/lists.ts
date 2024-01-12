@@ -2,7 +2,9 @@ import {
   Entity,
   FeatureDef,
   TSchema,
+  TypeName,
   TypedData,
+  createDataType,
   getNodeDefFromSnapshot,
   getTypedData,
 } from "event-processing";
@@ -17,6 +19,9 @@ import { db, prisma } from "~/server/db";
 import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
 import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
 import { getEntitiesList, getEventsList } from "../../lib/buildFilterQueries";
+import { nanoid } from "nanoid";
+import { EntityType } from "@prisma/client";
+import { AnnotatedFeature } from "../../../shared/types";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: protectedProcedure
@@ -44,6 +49,7 @@ export const listsRouter = createTRPCRouter({
       });
 
       const featureDefs = await getLatestFeatureDefs();
+      const entityTypes = await prisma.entityType.findMany();
 
       return {
         count: 0,
@@ -55,7 +61,11 @@ export const listsRouter = createTRPCRouter({
             entityId,
             firstSeenAt: new Date(entity.first_seen),
             lastSeenAt: new Date(entity.last_seen),
-            features: getAnnotatedFeatures(featureDefs, entity.features_array),
+            features: getAnnotatedFeatures(
+              featureDefs,
+              entityTypes,
+              entity.features_array
+            ),
           };
         }),
       };
@@ -79,6 +89,7 @@ export const listsRouter = createTRPCRouter({
       });
 
       const featureDefs = await getLatestFeatureDefs();
+      const entityTypes = await prisma.entityType.findMany();
 
       return {
         count: 0,
@@ -88,7 +99,11 @@ export const listsRouter = createTRPCRouter({
           timestamp: new Date(event.event_timestamp),
           data: JSON.parse(event.event_data),
           entities: getUniqueEntities(event.entities),
-          features: getAnnotatedFeatures(featureDefs, event.features_array),
+          features: getAnnotatedFeatures(
+            featureDefs,
+            entityTypes,
+            event.features_array
+          ),
         })),
       };
     }),
@@ -117,22 +132,9 @@ function getUniqueEntities(
   return entities;
 }
 
-type AnnotatedFeature = {
-  featureId: string;
-  featureName: string;
-  result:
-    | {
-        type: "error";
-        message: string;
-      }
-    | {
-        type: "success";
-        data: TypedData;
-      };
-};
-
 function getAnnotatedFeatures(
   featureDefs: FeatureDef[],
+  entityTypes: EntityType[],
   featuresArray: Array<[string, string | null, string | null]> // featureId, value, error
 ) {
   const featureDefsMap = new Map<string, FeatureDef>();
@@ -140,25 +142,48 @@ function getAnnotatedFeatures(
     featureDefsMap.set(featureDef.id, featureDef);
   }
 
+  const entityTypesMap = new Map<string, string>();
+  for (const entityType of entityTypes) {
+    entityTypesMap.set(entityType.id, entityType.type);
+  }
+
   const annotatedFeatures: AnnotatedFeature[] = [];
   for (const [featureId, value, error] of featuresArray) {
     const featureDef = featureDefsMap.get(featureId);
-    if (!featureDef) {
+    if (featureDef) {
+      const parsed = JSON.parse(value ?? "null");
+
+      annotatedFeatures.push({
+        featureId,
+        featureName: featureDef.name,
+        result: error
+          ? { type: "error", message: error }
+          : {
+              type: "success",
+              data: getTypedData(parsed, featureDef.schema),
+            },
+      });
       continue;
     }
 
-    const parsed = JSON.parse(value ?? "null");
-
-    annotatedFeatures.push({
-      featureId,
-      featureName: featureDef.name,
-      result: error
-        ? { type: "error", message: error }
-        : {
-            type: "success",
-            data: getTypedData(parsed, featureDef.schema),
-          },
-    });
+    const entityType = entityTypesMap.get(featureId);
+    if (entityType) {
+      const parsed = JSON.parse(value ?? "null");
+      annotatedFeatures.push({
+        featureId,
+        featureName: entityType,
+        result: error
+          ? { type: "error", message: error }
+          : {
+              type: "success",
+              data: getTypedData(parsed, {
+                type: TypeName.Entity,
+                entityType: featureId,
+              }),
+            },
+      });
+      continue;
+    }
   }
 
   return annotatedFeatures;

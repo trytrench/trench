@@ -61,7 +61,7 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
       {/* Entity Type */}
       {value.type === TypeName.Entity && (
         <span className="">
-          <span className="mx-2">of type</span>
+          <span className="mx-2 text-gray-400">of type</span>
           <Select.Root
             value={value.entityType ?? ANY_STRING}
             onValueChange={(entityType) => {
