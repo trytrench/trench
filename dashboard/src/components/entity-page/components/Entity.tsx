@@ -1,3 +1,4 @@
+import { useEntity } from "../context/EntityContext";
 import { EntityPageComponent } from "./types";
 
 export interface EntityConfig {
@@ -8,9 +9,12 @@ export const EntityComponent: EntityPageComponent<EntityConfig> = ({
   config,
 }) => {
   // Component implementation
+  const { entityType, entityId } = useEntity();
   return (
     <div>
-      <div>ENTITY</div>
+      <div>
+        {entityType} {entityId}
+      </div>
     </div>
   );
 };

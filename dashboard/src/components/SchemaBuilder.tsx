@@ -5,6 +5,9 @@ import { SelectContent, SelectItem } from "./ui/select";
 import { ChevronDown } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
+import { api } from "../utils/api";
+
+const ANY_STRING = "__any__";
 
 interface SchemaBuilderProps {
   value: TSchema;
@@ -16,6 +19,9 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
   onChange,
 }) => {
   const { toast } = useToast();
+
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
   const handleTypeChange = (val: TypeName) => {
     const newValue: TSchema = DATA_TYPES_REGISTRY[val].defaultSchema;
     onChange(newValue);
@@ -51,6 +57,39 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
           ))}
         </SelectContent>
       </Select.Root>
+
+      {/* Entity Type */}
+      {value.type === TypeName.Entity && (
+        <span className="">
+          <span className="mx-2">of type</span>
+          <Select.Root
+            value={value.entityType ?? ANY_STRING}
+            onValueChange={(entityType) => {
+              if (entityType === ANY_STRING) {
+                onChange({ type: TypeName.Entity });
+              } else {
+                onChange({ ...value, entityType });
+              }
+            }}
+          >
+            <Select.Trigger className="p-0 font-mono border-transparent">
+              {!value.entityType
+                ? "Any"
+                : entityTypes?.find((et) => et.id === value.entityType)?.type ??
+                  "unknown"}
+              <ChevronDown className="inline-block h-3 w-3" />
+            </Select.Trigger>
+            <SelectContent>
+              <SelectItem value={ANY_STRING}>Any</SelectItem>
+              {entityTypes?.map((et) => (
+                <SelectItem key={et.id} value={et.id}>
+                  {et.type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select.Root>
+        </span>
+      )}
 
       {/* Array Items */}
       {value.type === TypeName.Array && (

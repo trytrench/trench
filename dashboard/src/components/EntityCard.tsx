@@ -13,10 +13,13 @@ interface Props {
 }
 
 export const EntityCard = ({ entity, relation }: Props) => {
-  const router = useRouter();
-
   return (
-    <div className="border rounded-lg shadow-sm p-8 bg-card">
+    <a
+      className="flex flex-col text-left border rounded-lg shadow-sm p-8 bg-card"
+      href={`/entity/${encodeURIComponent(
+        entity.entityType
+      )}/${encodeURIComponent(entity.entityId)}`}
+    >
       <div className="">
         <Link
           href={`/entity/${encodeURIComponent(
@@ -86,6 +89,6 @@ export const EntityCard = ({ entity, relation }: Props) => {
           })}
         </div>
       </div>
-    </div>
+    </a>
   );
 };

@@ -95,6 +95,9 @@ abstract class IDataType<TS extends TSchema> {
   throwParseError(input: any): never {
     throwParseError(this.schema.type, input);
   }
+  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+    return schema.type === this.schema.type;
+  }
 }
 
 // Implementations for each data type
@@ -175,6 +178,13 @@ class EntityDataType<T extends string = string> extends IDataType<
       return `{ type: string; id: string }`;
     }
   }
+  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+    if (schema.type !== TypeName.Entity) return false;
+    if (this.schema.entityType && schema.entityType) {
+      return this.schema.entityType === schema.entityType;
+    }
+    return true;
+  }
 }
 
 class ArrayDataType<TItems extends TSchema> extends IDataType<
@@ -219,6 +229,9 @@ class AnyDataType extends IDataType<TAnySchema> {
   }
   toTypescript(): string {
     return "any";
+  }
+  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+    return true;
   }
 }
 

@@ -25,6 +25,7 @@ import {
   RenderResult,
   RenderTypedData,
 } from "../../../components/RenderResult";
+import { EntityPageEditor } from "../../../components/entity-page/EntityPageEditor";
 
 type Option = {
   label: string;
@@ -112,6 +113,9 @@ const Page: NextPageWithLayout = () => {
     [entityData]
   );
 
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const eType = entityTypes?.find((et) => et.id === entityData?.entityType);
+
   const [tab, setTab] = useQueryParam("tab", StringParam);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
@@ -119,9 +123,7 @@ const Page: NextPageWithLayout = () => {
     <main className="h-full flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
         <h1 className="text-2xl">{entityData?.entityId}</h1>
-        <Badge className="-translate-y-0.5">
-          Entity Type: {entityData?.entityType}
-        </Badge>
+        <Badge className="-translate-y-0.5">{eType?.type}</Badge>
       </div>
       <div className="grid grid-cols-4 flex-1">
         <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
@@ -173,6 +175,7 @@ const Page: NextPageWithLayout = () => {
               {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
               <TabsTrigger value="history">Event History</TabsTrigger>
               <TabsTrigger value="links">Related Entities</TabsTrigger>
+              <TabsTrigger value="page">Custom Page</TabsTrigger>
             </TabsList>
             {/* <TabsContent value="explorer">
               <div className="">
@@ -193,6 +196,9 @@ const Page: NextPageWithLayout = () => {
             </TabsContent>
             <TabsContent value="links" className="relative grow">
               <RelatedEntities entityId={entityId} entityType={entityType} />
+            </TabsContent>
+            <TabsContent value="page" className="relative grow">
+              <EntityPageEditor entityId={entityId} />
             </TabsContent>
           </Tabs>
         </div>

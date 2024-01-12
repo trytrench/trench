@@ -1,5 +1,4 @@
 import React from "react";
-import { Responsive, WidthProvider } from "react-grid-layout";
 import { useAtom } from "jotai";
 
 import {
@@ -7,20 +6,13 @@ import {
   entityPageStateAtom,
   isEditModeAtom,
 } from "./state";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { COMPONENT_REGISTRY, ComponentConfig } from "./components";
-import { type ComponentType } from "./components/_enum";
 import { Button } from "../ui/button";
 import { RenderComponent } from "./RenderComponent";
+import { useRouter } from "next/router";
+import { EntityProvider } from "./context/EntityContext";
 
 export const EntityPageEditor: React.FC = () => {
-  const [{ root, components }, setEntityPageState] =
-    useAtom(entityPageStateAtom);
+  const [{ root }, setEntityPageState] = useAtom(entityPageStateAtom);
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
@@ -32,14 +24,21 @@ export const EntityPageEditor: React.FC = () => {
     setIsEditMode(!isEditMode);
   };
 
+  const router = useRouter();
+  const entityType = decodeURIComponent(router.query.entityType as string);
+  const entityId = decodeURIComponent(router.query.entityId as string);
+
   return (
     <div>
       <Button onClick={clearEntityPageState}>reset</Button>
+
       <Button onClick={toggleEditMode}>
         {isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
       </Button>
 
-      <RenderComponent id={root} />
+      <EntityProvider entityId={entityId} entityType={entityType}>
+        <RenderComponent id={root} />
+      </EntityProvider>
     </div>
   );
 };
