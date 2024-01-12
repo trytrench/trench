@@ -34,9 +34,7 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
     }
     return set;
   })
-  .setReturnSchema({
-    type: TypeName.Int64,
-  })
+  .setReturnSchema(TypeName.Int64)
   .setContextType<{
     redis: RedisInterface;
   }>()

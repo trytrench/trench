@@ -53,7 +53,7 @@ export default function NodeCombobox({
       open={open}
       onOpenChange={(open) => {
         setOpen(open);
-        if (!open) setEntityNode(null);
+        if (!open && !initialEntityNode) setEntityNode(null);
       }}
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>

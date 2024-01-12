@@ -92,7 +92,7 @@ interface Props {
     assignedToFeatures: FeatureDep[],
     featureDeps: FeatureDep[],
     nodeDeps: NodeDef[]
-  ) => Promise<void>;
+  ) => void;
 }
 
 export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {

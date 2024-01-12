@@ -34,32 +34,25 @@ import { api } from "~/utils/api";
 import AssignEntities from "../../AssignEntities";
 import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
 import { TimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
+import { add } from "date-fns";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   dataType: z.nativeEnum(TypeName),
-  featureDeps: z.array(
-    z.object({
-      featureId: z.string(),
-      featureName: z.string(),
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
-  nodeDeps: z.array(
-    z.object({
-      nodeId: z.string(),
-      nodeName: z.string(),
-    })
-  ),
 });
 
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
   onSave: (
-    def: Partial<NodeDefsMap[NodeType.UniqueCounter]>,
-    assignedToFeatures: FeatureDep[]
+    def: NodeDef,
+    assignedToFeatures: FeatureDep[],
+    countUniqueFeatureDeps: FeatureDep[],
+    countByFeatureDeps: FeatureDep[],
+    countUniqueNodeDeps: NodeDef[],
+    countByNodeDeps: NodeDef[],
+    conditionFeatureDep: FeatureDep | null,
+    conditionNodeDep: NodeDef | null
   ) => void;
 }
 
@@ -69,8 +62,6 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
     defaultValues: {
       name: "",
       dataType: TypeName.String,
-      featureDeps: [],
-      nodeDeps: [],
     },
   });
 
@@ -80,13 +71,6 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   const { data: nodes } = api.nodeDefs.list.useQuery({
     eventTypeId: router.query.eventTypeId as string,
   });
-
-  const [config, setConfig] = useState(
-    initialNodeDef?.config ?? {
-      code: "",
-      depsMap: {},
-    }
-  );
 
   const [countUniqueFeatureDeps, setCountUniqueFeatureDeps] = useState<
     FeatureDep[]
@@ -98,9 +82,11 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
   );
   const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDef[]>([]);
 
-  const [conditionNode, setConditionNode] = useState<
-    FeatureDep | NodeDef | null
-  >(null);
+  const [conditionNodeDep, setConditionNodeDep] = useState<NodeDef | null>(
+    null
+  );
+  const [conditionFeatureDep, setConditionFeatureDep] =
+    useState<FeatureDep | null>(null);
 
   const isValid = useMemo(
     () => form.formState.isValid,
@@ -139,20 +125,30 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
+              const date = new Date();
               onSave(
                 {
                   // ...initialNodeDef,
-
                   name: form.getValues("name"),
                   config: {
-                    timeWindowMs: 1000 * 60 * 60,
+                    timeWindowMs:
+                      add(date, {
+                        [timeWindow.unit]: timeWindow.value,
+                      }).getTime() - date.getTime(),
                     countByNodeIds: countByNodeDeps.map((dep) => dep.id),
                     countUniqueNodeIds: countUniqueNodeDeps.map(
                       (dep) => dep.id
                     ),
+                    conditionNodeId: conditionFeatureDep?.id,
                   } as Partial<NodeDefsMap[NodeType.UniqueCounter]["config"]>,
                 },
-                assignedToFeatures
+                assignedToFeatures,
+                countUniqueFeatureDeps,
+                countByFeatureDeps,
+                countUniqueNodeDeps,
+                countByNodeDeps,
+                conditionFeatureDep,
+                conditionNodeDep
               );
             }}
           >
@@ -247,7 +243,18 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             />
             <div className="text-sm">Where</div>
 
-            {!conditionNode ? (
+            {conditionNodeDep ? (
+              <NodeDep
+                nodeName={conditionNodeDep.name}
+                onDelete={() => setConditionNodeDep(null)}
+              />
+            ) : conditionFeatureDep ? (
+              <FeatureDep
+                nodeName={conditionFeatureDep.node.name}
+                featureName={conditionFeatureDep.feature.name}
+                onDelete={() => setConditionFeatureDep(null)}
+              />
+            ) : (
               <NodeCombobox
                 nodes={
                   nodes?.filter(
@@ -262,9 +269,9 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                   ) ?? []
                 }
                 onSelectFeature={(node, feature) =>
-                  setConditionNode({ node, feature })
+                  setConditionFeatureDep({ node, feature })
                 }
-                onSelectNode={setConditionNode}
+                onSelectNode={setConditionNodeDep}
                 selectedFeatureIds={[]}
                 selectedNodeIds={[]}
               >
@@ -272,17 +279,6 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
                   <Plus className="h-4 w-4" />
                 </Button>
               </NodeCombobox>
-            ) : "feature" in conditionNode ? (
-              <FeatureDep
-                nodeName={conditionNode.node.name}
-                featureName={conditionNode.feature.name}
-                onDelete={() => setConditionNode(conditionNode)}
-              />
-            ) : (
-              <NodeDep
-                nodeName={conditionNode.name}
-                onDelete={() => setConditionNode(null)}
-              />
             )}
 
             <div className="text-sm">In the last</div>

@@ -1,25 +1,12 @@
-import { Plus } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../../ui/command";
-import { Button } from "../../ui/button";
-import { api } from "../../../utils/api";
-import { FeatureType } from "event-processing";
-import { Label } from "../../ui/label";
 import { Input } from "~/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectItem,
 } from "~/components/ui/select";
+import { Label } from "../../ui/label";
 
 type TimeInterval = {
   number: number;
