@@ -2,7 +2,7 @@ import { db } from "databases";
 import { TrenchEvent } from "../nodeTypeDef";
 import { getUnixTime } from "date-fns";
 
-type FeatureRow = {
+export type FeatureRow = {
   engine_id: string;
   created_at: number;
   event_type: string;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
-import { TSchema, TypeName, createDataType } from "../../data-types";
+import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
@@ -38,12 +38,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
 
       const { nodeId, path } = valueAccessor;
 
-      const assignToEntity = await getDependency({
-        nodeId: entityAppearanceNodeId,
-        expectedSchema: {
-          type: TypeName.Entity,
-        },
-      });
+      let assignToEntity: Entity | null = null;
 
       const baseData = {
         engine_id: engineId,
@@ -53,12 +48,22 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         event_timestamp: getUnixTime(event.timestamp),
         feature_type: nodeDef.type,
         feature_id: featureId,
-        entity_type: [assignToEntity.type],
-        entity_id: [assignToEntity.id],
         data_type: featureSchema.type,
         is_deleted: 0,
+        entity_type: [] as string[],
+        entity_id: [] as string[],
       };
+
       try {
+        assignToEntity = await getDependency({
+          nodeId: entityAppearanceNodeId,
+          expectedSchema: {
+            type: TypeName.Entity,
+          },
+        });
+        baseData.entity_type.push(assignToEntity.type);
+        baseData.entity_id.push(assignToEntity.id);
+
         const obj = nodeId
           ? await getDependency({
               nodeId: nodeId,
