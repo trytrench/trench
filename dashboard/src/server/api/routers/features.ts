@@ -11,19 +11,17 @@ export const featureDefSchema = z.object({
 
 export const featuresRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const result = await ctx.prisma.feature.findMany({});
+    const features = await ctx.prisma.feature.findMany({});
 
-    const ret: FeatureDef[] = result.map((f) => {
+    return features.map((feature) => {
       return {
-        id: f.id,
-        name: f.name,
-        description: f.description ?? undefined,
-        schema: f.schema as unknown as TSchema,
-        entityTypeId: f.entityTypeId,
+        id: feature.id,
+        name: feature.name,
+        description: feature.description ?? undefined,
+        schema: feature.schema as unknown as TSchema,
+        entityTypeId: feature.entityTypeId,
       };
-    });
-
-    return ret;
+    }) as FeatureDef[];
   }),
   create: protectedProcedure
     .input(featureDefSchema.omit({ id: true }))

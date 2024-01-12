@@ -208,7 +208,6 @@ export class ExecutionEngine {
       };
 
       const promise = processNode().catch((e) => {
-        console.error(e);
         return createError(e.message);
       });
       nodePromises[nodeId] = promise;

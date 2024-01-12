@@ -86,7 +86,12 @@ const formSchema = z.object({
 interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
-  onSave: (data: NodeDef, assignedToFeatures: FeatureDep[]) => void;
+  onSave: (
+    data: NodeDef,
+    assignedToFeatures: FeatureDep[],
+    featureDeps: FeatureDep[],
+    nodeDeps: NodeDef[]
+  ) => Promise<void>;
 }
 
 export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
@@ -137,6 +142,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
     form.watch("schema")
   ).toTypescript()}>;`;
   const depsType = useDepsTypes(
+    // TODO: Convert between nodeDef schema and type
     form.watch("nodeDeps"),
     form.watch("featureDeps")
   );
@@ -203,7 +209,9 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                     depsMap: {},
                   },
                 },
-                assignedToFeatures
+                assignedToFeatures,
+                form.getValues("featureDeps"),
+                form.getValues("nodeDeps")
               );
             }}
           >
