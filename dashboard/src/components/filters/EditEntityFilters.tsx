@@ -88,7 +88,12 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
             {/* Type Filter */}
             <TypeSelectorSubItem
-              types={allEntityTypes?.map((e) => e.type) ?? []}
+              types={
+                allEntityTypes?.map((e) => ({
+                  id: e.id,
+                  name: e.type,
+                })) ?? []
+              }
               value={entityType ?? null}
               onChange={(type) => {
                 onChange({

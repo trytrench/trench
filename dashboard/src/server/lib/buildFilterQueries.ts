@@ -193,6 +193,7 @@ export async function getEntitiesList(props: {
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
   `;
 
+  console.log(finalQuery);
   const result = await db.query({
     query: finalQuery,
     format: "JSONEachRow",

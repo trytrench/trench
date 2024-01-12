@@ -7,8 +7,9 @@ import {
 } from "../ui/dropdown-menu";
 import { TypeChip } from "./Chips";
 
+type Type = { id: string; name: string };
 export function TypeSelectorSubItem(props: {
-  types: string[];
+  types: Type[];
   value: string | null;
   onChange: (type: string) => void;
 }) {
@@ -20,15 +21,15 @@ export function TypeSelectorSubItem(props: {
       <DropdownMenuSubContent>
         {types.map((type) => (
           <DropdownMenuItem
-            key={type}
+            key={type.id}
             onClick={() => {
-              onChange(type);
+              onChange(type.id);
             }}
             className="relative pl-8"
           >
-            <TypeChip type={type} className="shadow-sm" />
+            <TypeChip type={type.name} className="shadow-sm" />
 
-            {value === type && (
+            {value === type.id && (
               <Check className="absolute w-4 h-4 left-2 top-2" />
             )}
           </DropdownMenuItem>
