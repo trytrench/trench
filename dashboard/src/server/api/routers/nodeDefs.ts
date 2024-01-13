@@ -5,9 +5,11 @@ import {
   NodeType,
   TypeName,
 } from "event-processing";
-import { z } from "zod";
+import { string, z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { featureDefSchema } from "./features";
+import { TimeWindow } from "~/pages/settings/event-types/[eventTypeId]/node/TimeWindowDialog";
+import { add, getTime } from "date-fns";
 
 export const nodeDefSchema = z.object({
   id: z.string(),
@@ -17,6 +19,34 @@ export const nodeDefSchema = z.object({
   dependsOn: z.array(z.string()),
   config: z.record(z.any()),
   returnSchema: z.record(z.any()),
+});
+
+const countUniqueConfigSchema = z.object({
+  countByFeatureDeps: z.array(
+    z.object({
+      feature: featureDefSchema,
+      node: nodeDefSchema,
+    })
+  ),
+  countUniqueFeatureDeps: z.array(
+    z.object({
+      feature: featureDefSchema,
+      node: nodeDefSchema,
+    })
+  ),
+  countByNodeDeps: z.array(nodeDefSchema),
+  countUniqueNodeDeps: z.array(nodeDefSchema),
+  conditionFeatureDep: z
+    .object({
+      feature: featureDefSchema,
+      node: nodeDefSchema,
+    })
+    .nullable(),
+  conditionNodeDep: nodeDefSchema.nullable(),
+  timeWindow: z.object({
+    value: z.number(),
+    unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
+  }),
 });
 
 export const nodeDefsRouter = createTRPCRouter({
@@ -57,58 +87,39 @@ export const nodeDefsRouter = createTRPCRouter({
   createUniqueCount: protectedProcedure
     .input(
       z.object({
-        nodeDef: nodeDefSchema.omit({ id: true, dependsOn: true }),
-        assignedToFeatures: z.array(
+        name: z.string(),
+        eventTypes: z.array(z.string()),
+        assignToFeatures: z.array(
           z.object({
             feature: featureDefSchema,
             node: nodeDefSchema,
           })
         ),
-        countByFeatureDeps: z.array(
-          z.object({
-            feature: featureDefSchema,
-            node: nodeDefSchema,
-          })
-        ),
-        countUniqueFeatureDeps: z.array(
-          z.object({
-            feature: featureDefSchema,
-            node: nodeDefSchema,
-          })
-        ),
-        countByNodeDeps: z.array(nodeDefSchema),
-        countUniqueNodeDeps: z.array(nodeDefSchema),
-        conditionFeatureDep: z
-          .object({
-            feature: featureDefSchema,
-            node: nodeDefSchema,
-          })
-          .optional(),
-        conditionNodeDep: nodeDefSchema.optional(),
+        countUniqueConfig: countUniqueConfigSchema,
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { configSchema } = NODE_TYPE_DEFS[input.nodeDef.type];
-      configSchema.parse(input.nodeDef.config);
+      const { countUniqueConfig: countUnique } = input;
 
-      if (input.conditionFeatureDep && input.conditionNodeDep) {
+      if (countUnique.conditionFeatureDep && countUnique.conditionNodeDep) {
         throw new Error(
           "Cannot have both a condition feature and a condition node"
         );
       }
 
-      let conditionNodeId = input.conditionNodeDep?.id;
-      if (input.conditionFeatureDep) {
+      let conditionNodeId = countUnique.conditionNodeDep?.id;
+      if (countUnique.conditionFeatureDep) {
         const conditionNode = await ctx.prisma.node.create({
           data: {
-            name: input.conditionFeatureDep.feature.name,
+            name: countUnique.conditionFeatureDep.feature.name,
             type: NodeType.GetEntityFeature,
             dependsOn: [],
-            eventTypes: input.nodeDef.eventTypes,
-            returnSchema: input.conditionFeatureDep.feature.schema as object,
+            eventTypes: input.eventTypes,
+            returnSchema: countUnique.conditionFeatureDep.feature
+              .schema as object,
             config: {
-              featureId: input.conditionFeatureDep.feature.id,
-              entityAppearanceNodeId: input.conditionFeatureDep.node.id,
+              featureId: countUnique.conditionFeatureDep.feature.id,
+              entityAppearanceNodeId: countUnique.conditionFeatureDep.node.id,
             } as NodeDefsMap[NodeType.GetEntityFeature]["config"],
           },
         });
@@ -116,14 +127,14 @@ export const nodeDefsRouter = createTRPCRouter({
       }
       // Create feature getter nodes
       const countByFeatureDeps = await Promise.all(
-        input.countByFeatureDeps.map(({ node, feature }) =>
+        countUnique.countByFeatureDeps.map(({ node, feature }) =>
           ctx.prisma.node.create({
             data: {
               name: `${node.name}.${feature.name}`,
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.nodeDef.eventTypes,
+              eventTypes: input.eventTypes,
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -135,14 +146,14 @@ export const nodeDefsRouter = createTRPCRouter({
       );
 
       const countUniqueFeatureDeps = await Promise.all(
-        input.countByFeatureDeps.map(({ node, feature }) =>
+        countUnique.countByFeatureDeps.map(({ node, feature }) =>
           ctx.prisma.node.create({
             data: {
               name: `${node.name}.${feature.name}`,
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.nodeDef.eventTypes,
+              eventTypes: input.eventTypes,
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -155,27 +166,27 @@ export const nodeDefsRouter = createTRPCRouter({
 
       const nodeDef = await ctx.prisma.node.create({
         data: {
-          name: input.nodeDef.name,
+          name: input.name,
           type: NodeType.UniqueCounter,
           dependsOn: [
             ...countByFeatureDeps.map((node) => node.id),
             ...countUniqueFeatureDeps.map((node) => node.id),
-            ...input.countByNodeDeps.map((node) => node.id),
-            ...input.countUniqueNodeDeps.map((node) => node.id),
+            ...countUnique.countByNodeDeps.map((node) => node.id),
+            ...countUnique.countUniqueNodeDeps.map((node) => node.id),
             ...(conditionNodeId ? [conditionNodeId] : []),
           ],
-          eventTypes: input.nodeDef.eventTypes,
+          eventTypes: input.eventTypes,
           returnSchema: {
             type: TypeName.Int64,
           } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"] as object,
           config: {
-            timeWindowMs: input.nodeDef.config.timeWindowMs,
+            timeWindowMs: getTimeWindowMs(input.countUniqueConfig.timeWindow),
             countByNodeIds: [
-              ...input.countByNodeDeps.map((node) => node.id),
+              ...countUnique.countByNodeDeps.map((node) => node.id),
               ...countByFeatureDeps.map((node) => node.id),
             ],
             countUniqueNodeIds: [
-              ...input.countUniqueNodeDeps.map((node) => node.id),
+              ...countUnique.countUniqueNodeDeps.map((node) => node.id),
               ...countUniqueFeatureDeps.map((node) => node.id),
             ],
             conditionNodeId,
@@ -186,14 +197,14 @@ export const nodeDefsRouter = createTRPCRouter({
       });
 
       await Promise.all(
-        input.assignedToFeatures.map(({ feature, node }) =>
+        input.assignToFeatures.map(({ feature, node }) =>
           ctx.prisma.node.create({
             data: {
               name: feature.name,
               type: NodeType.LogEntityFeature,
               dependsOn: [nodeDef.id],
-              eventTypes: input.nodeDef.eventTypes,
-              returnSchema: {},
+              eventTypes: input.eventTypes,
+              returnSchema: { type: TypeName.Any },
               config: {
                 featureId: feature.id,
                 featureSchema: feature.schema,
@@ -216,7 +227,7 @@ export const nodeDefsRouter = createTRPCRouter({
     .input(
       z.object({
         nodeDef: nodeDefSchema.omit({ id: true, dependsOn: true }),
-        assignedToFeatures: z.array(
+        assignToFeatures: z.array(
           z.object({
             feature: featureDefSchema,
             node: nodeDefSchema,
@@ -293,14 +304,14 @@ export const nodeDefsRouter = createTRPCRouter({
 
       // Create feature setter nodes
       await Promise.all(
-        input.assignedToFeatures.map(({ feature, node }) =>
+        input.assignToFeatures.map(({ feature, node }) =>
           ctx.prisma.node.create({
             data: {
               name: feature.name,
               type: NodeType.LogEntityFeature,
               dependsOn: [nodeDef.id],
               eventTypes: input.nodeDef.eventTypes,
-              returnSchema: {},
+              returnSchema: { type: TypeName.Any },
               config: {
                 featureId: feature.id,
                 featureSchema: feature.schema,
@@ -399,4 +410,13 @@ const publish = async () => {
       value: engine.id,
     },
   });
+};
+
+const getTimeWindowMs = (timeWindow: TimeWindow) => {
+  const date = new Date();
+  return (
+    add(date, {
+      [timeWindow.unit]: timeWindow.value,
+    }).getTime() - date.getTime()
+  );
 };

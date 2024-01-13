@@ -1,7 +1,6 @@
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-
-import { NodeDefsMap, NodeType, TypeName } from "event-processing";
+import { NodeType } from "event-processing";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -9,7 +8,6 @@ import SettingsLayout from "~/components/SettingsLayout";
 import { EditNodeDef } from "~/components/features/EditNodeDef";
 import { toast } from "~/components/ui/use-toast";
 import { EditCount } from "./EditCount";
-import { create } from "lodash";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -23,8 +21,6 @@ const Page: NextPageWithLayout = () => {
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: false }
   );
-
-  const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
   const { mutateAsync: createUniqueCount } =
     api.nodeDefs.createUniqueCount.useMutation();
@@ -43,39 +39,12 @@ const Page: NextPageWithLayout = () => {
       </Link>
       {router.query.type === "count" ? (
         <EditCount
-          onSave={(
-            def,
-            assignedToFeatures,
-            countUniqueFeatureDeps,
-            countByFeatureDeps,
-            countUniqueNodeDeps,
-            countByNodeDeps,
-            conditionFeatureDep,
-            conditionNodeDep
-          ) => {
+          onSave={(name, assignToFeatures, countUniqueConfig) => {
             createUniqueCount({
-              nodeDef: {
-                name: def.name,
-                type: NodeType.UniqueCounter,
-                eventTypes: [router.query.eventTypeId as string],
-                returnSchema: {
-                  type: TypeName.Int64,
-                } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"],
-                config: {
-                  timeWindowMs: def.config.timeWindowMs,
-                  // Unused
-                  counterId: "",
-                  countUniqueNodeIds: [],
-                  countByNodeIds: [],
-                } as NodeDefsMap[NodeType.UniqueCounter]["config"],
-              },
-              assignedToFeatures,
-              countUniqueFeatureDeps,
-              countByFeatureDeps,
-              countUniqueNodeDeps,
-              countByNodeDeps,
-              conditionFeatureDep: conditionFeatureDep ?? undefined,
-              conditionNodeDep: conditionNodeDep ?? undefined,
+              name,
+              eventTypes: [router.query.eventTypeId as string],
+              assignToFeatures,
+              countUniqueConfig,
             })
               .then(() => {
                 toast({
@@ -96,7 +65,7 @@ const Page: NextPageWithLayout = () => {
       ) : (
         <EditNodeDef
           onRename={() => {}}
-          onSave={(def, assignedToFeatures, featureDeps, nodeDeps) => {
+          onSave={(def, assignToFeatures, featureDeps, nodeDeps) => {
             createComputed({
               nodeDef: {
                 name: def.name,
@@ -107,7 +76,7 @@ const Page: NextPageWithLayout = () => {
               },
               featureDeps,
               nodeDeps,
-              assignedToFeatures,
+              assignToFeatures,
             })
               .then(() => {
                 toast({

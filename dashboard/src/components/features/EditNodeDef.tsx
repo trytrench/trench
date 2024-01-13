@@ -51,6 +51,7 @@ import {
   CompileStatusMessage,
 } from "./shared/CodeEditor";
 import { api } from "~/utils/api";
+import FeatureAssignSelector from "~/pages/settings/event-types/[eventTypeId]/node/FeatureAssignSelector";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
@@ -89,7 +90,7 @@ interface Props {
   onRename: (name: string) => void;
   onSave: (
     data: NodeDef,
-    assignedToFeatures: FeatureDep[],
+    assignToFeatures: FeatureDep[],
     featureDeps: FeatureDep[],
     nodeDeps: NodeDef[]
   ) => void;
@@ -124,10 +125,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
   const [isCodeValid, setIsCodeValid] = useState(false);
 
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
-    []
-  );
+  const [assignToFeatures, setAssignToFeatures] = useState<FeatureDep[]>([]);
 
   const isValid = useMemo(
     () => form.formState.isValid && isCodeValid,
@@ -216,7 +214,7 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
                     depsMap: {},
                   },
                 },
-                assignedToFeatures,
+                assignToFeatures,
                 form.getValues("featureDeps"),
                 form.getValues("nodeDeps")
               );
@@ -286,40 +284,10 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
       <div className="text-sm font-medium mt-4 mb-2">Assign</div>
 
       <div className="flex items-center space-x-2 mt-2">
-        {assignedToFeatures.map((featureDep) => (
-          <FeatureDep
-            key={featureDep.feature.id + featureDep.node.id}
-            nodeName={featureDep.node.name}
-            featureName={featureDep.feature.name}
-            onDelete={() => {
-              setAssignedToFeatures(
-                assignedToFeatures.filter(
-                  (dep) =>
-                    dep.node.id !== featureDep.node.id ||
-                    dep.feature.id !== featureDep.feature.id
-                )
-              );
-            }}
-          />
-        ))}
-        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="xs">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <AssignEntities
-              onAssign={(node, feature) => {
-                setAssignedToFeatures([
-                  ...assignedToFeatures,
-                  { node, feature },
-                ]);
-                setAssignDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <FeatureAssignSelector
+          features={assignToFeatures}
+          onFeaturesChange={setAssignToFeatures}
+        />
       </div>
 
       {/* <EventTypes

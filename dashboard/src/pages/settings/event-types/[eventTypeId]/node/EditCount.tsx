@@ -1,16 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  NodeDefsMap,
-  NodeType,
-  TypeName,
-  type NodeDef,
-} from "event-processing";
-import { Pencil, Plus, Save, X } from "lucide-react";
+import { TypeName, type NodeDef } from "event-processing";
+import { Pencil, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import NodeCombobox from "~/components/NodeCombobox";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -30,11 +24,9 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { api } from "~/utils/api";
-import AssignEntities from "../../AssignEntities";
-import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
-import { TimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
-import { add } from "date-fns";
+import CountSelector, { type CountUniqueConfig } from "./CountSelector";
+import FeatureAssignSelector from "./FeatureAssignSelector";
+import { type FeatureDep } from "./NodeDepSelector";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
@@ -45,14 +37,9 @@ interface Props {
   initialNodeDef?: NodeDef;
   onRename: (name: string) => void;
   onSave: (
-    def: NodeDef,
-    assignedToFeatures: FeatureDep[],
-    countUniqueFeatureDeps: FeatureDep[],
-    countByFeatureDeps: FeatureDep[],
-    countUniqueNodeDeps: NodeDef[],
-    countByNodeDeps: NodeDef[],
-    conditionFeatureDep: FeatureDep | null,
-    conditionNodeDep: NodeDef | null
+    name: string,
+    assignToFeatures: FeatureDep[],
+    countUniqueConfig: CountUniqueConfig
   ) => void;
 }
 
@@ -67,26 +54,17 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
   const router = useRouter();
 
-  const { data: features } = api.features.list.useQuery();
-  const { data: nodes } = api.nodeDefs.list.useQuery({
-    eventTypeId: router.query.eventTypeId as string,
-  });
-
-  const [countUniqueFeatureDeps, setCountUniqueFeatureDeps] = useState<
-    FeatureDep[]
-  >([]);
-  const [countUniqueNodeDeps, setCountUniqueNodeDeps] = useState<NodeDef[]>([]);
-
-  const [countByFeatureDeps, setCountByFeatureDeps] = useState<FeatureDep[]>(
-    []
+  const [countUniqueConfig, setCountUniqueConfig] = useState<CountUniqueConfig>(
+    {
+      countUniqueFeatureDeps: [],
+      countByFeatureDeps: [],
+      countUniqueNodeDeps: [],
+      countByNodeDeps: [],
+      conditionFeatureDep: null,
+      conditionNodeDep: null,
+      timeWindow: null,
+    }
   );
-  const [countByNodeDeps, setCountByNodeDeps] = useState<NodeDef[]>([]);
-
-  const [conditionNodeDep, setConditionNodeDep] = useState<NodeDef | null>(
-    null
-  );
-  const [conditionFeatureDep, setConditionFeatureDep] =
-    useState<FeatureDep | null>(null);
 
   const isValid = useMemo(
     () => form.formState.isValid,
@@ -95,13 +73,7 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
   const isEditing = useMemo(() => !!initialNodeDef, [initialNodeDef]);
 
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-
-  const [assignedToFeatures, setAssignedToFeatures] = useState<FeatureDep[]>(
-    []
-  );
-
-  const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
+  const [assignToFeatures, setAssignToFeatures] = useState<FeatureDep[]>([]);
 
   return (
     <div>
@@ -125,30 +97,10 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
-              const date = new Date();
               onSave(
-                {
-                  // ...initialNodeDef,
-                  name: form.getValues("name"),
-                  config: {
-                    timeWindowMs:
-                      add(date, {
-                        [timeWindow.unit]: timeWindow.value,
-                      }).getTime() - date.getTime(),
-                    countByNodeIds: countByNodeDeps.map((dep) => dep.id),
-                    countUniqueNodeIds: countUniqueNodeDeps.map(
-                      (dep) => dep.id
-                    ),
-                    conditionNodeId: conditionFeatureDep?.id,
-                  } as Partial<NodeDefsMap[NodeType.UniqueCounter]["config"]>,
-                },
-                assignedToFeatures,
-                countUniqueFeatureDeps,
-                countByFeatureDeps,
-                countUniqueNodeDeps,
-                countByNodeDeps,
-                conditionFeatureDep,
-                conditionNodeDep
+                form.getValues("name"),
+                assignToFeatures,
+                countUniqueConfig
               );
             }}
           >
@@ -181,121 +133,20 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
           <div className="text-sm font-medium mt-4 mb-2">Assign</div>
 
           <div className="flex items-center space-x-2 mt-2">
-            {assignedToFeatures.map((featureDep) => (
-              <FeatureDep
-                key={featureDep.feature.id + featureDep.node.id}
-                nodeName={featureDep.node.name}
-                featureName={featureDep.feature.name}
-                onDelete={() => {
-                  setAssignedToFeatures(
-                    assignedToFeatures.filter(
-                      (dep) =>
-                        dep.node.id !== featureDep.node.id ||
-                        dep.feature.id !== featureDep.feature.id
-                    )
-                  );
-                }}
-              />
-            ))}
-
-            <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-              <DialogTrigger>
-                <Button variant="outline" size="xs">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <AssignEntities
-                  onAssign={(node, feature) => {
-                    setAssignedToFeatures([
-                      ...assignedToFeatures,
-                      { node, feature },
-                    ]);
-                    setAssignDialogOpen(false);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
+            <FeatureAssignSelector
+              features={assignToFeatures}
+              onFeaturesChange={setAssignToFeatures}
+            />
           </div>
 
           <div className="text-sm font-medium mt-4 mb-2">Count Unique</div>
 
           <div className="flex items-center space-x-2 mt-2">
-            <NodeDepSelector
-              nodes={nodes ?? []}
-              features={features ?? []}
-              nodeDeps={countUniqueNodeDeps}
-              featureDeps={countUniqueFeatureDeps}
-              onFeatureDepsChange={setCountUniqueFeatureDeps}
-              onNodeDepsChange={setCountUniqueNodeDeps}
-              canSelectEntityNode
+            <CountSelector
+              config={countUniqueConfig}
+              onConfigChange={setCountUniqueConfig}
+              eventTypeId={router.query.eventTypeId as string}
             />
-
-            <div className="text-sm">By</div>
-            <NodeDepSelector
-              nodes={nodes ?? []}
-              features={features ?? []}
-              nodeDeps={countByNodeDeps}
-              featureDeps={countByFeatureDeps}
-              onFeatureDepsChange={setCountByFeatureDeps}
-              onNodeDepsChange={setCountByNodeDeps}
-              canSelectEntityNode
-            />
-            <div className="text-sm">Where</div>
-
-            {conditionNodeDep ? (
-              <NodeDep
-                nodeName={conditionNodeDep.name}
-                onDelete={() => setConditionNodeDep(null)}
-              />
-            ) : conditionFeatureDep ? (
-              <FeatureDep
-                nodeName={conditionFeatureDep.node.name}
-                featureName={conditionFeatureDep.feature.name}
-                onDelete={() => setConditionFeatureDep(null)}
-              />
-            ) : (
-              <NodeCombobox
-                nodes={
-                  nodes?.filter(
-                    (node) =>
-                      node.returnSchema.type === TypeName.Boolean ||
-                      node.type === NodeType.EntityAppearance
-                  ) ?? []
-                }
-                features={
-                  features?.filter(
-                    (feature) => feature.schema.type === TypeName.Boolean
-                  ) ?? []
-                }
-                onSelectFeature={(node, feature) =>
-                  setConditionFeatureDep({ node, feature })
-                }
-                onSelectNode={setConditionNodeDep}
-                selectedFeatureIds={[]}
-                selectedNodeIds={[]}
-              >
-                <Button variant="outline" size="xs">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </NodeCombobox>
-            )}
-
-            <div className="text-sm">In the last</div>
-
-            {timeWindow ? (
-              <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
-                <div className="text-sm">{timeWindow.value}</div>
-                <div className="text-sm">{timeWindow.unit}</div>
-                <X className="h-4 w-4" onClick={() => setTimeWindow(null)} />
-              </div>
-            ) : (
-              <TimeWindowDialog onSubmit={setTimeWindow}>
-                <Button variant="outline" size="xs">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </TimeWindowDialog>
-            )}
           </div>
         </>
       )}
