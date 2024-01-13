@@ -1,15 +1,15 @@
 import { GlobalStateKey, prisma } from "databases";
+import { add } from "date-fns";
 import {
   NODE_TYPE_DEFS,
   NodeDefsMap,
   NodeType,
   TypeName,
 } from "event-processing";
-import { string, z } from "zod";
+import { z } from "zod";
+import { TimeWindow } from "~/pages/settings/event-types/[eventTypeId]/node/TimeWindowDialog";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { featureDefSchema } from "./features";
-import { TimeWindow } from "~/pages/settings/event-types/[eventTypeId]/node/TimeWindowDialog";
-import { add, getTime } from "date-fns";
 
 export const nodeDefSchema = z.object({
   id: z.string(),
@@ -21,21 +21,14 @@ export const nodeDefSchema = z.object({
   returnSchema: z.record(z.any()),
 });
 
-const countUniqueConfigSchema = z.object({
+const countConfigSchema = z.object({
   countByFeatureDeps: z.array(
     z.object({
       feature: featureDefSchema,
       node: nodeDefSchema,
     })
   ),
-  countUniqueFeatureDeps: z.array(
-    z.object({
-      feature: featureDefSchema,
-      node: nodeDefSchema,
-    })
-  ),
   countByNodeDeps: z.array(nodeDefSchema),
-  countUniqueNodeDeps: z.array(nodeDefSchema),
   conditionFeatureDep: z
     .object({
       feature: featureDefSchema,
@@ -47,6 +40,16 @@ const countUniqueConfigSchema = z.object({
     value: z.number(),
     unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
   }),
+});
+
+const countUniqueConfigSchema = countConfigSchema.extend({
+  countUniqueFeatureDeps: z.array(
+    z.object({
+      feature: featureDefSchema,
+      node: nodeDefSchema,
+    })
+  ),
+  countUniqueNodeDeps: z.array(nodeDefSchema),
 });
 
 export const nodeDefsRouter = createTRPCRouter({
@@ -82,6 +85,121 @@ export const nodeDefsRouter = createTRPCRouter({
       return nodeDefs.map(
         (nodeDef) => nodeDef as unknown as NodeDefsMap[keyof NodeDefsMap]
       );
+    }),
+
+  createCount: protectedProcedure
+    .input(
+      z.object({
+        name: z.string(),
+        eventTypes: z.array(z.string()),
+        assignToFeatures: z.array(
+          z.object({
+            feature: featureDefSchema,
+            node: nodeDefSchema,
+          })
+        ),
+        countConfig: countConfigSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { countConfig: count } = input;
+
+      if (count.conditionFeatureDep && count.conditionNodeDep) {
+        throw new Error(
+          "Cannot have both a condition feature and a condition node"
+        );
+      }
+
+      let conditionNodeId = count.conditionNodeDep?.id;
+      if (count.conditionFeatureDep) {
+        const conditionNode = await ctx.prisma.node.create({
+          data: {
+            name: count.conditionFeatureDep.feature.name,
+            type: NodeType.GetEntityFeature,
+            dependsOn: [],
+            eventTypes: input.eventTypes,
+            returnSchema: count.conditionFeatureDep.feature.schema as object,
+            config: {
+              featureId: count.conditionFeatureDep.feature.id,
+              entityAppearanceNodeId: count.conditionFeatureDep.node.id,
+            } as NodeDefsMap[NodeType.GetEntityFeature]["config"],
+          },
+        });
+        conditionNodeId = conditionNode.id;
+      }
+
+      // Create feature getter nodes
+      const countByFeatureDeps = await Promise.all(
+        count.countByFeatureDeps.map(({ node, feature }) =>
+          ctx.prisma.node.create({
+            data: {
+              name: `${node.name}.${feature.name}`,
+              type: NodeType.GetEntityFeature,
+              dependsOn: [],
+              // Make sure frontend passes this
+              eventTypes: input.eventTypes,
+              returnSchema: feature.schema as object,
+              config: {
+                featureId: feature.id,
+                entityAppearanceNodeId: node.id,
+              } as NodeDefsMap[NodeType.GetEntityFeature]["config"],
+            },
+          })
+        )
+      );
+
+      // Create count node
+      const nodeDef = await ctx.prisma.node.create({
+        data: {
+          name: input.name,
+          type: NodeType.Counter,
+          dependsOn: [
+            ...countByFeatureDeps.map((node) => node.id),
+            ...count.countByNodeDeps.map((node) => node.id),
+            ...(conditionNodeId ? [conditionNodeId] : []),
+          ],
+          eventTypes: input.eventTypes,
+          returnSchema: {
+            type: TypeName.Int64,
+          } as NodeDefsMap[NodeType.Counter]["returnSchema"] as object,
+          config: {
+            timeWindowMs: getTimeWindowMs(count.timeWindow),
+            countByNodeIds: [
+              ...count.countByNodeDeps.map((node) => node.id),
+              ...countByFeatureDeps.map((node) => node.id),
+            ],
+            conditionNodeId,
+            // TODO: Oh shit
+            counterId: (Math.random() * 10000).toString(),
+          } as NodeDefsMap[NodeType.Counter]["config"],
+        },
+      });
+
+      await Promise.all(
+        input.assignToFeatures.map(({ feature, node }) =>
+          ctx.prisma.node.create({
+            data: {
+              name: feature.name,
+              type: NodeType.LogEntityFeature,
+              dependsOn: [nodeDef.id],
+              eventTypes: input.eventTypes,
+              returnSchema: { type: TypeName.Any },
+              config: {
+                featureId: feature.id,
+                featureSchema: feature.schema,
+                entityAppearanceNodeId: node.id,
+                valueAccessor: {
+                  nodeId: nodeDef.id,
+                },
+              } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+            },
+          })
+        )
+      );
+
+      await publish();
+
+      return nodeDef;
     }),
 
   createUniqueCount: protectedProcedure
@@ -125,6 +243,7 @@ export const nodeDefsRouter = createTRPCRouter({
         });
         conditionNodeId = conditionNode.id;
       }
+
       // Create feature getter nodes
       const countByFeatureDeps = await Promise.all(
         countUnique.countByFeatureDeps.map(({ node, feature }) =>
@@ -146,7 +265,7 @@ export const nodeDefsRouter = createTRPCRouter({
       );
 
       const countUniqueFeatureDeps = await Promise.all(
-        countUnique.countByFeatureDeps.map(({ node, feature }) =>
+        countUnique.countUniqueFeatureDeps.map(({ node, feature }) =>
           ctx.prisma.node.create({
             data: {
               name: `${node.name}.${feature.name}`,
@@ -164,6 +283,7 @@ export const nodeDefsRouter = createTRPCRouter({
         )
       );
 
+      // Create count node
       const nodeDef = await ctx.prisma.node.create({
         data: {
           name: input.name,
@@ -180,7 +300,7 @@ export const nodeDefsRouter = createTRPCRouter({
             type: TypeName.Int64,
           } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"] as object,
           config: {
-            timeWindowMs: getTimeWindowMs(input.countUniqueConfig.timeWindow),
+            timeWindowMs: getTimeWindowMs(countUnique.timeWindow),
             countByNodeIds: [
               ...countUnique.countByNodeDeps.map((node) => node.id),
               ...countByFeatureDeps.map((node) => node.id),
@@ -196,6 +316,7 @@ export const nodeDefsRouter = createTRPCRouter({
         },
       });
 
+      // Create feature setter nodes
       await Promise.all(
         input.assignToFeatures.map(({ feature, node }) =>
           ctx.prisma.node.create({
@@ -285,6 +406,7 @@ export const nodeDefsRouter = createTRPCRouter({
         {} as Record<string, string>
       );
 
+      // Create computed node
       const nodeDef = await ctx.prisma.node.create({
         data: {
           name: input.nodeDef.name,

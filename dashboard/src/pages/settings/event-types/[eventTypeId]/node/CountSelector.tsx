@@ -6,7 +6,15 @@ import { api } from "~/utils/api";
 import { FeatureDep, NodeDep, NodeDepSelector } from "./NodeDepSelector";
 import { type TimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
 
-export type CountUniqueConfig = {
+export type CountConfig = {
+  countByFeatureDeps: FeatureDep[];
+  countByNodeDeps: NodeDef[];
+  conditionFeatureDep: FeatureDep | null;
+  conditionNodeDep: NodeDef | null;
+  timeWindow: TimeWindow | null;
+};
+
+export type UniqueCount = {
   countUniqueFeatureDeps: FeatureDep[];
   countByFeatureDeps: FeatureDep[];
   countUniqueNodeDeps: NodeDef[];
@@ -18,8 +26,8 @@ export type CountUniqueConfig = {
 
 interface Props {
   eventTypeId: string;
-  config: CountUniqueConfig;
-  onConfigChange: (config: CountUniqueConfig) => void;
+  config: CountConfig | UniqueCount;
+  onConfigChange: (config: CountConfig | UniqueCount) => void;
 }
 
 export default function CountSelector({
@@ -32,8 +40,8 @@ export default function CountSelector({
 
   const {
     countUniqueFeatureDeps,
-    countByFeatureDeps,
     countUniqueNodeDeps,
+    countByFeatureDeps,
     countByNodeDeps,
     conditionFeatureDep,
     conditionNodeDep,
@@ -42,19 +50,21 @@ export default function CountSelector({
 
   return (
     <>
-      <NodeDepSelector
-        nodes={nodes ?? []}
-        features={features ?? []}
-        nodeDeps={countUniqueNodeDeps}
-        featureDeps={countUniqueFeatureDeps}
-        onFeatureDepsChange={(deps) =>
-          onConfigChange({ ...config, countUniqueFeatureDeps: deps })
-        }
-        onNodeDepsChange={(deps) =>
-          onConfigChange({ ...config, countUniqueNodeDeps: deps })
-        }
-        canSelectEntityNode
-      />
+      {countUniqueFeatureDeps && (
+        <NodeDepSelector
+          nodes={nodes ?? []}
+          features={features ?? []}
+          nodeDeps={countUniqueNodeDeps}
+          featureDeps={countUniqueFeatureDeps}
+          onFeatureDepsChange={(deps) =>
+            onConfigChange({ ...config, countUniqueFeatureDeps: deps })
+          }
+          onNodeDepsChange={(deps) =>
+            onConfigChange({ ...config, countUniqueNodeDeps: deps })
+          }
+          canSelectEntityNode
+        />
+      )}
 
       <div className="text-sm">By</div>
       <NodeDepSelector

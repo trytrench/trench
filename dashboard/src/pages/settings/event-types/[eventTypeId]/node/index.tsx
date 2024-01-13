@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
 import { EditNodeDef } from "~/components/features/EditNodeDef";
 import { toast } from "~/components/ui/use-toast";
+import { EditUniqueCount } from "./EditUniqueCount";
 import { EditCount } from "./EditCount";
 
 const Page: NextPageWithLayout = () => {
@@ -21,6 +22,8 @@ const Page: NextPageWithLayout = () => {
     { eventTypeId: router.query.eventTypeId as string },
     { enabled: false }
   );
+
+  const { mutateAsync: createCount } = api.nodeDefs.createCount.useMutation();
 
   const { mutateAsync: createUniqueCount } =
     api.nodeDefs.createUniqueCount.useMutation();
@@ -39,6 +42,33 @@ const Page: NextPageWithLayout = () => {
       </Link>
       {router.query.type === "count" ? (
         <EditCount
+          onRename={() => {}}
+          onSave={(name, assignToFeatures, countConfig) => {
+            createCount({
+              name,
+              eventTypes: [router.query.eventTypeId as string],
+              assignToFeatures,
+              countConfig,
+            })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
+      ) : router.query.type === "unique-count" ? (
+        <EditUniqueCount
+          onRename={() => {}}
           onSave={(name, assignToFeatures, countUniqueConfig) => {
             createUniqueCount({
               name,

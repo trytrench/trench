@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type NodeDef } from "event-processing";
+import { TypeName, type NodeDef } from "event-processing";
 import { Pencil, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import CountSelector, { type CountConfig } from "./CountSelector";
+import CountSelector, { type UniqueCountConfig } from "./CountSelector";
 import FeatureAssignSelector from "./FeatureAssignSelector";
 import { type FeatureDep } from "./NodeDepSelector";
 
@@ -38,11 +38,11 @@ interface Props {
   onSave: (
     name: string,
     assignToFeatures: FeatureDep[],
-    countConfig: CountConfig
+    countUniqueConfig: UniqueCountConfig
   ) => void;
 }
 
-export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
+export function EditUniqueCount({ initialNodeDef, onSave, onRename }: Props) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,13 +52,17 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
 
   const router = useRouter();
 
-  const [countConfig, setCountConfig] = useState<CountConfig>({
-    countByFeatureDeps: [],
-    countByNodeDeps: [],
-    conditionFeatureDep: null,
-    conditionNodeDep: null,
-    timeWindow: null,
-  });
+  const [countUniqueConfig, setCountUniqueConfig] = useState<UniqueCountConfig>(
+    {
+      countUniqueFeatureDeps: [],
+      countByFeatureDeps: [],
+      countUniqueNodeDeps: [],
+      countByNodeDeps: [],
+      conditionFeatureDep: null,
+      conditionNodeDep: null,
+      timeWindow: null,
+    }
+  );
 
   const isValid = useMemo(
     () => form.formState.isValid,
@@ -91,7 +95,11 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             onClick={(event) => {
               event.preventDefault();
 
-              onSave(form.getValues("name"), assignToFeatures, countConfig);
+              onSave(
+                form.getValues("name"),
+                assignToFeatures,
+                countUniqueConfig
+              );
             }}
           >
             <Save className="w-4 h-4 mr-2" />
@@ -129,12 +137,12 @@ export function EditCount({ initialNodeDef, onSave, onRename }: Props) {
             />
           </div>
 
-          <div className="text-sm font-medium mt-4 mb-2">Count</div>
+          <div className="text-sm font-medium mt-4 mb-2">Count Unique</div>
 
           <div className="flex items-center space-x-2 mt-2">
             <CountSelector
-              config={countConfig}
-              onConfigChange={setCountConfig}
+              config={countUniqueConfig}
+              onConfigChange={setCountUniqueConfig}
               eventTypeId={router.query.eventTypeId as string}
             />
           </div>

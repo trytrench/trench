@@ -259,6 +259,18 @@ const Page: NextPageWithLayout = () => {
                 >
                   Count
                 </CommandItem>
+
+                <CommandItem
+                  onSelect={() =>
+                    void router.push(
+                      `/settings/event-types/${
+                        router.query.eventTypeId as string
+                      }/node?type=unique-count`
+                    )
+                  }
+                >
+                  Unique Count
+                </CommandItem>
               </CommandGroup>
             </Command>
           </PopoverContent>
