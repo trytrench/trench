@@ -34,7 +34,7 @@ export const COMPONENT_REGISTRY = {
     type: ComponentType.Map,
     component: MapComponent,
     defaultConfig: {
-      locationFeatureId: null,
+      locationFeaturePath: [],
     },
   }),
   [ComponentType.Title]: config({

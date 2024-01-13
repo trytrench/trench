@@ -9,25 +9,7 @@ import {
 import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
 import { SchemaBuilder } from "../components/SchemaBuilder";
-
-enum EntityType {
-  Card = "card_type_id",
-  Ip = "ip_type_id",
-}
-
-const ENTITY_TYPE_NAMES: Record<EntityType, string> = {
-  [EntityType.Card]: "Card",
-  [EntityType.Ip]: "Ip",
-};
-
-const cardEntity = createDataType({
-  type: TypeName.Entity,
-  entityType: EntityType.Card,
-});
-
-const location = createDataType({
-  type: TypeName.Location,
-});
+import { SchemaTag } from "../components/SchemaTag";
 
 interface Argument {
   name: string;
@@ -41,66 +23,6 @@ interface Count {
     amount: number;
     unit: string;
   };
-}
-
-// const shite2 = shite.parse("l");
-
-function SchemaTag({
-  schema,
-  layers = 0,
-}: {
-  schema: TSchema;
-  layers?: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  switch (schema.type) {
-    case TypeName.Entity:
-      return (
-        <code>
-          {"Entity<"}
-          {schema.entityType
-            ? ENTITY_TYPE_NAMES[schema.entityType as EntityType]
-            : "unknown"}
-          {">"}
-        </code>
-      );
-    case TypeName.Array:
-      return (
-        <code>
-          {"Array<"}
-          <SchemaTag schema={schema.items} />
-          {">"}
-        </code>
-      );
-    case TypeName.Object:
-      return (
-        <code>
-          <button
-            onClick={() => {
-              setExpanded((prev) => !prev);
-            }}
-          >
-            {`Object${expanded ? ` {` : "<"}`}
-          </button>
-
-          {expanded ? (
-            <div className="ml-4 flex flex-col">
-              {Object.entries(schema.properties).map(([key, value]) => (
-                <code key={key}>
-                  <span className="text-gray-400">{key}:</span>{" "}
-                  <SchemaTag schema={value} />
-                </code>
-              ))}
-            </div>
-          ) : (
-            <button onClick={() => setExpanded(true)}>...</button>
-          )}
-          {expanded ? "}" : ">"}
-        </code>
-      );
-    default:
-      return <code>{schema.type}</code>;
-  }
 }
 
 function ShowSchema({ schema }: { schema: TSchema }) {

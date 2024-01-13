@@ -330,3 +330,10 @@ export function getTypedData<T extends TSchema = TSchema>(
     value: createDataType(schema).parse(data),
   };
 }
+
+export function parseTypedData<T extends TSchema>(
+  expectedSchema: T,
+  data: TypedData
+): InferSchemaType<T> {
+  return createDataType(expectedSchema).parse(data.value);
+}
