@@ -185,6 +185,7 @@ const Page: NextPageWithLayout = () => {
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
 
   const [open, setOpen] = useState(false);
+  const [nodeSelectOpen, setNodeSelectOpen] = useState(false);
 
   return (
     <div>
@@ -197,28 +198,52 @@ const Page: NextPageWithLayout = () => {
       </Link>
       <div className="mt-1 mb-4 flex items-center">
         <h1 className="text-2xl text-emphasis-foreground">{eventType?.type}</h1>
-        <Select
-          onValueChange={(value) =>
-            void router.push(
-              `/settings/event-types/${
-                router.query.eventTypeId as string
-              }/node/${value}`
-            )
-          }
-        >
-          <SelectTrigger className="w-[180px] ml-4">
-            <SelectValue placeholder="Select a node" />
-          </SelectTrigger>
-          <SelectContent>
-            {nodes
-              ?.filter((node) => !node.config?.paths)
-              .map((node) => (
-                <SelectItem key={node.id} value={node.id}>
-                  {node.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+
+        <Popover open={nodeSelectOpen} onOpenChange={setNodeSelectOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              role="combobox"
+              variant="outline"
+              aria-expanded={nodeSelectOpen}
+              className="w-[200px] justify-between ml-4"
+            >
+              Select node
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+
+          <PopoverContent className="w-[200px] p-0">
+            <Command>
+              <CommandInput placeholder="Search types..." />
+              <CommandEmpty>No nodes found.</CommandEmpty>
+              <CommandGroup>
+                {nodes
+                  ?.filter((node) =>
+                    [
+                      NodeType.Computed,
+                      NodeType.Counter,
+                      NodeType.UniqueCounter,
+                    ].includes(node.type)
+                  )
+                  .map((node) => (
+                    <CommandItem
+                      key={node.id}
+                      onSelect={() =>
+                        void router.push(
+                          `/settings/event-types/${
+                            router.query.eventTypeId as string
+                          }/node/${node.id}`
+                        )
+                      }
+                    >
+                      {node.name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>

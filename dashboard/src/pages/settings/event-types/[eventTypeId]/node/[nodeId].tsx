@@ -1,12 +1,14 @@
-import type { NextPageWithLayout } from "~/pages/_app";
-import { api } from "~/utils/api";
-import type { NodeDefsMap, NodeType } from "event-processing";
+import { NodeDefsMap, NodeType } from "event-processing";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
-import { EditNodeDef } from "~/components/features/EditNodeDef";
+import { EditComputed } from "~/pages/settings/event-types/[eventTypeId]/node/EditComputed";
 import { toast } from "~/components/ui/use-toast";
+import type { NextPageWithLayout } from "~/pages/_app";
+import { api } from "~/utils/api";
+import { EditCount } from "./EditCount";
+import { EditUniqueCount } from "./EditUniqueCount";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -58,7 +60,91 @@ const Page: NextPageWithLayout = () => {
         <ChevronLeft className="w-3 h-3" />
         Back to {eventType?.type}
       </Link>
-      {nodeDef && <EditNodeDef initialNodeDef={nodeDef} onSave={handleSave} />}
+
+      {!nodeDef ? null : nodeDef.type === NodeType.Count ? (
+        <EditCount
+          onRename={() => {}}
+          onSave={(name, assignToFeatures, countConfig) => {
+            createCount({
+              name,
+              eventTypes: [router.query.eventTypeId as string],
+              assignToFeatures,
+              countConfig,
+            })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
+      ) : nodeDef.type === NodeType.UniqueCounter ? (
+        <EditUniqueCount
+          onRename={() => {}}
+          onSave={(name, assignToFeatures, countUniqueConfig) => {
+            createUniqueCount({
+              name,
+              eventTypes: [router.query.eventTypeId as string],
+              assignToFeatures,
+              countUniqueConfig,
+            })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
+      ) : (
+        <EditComputed
+          onRename={() => {}}
+          onSave={(def, assignToFeatures, featureDeps, nodeDeps) => {
+            createComputed({
+              nodeDef: {
+                name: def.name,
+                type: NodeType.Computed,
+                eventTypes: [router.query.eventTypeId as string],
+                returnSchema: def.returnSchema,
+                config: def.config,
+              },
+              featureDeps,
+              nodeDeps,
+              assignToFeatures,
+            })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
+      )}
     </div>
   );
 };

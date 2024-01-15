@@ -28,8 +28,8 @@ import {
   FeatureDep,
   NodeDepSelector,
 } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
-import { SchemaBuilder } from "../SchemaBuilder";
-import { useEventTypes } from "../ts-editor/useEventTypes";
+import { SchemaBuilder } from "../../../../../components/SchemaBuilder";
+import { useEventTypes } from "../../../../../components/ts-editor/useEventTypes";
 import {
   Dialog,
   DialogContent,
@@ -38,18 +38,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
+} from "../../../../../components/ui/dialog";
 import {
   SchemaDisplay,
   SchemaEntry,
   useDepsSchema,
   useDepsTypes,
-} from "./SchemaDisplay";
+} from "../../../../../components/features/SchemaDisplay";
 import {
   CodeEditor,
   CompileStatus,
   CompileStatusMessage,
-} from "./shared/CodeEditor";
+} from "../../../../../components/features/shared/CodeEditor";
 import { api } from "~/utils/api";
 import FeatureAssignSelector from "~/pages/settings/event-types/[eventTypeId]/node/FeatureAssignSelector";
 
@@ -96,7 +96,7 @@ interface Props {
   ) => void;
 }
 
-export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
+export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
