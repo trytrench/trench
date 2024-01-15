@@ -14,6 +14,7 @@ import { FeatureSelector } from "../FeatureSelector";
 import { TypeName, parseTypedData } from "event-processing";
 import { useEntity } from "../context/EntityContext";
 import { api } from "../../../utils/api";
+import { EditModeOverlay } from "../EditModeOverlay";
 
 export interface MapConfig {
   locationFeaturePath: FeaturePathItem[];
@@ -62,8 +63,10 @@ export const MapComponent: EntityPageComponent<MapConfig> = ({ id }) => {
     : [];
 
   return (
-    <div className="w-full h-40">
-      {isEditMode ? (
+    <EditModeOverlay
+      className="h-40"
+      isEditMode={isEditMode}
+      renderEditModeControls={() => (
         <div>
           <div>MAP</div>
           <div>
@@ -83,10 +86,10 @@ export const MapComponent: EntityPageComponent<MapConfig> = ({ id }) => {
             />
           </div>
         </div>
-      ) : (
-        <MapboxMap markers={locationMarkers} />
       )}
-    </div>
+    >
+      <MapboxMap markers={locationMarkers} />
+    </EditModeOverlay>
   );
 };
 
@@ -136,7 +139,6 @@ const MapboxMap = ({ markers }: PaymentMapProps) => {
       return { longitude, latitude, zoom };
     }
   };
-  console.log(env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
   return (
     <Map
       mapboxAccessToken={env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}

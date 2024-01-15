@@ -135,9 +135,9 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
                     onSelect={() => {
                       const value = registryConfig;
                       setState((prev) => {
-                        const prevComponent = prev.components[
-                          id
-                        ] as ComponentConfigMap[ComponentType.VerticalList];
+                        const prevComponent = prev?.components[id] as
+                          | ComponentConfigMap[ComponentType.VerticalList]
+                          | undefined;
                         if (!prevComponent) {
                           console.log("no prev component");
                           return prev;
@@ -146,7 +146,7 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
                         console.log({
                           ...prev,
                           components: {
-                            ...prev.components,
+                            ...prev?.components,
                             [id]: {
                               ...prevComponent,
                               config: {

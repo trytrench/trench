@@ -56,10 +56,6 @@ export function getAnnotatedFeatures(
     }
   }
 
-  console.log(annotatedFeatures);
-
-  // console.log(JSON.stringify(annotatedFeatures, null, 2));
-
   return annotatedFeatures;
 }
 

@@ -56,7 +56,7 @@ export const EntityPageEditor: React.FC = () => {
   }, [entityType, isEditMode, pageConfig, prevEditMode, upsertPage]);
 
   const clearEntityPageState = () => {
-    setEntityPageState(null);
+    setEntityPageState(defaultEntityPageState);
   };
 
   const toggleEditMode = () => {
