@@ -198,7 +198,7 @@ const Page: NextPageWithLayout = () => {
               <RelatedEntities entityId={entityId} entityType={entityType} />
             </TabsContent>
             <TabsContent value="page" className="relative grow">
-              <EntityPageEditor entityId={entityId} />
+              <EntityPageEditor />
             </TabsContent>
           </Tabs>
         </div>

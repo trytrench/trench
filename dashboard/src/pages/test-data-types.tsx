@@ -9,25 +9,9 @@ import {
 import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
 import { SchemaBuilder } from "../components/SchemaBuilder";
-
-enum EntityType {
-  Card = "card_type_id",
-  Ip = "ip_type_id",
-}
-
-const ENTITY_TYPE_NAMES: Record<EntityType, string> = {
-  [EntityType.Card]: "Card",
-  [EntityType.Ip]: "Ip",
-};
-
-const cardEntity = createDataType({
-  type: TypeName.Entity,
-  entityType: EntityType.Card,
-});
-
-const location = createDataType({
-  type: TypeName.Location,
-});
+import { SchemaTag } from "../components/SchemaTag";
+import { SelectDataPath } from "../components/nodes/SelectDataPath";
+import { DataPath } from "../shared/types";
 
 interface Argument {
   name: string;
@@ -41,66 +25,6 @@ interface Count {
     amount: number;
     unit: string;
   };
-}
-
-// const shite2 = shite.parse("l");
-
-function SchemaTag({
-  schema,
-  layers = 0,
-}: {
-  schema: TSchema;
-  layers?: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  switch (schema.type) {
-    case TypeName.Entity:
-      return (
-        <code>
-          {"Entity<"}
-          {schema.entityType
-            ? ENTITY_TYPE_NAMES[schema.entityType as EntityType]
-            : "unknown"}
-          {">"}
-        </code>
-      );
-    case TypeName.Array:
-      return (
-        <code>
-          {"Array<"}
-          <SchemaTag schema={schema.items} />
-          {">"}
-        </code>
-      );
-    case TypeName.Object:
-      return (
-        <code>
-          <button
-            onClick={() => {
-              setExpanded((prev) => !prev);
-            }}
-          >
-            {`Object${expanded ? ` {` : "<"}`}
-          </button>
-
-          {expanded ? (
-            <div className="ml-4 flex flex-col">
-              {Object.entries(schema.properties).map(([key, value]) => (
-                <code key={key}>
-                  <span className="text-gray-400">{key}:</span>{" "}
-                  <SchemaTag schema={value} />
-                </code>
-              ))}
-            </div>
-          ) : (
-            <button onClick={() => setExpanded(true)}>...</button>
-          )}
-          {expanded ? "}" : ">"}
-        </code>
-      );
-    default:
-      return <code>{schema.type}</code>;
-  }
 }
 
 function ShowSchema({ schema }: { schema: TSchema }) {
@@ -144,16 +68,33 @@ function ShowSchema({ schema }: { schema: TSchema }) {
 
 export default function Page() {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
+  const { data: bleh } = api.eventTypes.get.useQuery({
+    id: "C87WLwulYjPBV3eNPvykj",
+  });
 
   const [schema, setSchema] = useState<TSchema>({
     type: TypeName.Any,
   });
+
+  const [dataPath, setDataPath] = useState<DataPath | null>(null);
+  console.log(dataPath);
   return (
     <div className="text-sm p-4 flex flex-col items-start gap-4">
       {/* <ShowSchema schema={cardEntity.schema} />
       <ShowSchema schema={location.schema} /> */}
       <SchemaBuilder value={schema} onChange={setSchema} />
       <ShowSchema schema={schema} />
+
+      <div className="h-8"></div>
+      <div className="text-white">
+        <ShowSchema schema={bleh?.schema ?? { type: TypeName.Any }} />
+      </div>
+      <SelectDataPath
+        eventTypeId="C87WLwulYjPBV3eNPvykj"
+        value={dataPath}
+        onChange={setDataPath}
+        desiredSchema={{ type: TypeName.Location }}
+      />
     </div>
   );
 }

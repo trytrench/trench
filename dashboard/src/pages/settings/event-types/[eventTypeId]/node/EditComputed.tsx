@@ -53,6 +53,10 @@ import {
 import { api } from "~/utils/api";
 import FeatureAssignSelector from "~/pages/settings/event-types/[eventTypeId]/node/FeatureAssignSelector";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import libSource from "!!raw-loader?esModule=false!./nodeDefLib.ts";
+
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 // TODO: Move to separate file
@@ -327,9 +331,13 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
 
       <div className="h-96">
         <CodeEditor
-          typeDefs={[depsType, eventTypes, inputType, functionType].join(
-            "\n\n"
-          )}
+          typeDefs={[
+            libSource,
+            depsType,
+            eventTypes,
+            inputType,
+            functionType,
+          ].join("\n\n")}
           initialCode={config?.tsCode ?? FUNCTION_TEMPLATE}
           onCompileStatusChange={onCompileStatusChange}
         />

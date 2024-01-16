@@ -452,9 +452,9 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                   key={feature.id}
                   name={feature.name}
                   path={
-                    featureToNodeMap[feature.id]?.config.valueAccessor.path
+                    featureToNodeMap[feature.id]?.config.dataPath.path
                       ? `input.event.data.${featureToNodeMap[feature.id]?.config
-                          .valueAccessor.path}`
+                          .dataPath.path}`
                       : undefined
                   }
                 />

@@ -103,7 +103,7 @@ export default function EntityFeatureDialog({
         featureId: feature.id,
         entityAppearanceNodeId: values.entityProperty?.entityNodeId,
         featureSchema: feature.schema,
-        valueAccessor: {
+        dataPath: {
           nodeId: null,
           path: values.path.replace("input.event.data.", ""),
         },

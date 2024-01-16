@@ -79,6 +79,7 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
 }) => {
   const sensors = useSensors(useSensor(PointerSensor));
 
+  const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
   const [{ config }, setConfig] =
     useComponentConfig<ComponentType.VerticalList>(id);
 
@@ -118,71 +119,73 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
           ))}
         </SortableContext>
       </DndContext>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button>Add Component</Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0">
-          <Command>
-            <CommandInput placeholder="Search framework..." />
-            <CommandEmpty>No framework found.</CommandEmpty>
-            <CommandGroup>
-              {Object.values(COMPONENT_REGISTRY).map((registryConfig) => (
-                <CommandItem
-                  key={registryConfig.type}
-                  onSelect={() => {
-                    const value = registryConfig;
-                    setState((prev) => {
-                      const prevComponent = prev.components[
-                        id
-                      ] as ComponentConfigMap[ComponentType.VerticalList];
-                      if (!prevComponent) {
-                        console.log("no prev component");
-                        return prev;
-                      }
-                      const newId = nanoid();
-                      console.log({
-                        ...prev,
-                        components: {
-                          ...prev.components,
-                          [id]: {
-                            ...prevComponent,
-                            config: {
-                              items: [...prevComponent.config.items, newId],
+      {isEditMode && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button>Add Component</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0">
+            <Command>
+              <CommandInput placeholder="Search framework..." />
+              <CommandEmpty>No framework found.</CommandEmpty>
+              <CommandGroup>
+                {Object.values(COMPONENT_REGISTRY).map((registryConfig) => (
+                  <CommandItem
+                    key={registryConfig.type}
+                    onSelect={() => {
+                      const value = registryConfig;
+                      setState((prev) => {
+                        const prevComponent = prev?.components[id] as
+                          | ComponentConfigMap[ComponentType.VerticalList]
+                          | undefined;
+                        if (!prevComponent) {
+                          console.log("no prev component");
+                          return prev;
+                        }
+                        const newId = nanoid();
+                        console.log({
+                          ...prev,
+                          components: {
+                            ...prev?.components,
+                            [id]: {
+                              ...prevComponent,
+                              config: {
+                                items: [...prevComponent.config.items, newId],
+                              },
                             },
+                            [newId]: {
+                              type: value.type,
+                              config: value.defaultConfig,
+                            } as any,
                           },
-                          [newId]: {
-                            type: value.type,
-                            config: value.defaultConfig,
-                          } as any,
-                        },
+                        });
+                        return {
+                          ...prev,
+                          components: {
+                            ...prev.components,
+                            [id]: {
+                              ...prevComponent,
+                              config: {
+                                items: [...prevComponent.config.items, newId],
+                              },
+                            },
+                            [newId]: {
+                              type: value.type,
+                              config: value.defaultConfig,
+                            } as any,
+                          },
+                        };
                       });
-                      return {
-                        ...prev,
-                        components: {
-                          ...prev.components,
-                          [id]: {
-                            ...prevComponent,
-                            config: {
-                              items: [...prevComponent.config.items, newId],
-                            },
-                          },
-                          [newId]: {
-                            type: value.type,
-                            config: value.defaultConfig,
-                          } as any,
-                        },
-                      };
-                    });
-                  }}
-                >
-                  {registryConfig.type}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                    }}
+                  >
+                    {registryConfig.type}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 };

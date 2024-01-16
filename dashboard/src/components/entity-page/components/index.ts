@@ -28,13 +28,15 @@ export const COMPONENT_REGISTRY = {
   [ComponentType.Entity]: config({
     type: ComponentType.Entity,
     component: EntityComponent,
-    defaultConfig: {},
+    defaultConfig: {
+      entityFeaturePath: [],
+    },
   }),
   [ComponentType.Map]: config({
     type: ComponentType.Map,
     component: MapComponent,
     defaultConfig: {
-      locationFeatureId: null,
+      locationFeaturePath: [],
     },
   }),
   [ComponentType.Title]: config({

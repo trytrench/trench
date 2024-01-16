@@ -12,6 +12,9 @@ import {
   SelectTrigger,
 } from "../../ui/select";
 import { RenderResult, RenderTypedData } from "../../RenderResult";
+import { FeaturePathItem, FeatureSelector } from "../FeatureSelector";
+import { useState } from "react";
+import { TypeName } from "event-processing";
 
 export interface FeatureConfig {
   featureId: string | null;
@@ -28,17 +31,32 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
   const desiredFeature = features?.find(
     (feature) => feature.featureId === config.config.featureId
   );
+
+  const [path, setPath] = useState<FeaturePathItem[]>([]);
+
+  const { data } = api.features.getValue.useQuery(
+    {
+      entity: {
+        id: entityId,
+        type: entityType,
+      },
+      featurePath: path,
+    },
+    {
+      enabled: !!entityId && !!entityType && !!path.length,
+    }
+  );
   return (
     <div>
       {isEditMode ? (
         <div>
           <FeatureSelector
-            entityType={entityType}
-            value={config.config.featureId}
-            onChange={(val) => {
-              setConfig({ ...config, config: { featureId: val } });
-            }}
+            desiredSchema={{ type: TypeName.String }}
+            baseEntityTypeId={entityType}
+            value={path}
+            onChange={setPath}
           />
+          <pre>{JSON.stringify(data, null, 2)}</pre>
         </div>
       ) : (
         <div className="flex items-baseline gap-2">
@@ -50,46 +68,46 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
   );
 };
 
-const NONE_STRING = "__NONE__";
+// const NONE_STRING = "__NONE__";
 
-function FeatureSelector({
-  entityType,
-  value,
-  onChange,
-}: {
-  entityType: string;
-  value: string | null;
-  onChange: (value: string | null) => void;
-}) {
-  const { data: features } = api.features.list.useQuery({
-    entityTypeId: entityType,
-  });
+// function FeatureSelector({
+//   entityType,
+//   value,
+//   onChange,
+// }: {
+//   entityType: string;
+//   value: string | null;
+//   onChange: (value: string | null) => void;
+// }) {
+//   const { data: features } = api.features.list.useQuery({
+//     entityTypeId: entityType,
+//   });
 
-  const selectedFeature = features?.find((feature) => feature.id === value);
+//   const selectedFeature = features?.find((feature) => feature.id === value);
 
-  return (
-    <div>
-      <Select
-        value={value ?? NONE_STRING}
-        onValueChange={(val) => {
-          if (val === NONE_STRING) {
-            onChange(null);
-          } else {
-            onChange(val);
-          }
-        }}
-      >
-        <SelectTrigger>{selectedFeature?.name ?? "None"}</SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE_STRING}>None</SelectItem>
+//   return (
+//     <div>
+//       <Select
+//         value={value ?? NONE_STRING}
+//         onValueChange={(val) => {
+//           if (val === NONE_STRING) {
+//             onChange(null);
+//           } else {
+//             onChange(val);
+//           }
+//         }}
+//       >
+//         <SelectTrigger>{selectedFeature?.name ?? "None"}</SelectTrigger>
+//         <SelectContent>
+//           <SelectItem value={NONE_STRING}>None</SelectItem>
 
-          {features?.map((feature) => (
-            <SelectItem key={feature.id} value={feature.id}>
-              {feature.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
+//           {features?.map((feature) => (
+//             <SelectItem key={feature.id} value={feature.id}>
+//               {feature.name}
+//             </SelectItem>
+//           ))}
+//         </SelectContent>
+//       </Select>
+//     </div>
+//   );
+// }

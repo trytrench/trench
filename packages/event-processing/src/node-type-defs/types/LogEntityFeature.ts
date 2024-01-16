@@ -13,30 +13,26 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       featureId: z.string(),
       featureSchema: z.record(z.any()),
       entityAppearanceNodeId: z.string().optional(),
-      valueAccessor: z.object({
-        nodeId: z.string().nullable(),
-        path: z.string().optional(),
+      dataPath: z.object({
+        nodeId: z.string(),
+        path: z.array(z.string()).optional(),
       }),
     })
   )
   .setGetDependencies((config) => {
     const set = new Set<string>();
     if (config.entityAppearanceNodeId) set.add(config.entityAppearanceNodeId);
-    if (config.valueAccessor.nodeId) {
-      set.add(config.valueAccessor.nodeId);
+    if (config.dataPath.nodeId) {
+      set.add(config.dataPath.nodeId);
     }
     return set;
   })
   .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency, engineId }) => {
-      const {
-        featureId,
-        featureSchema,
-        valueAccessor,
-        entityAppearanceNodeId,
-      } = nodeDef.config;
+      const { featureId, featureSchema, dataPath, entityAppearanceNodeId } =
+        nodeDef.config;
 
-      const { nodeId, path } = valueAccessor;
+      const { nodeId, path } = dataPath;
 
       let assignToEntity: Entity | null = null;
 

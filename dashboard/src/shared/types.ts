@@ -1,4 +1,9 @@
-import { TypedData } from "event-processing";
+import { TSchema, TypedData } from "event-processing";
+
+export type FeaturePathItem = {
+  featureId: string;
+  schema: TSchema;
+};
 
 export type AnnotatedFeature = {
   featureId: string;
@@ -12,4 +17,10 @@ export type AnnotatedFeature = {
         type: "success";
         data: TypedData;
       };
+};
+
+export type DataPath = {
+  nodeId: string;
+  path: string[];
+  schema: TSchema;
 };
