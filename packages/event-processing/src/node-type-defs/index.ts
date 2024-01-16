@@ -1,4 +1,5 @@
 import { NodeDef, NodeTypeDef } from "./nodeTypeDef";
+import { cacheEntityFeatureNodeDef } from "./types/CacheEntityFeature";
 import { computedNodeDef } from "./types/Computed";
 import { counterNodeDef } from "./types/Counter";
 import { entityAppearanceNodeDef } from "./types/EntityAppearance";
@@ -14,6 +15,7 @@ export const NODE_TYPE_DEFS = {
   [NodeType.GetEntityFeature]: getEntityFeatureNodeDef,
   [NodeType.EntityAppearance]: entityAppearanceNodeDef,
   [NodeType.LogEntityFeature]: logEntityFeatureNodeDef,
+  [NodeType.CacheEntityFeature]: cacheEntityFeatureNodeDef,
 } satisfies {
   [TNodeType in NodeType]: NodeTypeDef<TNodeType, any, any, any>;
 };

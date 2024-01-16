@@ -198,7 +198,7 @@ export const nodeDefsRouter = createTRPCRouter({
                 featureId: feature.id,
                 featureSchema: feature.schema,
                 entityAppearanceNodeId: node.id,
-                valueAccessor: {
+                dataPath: {
                   nodeId: nodeDef.id,
                 },
               } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
@@ -305,7 +305,7 @@ export const nodeDefsRouter = createTRPCRouter({
                 featureId: feature.id,
                 featureSchema: feature.schema,
                 entityAppearanceNodeId: node.id,
-                valueAccessor: {
+                dataPath: {
                   nodeId: nodeDef.id,
                 },
               } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
