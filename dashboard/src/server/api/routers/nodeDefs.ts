@@ -452,6 +452,139 @@ export const nodeDefsRouter = createTRPCRouter({
       return nodeDef;
     }),
 
+  createRule: protectedProcedure
+    .input(
+      z.object({
+        nodeDef: nodeDefSchema.omit({
+          id: true,
+          dependsOn: true,
+          returnSchema: true,
+        }),
+        assignToFeatures: z.array(
+          z.object({
+            feature: featureDefSchema,
+            node: nodeDefSchema,
+          })
+        ),
+        featureDeps: z.array(
+          z.object({
+            feature: featureDefSchema,
+            node: nodeDefSchema,
+          })
+        ),
+        nodeDeps: z.array(nodeDefSchema),
+        assignToEvent: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // TODO: Support multiple layers of dependencies
+      // Validation
+      const { configSchema } = NODE_TYPE_DEFS[input.nodeDef.type];
+      configSchema.parse(input.nodeDef.config);
+
+      // Create feature getter nodes
+      const featureDeps = await Promise.all(
+        input.featureDeps.map(({ node, feature }) =>
+          ctx.prisma.node.create({
+            data: {
+              // We do this so that the dependency can be accessed via "entityNodeName.featureName" in code
+              name: `${node.name}.${feature.name}`,
+              type: NodeType.GetEntityFeature,
+              dependsOn: [],
+              // Make sure frontend passes this
+              eventTypes: input.nodeDef.eventTypes,
+              returnSchema: {
+                type: TypeName.Boolean,
+              },
+              config: {
+                featureId: feature.id,
+                entityAppearanceNodeId: node.id,
+              } as NodeDefsMap[NodeType.GetEntityFeature]["config"],
+            },
+          })
+        )
+      );
+
+      const nodeDepsMap = input.nodeDeps.reduce(
+        (acc, node) => {
+          acc[node.name] = node.id;
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      const featureDepsMap = featureDeps.reduce(
+        (acc, node) => {
+          acc[node.name] = node.id;
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      // Create computed node
+      const nodeDef = await ctx.prisma.node.create({
+        data: {
+          name: input.nodeDef.name,
+          type: NodeType.Rule,
+          dependsOn: [
+            ...featureDeps.map((node) => node.id),
+            ...input.nodeDeps.map((node) => node.id),
+          ],
+          eventTypes: input.nodeDef.eventTypes,
+          returnSchema: input.nodeDef.returnSchema,
+          config: {
+            ...input.nodeDef.config,
+            depsMap: { ...nodeDepsMap, ...featureDepsMap },
+          } as NodeDefsMap[NodeType.Rule]["config"],
+        },
+      });
+
+      // Create feature setter nodes
+      await Promise.all(
+        input.assignToFeatures.map(({ feature, node }) =>
+          ctx.prisma.node.create({
+            data: {
+              name: feature.name,
+              type: NodeType.LogEntityFeature,
+              dependsOn: [nodeDef.id],
+              eventTypes: input.nodeDef.eventTypes,
+              returnSchema: { type: TypeName.Any },
+              config: {
+                featureId: feature.id,
+                featureSchema: feature.schema,
+                entityAppearanceNodeId: node.id,
+                valueAccessor: {
+                  nodeId: nodeDef.id,
+                },
+              } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+            },
+          })
+        )
+      );
+
+      if (input.assignToEvent) {
+        await ctx.prisma.node.create({
+          data: {
+            name: input.nodeDef.name,
+            type: NodeType.LogEntityFeature,
+            dependsOn: [nodeDef.id],
+            eventTypes: input.nodeDef.eventTypes,
+            returnSchema: { type: TypeName.Any },
+            config: {
+              featureSchema: input.nodeDef.returnSchema,
+              valueAccessor: {
+                nodeId: nodeDef.id,
+              },
+            } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+          },
+        });
+      }
+
+      await publish();
+
+      return nodeDef;
+    }),
+
   create: protectedProcedure
     .input(nodeDefSchema.omit({ id: true }))
     .mutation(async ({ ctx, input }) => {

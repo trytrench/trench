@@ -10,9 +10,9 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
   .setConfigSchema(
     z.object({
-      featureId: z.string(),
+      featureId: z.string().optional(),
       featureSchema: z.record(z.any()),
-      entityAppearanceNodeId: z.string(),
+      entityAppearanceNodeId: z.string().optional(),
       valueAccessor: z.object({
         nodeId: z.string().nullable(),
         path: z.string().optional(),
@@ -21,7 +21,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   )
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    set.add(config.entityAppearanceNodeId);
+    if (config.entityAppearanceNodeId) set.add(config.entityAppearanceNodeId);
     if (config.valueAccessor.nodeId) {
       set.add(config.valueAccessor.nodeId);
     }
@@ -47,7 +47,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
         feature_type: nodeDef.type,
-        feature_id: featureId,
+        feature_id: featureId ?? null,
         data_type: featureSchema.type,
         is_deleted: 0,
         entity_type: [] as string[],
@@ -55,14 +55,16 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       };
 
       try {
-        assignToEntity = await getDependency({
-          nodeId: entityAppearanceNodeId,
-          expectedSchema: {
-            type: TypeName.Entity,
-          },
-        });
-        baseData.entity_type.push(assignToEntity.type);
-        baseData.entity_id.push(assignToEntity.id);
+        if (entityAppearanceNodeId) {
+          assignToEntity = await getDependency({
+            nodeId: entityAppearanceNodeId,
+            expectedSchema: {
+              type: TypeName.Entity,
+            },
+          });
+          baseData.entity_type.push(assignToEntity.type);
+          baseData.entity_id.push(assignToEntity.id);
+        }
 
         const obj = nodeId
           ? await getDependency({

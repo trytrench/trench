@@ -4,11 +4,13 @@ import { counterNodeDef } from "./types/Counter";
 import { entityAppearanceNodeDef } from "./types/EntityAppearance";
 import { getEntityFeatureNodeDef } from "./types/GetEntityFeature";
 import { logEntityFeatureNodeDef } from "./types/LogEntityFeature";
+import { ruleNodeDef } from "./types/Rule";
 import { uniqueCounterNodeDef } from "./types/UniqueCounter";
 import { NodeType } from "./types/_enum";
 
 export const NODE_TYPE_DEFS = {
   [NodeType.Computed]: computedNodeDef,
+  [NodeType.Rule]: ruleNodeDef,
   [NodeType.Counter]: counterNodeDef,
   [NodeType.UniqueCounter]: uniqueCounterNodeDef,
   [NodeType.GetEntityFeature]: getEntityFeatureNodeDef,

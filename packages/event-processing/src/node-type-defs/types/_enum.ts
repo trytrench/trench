@@ -5,4 +5,5 @@ export enum NodeType {
   GetEntityFeature = "GetEntityFeature",
   EntityAppearance = "EntityAppearance",
   LogEntityFeature = "LogEntityFeature",
+  Rule = "Rule",
 }

@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
+import { NodeType } from "./_enum";
+import { TypeName } from "../../data-types";
 
-export const computedNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.Computed)
+export const ruleNodeDef = createNodeTypeDefBuilder()
+  .setNodeType(NodeType.Rule)
   .setConfigSchema(
     z.object({
       depsMap: z.record(z.string()),
@@ -11,6 +12,7 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       compiledJs: z.string(),
     })
   )
+  .setReturnSchema(TypeName.Boolean)
   .setGetDependencies((config) => {
     return new Set(Object.values(config.depsMap));
   })

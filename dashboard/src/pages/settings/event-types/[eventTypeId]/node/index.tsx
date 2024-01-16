@@ -5,10 +5,11 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
-import { EditNodeDef } from "~/components/features/EditNodeDef";
 import { toast } from "~/components/ui/use-toast";
 import { EditUniqueCount } from "./EditUniqueCount";
 import { EditCount } from "./EditCount";
+import { EditComputed } from "./EditComputed";
+import { EditRule } from "./EditRule";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
@@ -30,6 +31,8 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: createComputed } =
     api.nodeDefs.createComputed.useMutation();
+
+  const { mutateAsync: createRule } = api.nodeDefs.createRule.useMutation();
 
   return (
     <div>
@@ -92,8 +95,45 @@ const Page: NextPageWithLayout = () => {
               });
           }}
         />
+      ) : router.query.type === "rule" ? (
+        <EditRule
+          onRename={() => {}}
+          onSave={(
+            def,
+            assignToFeatures,
+            featureDeps,
+            nodeDeps,
+            assignToEvent
+          ) => {
+            createRule({
+              nodeDef: {
+                name: def.name,
+                type: NodeType.Rule,
+                eventTypes: [router.query.eventTypeId as string],
+                config: def.config,
+              },
+              featureDeps,
+              nodeDeps,
+              assignToFeatures,
+              assignToEvent,
+            })
+              .then(() => {
+                toast({
+                  title: "Node created",
+                  // description: `${values.entity}`,
+                });
+                return refetchNodes();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create node",
+                });
+              });
+          }}
+        />
       ) : (
-        <EditNodeDef
+        <EditComputed
           onRename={() => {}}
           onSave={(def, assignToFeatures, featureDeps, nodeDeps) => {
             createComputed({

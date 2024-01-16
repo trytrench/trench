@@ -47,7 +47,7 @@ import {
 } from "~/components/ui/select";
 import { useToast } from "~/components/ui/use-toast";
 import { type NextPageWithLayout } from "~/pages/_app";
-import { api } from "~/utils/api";
+import { RouterOutputs, api } from "~/utils/api";
 import AssignEntities from "../AssignEntities";
 import EntityFeatureDialog from "../EntityFeatureDialog";
 
@@ -64,6 +64,15 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
+import { DataTable } from "~/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+
+const columns: ColumnDef<RouterOutputs["nodeDefs"]["list"][number]>[] = [
+  {
+    accessorKey: "name",
+    header: "Name",
+  },
+];
 
 const entitySchema = z.object({
   entityTypeId: z.string(),
@@ -296,6 +305,18 @@ const Page: NextPageWithLayout = () => {
                 >
                   Unique Count
                 </CommandItem>
+
+                <CommandItem
+                  onSelect={() =>
+                    void router.push(
+                      `/settings/event-types/${
+                        router.query.eventTypeId as string
+                      }/node?type=rule`
+                    )
+                  }
+                >
+                  Rule
+                </CommandItem>
               </CommandGroup>
             </Command>
           </PopoverContent>
@@ -379,6 +400,12 @@ const Page: NextPageWithLayout = () => {
           // }}
         />
       </Card>
+
+      {/* <DataTable
+        columns={columns}
+        data={nodes?.filter((node) => node.type === NodeType.Rule) ?? []}
+      /> */}
+
       <div className="h-9" />
       <AssignEntities />
     </div>

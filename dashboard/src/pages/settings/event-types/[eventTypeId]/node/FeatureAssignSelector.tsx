@@ -3,21 +3,29 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
 import AssignEntities from "../../AssignEntities";
-import { FeatureDep } from "./NodeDepSelector";
+import { FeatureDep, NodeDep } from "./NodeDepSelector";
 
 interface Props {
   features: FeatureDep[];
   onFeaturesChange: (features: FeatureDep[]) => void;
+  onAssignToEvent: (assign: boolean) => void;
+  assignedToEvent: boolean;
 }
 
 export default function FeatureAssignSelector({
   features,
   onFeaturesChange,
+  onAssignToEvent,
+  assignedToEvent,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
+      {assignedToEvent && (
+        <NodeDep nodeName="Event" onDelete={() => onAssignToEvent(false)} />
+      )}
+
       {features.map((featureDep) => (
         <FeatureDep
           key={featureDep.feature.id + featureDep.node.id}
@@ -45,6 +53,10 @@ export default function FeatureAssignSelector({
           <AssignEntities
             onAssign={(node, feature) => {
               onFeaturesChange([...features, { node, feature }]);
+              setOpen(false);
+            }}
+            onAssignToEvent={() => {
+              onAssignToEvent(true);
               setOpen(false);
             }}
           />

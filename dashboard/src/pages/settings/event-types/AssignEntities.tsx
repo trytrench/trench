@@ -235,9 +235,10 @@ const EntityCard = ({
 
 interface Props {
   onAssign?: (node: NodeDef, feature: FeatureDef) => void;
+  onAssignToEvent?: () => void;
 }
 
-export default function AssignEntities({ onAssign }: Props) {
+export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -266,6 +267,13 @@ export default function AssignEntities({ onAssign }: Props) {
 
   return (
     <div className="space-y-4">
+      {onAssignToEvent && (
+        <EntityCard name="Event" path="">
+          <Button size="sm" variant="outline" onClick={onAssignToEvent}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </EntityCard>
+      )}
       {nodes?.map((node) =>
         node.type === NodeType.EntityAppearance ? (
           <EntityCard
@@ -350,7 +358,9 @@ export default function AssignEntities({ onAssign }: Props) {
                   });
               }}
             >
-              <Button variant="outline">Create</Button>
+              <Button size="sm" variant="outline">
+                <Plus className="h-4 w-4" />
+              </Button>
             </FeatureDialog>
           </EntityCard>
         ) : null
