@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeType, type NodeDef } from "event-processing";
+import { type NodeDef, FeatureDef } from "event-processing";
 import { ChevronsUpDown, Pencil, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useMemo, useState } from "react";
@@ -55,7 +55,6 @@ const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  schema: z.record(z.any()),
   featureDeps: z.array(
     z.object({
       feature: featureDefSchema,
@@ -105,7 +104,8 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
 
   const [assignToFeatures, setAssignToFeatures] = useState<FeatureDep[]>([]);
 
-  const [assignedToEvent, setAssignedToEvent] = useState(false);
+  const [assignToEventFeature, setAssignToEventFeature] =
+    useState<FeatureDef | null>(null);
 
   const isValid = useMemo(
     () => form.formState.isValid && isCodeValid,
@@ -159,6 +159,7 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
     },
     [setCompileStatus]
   );
+  console.log(isValid, form.formState.isValid);
 
   return (
     <div>
@@ -196,7 +197,7 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
                 assignToFeatures,
                 form.getValues("featureDeps"),
                 form.getValues("nodeDeps"),
-                assignedToEvent
+                assignToEventFeature
               );
             }}
           >
@@ -248,8 +249,8 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
         <FeatureAssignSelector
           features={assignToFeatures}
           onFeaturesChange={setAssignToFeatures}
-          onAssignToEvent={setAssignedToEvent}
-          assignedToEvent={assignedToEvent}
+          eventFeature={assignToEventFeature}
+          onEventFeatureChange={setAssignToEventFeature}
         />
       </div>
 

@@ -3,27 +3,32 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
 import AssignEntities from "../../AssignEntities";
-import { FeatureDep, NodeDep } from "./NodeDepSelector";
+import { FeatureDep } from "./NodeDepSelector";
+import { FeatureDef } from "event-processing";
 
 interface Props {
   features: FeatureDep[];
   onFeaturesChange: (features: FeatureDep[]) => void;
-  onAssignToEvent: (assign: boolean) => void;
-  assignedToEvent: boolean;
+  eventFeature: FeatureDef | null;
+  onEventFeatureChange: (feature: FeatureDef | null) => void;
 }
 
 export default function FeatureAssignSelector({
   features,
   onFeaturesChange,
-  onAssignToEvent,
-  assignedToEvent,
+  onEventFeatureChange,
+  eventFeature,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      {assignedToEvent && (
-        <NodeDep nodeName="Event" onDelete={() => onAssignToEvent(false)} />
+      {eventFeature && (
+        <FeatureDep
+          nodeName="Event"
+          featureName={eventFeature.name}
+          onDelete={() => onEventFeatureChange(null)}
+        />
       )}
 
       {features.map((featureDep) => (
@@ -55,8 +60,8 @@ export default function FeatureAssignSelector({
               onFeaturesChange([...features, { node, feature }]);
               setOpen(false);
             }}
-            onAssignToEvent={() => {
-              onAssignToEvent(true);
+            onAssignToEvent={(feature) => {
+              onEventFeatureChange(feature);
               setOpen(false);
             }}
           />

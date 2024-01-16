@@ -54,12 +54,101 @@ import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
 import EntityFeatureDialog from "./EntityFeatureDialog";
 import { SchemaBuilder } from "../../../components/SchemaBuilder";
+import AssignEventFeatureDialog from "./AssignEventFeatureDialog";
 
 const featureSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
   schema: z.record(z.any()),
 });
+
+const eventFeatureSchema = z.object({
+  name: z.string(),
+  schema: z.record(z.any()),
+});
+
+const EventFeatureDialog = ({
+  title,
+  children,
+  onSubmit,
+}: {
+  title: string;
+  entityTypeId?: string;
+  children: React.ReactNode;
+  onSubmit: (values: z.infer<typeof eventFeatureSchema>) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof eventFeatureSchema>>({
+    resolver: zodResolver(eventFeatureSchema),
+    defaultValues: {
+      name: "",
+      schema: {
+        type: TypeName.String,
+      },
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              setOpen(false);
+              form.reset();
+            })}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="schema"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Data Type</FormLabel>
+                      <div>
+                        <SchemaBuilder
+                          value={field.value as TSchema}
+                          onChange={field.onChange}
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const FeatureDialog = ({
   title,
@@ -235,7 +324,7 @@ const EntityCard = ({
 
 interface Props {
   onAssign?: (node: NodeDef, feature: FeatureDef) => void;
-  onAssignToEvent?: () => void;
+  onAssignToEvent?: (feature: FeatureDef) => void;
 }
 
 export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
@@ -246,6 +335,8 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     api.features.list.useQuery();
 
   const { mutateAsync: createFeature } = api.features.create.useMutation();
+  const { mutateAsync: createEventFeature } =
+    api.features.createEventFeature.useMutation();
 
   const { data: nodes } = api.nodeDefs.list.useQuery(
     { eventTypeId: router.query.eventTypeId as string },
@@ -267,13 +358,82 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
 
   return (
     <div className="space-y-4">
-      {onAssignToEvent && (
-        <EntityCard name="Event" path="">
-          <Button size="sm" variant="outline" onClick={onAssignToEvent}>
+      <EntityCard name="Event" path="">
+        {features
+          ?.filter(
+            (feature) => !feature.entityTypeId && featureToNodeMap[feature.id]
+          )
+          .map((feature) => (
+            <FeatureCard
+              key={feature.id}
+              name={feature.name}
+              path={
+                featureToNodeMap[feature.id]?.config.valueAccessor.path
+                  ? `input.event.data.${featureToNodeMap[feature.id]?.config
+                      .valueAccessor.path}`
+                  : undefined
+              }
+            />
+          ))}
+
+        {features
+          ?.filter(
+            (feature) => !feature.entityTypeId && !featureToNodeMap[feature.id]
+          )
+          .map((feature) => (
+            <div key={feature.id} className="flex items-center space-x-2">
+              <div className="text-emphasis-foreground text-sm">
+                {feature.name}
+              </div>
+
+              {onAssignToEvent ? (
+                <Button
+                  size="iconXs"
+                  variant="outline"
+                  onClick={() => onAssignToEvent(feature)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              ) : (
+                <AssignEventFeatureDialog
+                  title="Assign Event Property"
+                  feature={feature}
+                >
+                  <Button size="iconXs" variant="outline">
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </AssignEventFeatureDialog>
+              )}
+            </div>
+          ))}
+
+        <EventFeatureDialog
+          title="Create Event Property"
+          onSubmit={(values) => {
+            createEventFeature({
+              name: values.name,
+              schema: values.schema,
+            })
+              .then(() => {
+                toast({
+                  title: "Event property created",
+                  description: `${values.name}`,
+                });
+                return refetchFeatures();
+              })
+              .catch(() => {
+                toast({
+                  variant: "destructive",
+                  title: "Failed to create entity property",
+                });
+              });
+          }}
+        >
+          <Button size="sm" variant="outline">
             <Plus className="h-4 w-4" />
           </Button>
-        </EntityCard>
-      )}
+        </EventFeatureDialog>
+      </EntityCard>
       {nodes?.map((node) =>
         node.type === NodeType.EntityAppearance ? (
           <EntityCard

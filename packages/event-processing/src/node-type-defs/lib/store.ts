@@ -9,7 +9,7 @@ export type FeatureRow = {
   event_id: string;
   event_timestamp: number;
   feature_type: string;
-  feature_id: string | null;
+  feature_id: string;
   entity_type: string[];
   entity_id: string[];
   data_type: string;

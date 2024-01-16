@@ -9,6 +9,12 @@ export const featureDefSchema = z.object({
   entityTypeId: z.string(),
 });
 
+export const eventFeatureDefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  schema: z.record(z.unknown()),
+});
+
 export const featuresRouter = createTRPCRouter({
   list: protectedProcedure
     .input(
@@ -50,6 +56,20 @@ export const featuresRouter = createTRPCRouter({
 
       return feature;
     }),
+
+  createEventFeature: protectedProcedure
+    .input(eventFeatureDefSchema.omit({ id: true }))
+    .mutation(async ({ ctx, input }) => {
+      const feature = await ctx.prisma.feature.create({
+        data: {
+          name: input.name,
+          schema: input.schema,
+        },
+      });
+
+      return feature;
+    }),
+
   //   delete: protectedProcedure
   //     .input(z.object({ id: z.string() }))
   //     .mutation(async ({ ctx, input }) => {

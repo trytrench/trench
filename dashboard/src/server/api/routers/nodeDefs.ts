@@ -9,7 +9,7 @@ import {
 import { z } from "zod";
 import { TimeWindow } from "~/pages/settings/event-types/[eventTypeId]/node/TimeWindowDialog";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { featureDefSchema } from "./features";
+import { eventFeatureDefSchema, featureDefSchema } from "./features";
 
 export const nodeDefSchema = z.object({
   id: z.string(),
@@ -473,7 +473,7 @@ export const nodeDefsRouter = createTRPCRouter({
           })
         ),
         nodeDeps: z.array(nodeDefSchema),
-        assignToEvent: z.boolean(),
+        assignToEventFeature: eventFeatureDefSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -531,7 +531,9 @@ export const nodeDefsRouter = createTRPCRouter({
             ...input.nodeDeps.map((node) => node.id),
           ],
           eventTypes: input.nodeDef.eventTypes,
-          returnSchema: input.nodeDef.returnSchema,
+          returnSchema: {
+            type: TypeName.Boolean,
+          },
           config: {
             ...input.nodeDef.config,
             depsMap: { ...nodeDepsMap, ...featureDepsMap },
@@ -562,16 +564,17 @@ export const nodeDefsRouter = createTRPCRouter({
         )
       );
 
-      if (input.assignToEvent) {
+      if (input.assignToEventFeature) {
         await ctx.prisma.node.create({
           data: {
-            name: input.nodeDef.name,
+            name: input.assignToEventFeature.name,
             type: NodeType.LogEntityFeature,
             dependsOn: [nodeDef.id],
             eventTypes: input.nodeDef.eventTypes,
             returnSchema: { type: TypeName.Any },
             config: {
-              featureSchema: input.nodeDef.returnSchema,
+              featureId: input.assignToEventFeature.id,
+              featureSchema: input.assignToEventFeature.schema,
               valueAccessor: {
                 nodeId: nodeDef.id,
               },

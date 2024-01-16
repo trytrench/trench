@@ -103,7 +103,7 @@ const Page: NextPageWithLayout = () => {
             assignToFeatures,
             featureDeps,
             nodeDeps,
-            assignToEvent
+            assignToEventFeature
           ) => {
             createRule({
               nodeDef: {
@@ -115,7 +115,7 @@ const Page: NextPageWithLayout = () => {
               featureDeps,
               nodeDeps,
               assignToFeatures,
-              assignToEvent,
+              assignToEventFeature,
             })
               .then(() => {
                 toast({

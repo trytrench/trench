@@ -10,7 +10,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
   .setConfigSchema(
     z.object({
-      featureId: z.string().optional(),
+      featureId: z.string(),
       featureSchema: z.record(z.any()),
       entityAppearanceNodeId: z.string().optional(),
       valueAccessor: z.object({
@@ -47,7 +47,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
         feature_type: nodeDef.type,
-        feature_id: featureId ?? null,
+        feature_id: featureId,
         data_type: featureSchema.type,
         is_deleted: 0,
         entity_type: [] as string[],

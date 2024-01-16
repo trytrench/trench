@@ -66,6 +66,7 @@ import {
 import { cn } from "~/lib/utils";
 import { DataTable } from "~/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
+import AssignEventFeatureDialog from "../AssignEventFeatureDialog";
 
 const columns: ColumnDef<RouterOutputs["nodeDefs"]["list"][number]>[] = [
   {
@@ -336,6 +337,15 @@ const Page: NextPageWithLayout = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent>
+                <AssignEventFeatureDialog
+                  title="Assign Event Property"
+                  path={path}
+                >
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Assign to event
+                  </DropdownMenuItem>
+                </AssignEventFeatureDialog>
+
                 <EntityFeatureDialog title="Assign Entity Property" path={path}>
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     Assign to entity
