@@ -159,7 +159,6 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
     },
     [setCompileStatus]
   );
-  console.log(isValid, form.formState.isValid);
 
   return (
     <div>
