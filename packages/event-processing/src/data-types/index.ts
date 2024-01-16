@@ -95,7 +95,7 @@ abstract class IDataType<TS extends TSchema> {
   throwParseError(input: any): never {
     throwParseError(this.schema.type, input);
   }
-  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return schema.type === this.schema.type;
   }
 }
@@ -178,7 +178,7 @@ class EntityDataType<T extends string = string> extends IDataType<
       return `{ type: string; id: string }`;
     }
   }
-  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     if (schema.type !== TypeName.Entity) return false;
     if (this.schema.entityType && schema.entityType) {
       return this.schema.entityType === schema.entityType;
@@ -230,7 +230,7 @@ class AnyDataType extends IDataType<TAnySchema> {
   toTypescript(): string {
     return "any";
   }
-  isSubTypeOf<T extends TSchema>(schema: T): boolean {
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return true;
   }
 }
@@ -336,4 +336,42 @@ export function parseTypedData<T extends TSchema>(
   data: TypedData
 ): InferSchemaType<T> {
   return createDataType(expectedSchema).parse(data.value);
+}
+
+function isEqual(...args: TSchema[]) {
+  const first = JSON.stringify(args[0]);
+  for (const arg of args) {
+    if (JSON.stringify(arg) !== first) return false;
+  }
+}
+
+export function inferSchemaFromJsonObject(jsonObj: any): TSchema {
+  if (typeof jsonObj === "string") {
+    return { type: TypeName.String };
+  } else if (typeof jsonObj === "boolean") {
+    return { type: TypeName.Boolean };
+  } else if (typeof jsonObj === "number") {
+    return { type: TypeName.Float64 };
+  } else if (Array.isArray(jsonObj)) {
+    const items = jsonObj.map((item) => inferSchemaFromJsonObject(item));
+    if (!isEqual(...items) || items.length === 0) {
+      return { type: TypeName.Array, items: { type: TypeName.Any } };
+    } else {
+      return {
+        type: TypeName.Array,
+        items: inferSchemaFromJsonObject(jsonObj[0]),
+      };
+    }
+  } else if (typeof jsonObj === "object") {
+    const properties: Record<string, TSchema> = {};
+    for (const key in jsonObj) {
+      properties[key] = inferSchemaFromJsonObject(jsonObj[key]);
+    }
+    return {
+      type: TypeName.Object,
+      properties,
+    };
+  } else {
+    throw new Error(`Cannot infer schema from JSON: ${jsonObj}`);
+  }
 }

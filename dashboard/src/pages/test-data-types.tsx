@@ -10,6 +10,8 @@ import { useMemo, useState } from "react";
 import { IndentationText, Project } from "ts-morph";
 import { SchemaBuilder } from "../components/SchemaBuilder";
 import { SchemaTag } from "../components/SchemaTag";
+import { SelectDataPath } from "../components/nodes/SelectDataPath";
+import { DataPath } from "../shared/types";
 
 interface Argument {
   name: string;
@@ -66,16 +68,33 @@ function ShowSchema({ schema }: { schema: TSchema }) {
 
 export default function Page() {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
+  const { data: bleh } = api.eventTypes.get.useQuery({
+    id: "C87WLwulYjPBV3eNPvykj",
+  });
 
   const [schema, setSchema] = useState<TSchema>({
     type: TypeName.Any,
   });
+
+  const [dataPath, setDataPath] = useState<DataPath | null>(null);
+  console.log(dataPath);
   return (
     <div className="text-sm p-4 flex flex-col items-start gap-4">
       {/* <ShowSchema schema={cardEntity.schema} />
       <ShowSchema schema={location.schema} /> */}
       <SchemaBuilder value={schema} onChange={setSchema} />
       <ShowSchema schema={schema} />
+
+      <div className="h-8"></div>
+      <div className="text-white">
+        <ShowSchema schema={bleh?.schema ?? { type: TypeName.Any }} />
+      </div>
+      <SelectDataPath
+        eventTypeId="C87WLwulYjPBV3eNPvykj"
+        value={dataPath}
+        onChange={setDataPath}
+        desiredSchema={{ type: TypeName.Location }}
+      />
     </div>
   );
 }

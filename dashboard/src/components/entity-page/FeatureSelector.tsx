@@ -13,10 +13,10 @@ export function FeatureSelector(props: {
   const { value, onChange, desiredSchema, baseEntityTypeId } = props;
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
-  const finalItem = value[value.length - 1];
-  const finalItemType = finalItem ? createDataType(finalItem.schema) : null;
-  const isValidSelection = finalItemType
-    ? finalItemType.isSubTypeOf(desiredSchema)
+  const finalItem = value[value.length - 1]!;
+  const desiredType = finalItem ? createDataType(desiredSchema) : null;
+  const isValidSelection = desiredType
+    ? desiredType.isSuperTypeOf(finalItem.schema)
     : false;
   return (
     <div className="flex flex-wrap">
@@ -114,7 +114,7 @@ function SelectFeaturePathItem(props: {
             (feature) =>
               feature.entityTypeId === previousEntityTypeId &&
               (feature.schema.type === TypeName.Entity ||
-                createDataType(feature.schema).isSubTypeOf(desiredSchema))
+                createDataType(desiredSchema).isSuperTypeOf(feature.schema))
           )
           ?.map((feature) => (
             <SelectItem key={feature.id} value={feature.id}>

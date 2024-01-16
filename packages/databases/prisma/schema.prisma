@@ -138,6 +138,7 @@ model EventType {
   updatedAt DateTime @updatedAt
 
   type         String @unique
+  schema      Json?
   exampleEvent Json?
 }
 

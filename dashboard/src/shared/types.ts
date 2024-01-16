@@ -18,3 +18,9 @@ export type AnnotatedFeature = {
         data: TypedData;
       };
 };
+
+export type DataPath = {
+  nodeId: string;
+  path: string[];
+  schema: TSchema;
+};
