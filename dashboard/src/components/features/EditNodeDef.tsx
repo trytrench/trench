@@ -52,6 +52,10 @@ import {
 } from "./shared/CodeEditor";
 import { api } from "~/utils/api";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import libSource from "!!raw-loader?esModule=false!./nodeDefLib.ts";
+
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 // TODO: Move to separate file
@@ -359,9 +363,13 @@ export function EditNodeDef({ initialNodeDef, onSave, onRename }: Props) {
 
       <div className="h-96">
         <CodeEditor
-          typeDefs={[depsType, eventTypes, inputType, functionType].join(
-            "\n\n"
-          )}
+          typeDefs={[
+            libSource,
+            depsType,
+            eventTypes,
+            inputType,
+            functionType,
+          ].join("\n\n")}
           initialCode={config?.tsCode ?? FUNCTION_TEMPLATE}
           onCompileStatusChange={onCompileStatusChange}
         />

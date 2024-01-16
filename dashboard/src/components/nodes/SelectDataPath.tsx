@@ -94,25 +94,6 @@ function useDataAccessNodes(props: { eventTypeId: string }) {
   };
 }
 
-function schemaIncludesPath(schema: TSchema, path: string[]) {
-  if (path.length === 0) {
-    return true;
-  }
-
-  const [first, ...rest] = path;
-
-  if (schema.type === TypeName.Object) {
-    const subSchema = schema.properties[first!];
-    if (!subSchema) {
-      return false;
-    }
-
-    return schemaIncludesPath(subSchema, rest);
-  } else {
-    return false;
-  }
-}
-
 interface SelectDataPathProps {
   eventTypeId: string;
   value: DataPath | null;
