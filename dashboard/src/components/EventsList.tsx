@@ -320,31 +320,28 @@ function EventCard({ event, isFirst, isLast }: EventCardProps) {
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {/* {rules.length > 0 && (
-          <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
-            {rules.map(({ name, color }) => (
-              <div key={name} className="flex space-x-1 items-center">
-                <div
-                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
-                ></div>
-                <div className="font-semibold">{name}</div>
-              </div>
-            ))}
-          </div>
-        )} */}
-
         {event.features.length > 0 ? (
           <>
+            <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
+              {event.features
+                .filter((feature) => feature.rule && feature.result)
+                .map(({ featureId, featureName, rule }) => (
+                  <div key={featureId} className="flex space-x-1 items-center">
+                    <div className={`rounded-full ${rule!.color} w-2 h-2`} />
+                    <div className="font-semibold">{featureName}</div>
+                  </div>
+                ))}
+            </div>
+
             <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
-              {event.features.map((f, idx) => {
-                const { featureId, featureName, featureType, result } = f;
-                return (
+              {event.features
+                .filter((feature) => !feature.rule)
+                .map(({ featureId, featureName, result }) => (
                   <div key={featureId}>
                     <div className="font-semibold">{featureName}</div>
                     <RenderResult result={result} />
                   </div>
-                );
-              })}
+                ))}
             </div>
           </>
         ) : (

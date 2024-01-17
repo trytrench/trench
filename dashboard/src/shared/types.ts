@@ -1,3 +1,4 @@
+import { Rule } from "@prisma/client";
 import { TSchema, TypedData } from "event-processing";
 
 export type FeaturePathItem = {
@@ -8,6 +9,7 @@ export type FeaturePathItem = {
 export type AnnotatedFeature = {
   featureId: string;
   featureName: string;
+  rule?: Rule;
   result:
     | {
         type: "error";
