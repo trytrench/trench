@@ -43,8 +43,6 @@ model Event {
   @@index([timestamp])
 }
 
-// TODO: Change to one to many
-
 model Feature {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -56,8 +54,25 @@ model Feature {
   // Immutable
   schema Json
 
+  eventType   EventType? @relation(fields: [eventTypeId], references: [id])
+  eventTypeId String?
+
   entityType   EntityType? @relation(fields: [entityTypeId], references: [id])
   entityTypeId String?
+
+  rule Rule?
+}
+
+model Rule {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  description String?
+  color       String?
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String  @unique
 }
 
 model Node {
@@ -114,7 +129,7 @@ model EntityType {
   updatedAt DateTime @updatedAt
 
   features Feature[]
-  pages EntityTypePage[]
+  pages    EntityTypePage[]
 
   type String @unique
 }
@@ -124,7 +139,7 @@ model EntityTypePage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  entityType EntityType @relation(fields: [entityTypeId], references: [id])
+  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
   entityTypeId String
 
   config Json
@@ -135,9 +150,10 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type         String @unique
-  schema      Json?
+  type         String    @unique
+  schema       Json?
   exampleEvent Json?
+  features     Feature[]
 }
 
 // Necessary for Next auth

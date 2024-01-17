@@ -188,7 +188,7 @@ export const nodeDefsRouter = createTRPCRouter({
                 featureId: feature.id,
                 featureSchema: feature.schema,
                 entityAppearanceNodeId: node.id,
-                valueAccessor: {
+                dataPath: {
                   nodeId: nodeDef.id,
                 },
               } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
@@ -533,7 +533,7 @@ export const nodeDefsRouter = createTRPCRouter({
           eventTypes: input.nodeDef.eventTypes,
           returnSchema: {
             type: TypeName.Boolean,
-          },
+          } as NodeDefsMap[NodeType.Rule]["returnSchema"] as object,
           config: {
             ...input.nodeDef.config,
             depsMap: { ...nodeDepsMap, ...featureDepsMap },
@@ -555,7 +555,7 @@ export const nodeDefsRouter = createTRPCRouter({
                 featureId: feature.id,
                 featureSchema: feature.schema,
                 entityAppearanceNodeId: node.id,
-                valueAccessor: {
+                dataPath: {
                   nodeId: nodeDef.id,
                 },
               } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
@@ -575,7 +575,7 @@ export const nodeDefsRouter = createTRPCRouter({
             config: {
               featureId: input.assignToEventFeature.id,
               featureSchema: input.assignToEventFeature.schema,
-              valueAccessor: {
+              dataPath: {
                 nodeId: nodeDef.id,
               },
             } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
