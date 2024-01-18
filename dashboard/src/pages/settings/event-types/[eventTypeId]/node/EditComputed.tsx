@@ -5,6 +5,7 @@ import {
   createDataType,
   type NodeDef,
   NodeType,
+  FeatureDef,
 } from "event-processing";
 import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -130,6 +131,9 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
   const [isCodeValid, setIsCodeValid] = useState(false);
 
   const [assignToFeatures, setAssignToFeatures] = useState<FeatureDep[]>([]);
+
+  const [assignToEventFeature, setAssignToEventFeature] =
+    useState<FeatureDef | null>(null);
 
   const isValid = useMemo(
     () => form.formState.isValid && isCodeValid,
@@ -291,6 +295,8 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
         <FeatureAssignSelector
           features={assignToFeatures}
           onFeaturesChange={setAssignToFeatures}
+          eventFeature={assignToEventFeature}
+          onEventFeatureChange={setAssignToEventFeature}
         />
       </div>
 

@@ -73,6 +73,70 @@ export const featuresRouter = createTRPCRouter({
       return feature;
     }),
 
+  getFeatures: protectedProcedure
+    .input(
+      z.object({
+        featureIds: z.array(z.string()),
+        entityIds: z.array(z.string()),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { featureIds, entityIds } = input;
+
+      const featureDefs = await getLatestFeatureDefs();
+      const entityTypes = await ctx.prisma.entityType.findMany();
+
+      const result = await db.query({
+        query: `
+          SELECT
+              entity_type,
+              entity_id,
+              groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
+          FROM (
+              SELECT
+                  entity_type,
+                  entity_id,
+                  feature_id,
+                  value,
+                  event_timestamp,
+                  error,
+                  row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
+              FROM features
+              FINAL
+              WHERE entity_id IN (${entityIds
+                .map((id) => `['${id}']`)
+                .join(",")}) and feature_id in (${featureIds
+                .map((id) => `'${id}'`)
+                .join(",")})
+          ) AS latest_features
+          WHERE latest_features.rn = 1
+          GROUP BY entity_type, entity_id
+        `,
+        format: "JSONEachRow",
+      });
+
+      const entities = await result.json<
+        {
+          entity_type: [string];
+          entity_id: [string];
+          features_array: Array<[string, string | null, string | null]>;
+        }[]
+      >();
+
+      return entities.map((entity) => {
+        const entityId = entity.entity_id[0];
+        return {
+          entityId,
+          entityType: entity.entity_type[0],
+          features: getAnnotatedFeatures(
+            featureDefs,
+            entityTypes,
+            entity.features_array
+          ),
+        };
+      });
+    }),
+
   getValue: protectedProcedure
     .input(
       z.object({

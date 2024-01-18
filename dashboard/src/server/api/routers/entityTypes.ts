@@ -1,3 +1,4 @@
+import { TypeName } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
@@ -9,11 +10,21 @@ export const entityTypesRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.prisma.entityType.create({
+      const entityType = await ctx.prisma.entityType.create({
         data: {
           type: input.name,
         },
       });
+
+      await ctx.prisma.feature.create({
+        data: {
+          name: "Name",
+          entityTypeId: entityType.id,
+          schema: { type: TypeName.String },
+        },
+      });
+
+      return entityType;
     }),
   delete: protectedProcedure
     .input(

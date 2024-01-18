@@ -10,6 +10,8 @@ import type { NextPageWithLayout } from "~/pages/_app";
 import { EntityFilters } from "~/shared/validation";
 import { api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
+import { TypeName } from "event-processing";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 
 const EntityList = () => {
   const [filters, setFilters] = useState<EntityFilters>({});
@@ -40,6 +42,21 @@ const EntityList = () => {
     return entities?.pages.flatMap((page) => page.rows) ?? [];
   }, [entities]);
 
+  const entityIds = useMemo<string[]>(() => {
+    return allEntities.flatMap((entity) => {
+      return (
+        entity.features
+          .filter(
+            (feature) =>
+              feature.result.type === "success" &&
+              feature.result.data.schema.type === TypeName.Entity
+          )
+          .map((feature) => feature.result.data!.value.id) ?? []
+      );
+    });
+  }, [allEntities]);
+  const entityNameMap = useEntityNameMap(entityIds);
+
   return (
     <div className="flex flex-col">
       <div className="flex p-3 px-8 border-b">
@@ -58,6 +75,7 @@ const EntityList = () => {
                       key={entity.entityId}
                       href={`/entity/${entity.id}`}
                       entity={entity}
+                      entityNameMap={entityNameMap}
                     />
                   );
                 })}

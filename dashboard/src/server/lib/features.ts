@@ -7,12 +7,13 @@ export function getAnnotatedFeatures(
   featureDefs: FeatureDef[],
   entityTypes: EntityType[],
   featuresArray: Array<[string, string | null, string | null]>, // featureId, value, error
-  rules: Rule[]
+  rules?: Rule[]
 ) {
-  const featureToRuleMap = rules.reduce(
-    (acc, rule) => ({ ...acc, [rule.featureId]: rule }),
-    {} as Record<string, Rule>
-  );
+  const featureToRuleMap =
+    rules?.reduce(
+      (acc, rule) => ({ ...acc, [rule.featureId]: rule }),
+      {} as Record<string, Rule>
+    ) ?? {};
 
   const featureDefsMap = new Map<string, FeatureDef>();
   for (const featureDef of featureDefs) {
