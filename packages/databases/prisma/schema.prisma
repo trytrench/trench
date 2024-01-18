@@ -74,6 +74,23 @@ model Rule {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String  @unique
 }
+model EventViews {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name    String
+  filters Json
+}
+
+model EntityViews {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name    String
+  filters Json
+}
 
 model Node {
   id String @id @default(dbgenerated("nanoid()"))
