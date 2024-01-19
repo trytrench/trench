@@ -107,9 +107,13 @@ function EntityDialog(props: {
     },
   });
 
+  const [initializedForm, setInitializedForm] = useState(false);
   useEffect(() => {
-    form.reset(defaults);
-  }, [defaults, form]);
+    if (!initializedForm && defaults) {
+      form.reset(defaults);
+      setInitializedForm(true);
+    }
+  }, [defaults, form, initializedForm]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
