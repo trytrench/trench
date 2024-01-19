@@ -64,7 +64,7 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
       <PopoverContent className="p-0" align="start">
         <Command>
           <CommandInput placeholder="Search nodes..." />
-          <CommandEmpty>No nodes found.</CommandEmpty>
+          <CommandEmpty>No options found.</CommandEmpty>
           <CommandGroup>
             {options.map((option) => (
               <CommandItem

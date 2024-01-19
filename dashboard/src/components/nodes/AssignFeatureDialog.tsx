@@ -149,7 +149,7 @@ export function AssignFeature({
                   name="dataPath"
                   render={({ field }) => (
                     <FormItem className="col-span-3">
-                      <FormLabel>Path</FormLabel>
+                      <FormLabel>Assign data from:</FormLabel>
                       <FormControl>
                         <SelectDataPath
                           value={field.value}
@@ -165,10 +165,42 @@ export function AssignFeature({
 
               <FormField
                 control={form.control}
+                name="featureId"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>To property:</FormLabel>
+                    <ComboboxSelector
+                      value={field.value}
+                      onSelect={field.onChange}
+                      options={
+                        features
+                          ?.filter((feature) => {
+                            const entitySchema =
+                              form.watch("entityDataPath")?.schema;
+                            if (entitySchema?.type === TypeName.Entity) {
+                              return (
+                                feature.entityTypeId === entitySchema.entityType
+                              );
+                            }
+                            return true;
+                          })
+                          .map((f) => ({
+                            label: f.name,
+                            value: f.id,
+                          })) ?? []
+                      }
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="entityDataPath"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Entity Path</FormLabel>
+                    <FormLabel>Of entity:</FormLabel>
                     <FormControl>
                       <SelectDataPath
                         value={field.value ?? null}
@@ -186,27 +218,6 @@ export function AssignFeature({
                         eventType={eventType}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="featureId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Property</FormLabel>
-                    <ComboboxSelector
-                      value={field.value}
-                      onSelect={field.onChange}
-                      options={
-                        features?.map((f) => ({
-                          label: f.name,
-                          value: f.id,
-                        })) ?? []
-                      }
-                    />
                     <FormMessage />
                   </FormItem>
                 )}
