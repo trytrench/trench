@@ -72,7 +72,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
               },
             })
           : event.data;
-        const value = path ? get(obj, path) : obj;
+        const value = path.length ? get(obj, path) : obj;
 
         const topLevelType = featureSchema.type;
         const dataType = createDataType(featureSchema);

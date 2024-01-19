@@ -33,8 +33,8 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.EntityAppearance]: {},
   [NodeType.LogEntityFeature]: {},
   [NodeType.CacheEntityFeature]: { redis },
-  [NodeType.Rule]: {},
   [NodeType.Event]: {},
+  [NodeType.Decision]: {},
 };
 
 type TrenchError = {
@@ -175,7 +175,10 @@ export class ExecutionEngine {
                 )}, which failed with error: ${result.output.message}`
               );
             } else {
-              const resolvedValue = get(result.output.data, dataPath.path);
+              const resolvedValue = dataPath.path.length
+                ? get(result.output.data, dataPath.path)
+                : result.output.data;
+
               if (expectedSchema) {
                 const type = createDataType(expectedSchema);
                 try {

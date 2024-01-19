@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createNodeTypeDefBuilder } from "../builder";
 import { NodeType } from "./_enum";
 import { TypeName } from "../../data-types";
+import { dataPathZodSchema } from "../../data-path";
 
 export const decisionNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.Decision)
@@ -9,7 +10,7 @@ export const decisionNodeDef = createNodeTypeDefBuilder()
     z.object({
       conditions: z.array(
         z.object({
-          ruleNodeId: z.string(),
+          rules: z.array(dataPathZodSchema),
           decisionId: z.string(),
         })
       ),
@@ -18,31 +19,33 @@ export const decisionNodeDef = createNodeTypeDefBuilder()
   )
   .setReturnSchema(TypeName.String)
   .setGetDependencies((config) => {
-    return new Set(config.conditions.map((condition) => condition.ruleNodeId));
+    return new Set(
+      config.conditions.flatMap((condition) =>
+        condition.rules.map((rule) => rule.nodeId)
+      )
+    );
   })
   .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency }) => {
       const { conditions, elseDecisionId } = nodeDef.config;
 
       for (const condition of conditions) {
-        const value = await getDependency({
-          dataPath: {
-            nodeId: condition.ruleNodeId,
-            path: [],
-            schema: { type: TypeName.Boolean },
-          },
-        });
+        let isTrue = true;
+        for (const rule of condition.rules) {
+          const value = await getDependency({
+            dataPath: rule,
+          });
 
-        if (value) {
-          return {
-            data: condition.decisionId,
-          };
+          if (!value) {
+            isTrue = false;
+            break;
+          }
         }
+
+        if (isTrue) return { data: condition.decisionId };
       }
 
-      return {
-        data: elseDecisionId,
-      };
+      return { data: elseDecisionId };
     };
   })
   .build();

@@ -1,4 +1,4 @@
-import { DataPath, TypeName } from "event-processing";
+import { DataPath, NodeType, TypeName, buildNodeDef } from "event-processing";
 import { Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/router";
 import { useState } from "react";
@@ -13,18 +13,18 @@ import {
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
 import { SelectDataPath } from "../SelectDataPath";
+import { useMutateNode } from "./useMutateNode";
 
 export const EditDecision = () => {
   const router = useRouter();
 
-  const [data, setData] = useState<
-    { conditions: DataPath[]; decisionId: string | null }[]
-  >([
-    {
-      conditions: [],
-      decisionId: null,
-    },
-  ]);
+  const { createNodeDef, updateNodeDef } = useMutateNode();
+
+  const [conditions, setConditions] = useState<
+    { rules: DataPath[]; decisionId: string | null }[]
+  >([{ rules: [], decisionId: null }]);
+  console.log(conditions);
+
   const [elseDecisionId, setElseDecisionId] = useState<string>("");
 
   const { data: decisions } = api.decisions.list.useQuery();
@@ -38,33 +38,34 @@ export const EditDecision = () => {
 
         <div className="flex gap-2 items-center">
           <Button
-          // disabled={!isValid}
-          // onClick={(event) => {
-          //   event.preventDefault();
+            // disabled={!isValid}
+            onClick={(event) => {
+              event.preventDefault();
 
-          //   // TODO: Clean this up
-          //   onSave(
-          //     {
-          //       ...initialNodeDef,
-          //       name: form.getValues("name"),
-          //       config: {
-          //         ...config,
-          //         depsMap: {},
-          //       },
-          //     },
-          //     assignToFeatures,
-          //     form.getValues("featureDeps"),
-          //     form.getValues("nodeDeps"),
-          //     assignToEventFeature
-          //   );
-          // }}
+              createNodeDef(
+                buildNodeDef(NodeType.Decision, {
+                  name: "Decision",
+                  type: NodeType.Decision,
+                  eventType: router.query.eventType as string,
+                  returnSchema: {
+                    type: TypeName.String,
+                  },
+                  config: {
+                    conditions,
+                    elseDecisionId: elseDecisionId,
+                  },
+                })
+              )
+                .then(() => {})
+                .catch(() => {});
+            }}
           >
             <Save className="w-4 h-4 mr-2" />
             Save
           </Button>
         </div>
       </div>
-      {data.map((route, index) => (
+      {conditions.map((condition, index) => (
         <Panel key={index} className="flex flex-col col-span-3">
           <div className="flex justify-between p-1">
             <span className="flex-1 pl-8">If the rule fires...</span>
@@ -73,33 +74,33 @@ export const EditDecision = () => {
 
           <div>
             <div className="flex">
-              {route.conditions.map((condition, outerIndex) => (
+              {condition.rules.map((rule, outerIndex) => (
                 <SelectDataPath
                   key={outerIndex}
-                  value={condition}
+                  value={rule}
                   onChange={(val) => {
                     if (val) {
-                      setData(
-                        data.map((d, i) =>
+                      setConditions(
+                        conditions.map((d, i) =>
                           i === index
                             ? {
                                 ...d,
-                                conditions: [
-                                  ...d.conditions.slice(0, outerIndex),
+                                rules: [
+                                  ...d.rules.slice(0, outerIndex),
                                   val,
-                                  ...d.conditions.slice(outerIndex + 1),
+                                  ...d.rules.slice(outerIndex + 1),
                                 ],
                               }
                             : d
                         )
                       );
                     } else {
-                      setData(
-                        data.map((d, i) =>
+                      setConditions(
+                        conditions.map((d, i) =>
                           i === index
                             ? {
                                 ...d,
-                                conditions: d.conditions.filter(
+                                rules: d.rules.filter(
                                   (_, i) => i !== outerIndex
                                 ),
                               }
@@ -116,12 +117,12 @@ export const EditDecision = () => {
               <SelectDataPath
                 value={null}
                 onChange={(val) => {
-                  setData(
-                    data.map((d, i) =>
+                  setConditions(
+                    conditions.map((d, i) =>
                       i === index
                         ? {
                             ...d,
-                            conditions: [...d.conditions, val],
+                            rules: [...d.rules, val],
                           }
                         : d
                     )
@@ -132,10 +133,10 @@ export const EditDecision = () => {
               />
 
               <Select
-                value={route.decisionId}
+                value={condition.decisionId}
                 onValueChange={(val) => {
-                  setData(
-                    data.map((d, i) =>
+                  setConditions(
+                    conditions.map((d, i) =>
                       i === index
                         ? {
                             ...d,
@@ -160,7 +161,7 @@ export const EditDecision = () => {
 
               <Button
                 onClick={() => {
-                  setData(data.filter((_, i) => i !== index));
+                  setConditions(conditions.filter((_, i) => i !== index));
                 }}
                 variant="ghost"
               >
@@ -173,10 +174,10 @@ export const EditDecision = () => {
 
       <Button
         onClick={() => {
-          setData([
-            ...data,
+          setConditions([
+            ...conditions,
             {
-              conditions: [],
+              rules: [],
               decisionId: null,
             },
           ]);
