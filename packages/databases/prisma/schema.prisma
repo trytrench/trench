@@ -75,6 +75,16 @@ model Rule {
   featureId String  @unique
 }
 
+model Decision {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+  type        String
+}
+
 model EventViews {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
