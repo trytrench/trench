@@ -75,6 +75,7 @@ export function AssignFeature({
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      ...defaults,
       dataPath: {
         nodeId: "",
         path: [],
@@ -84,9 +85,13 @@ export function AssignFeature({
     },
   });
 
+  const [initializedForm, setInitializedForm] = useState(false);
   useEffect(() => {
-    form.reset(defaults);
-  }, [defaults, form]);
+    if (!initializedForm && defaults) {
+      form.reset(defaults);
+      setInitializedForm(true);
+    }
+  }, [defaults, form, initializedForm]);
 
   const { data: features } = api.features.list.useQuery();
 
@@ -153,7 +158,10 @@ export function AssignFeature({
                       <FormControl>
                         <SelectDataPath
                           value={field.value}
-                          onChange={field.onChange}
+                          onChange={(val) => {
+                            console.log(val);
+                            field.onChange(val);
+                          }}
                           eventType={eventType}
                         />
                       </FormControl>
