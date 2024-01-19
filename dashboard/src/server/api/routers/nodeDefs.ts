@@ -128,7 +128,7 @@ export const nodeDefsRouter = createTRPCRouter({
         include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
       });
 
-      await publish();
+      // await publish();
 
       const snapshot = nodeDef.snapshots[0]!;
       const ret: NodeDefsMap[keyof NodeDefsMap] = {

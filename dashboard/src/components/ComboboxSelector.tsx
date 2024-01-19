@@ -21,7 +21,11 @@ import { Button } from "./ui/button";
 interface ComboboxSelectorProps {
   value: string | null;
   onSelect: (nodeId: string | null) => void;
-  renderTrigger?: (props: { value: string | null }) => React.ReactNode;
+  renderTrigger?: (props: {
+    value: string | null;
+    originalChildren: React.ReactNode;
+    renderOriginal: (children: React.ReactNode) => React.ReactNode;
+  }) => React.ReactNode;
   placeholder?: string;
   options: {
     label: string;
@@ -42,24 +46,31 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
 
   const [open, setOpen] = useState(false);
 
+  const renderOriginal = (children: React.ReactNode) => (
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-expanded={open}
+      className="w-[200px] justify-between"
+    >
+      {children}
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  );
+
+  const originalValue = value
+    ? options.find((option) => option.value === value)?.label
+    : placeholder ?? "Select...";
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {renderTrigger ? (
-          renderTrigger({ value })
-        ) : (
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-[200px] justify-between"
-          >
-            {value
-              ? options.find((option) => option.value === value)?.label
-              : placeholder ?? "Select..."}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        )}
+        {renderTrigger
+          ? renderTrigger({
+              value,
+              renderOriginal,
+              originalChildren: originalValue,
+            })
+          : renderOriginal(originalValue)}
       </PopoverTrigger>
       <PopoverContent className="p-0" align="start">
         <Command>

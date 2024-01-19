@@ -36,7 +36,11 @@ export function EventTypeNodesSchemaDisplay({
               path={[]}
               schema={node.returnSchema}
               onItemClick={({ path, schema }) => {
-                onItemClick?.({ nodeId: node.id, path, schema });
+                onItemClick?.({
+                  nodeId: node.id,
+                  path,
+                  schema,
+                });
               }}
               renderRightComponent={({ path, schema }) => {
                 return renderRightComponent?.({

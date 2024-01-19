@@ -1,4 +1,10 @@
-import { DataPath, TSchema, TypeName, createDataType } from "event-processing";
+import {
+  DataPath,
+  NodeDef,
+  TSchema,
+  TypeName,
+  createDataType,
+} from "event-processing";
 import { api } from "../../utils/api";
 import { useMemo } from "react";
 import { SchemaTag } from "../SchemaTag";
@@ -7,92 +13,11 @@ import { ComboboxSelector } from "../ComboboxSelector";
 import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
 
-// function useFlattenedFeaturePaths(props: {
-//   baseDataPath: DataPath;
-//   maxDepth?: number;
-//   desiredSchema?: TSchema;
-// }) {
-//   const { baseDataPath, maxDepth = 4 } = props;
-
-//   const { data: features } = api.features.list.useQuery();
-
-//   const flattenedFeaturePaths = useMemo(() => {
-//     const featurePaths: DataPath[] = [];
-//     if (!features) return [];
-
-//     const desiredType = createDataType(
-//       props.desiredSchema ?? { type: TypeName.Any }
-//     );
-
-//     /**
-//      * First, make sure baseDataPath.schema is of type Entity.
-//      * Then, get all features for the schema.entityTypeId.
-//      * Filter out all features whose schema is either:
-//      *  - a subtype of desiredSchema -> return
-//      *  - an entity type -> recurse
-//      * Essentially we want to discover all feature paths that are of the desired schema,
-//      * but we stop at the maxDepth.
-//      */
-
-//     const getPaths = (
-//       schema: TSchema,
-//       prefix: string[],
-//       depth: number
-//     ): {
-//       path: string[];
-//       schema: TSchema;
-//     }[] => {
-//       const allPaths: {
-//         path: string[];
-//         schema: TSchema;
-//       }[] = [];
-
-//       if (depth >= maxDepth) {
-//         return allPaths;
-//       }
-
-//       if (schema.type === TypeName.Entity) {
-//         const entityFeatures = features.filter(
-//           (feature) => feature.entityTypeId === schema.entityType
-//         );
-//         for (const feature of entityFeatures) {
-//           const subPaths = getPaths(
-//             feature.schema,
-//             [...prefix, feature.id],
-//             depth + 1
-//           );
-//           allPaths.push(...subPaths);
-//         }
-//       } else if (desiredType.isSuperTypeOf(schema)) {
-//         return [
-//           {
-//             path: prefix,
-//             schema,
-//           },
-//         ];
-//       }
-
-//       return allPaths;
-//     };
-
-//     const paths = getPaths(baseDataPath.schema, [], 0);
-//     for (const path of paths) {
-//       featurePaths.push({
-//         ...baseDataPath,
-//         featurePath: path.path,
-//         featureSchema: path.schema,
-//       });
-//     }
-//     return featurePaths;
-//   }, [baseDataPath, features, maxDepth, props.desiredSchema]);
-
-//   return {
-//     flattenedFeaturePaths,
-//   };
-// }
-
-function useFlattenedDataPaths(props: { eventType: string }) {
-  const { eventType } = props;
+function useFlattenedDataPaths(props: {
+  eventType: string;
+  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+}) {
+  const { eventType, filterNodeOptions = () => true } = props;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
@@ -127,7 +52,9 @@ function useFlattenedDataPaths(props: { eventType: string }) {
       return allPaths;
     };
 
-    for (const node of nodes ?? []) {
+    const filteredNodes = nodes?.filter(filterNodeOptions);
+
+    for (const node of filteredNodes ?? []) {
       const paths = getPaths(node.returnSchema, []);
       for (const path of paths) {
         dataPaths.push({
@@ -139,7 +66,7 @@ function useFlattenedDataPaths(props: { eventType: string }) {
     }
 
     return dataPaths;
-  }, [nodes]);
+  }, [filterNodeOptions, nodes]);
 
   return {
     flattenedDataPaths,
@@ -150,6 +77,8 @@ interface SelectDataPathProps {
   eventType: string;
   value: DataPath | null;
   disablePathSelection?: boolean;
+
+  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
 
   onChange: (value: DataPath | null) => void;
   onIsValidChange?: (isValid: boolean) => void;
@@ -162,6 +91,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
     eventType,
     value,
     onChange,
+    filterNodeOptions,
     desiredSchema,
     disablePathSelection = false,
   } = props;
@@ -170,17 +100,8 @@ export function SelectDataPath(props: SelectDataPathProps) {
 
   const { flattenedDataPaths } = useFlattenedDataPaths({
     eventType,
+    filterNodeOptions,
   });
-
-  // const { flattenedFeaturePaths } = useFlattenedFeaturePaths({
-  //   baseDataPath: value ?? {
-  //     nodeId: "",
-  //     path: [],
-  //     featurePath: [],
-  //     schema: { type: TypeName.Any },
-  //   },
-  //   desiredSchema,
-  // });
 
   const filteredPaths = flattenedDataPaths.filter((path) => {
     const desiredType = createDataType(desiredSchema ?? { type: TypeName.Any });
@@ -195,13 +116,6 @@ export function SelectDataPath(props: SelectDataPathProps) {
       value: path.path.join("."),
     }))
     .filter((option) => !!option.value);
-
-  // const filteredFeatureOptions = flattenedFeaturePaths
-  //   .map((path) => ({
-  //     label: path.featurePath!.join("."),
-  //     value: path.featurePath!.join("."),
-  //   }))
-  //   .filter((option) => !!option.value);
 
   const validNodes = uniqBy(filteredPaths, (path) => path.nodeId).map(
     (path) => ({
@@ -304,81 +218,6 @@ export function SelectDataPath(props: SelectDataPathProps) {
           }}
         />
       )}
-      {/* {value?.schema.type === TypeName.Entity && (
-        <ComboboxSelector
-          value={value?.featurePath?.join(".") ?? null}
-          onSelect={(newValue) => {
-            const newDataPath = flattenedFeaturePaths.find(
-              (path) => path.featurePath?.join(".") === newValue
-            );
-            onChange(
-              newDataPath ?? {
-                ...value,
-                featurePath: undefined,
-                featureSchema: undefined,
-              }
-            );
-          }}
-          renderOption={({ option, selected }) => {
-            const path = flattenedFeaturePaths.find(
-              (path) => path.featurePath?.join(".") === option.value
-            );
-            if (!path) {
-              return null;
-            }
-            return (
-              <div className="flex w-full justify-start">
-                <div className="text-gray-400">
-                  <RenderFeaturePath featurePath={path.featurePath ?? []} />
-                </div>
-                <div className="ml-4">
-                  <SchemaTag
-                    schema={path.featureSchema ?? { type: TypeName.Any }}
-                  />
-                </div>
-              </div>
-            );
-          }}
-          options={filteredFeatureOptions}
-          renderTrigger={({ value }) => {
-            if (!value) {
-              return (
-                <button className="flex justify-start items-center text-sm text-gray-400 font-mono">
-                  Select a path...
-                  <ChevronDown className="w-3 h-3 ml-1" />
-                </button>
-              );
-            }
-            const path = flattenedFeaturePaths.find(
-              (path) => path.featurePath?.join(".") === value
-            );
-            if (!path) {
-              return null;
-            }
-            return (
-              <button className="flex justify-start items-center text-sm text-black font-mono">
-                <RenderFeaturePath featurePath={path.featurePath ?? []} />
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </button>
-            );
-          }}
-        />
-      )} */}
     </div>
   );
 }
-
-// function RenderFeaturePath(props: { featurePath: string[] }) {
-//   const { featurePath } = props;
-//   const { data: features } = api.features.list.useQuery({});
-
-//   const featureNames = featurePath.map((featureId) => {
-//     const feature = features?.find((feature) => feature.id === featureId);
-//     return feature?.name ?? featureId;
-//   });
-//   return (
-//     <div className="flex items-center gap-2">
-//       <div className="text-gray-400">{featureNames.join("->")}</div>
-//     </div>
-//   );
-// }

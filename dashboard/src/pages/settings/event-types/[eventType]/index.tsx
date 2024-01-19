@@ -72,7 +72,6 @@ import { cn } from "~/lib/utils";
 import { DataTable } from "~/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog";
-import { AssignEntityFeatureDialog } from "../../../../components/nodes/AssignEntityFeatureDialog";
 import { SelectDataPath } from "../../../../components/nodes/SelectDataPath";
 import { handleError } from "../../../../lib/handleError";
 import { useMutateNode } from "../../../../components/nodes/editor/useMutateNode";
@@ -206,7 +205,10 @@ const Page: NextPageWithLayout = () => {
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
-  const { createNodeDef } = useMutateNode();
+  const {
+    create: { mutateAsync: createNodeDef },
+    update: { mutateAsync: updateNodeDef },
+  } = useMutateNode();
 
   const [open, setOpen] = useState(false);
   const [nodeSelectOpen, setNodeSelectOpen] = useState(false);
