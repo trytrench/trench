@@ -8,7 +8,7 @@ export const eventNodeDef = createNodeTypeDefBuilder()
   .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency }) => {
       return {
-        data: event.data,
+        data: event,
       };
     };
   })

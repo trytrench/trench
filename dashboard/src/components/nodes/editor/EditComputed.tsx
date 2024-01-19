@@ -124,7 +124,13 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       setCompileStatus(compileStatus);
 
       if (compileStatus.status === "success") {
-        form.setValue("config.tsCode", compileStatus.code);
+        form.setValue(
+          "config.tsCode",
+          // Remove const so that we can eval it as a function
+          compileStatus.code
+            .slice(compileStatus.compiled.indexOf("async"))
+            .replace(/[;\n]+$/, "")
+        );
         form.setValue("config.compiledJs", compileStatus.compiled);
       } else {
         form.setValue("config.tsCode", "");

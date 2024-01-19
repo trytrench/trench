@@ -167,7 +167,7 @@ export class ExecutionEngine {
           engineId: this.engineId,
           getDependency: async ({ dataPath, expectedSchema }) => {
             const depNodeDef = this.getNodeInstance(dataPath.nodeId).nodeDef;
-            const result = await this.evaluateNode(nodeId);
+            const result = await this.evaluateNode(dataPath.nodeId);
             if (result.type === "error") {
               throw new Error(
                 `Node ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
@@ -197,8 +197,8 @@ export class ExecutionEngine {
           },
         });
 
-        const dataType = createDataType(instance.nodeDef.returnSchema);
-        dataType.parse(resolvedOutput.data);
+        // const dataType = createDataType(instance.nodeDef.returnSchema);
+        // dataType.parse(resolvedOutput.data);
 
         // Register state updaters
         this.state.stateUpdaters.push(...(resolvedOutput.stateUpdaters ?? []));
