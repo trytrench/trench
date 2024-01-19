@@ -1,5 +1,9 @@
 import SuperJSON from "superjson";
 import * as murmurHash from "./murmurHash3";
+import { z } from "zod";
+import { dataPathZodSchema } from "../../data-path";
+import { timeWindowSchema } from "./timeWindow";
+import { tSchemaZod } from "../../data-types";
 
 export function getPastNTimeBuckets(props: {
   timeWindowMs: number;
@@ -54,3 +58,23 @@ export function getPastNCountBucketHashes(props: {
 
   return bucketHashes;
 }
+
+export const argsSchema = z.array(
+  z.object({
+    argName: z.string(),
+    schema: tSchemaZod,
+  })
+);
+
+export const counterSchema = z.object({
+  id: z.string(),
+  timeWindow: timeWindowSchema,
+  // countByArgs: argsSchema,
+});
+
+export const uniqueCounterSchema = z.object({
+  id: z.string(),
+  timeWindow: timeWindowSchema,
+  // countArgs: argsSchema,
+  // countByArgs: argsSchema,
+});

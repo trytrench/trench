@@ -44,7 +44,7 @@ ALTER TABLE "EntityType" DROP CONSTRAINT "EntityType_nameFeatureId_fkey";
 ALTER TABLE "EntityType" DROP CONSTRAINT "EntityType_projectId_fkey";
 
 -- DropForeignKey
-ALTER TABLE "EventFeature" DROP CONSTRAINT "EventFeature_eventTypeId_fkey";
+ALTER TABLE "EventFeature" DROP CONSTRAINT "EventFeature_eventType_fkey";
 
 -- DropForeignKey
 ALTER TABLE "EventFeature" DROP CONSTRAINT "EventFeature_featureId_fkey";

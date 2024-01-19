@@ -21,9 +21,13 @@ export const ruleNodeDef = createNodeTypeDefBuilder()
       const { depsMap, compiledJs } = nodeDef.config;
 
       const depValues: Record<string, any> = {};
-      for (const [key, depFeatureId] of Object.entries(depsMap)) {
+      for (const [key, depNodeId] of Object.entries(depsMap)) {
         const featureValue = await getDependency({
-          nodeId: depFeatureId,
+          dataPath: {
+            nodeId: depNodeId,
+            path: [],
+            schema: { type: TypeName.Any },
+          },
         });
         depValues[key] = featureValue;
       }

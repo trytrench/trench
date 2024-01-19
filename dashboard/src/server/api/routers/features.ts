@@ -1,6 +1,6 @@
 import { FeatureRow } from "./../../../../../packages/event-processing/src/node-type-defs/lib/store";
 import { db } from "databases";
-import { FeatureDef, TSchema } from "event-processing";
+import { FeatureDef, TSchema, tSchemaZod } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
@@ -8,14 +8,14 @@ import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
 export const featureDefSchema = z.object({
   id: z.string(),
   name: z.string(),
-  schema: z.record(z.unknown()),
+  schema: tSchemaZod,
   entityTypeId: z.string(),
 });
 
 export const eventFeatureDefSchema = z.object({
   id: z.string(),
   name: z.string(),
-  schema: z.record(z.unknown()),
+  schema: tSchemaZod,
 });
 
 export const featuresRouter = createTRPCRouter({

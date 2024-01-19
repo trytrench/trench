@@ -1,164 +1,86 @@
-import { NodeDef, createDataType } from "event-processing";
+import {
+  DataPath,
+  NodeDef,
+  TSchema,
+  TypeName,
+  createDataType,
+} from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { FeatureDep } from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
 import { api } from "~/utils/api";
 
-interface SchemaDisplayProps {
-  eventTypeId: string;
-  onItemClick?: (path: string, name: string) => void;
-  basePath?: string;
-  baseName?: string;
-  renderRightComponent?: (path: string) => React.ReactNode;
+interface EventTypeNodesSchemaDisplayProps {
+  eventType: string;
+  onItemClick?: (dataPath: DataPath) => void;
+  renderRightComponent?: (dataPath: DataPath) => React.ReactNode;
 }
 
-export function SchemaDisplay({
-  eventTypeId,
+export function EventTypeNodesSchemaDisplay({
+  eventType,
   onItemClick,
-  basePath = "",
-  baseName = "",
   renderRightComponent,
-}: SchemaDisplayProps) {
-  const schemaObj = useEventSchema(eventTypeId);
+}: EventTypeNodesSchemaDisplayProps) {
+  const { data: nodes } = api.nodeDefs.list.useQuery(
+    { eventType },
+    { enabled: !!eventType }
+  );
 
   return (
-    <SchemaEntry
-      name={baseName}
-      path={basePath}
-      info={schemaObj}
-      onItemClick={onItemClick}
-      renderRightComponent={renderRightComponent}
-    />
-  );
-}
-
-//
-
-export function useEventSchema(eventTypeId: string) {
-  const { data: eventType } = api.eventTypes.get.useQuery({ id: eventTypeId });
-
-  return useMemo(() => {
-    if (!eventType) return {};
-
-    return JSON.parse(
-      run(
-        "Root",
-        JSON.stringify(eventType.exampleEvent),
-        JSON.stringify({ output_mode: "json_schema" })
-      )
-    );
-  }, [eventType]);
-}
-
-// TODO: Support object types
-export function useDepsSchema(nodeDeps: NodeDef[], featureDeps: FeatureDep[]) {
-  const featureProperties = useMemo(
-    () =>
-      featureDeps.reduce(
-        (acc, dep) => {
-          if (!acc[dep.node.name]) {
-            acc[dep.node.name] = { type: "object", properties: {} };
-          }
-
-          acc[dep.node.name]!.properties[dep.feature.name] = {
-            type: createDataType(dep.feature.schema).toTypescript(),
-          };
-          return acc;
-        },
-        {} as Record<
-          string,
-          { type: string; properties: Record<string, unknown> }
-        >
-      ),
-    [featureDeps]
-  );
-
-  const nodeProperties = useMemo(() => {
-    return nodeDeps.reduce(
-      (acc, dep) => {
-        acc[dep.name] = {
-          type: createDataType(dep.returnSchema).toTypescript(),
-        };
-        return acc;
-      },
-      {} as Record<string, unknown>
-    );
-  }, [nodeDeps]);
-
-  return {
-    type: "object",
-    properties: {
-      ...featureProperties,
-      ...nodeProperties,
-    },
-  };
-}
-
-export function useDepsTypes(nodeDeps: NodeDef[], featureDeps: FeatureDep[]) {
-  return useMemo(() => {
-    let typeDef = "interface Dependencies {\n";
-
-    const nodeNames = featureDeps.reduce(
-      (acc, dep) => {
-        if (!acc[dep.node.name]) acc[dep.node.name] = [];
-
-        acc[dep.node.name]!.push(
-          `"${dep.feature.name}": ${createDataType(
-            dep.feature.schema
-          ).toTypescript()}`
+    <div>
+      {nodes?.map((node) => {
+        return (
+          <div key={node.id}>
+            <SchemaDisplay
+              name={node.name}
+              path={[]}
+              schema={node.returnSchema}
+              onItemClick={({ path, schema }) => {
+                onItemClick?.({ nodeId: node.id, path, schema });
+              }}
+              renderRightComponent={({ path, schema }) => {
+                return renderRightComponent?.({
+                  nodeId: node.id,
+                  path,
+                  schema,
+                });
+              }}
+            />
+          </div>
         );
-        return acc;
-      },
-      {} as Record<string, string[]>
-    );
-
-    for (const nodeName in nodeNames) {
-      typeDef += `  "${nodeName}": {\n`;
-      typeDef +=
-        nodeNames[nodeName]
-          .map((featureName) => `    ${featureName}`)
-          .join(";\n") + ";\n";
-
-      typeDef += "  };\n";
-    }
-
-    for (const dep of nodeDeps) {
-      typeDef += `  "${dep.name}": ${createDataType(
-        dep.returnSchema
-      ).toTypescript()};\n`;
-    }
-    typeDef += "}";
-
-    return typeDef;
-  }, [nodeDeps, featureDeps]);
+      })}
+    </div>
+  );
 }
 
-type InfoType = {
-  type?: string;
-  properties?: object;
-};
-
-interface SchemaEntryProps {
+interface SchemaDisplayProps {
   name: string;
-  path: string;
-  info: InfoType;
-  onItemClick?: (path: string, name: string) => void;
-  renderRightComponent?: (path: string) => React.ReactNode;
+  path: string[];
+  schema: TSchema;
+  onItemClick?: (props: {
+    name: string;
+    path: string[];
+    schema: TSchema;
+  }) => void;
+  renderRightComponent?: (props: {
+    name: string;
+    path: string[];
+    schema: TSchema;
+  }) => React.ReactNode;
 }
 
-export function SchemaEntry(props: SchemaEntryProps) {
-  const { name, path, info, onItemClick, renderRightComponent } = props;
+export function SchemaDisplay(props: SchemaDisplayProps) {
+  const { name, path, schema, onItemClick, renderRightComponent } = props;
 
   const [collapsed, setCollapsed] = useState(false);
 
-  if (info.type === "object") {
+  if (schema.type === TypeName.Object) {
     return (
       <>
         <div className="flex items-center gap-1 pt-0.5">
           <button
             onClick={() => {
-              onItemClick?.(path, name);
+              onItemClick?.({ name, path, schema });
             }}
           >
             {name}
@@ -176,17 +98,17 @@ export function SchemaEntry(props: SchemaEntryProps) {
           </button>
         </div>
         {!collapsed &&
-          (info.properties && Object.keys(info.properties).length ? (
-            <div className="ml-0 border-l pl-8">
-              {Object.entries(info.properties ?? {}).map(([key, value]) => {
-                const entryPath = path ? `${path}.${key}` : key;
+          (schema.properties && Object.keys(schema.properties).length ? (
+            <div className="ml-0 border-l pl-4">
+              {Object.entries(schema.properties ?? {}).map(([key, value]) => {
+                const entryPath = path ? [...path, key] : [key];
 
                 return (
-                  <div key={entryPath}>
-                    <SchemaEntry
+                  <div key={key}>
+                    <SchemaDisplay
                       name={key}
                       path={entryPath}
-                      info={value}
+                      schema={value}
                       onItemClick={onItemClick}
                       renderRightComponent={renderRightComponent}
                     />
@@ -205,12 +127,12 @@ export function SchemaEntry(props: SchemaEntryProps) {
     <div className="pt-0.5 flex items-center">
       <button
         onClick={() => {
-          onItemClick?.(path, name);
+          onItemClick?.({ name, path, schema });
         }}
       >
-        {name}: <span className="opacity-50">{info.type ?? "?"}</span>
+        {name}: <span className="opacity-50">{schema.type ?? "?"}</span>
       </button>
-      {renderRightComponent?.(path)}
+      {renderRightComponent?.({ name, path, schema })}
     </div>
   );
 }

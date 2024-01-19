@@ -46,7 +46,7 @@ async function initEventHandler() {
       const storeRows: StoreRow[] = [];
       for (const eventObj of events) {
         engine.initState(eventObj.event);
-        await recordEventType(eventObj.event.type, eventObj.event.data);
+        await recordEventType(eventObj.event.type, eventObj.event);
         await engine.getAllEngineResults();
         await engine.executeStateUpdates();
         storeRows.push(...(engine.state?.savedStoreRows ?? []));

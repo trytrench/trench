@@ -143,7 +143,7 @@ export function EditUniqueCount({ initialNodeDef, onSave, onRename }: Props) {
             <CountSelector
               config={countUniqueConfig}
               onConfigChange={setCountUniqueConfig}
-              eventTypeId={router.query.eventTypeId as string}
+              eventType={router.query.eventType as string}
             />
           </div>
         </>

@@ -74,6 +74,7 @@ model Rule {
   feature   Feature @relation(fields: [featureId], references: [id])
   featureId String  @unique
 }
+
 model EventViews {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -98,36 +99,49 @@ model Node {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type         String
-  name         String
-  returnSchema Json
+  name String
+  type String
 
-  eventTypes String[]
-  dependsOn  String[]
-  config     Json
+  eventTypeObj EventType @relation(fields: [eventType], references: [id])
+  eventType    String
 
-  executionEngines ExecutionEngineToNode[]
+  snapshots NodeSnapshot[]
 }
 
-model ExecutionEngineToNode {
+model NodeSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  nodeId String
   node   Node   @relation(fields: [nodeId], references: [id])
+  nodeId String
+
+  returnSchema Json
+  dependsOn    String[]
+  config       Json
+
+  executionEngines ExecutionEngineToNodeSnapshot[]
+}
+
+model ExecutionEngineToNodeSnapshot {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nodeSnapshotId String
+  nodeSnapshot   NodeSnapshot @relation(fields: [nodeSnapshotId], references: [id])
 
   executionEngineId String
   executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
 
-  @@unique([nodeId, executionEngineId])
+  @@unique([nodeSnapshotId, executionEngineId])
 }
 
 model ExecutionEngine {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  nodes ExecutionEngineToNode[]
+  nodeSnapshots ExecutionEngineToNodeSnapshot[]
 }
 
 enum GlobalStateKey {
@@ -163,14 +177,12 @@ model EntityTypePage {
 }
 
 model EventType {
-  id        String   @id @default(dbgenerated("nanoid()"))
+  id        String   @id
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type         String    @unique
-  schema       Json?
-  exampleEvent Json?
-  features     Feature[]
+  features Feature[]
+  nodes    Node[]
 }
 
 // Necessary for Next auth

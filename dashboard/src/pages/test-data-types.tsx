@@ -11,7 +11,7 @@ import { IndentationText, Project } from "ts-morph";
 import { SchemaBuilder } from "../components/SchemaBuilder";
 import { SchemaTag } from "../components/SchemaTag";
 import { SelectDataPath } from "../components/nodes/SelectDataPath";
-import { DataPath } from "../shared/types";
+import { DataPath } from "event-processing";
 
 interface Argument {
   name: string;
@@ -68,8 +68,8 @@ function ShowSchema({ schema }: { schema: TSchema }) {
 
 export default function Page() {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
-  const { data: bleh } = api.eventTypes.get.useQuery({
-    id: "C87WLwulYjPBV3eNPvykj",
+  const { data: bleh } = api.nodeDefs.get.useQuery({
+    id: "anz9RTaxbDPTPIJd8ve7H",
   });
 
   const [schema, setSchema] = useState<TSchema>({
@@ -87,14 +87,14 @@ export default function Page() {
 
       <div className="h-8"></div>
       <div className="text-white">
-        <ShowSchema schema={bleh?.schema ?? { type: TypeName.Any }} />
+        <ShowSchema schema={bleh?.returnSchema ?? { type: TypeName.Any }} />
       </div>
-      <SelectDataPath
-        eventTypeId="C87WLwulYjPBV3eNPvykj"
+      {/* <SelectDataPath
+        eventType="C87WLwulYjPBV3eNPvykj"
         value={dataPath}
         onChange={setDataPath}
         desiredSchema={{ type: TypeName.Location }}
-      />
+      /> */}
     </div>
   );
 }

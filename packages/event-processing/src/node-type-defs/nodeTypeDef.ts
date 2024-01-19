@@ -1,7 +1,8 @@
 import { ZodType, z } from "zod";
 import { NodeType } from "./types/_enum";
-import { InferSchemaType, TSchema } from "../data-types";
+import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
+import { DataPath } from "../data-path";
 
 export type NodeDef<
   TNodeType extends NodeType = NodeType,
@@ -9,12 +10,25 @@ export type NodeDef<
   TConfig = any,
 > = {
   id: string;
+  eventType: string;
   name: string;
   type: TNodeType;
   returnSchema: TReturnSchema;
   config: TConfig;
   dependsOn: Set<string>;
 };
+
+export function getNodeDefSchema<T extends ZodType<any>>(configSchema: T) {
+  return z.object({
+    id: z.string(),
+    eventType: z.string(),
+    name: z.string(),
+    type: z.nativeEnum(NodeType),
+    returnSchema: tSchemaZod,
+    config: configSchema,
+    dependsOn: z.set(z.string()),
+  });
+}
 
 export type TrenchEvent = {
   id: string;
@@ -29,7 +43,7 @@ export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   event: TrenchEvent;
   engineId: string;
   getDependency<TR extends TSchema>(props: {
-    nodeId: string;
+    dataPath: DataPath;
     expectedSchema?: TR;
   }): Promise<InferSchemaType<TR>>;
 }) => Promise<{
@@ -42,7 +56,7 @@ export type NodeTypeDef<
   TNodeType extends NodeType = any,
   TReturn extends TSchema = any,
   TConfigSchema extends ZodType = any,
-  TContext = unknown,
+  TContext = any,
 > = {
   nodeType: TNodeType;
   configSchema: TConfigSchema;

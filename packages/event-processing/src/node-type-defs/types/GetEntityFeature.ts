@@ -4,6 +4,7 @@ import { createNodeTypeDefBuilder } from "../builder";
 import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
 import { hashObject } from "../lib/counts";
 import { RedisInterface } from "databases";
+import { dataPathZodSchema } from "../../data-path";
 
 export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.GetEntityFeature)
@@ -11,7 +12,7 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
     z.object({
       featureId: z.string(),
       featureSchema: z.record(z.any()),
-      entityAppearanceNodeId: z.string(),
+      entityDataPath: dataPathZodSchema,
     })
   )
   .setContextType<{
@@ -19,15 +20,15 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
   }>()
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    set.add(config.entityAppearanceNodeId);
+    set.add(config.entityDataPath.nodeId);
     return set;
   })
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, entityAppearanceNodeId } = nodeDef.config;
+      const { featureId, entityDataPath } = nodeDef.config;
 
       let entity = await getDependency({
-        nodeId: entityAppearanceNodeId,
+        dataPath: entityDataPath,
         expectedSchema: {
           type: TypeName.Entity,
         },

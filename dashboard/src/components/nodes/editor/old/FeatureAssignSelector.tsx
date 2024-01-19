@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
-import AssignEntities from "../../AssignEntities";
+import AssignEntities from "../../../../../components/nodes/AssignEntities";
 import { FeatureDep } from "./NodeDepSelector";
 import { FeatureDef } from "event-processing";
 

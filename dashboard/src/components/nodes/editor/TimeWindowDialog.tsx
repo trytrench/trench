@@ -1,4 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { timeWindowSchema } from "event-processing/src/node-type-defs/lib/timeWindow";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -26,25 +28,26 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 
-const formSchema = z.object({
-  value: z.coerce.number().min(1),
-  unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
-});
-
-export type TimeWindow = z.infer<typeof formSchema>;
+type TimeWindow = z.infer<typeof timeWindowSchema>;
 
 interface Props {
   children: React.ReactNode;
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  value: TimeWindow;
+  onSubmit: (values: TimeWindow) => void;
 }
 
-export function TimeWindowDialog({ children, onSubmit }: Props) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+export function TimeWindowDialog({ children, onSubmit, value }: Props) {
+  const form = useForm<TimeWindow>({
+    resolver: zodResolver(timeWindowSchema),
     defaultValues: {
       unit: "days",
+      value: 1,
     },
   });
+
+  useEffect(() => {
+    form.reset(value);
+  }, [form, value]);
 
   return (
     <Dialog>
@@ -107,5 +110,13 @@ export function TimeWindowDialog({ children, onSubmit }: Props) {
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function RenderTimeWindow({ value }: { value: TimeWindow }) {
+  return (
+    <>
+      {value.value} {value.unit}
+    </>
   );
 }

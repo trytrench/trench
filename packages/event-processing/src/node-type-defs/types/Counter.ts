@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { StateUpdater } from "../nodeTypeDef";
-import { getPastNCountBucketHashes } from "../lib/counts";
+import { counterSchema, getPastNCountBucketHashes } from "../lib/counts";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { RedisInterface } from "databases";
 import { TypeName } from "../../data-types";
+import { dataPathZodSchema } from "../../data-path";
+import { getTimeWindowMs } from "../lib/timeWindow";
 
 const N_BUCKETS = 10;
 
@@ -13,20 +15,19 @@ export const counterNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.Counter)
   .setConfigSchema(
     z.object({
-      counterId: z.string(),
-      timeWindowMs: z.number(),
-      countByNodeIds: z.array(z.string()),
-      conditionNodeId: z.string().optional(),
+      counter: counterSchema,
+      countByDataPaths: z.array(dataPathZodSchema),
+      conditionDataPath: dataPathZodSchema.optional(),
     })
   )
   .setReturnSchema(TypeName.Int64)
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    for (const nodeId of config.countByNodeIds) {
-      set.add(nodeId);
+    for (const path of config.countByDataPaths) {
+      set.add(path.nodeId);
     }
-    if (config.conditionNodeId) {
-      set.add(config.conditionNodeId);
+    if (config.conditionDataPath?.nodeId) {
+      set.add(config.conditionDataPath.nodeId);
     }
     return set;
   })
@@ -41,32 +42,30 @@ export const counterNodeDef = createNodeTypeDefBuilder()
        * 2. Then, we need to return a callback that increments the count of the current time bucket.
        */
 
-      const { timeWindowMs, counterId, countByNodeIds, conditionNodeId } =
-        nodeDef.config;
+      const { counter, countByDataPaths, conditionDataPath } = nodeDef.config;
 
       let shouldIncrementCount = true;
-      if (conditionNodeId) {
-        const conditionValue = await getDependency({
-          nodeId: conditionNodeId,
+      if (conditionDataPath) {
+        shouldIncrementCount = await getDependency({
+          dataPath: conditionDataPath,
           expectedSchema: {
             type: TypeName.Boolean,
           },
         });
-        shouldIncrementCount = conditionValue;
       }
 
       const valuesToCountBy = await Promise.all(
-        countByNodeIds.map((nodeId) => {
+        countByDataPaths.map((nodeId) => {
           return getDependency({
-            nodeId,
+            dataPath: nodeId,
           }).then((value) => JSON.stringify(value));
         })
       );
 
       const bucketHashes = getPastNCountBucketHashes({
         n: N_BUCKETS,
-        timeWindowMs: timeWindowMs,
-        counterId,
+        timeWindowMs: getTimeWindowMs(counter.timeWindow),
+        counterId: counter.id,
         countBy: valuesToCountBy,
         currentTime: event.timestamp,
       });

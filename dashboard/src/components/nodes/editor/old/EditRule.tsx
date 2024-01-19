@@ -22,15 +22,15 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
-import FeatureAssignSelector from "~/pages/settings/event-types/[eventTypeId]/node/FeatureAssignSelector";
+import FeatureAssignSelector from "~/pages/settings/event-types/[eventType]/node/FeatureAssignSelector";
 import {
   FeatureDep,
   NodeDepSelector,
-} from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+} from "~/pages/settings/event-types/[eventType]/node/NodeDepSelector";
 import { api } from "~/utils/api";
 import {
+  EventTypeNodesSchemaDisplay,
   SchemaDisplay,
-  SchemaEntry,
   useDepsSchema,
   useDepsTypes,
 } from "../../../../../components/features/SchemaDisplay";
@@ -39,7 +39,6 @@ import {
   CompileStatus,
   CompileStatusMessage,
 } from "../../../../../components/features/shared/CodeEditor";
-import { useEventTypes } from "../../../../../components/ts-editor/useEventTypes";
 import {
   Dialog,
   DialogContent,
@@ -90,7 +89,7 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
 
   const { data: features } = api.features.list.useQuery();
   const { data: nodes } = api.nodeDefs.list.useQuery({
-    eventTypeId: router.query.eventTypeId as string,
+    eventType: router.query.eventType as string,
   });
 
   const [config, setConfig] = useState(
@@ -130,8 +129,6 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
     form.watch("nodeDeps"),
     form.watch("featureDeps")
   );
-
-  const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
   const deps = useDepsSchema(form.watch("nodeDeps"), form.watch("featureDeps"));
 
@@ -235,7 +232,7 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
                   form.setValue("featureDeps", deps)
                 }
                 onNodeDepsChange={(deps) => form.setValue("nodeDeps", deps)}
-                eventTypeId={router.query.eventTypeId as string}
+                eventType={router.query.eventType as string}
               />
             </div>
           </form>
@@ -307,20 +304,18 @@ export function EditRule({ initialNodeDef, onSave, onRename }: Props) {
 
       {showSchema && (
         <Card className="h-96 overflow-auto p-6 mb-4">
-          <SchemaDisplay
+          <EventTypeNodesSchemaDisplay
             basePath="input.event.data"
             baseName="event.data"
-            eventTypeId={router.query.eventTypeId as string}
+            eventType={router.query.eventType as string}
           />
-          <SchemaEntry name="deps" path="input.deps" info={deps} />
+          <SchemaDisplay name="deps" path="input.deps" info={deps} />
         </Card>
       )}
 
       <div className="h-96">
         <CodeEditor
-          typeDefs={[depsType, eventTypes, inputType, functionType].join(
-            "\n\n"
-          )}
+          typeDefs={[depsType, inputType, functionType].join("\n\n")}
           initialCode={config?.tsCode ?? FUNCTION_TEMPLATE}
           onCompileStatusChange={onCompileStatusChange}
         />

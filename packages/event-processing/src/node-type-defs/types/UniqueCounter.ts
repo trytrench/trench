@@ -1,12 +1,18 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { StateUpdater } from "../nodeTypeDef";
-import { getPastNCountBucketHashes, hashObject } from "../lib/counts";
+import {
+  getPastNCountBucketHashes,
+  hashObject,
+  uniqueCounterSchema,
+} from "../lib/counts";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { type RedisInterface } from "databases";
 import { TypeName } from "../../data-types";
+import { dataPathZodSchema } from "../../data-path";
+import { getTimeWindowMs } from "../lib/timeWindow";
 
 const N_BUCKETS = 10;
 
@@ -14,23 +20,22 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.UniqueCounter)
   .setConfigSchema(
     z.object({
-      counterId: z.string(),
-      timeWindowMs: z.number(),
-      countUniqueNodeIds: z.array(z.string()),
-      countByNodeIds: z.array(z.string()),
-      conditionNodeId: z.string().optional(),
+      uniqueCounter: uniqueCounterSchema,
+      countDataPaths: z.array(dataPathZodSchema),
+      countByDataPaths: z.array(dataPathZodSchema),
+      conditionDataPath: dataPathZodSchema.optional(),
     })
   )
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    for (const nodeId of config.countByNodeIds) {
-      set.add(nodeId);
+    for (const path of config.countByDataPaths) {
+      set.add(path.nodeId);
     }
-    for (const nodeId of config.countUniqueNodeIds) {
-      set.add(nodeId);
+    for (const path of config.countDataPaths) {
+      set.add(path.nodeId);
     }
-    if (config.conditionNodeId) {
-      set.add(config.conditionNodeId);
+    if (config.conditionDataPath) {
+      set.add(config.conditionDataPath.nodeId);
     }
     return set;
   })
@@ -41,17 +46,16 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
   .setCreateResolver(({ nodeDef: featureDef, context }) => {
     return async ({ event, getDependency }) => {
       const {
-        timeWindowMs,
-        counterId,
-        countByNodeIds,
-        countUniqueNodeIds,
-        conditionNodeId,
+        uniqueCounter,
+        conditionDataPath,
+        countDataPaths,
+        countByDataPaths,
       } = featureDef.config;
 
       let shouldUpdateCount = true;
-      if (conditionNodeId) {
+      if (conditionDataPath) {
         shouldUpdateCount = await getDependency({
-          nodeId: conditionNodeId,
+          dataPath: conditionDataPath,
           expectedSchema: {
             type: TypeName.Boolean,
           },
@@ -59,9 +63,9 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       }
 
       const countBy = await Promise.all(
-        countByNodeIds.map((nodeId) => {
+        countByDataPaths.map((path) => {
           return getDependency({
-            nodeId: nodeId,
+            dataPath: path,
           }).then((data) => JSON.stringify(data));
         })
       );
@@ -69,15 +73,15 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       const bucketHashes = getPastNCountBucketHashes({
         n: N_BUCKETS,
         currentTime: event.timestamp,
-        timeWindowMs: timeWindowMs,
-        counterId,
+        timeWindowMs: getTimeWindowMs(uniqueCounter.timeWindow),
+        counterId: uniqueCounter.id,
         countBy,
       });
 
       const countUniqueValues = await Promise.all(
-        countUniqueNodeIds.map((featureId) => {
+        countDataPaths.map((path) => {
           return getDependency({
-            nodeId: featureId,
+            dataPath: path,
           }).then((data) => JSON.stringify(data));
         })
       );

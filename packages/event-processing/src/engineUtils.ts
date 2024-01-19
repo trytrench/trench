@@ -1,28 +1,7 @@
 import { GlobalStateKey, prisma } from "databases";
 import { ExecutionEngine } from "./engine";
 import { NodeDef, NodeType } from "./node-type-defs";
-
-export function getNodeDefFromSnapshot(snapshot: {
-  id: string;
-  config: any;
-  deps: string[];
-  eventTypes: string[];
-  node: {
-    id: string;
-    type: string;
-    dataType: any;
-    name: string;
-  };
-}): NodeDef {
-  return {
-    id: snapshot.node.id,
-    type: snapshot.node.type as NodeType,
-    name: snapshot.node.name,
-    dependsOn: new Set(snapshot.deps),
-    returnSchema: snapshot.node.dataType as any,
-    config: snapshot.config as object,
-  };
-}
+import { TSchema } from "./data-types";
 
 async function fetchFeatureDefSnapshots({
   engineId,
@@ -33,9 +12,13 @@ async function fetchFeatureDefSnapshots({
   const engineDef = await prisma.executionEngine.findUnique({
     where: { id: engineId },
     include: {
-      nodes: {
+      nodeSnapshots: {
         include: {
-          node: true,
+          nodeSnapshot: {
+            include: {
+              node: true,
+            },
+          },
         },
       },
     },
@@ -44,7 +27,19 @@ async function fetchFeatureDefSnapshots({
   if (!engineDef) {
     throw new Error(`No engine found for engineId ${engineId}`);
   }
-  return engineDef.nodes.map((node) => node.node);
+  return engineDef.nodeSnapshots.map((obj) => {
+    const snapshot = obj.nodeSnapshot;
+    const { node } = snapshot;
+    return {
+      id: snapshot.nodeId,
+      type: node.type as NodeType,
+      eventType: node.eventType,
+      name: node.name,
+      config: snapshot.config,
+      returnSchema: snapshot.returnSchema as unknown as TSchema,
+      dependsOn: new Set(snapshot.dependsOn),
+    };
+  });
 }
 
 export async function fetchCurrentEngineId() {
