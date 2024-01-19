@@ -1,5 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeDefsMap, NodeType, TypeName } from "event-processing";
+import {
+  NodeDefsMap,
+  NodeType,
+  TypeName,
+  dataPathZodSchema,
+} from "event-processing";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import React, { useState } from "react";
@@ -39,45 +44,37 @@ import { useToast } from "~/components/ui/use-toast";
 import { cn } from "~/lib/utils";
 import { api } from "~/utils/api";
 
-const entityFeatureSchema = z.object({
-  path: z.string(),
-  entityProperty: z.object({
-    entityNodeId: z.string(),
-    entityName: z.string(),
-    featureId: z.string(),
-    featureName: z.string(),
-  }),
+const formSchema = z.object({
+  dataPath: dataPathZodSchema.nullable(),
+  entityDataPath: dataPathZodSchema.optional(),
+  featureId: z.string(),
 });
 
-export default function EntityFeatureDialog({
+type FormType = z.infer<typeof formSchema>;
+
+export function AssignEntityFeatureDialog({
   title,
   children,
-  path = "",
-  entityTypeId = "",
-  featureId = "",
+  defaults,
 }: {
   title: string;
   children: React.ReactNode;
-  path?: string;
-  entityTypeId?: string;
-  featureId?: string;
+  defaults: FormType;
 }) {
   const router = useRouter();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
-  const form = useForm<z.infer<typeof entityFeatureSchema>>({
-    resolver: zodResolver(entityFeatureSchema),
-    defaultValues: {
-      path,
-    },
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaults,
   });
   const { data: features } = api.features.list.useQuery();
 
   const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
   const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery(
-    { eventTypeId: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
+    { eventType: router.query.eventType as string },
+    { enabled: !!router.query.eventType }
   );
 
   const [entityNode, setEntityNode] = useState<
@@ -85,43 +82,41 @@ export default function EntityFeatureDialog({
   >();
   const [entityDepsDropdownOpen, setEntityDepsDropdownOpen] = useState(false);
 
-  const createEntityFeature = (values: z.infer<typeof entityFeatureSchema>) => {
-    const feature = features?.find(
-      (f) => f.id === values.entityProperty?.featureId
-    );
+  const createEntityFeature = (values: FormType) => {
+    const feature = features?.find((f) => f.id === values.featureId);
     if (!feature) throw new Error("Feature not found");
 
-    createNodeDef({
-      eventTypes: [router.query.eventTypeId as string],
-      name: feature.name,
-      type: NodeType.LogEntityFeature,
-      returnSchema: {
-        type: TypeName.Any,
-      },
-      dependsOn: [],
-      config: {
-        featureId: feature.id,
-        entityAppearanceNodeId: values.entityProperty?.entityNodeId,
-        featureSchema: feature.schema,
-        dataPath: {
-          nodeId: null,
-          path: values.path.replace("input.event.data.", ""),
-        },
-      } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
-    })
-      .then(() => {
-        toast({
-          title: "Entity property assigned",
-          // description: `${feature.name}`,
-        });
-        return refetchNodes();
-      })
-      .catch(() => {
-        toast({
-          variant: "destructive",
-          title: "Failed to assign entity property",
-        });
-      });
+    // createNodeDef({
+    //   eventTypes: [router.query.eventType as string],
+    //   name: feature.name,
+    //   type: NodeType.LogEntityFeature,
+    //   returnSchema: {
+    //     type: TypeName.Any,
+    //   },
+    //   dependsOn: [],
+    //   config: {
+    //     featureId: feature.id,
+    //     entityAppearanceNodeId: values.entityProperty?.entityNodeId,
+    //     featureSchema: feature.schema,
+    //     dataPath: {
+    //       nodeId: "event",
+    //       path: values.path.replace("input.event.data.", ""),
+    //     },
+    //   } as NodeDefsMap[NodeType.LogEntityFeature]["config"],
+    // })
+    //   .then(() => {
+    //     toast({
+    //       title: "Entity property assigned",
+    //       // description: `${feature.name}`,
+    //     });
+    //     return refetchNodes();
+    //   })
+    //   .catch(() => {
+    //     toast({
+    //       variant: "destructive",
+    //       title: "Failed to assign entity property",
+    //     });
+    //   });
   };
 
   return (

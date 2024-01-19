@@ -1,28 +1,49 @@
 import { prisma } from "databases";
-import { inferSchemaFromJsonObject } from "event-processing";
+import {
+  NodeType,
+  TrenchEvent,
+  inferSchemaFromJsonObject,
+} from "event-processing";
 
 var seenEventTypes = new Set<string>();
 
-export async function recordEventType(eventType: string, exampleEvent: any) {
+export async function recordEventType(
+  eventType: string,
+  exampleEvent: TrenchEvent
+) {
   if (seenEventTypes.has(eventType)) {
     return;
   }
   seenEventTypes.add(eventType);
 
-  const schema = inferSchemaFromJsonObject(exampleEvent);
+  const schema = inferSchemaFromJsonObject({
+    id: exampleEvent.id,
+    type: exampleEvent.type,
+    timestamp: exampleEvent.timestamp.toISOString(),
+    data: exampleEvent.data,
+  });
 
   await prisma.eventType.upsert({
     where: {
-      type: eventType,
+      id: eventType,
     },
     create: {
-      type: eventType,
-      exampleEvent: exampleEvent,
-      schema: schema as any,
+      id: eventType,
+      nodes: {
+        create: [
+          {
+            type: NodeType.Event,
+            name: `Event: ${eventType}`,
+            snapshots: {
+              create: {
+                returnSchema: schema as any,
+                config: {},
+              },
+            },
+          },
+        ],
+      },
     },
-    update: {
-      exampleEvent: exampleEvent,
-      schema: schema as any,
-    },
+    update: {},
   });
 }

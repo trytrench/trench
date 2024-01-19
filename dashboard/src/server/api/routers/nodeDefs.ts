@@ -1,25 +1,21 @@
 import { GlobalStateKey, prisma } from "databases";
 import { add } from "date-fns";
 import {
-  NODE_TYPE_DEFS,
+  NODE_TYPE_REGISTRY,
+  NodeDef,
   NodeDefsMap,
   NodeType,
+  NodeTypeDef,
+  TSchema,
   TypeName,
+  getNodeDefSchema,
+  tSchemaZod,
 } from "event-processing";
 import { z } from "zod";
-import { TimeWindow } from "~/pages/settings/event-types/[eventTypeId]/node/TimeWindowDialog";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { eventFeatureDefSchema, featureDefSchema } from "./features";
 
-export const nodeDefSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.nativeEnum(NodeType),
-  eventTypes: z.array(z.string()),
-  dependsOn: z.array(z.string()),
-  config: z.record(z.any()),
-  returnSchema: z.record(z.any()),
-});
+export const nodeDefSchema = getNodeDefSchema(z.any());
 
 const countConfigSchema = z.object({
   countByFeatureDeps: z.array(
@@ -59,39 +55,171 @@ export const nodeDefsRouter = createTRPCRouter({
         id: z.string(),
       })
     )
-    .query(({ ctx, input }) => {
-      return ctx.prisma.node.findUniqueOrThrow({
-        where: {
-          id: input.id,
-        },
-      }) as unknown as NodeDefsMap[keyof NodeDefsMap];
+    .query(async ({ ctx, input }) => {
+      const nodeDef = await ctx.prisma.node.findUniqueOrThrow({
+        where: { id: input.id },
+        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+      });
+
+      const snapshot = nodeDef.snapshots[0]!;
+      const ret: NodeDefsMap[keyof NodeDefsMap] = {
+        id: nodeDef.id,
+        name: nodeDef.name,
+        eventType: nodeDef.eventType,
+        config: snapshot.config as unknown as any,
+        type: nodeDef.type as unknown as any,
+        dependsOn: new Set(snapshot.dependsOn),
+        returnSchema: snapshot as unknown as TSchema,
+      };
+      return ret;
     }),
 
   list: protectedProcedure
     .input(
-      z.object({
-        eventTypeId: z.string().optional(),
-      })
+      z
+        .object({
+          eventType: z.string().optional(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
-      const nodeDefs = await ctx.prisma.node.findMany({
+      const nodes = await ctx.prisma.node.findMany({
         where: {
-          eventTypes: input.eventTypeId
-            ? { has: input.eventTypeId }
-            : undefined,
+          eventType: input?.eventType,
+        },
+        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+      });
+
+      return nodes.map((nodeDef) => {
+        const snapshot = nodeDef.snapshots[0]!;
+        const ret: NodeDefsMap[NodeType] = {
+          id: nodeDef.id,
+          name: nodeDef.name,
+          eventType: nodeDef.eventType,
+          config: snapshot.config as unknown as any,
+          type: nodeDef.type as unknown as any,
+          dependsOn: new Set(snapshot.dependsOn),
+          returnSchema: snapshot.returnSchema as unknown as TSchema,
+        };
+        return ret;
+      }) as NodeDefsMap[NodeType][];
+    }),
+
+  create: protectedProcedure
+    .input(nodeDefSchema.omit({ id: true, dependsOn: true }))
+    .mutation(async ({ ctx, input }) => {
+      const { configSchema, getDependencies } = NODE_TYPE_REGISTRY[input.type];
+      configSchema.parse(input.config);
+      const dependsOn = getDependencies(input.config);
+
+      const nodeDef = await ctx.prisma.node.create({
+        data: {
+          name: input.name,
+          type: input.type,
+          eventType: input.eventType,
+          snapshots: {
+            create: {
+              returnSchema: input.returnSchema as unknown as any,
+              dependsOn: Array.from(dependsOn),
+              config: input.config,
+            },
+          },
+        },
+        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+      });
+
+      await publish();
+
+      const snapshot = nodeDef.snapshots[0]!;
+      const ret: NodeDefsMap[keyof NodeDefsMap] = {
+        id: nodeDef.id,
+        name: nodeDef.name,
+        eventType: nodeDef.eventType,
+        config: snapshot.config as unknown as any,
+        type: nodeDef.type as unknown as any,
+        dependsOn: new Set(snapshot.dependsOn),
+        returnSchema: snapshot.returnSchema as unknown as TSchema,
+      };
+      return ret;
+    }),
+
+  update: protectedProcedure
+    .input(
+      nodeDefSchema.omit({
+        dependsOn: true,
+        returnSchema: true,
+        eventType: true,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const nodeDef = await ctx.prisma.node.findUniqueOrThrow({
+        where: { id: input.id },
+        include: {
+          snapshots: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
         },
       });
 
-      return nodeDefs.map(
-        (nodeDef) => nodeDef as unknown as NodeDefsMap[keyof NodeDefsMap]
+      const { configSchema, getDependencies } =
+        NODE_TYPE_REGISTRY[nodeDef.type as NodeType];
+      configSchema.parse(input.config);
+      const dependsOn = getDependencies(input.config);
+
+      const snapshotKeys = ["config"];
+      const shouldCreateSnapshot = Object.keys(input).some((key) =>
+        snapshotKeys.includes(key)
       );
+
+      const snapshot = nodeDef.snapshots[0]!;
+
+      const updatedNodeDef = await ctx.prisma.node.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          name: input.name,
+          snapshots: shouldCreateSnapshot
+            ? {
+                create: {
+                  returnSchema: snapshot.returnSchema as unknown as any,
+                  dependsOn: Array.from(dependsOn),
+                  config: input.config,
+                },
+              }
+            : undefined,
+        },
+        include: {
+          snapshots: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+        },
+      });
+
+      const updatedSnapshot = updatedNodeDef.snapshots[0]!;
+      const ret: NodeDefsMap[keyof NodeDefsMap] = {
+        id: updatedNodeDef.id,
+        name: updatedNodeDef.name,
+        eventType: updatedNodeDef.eventType,
+        config: updatedSnapshot.config as unknown as any,
+        type: updatedNodeDef.type as unknown as any,
+        dependsOn: new Set(updatedSnapshot.dependsOn),
+        returnSchema: updatedSnapshot.returnSchema as unknown as TSchema,
+      };
+      return ret;
     }),
 
   createCount: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-        eventTypes: z.array(z.string()),
+        eventType: z.string(),
         assignToFeatures: z.array(
           z.object({
             feature: featureDefSchema,
@@ -117,7 +245,7 @@ export const nodeDefsRouter = createTRPCRouter({
             name: count.conditionFeatureDep.feature.name,
             type: NodeType.GetEntityFeature,
             dependsOn: [],
-            eventTypes: input.eventTypes,
+            eventType: input.eventType,
             returnSchema: count.conditionFeatureDep.feature.schema as object,
             config: {
               featureId: count.conditionFeatureDep.feature.id,
@@ -137,7 +265,7 @@ export const nodeDefsRouter = createTRPCRouter({
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.eventTypes,
+              eventType: input.eventType,
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -158,7 +286,7 @@ export const nodeDefsRouter = createTRPCRouter({
             ...count.countByNodeDeps.map((node) => node.id),
             ...(conditionNodeId ? [conditionNodeId] : []),
           ],
-          eventTypes: input.eventTypes,
+          eventType: input.eventType,
           returnSchema: {
             type: TypeName.Int64,
           } as NodeDefsMap[NodeType.Counter]["returnSchema"] as object,
@@ -182,7 +310,7 @@ export const nodeDefsRouter = createTRPCRouter({
               name: feature.name,
               type: NodeType.LogEntityFeature,
               dependsOn: [nodeDef.id],
-              eventTypes: input.eventTypes,
+              eventType: input.eventType,
               returnSchema: { type: TypeName.Any },
               config: {
                 featureId: feature.id,
@@ -206,7 +334,7 @@ export const nodeDefsRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string(),
-        eventTypes: z.array(z.string()),
+        eventType: z.string(),
         assignToFeatures: z.array(
           z.object({
             feature: featureDefSchema,
@@ -232,7 +360,7 @@ export const nodeDefsRouter = createTRPCRouter({
             name: countUnique.conditionFeatureDep.feature.name,
             type: NodeType.GetEntityFeature,
             dependsOn: [],
-            eventTypes: input.eventTypes,
+            eventType: input.eventType,
             returnSchema: countUnique.conditionFeatureDep.feature
               .schema as object,
             config: {
@@ -253,7 +381,7 @@ export const nodeDefsRouter = createTRPCRouter({
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.eventTypes,
+              eventType: input.eventType,
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -272,7 +400,8 @@ export const nodeDefsRouter = createTRPCRouter({
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.eventTypes,
+              eventType: input.eventType,
+
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -295,7 +424,8 @@ export const nodeDefsRouter = createTRPCRouter({
             ...countUnique.countUniqueNodeDeps.map((node) => node.id),
             ...(conditionNodeId ? [conditionNodeId] : []),
           ],
-          eventTypes: input.eventTypes,
+          eventType: input.eventType,
+
           returnSchema: {
             type: TypeName.Int64,
           } as NodeDefsMap[NodeType.UniqueCounter]["returnSchema"] as object,
@@ -324,7 +454,8 @@ export const nodeDefsRouter = createTRPCRouter({
               name: feature.name,
               type: NodeType.LogEntityFeature,
               dependsOn: [nodeDef.id],
-              eventTypes: input.eventTypes,
+              eventType: input.eventType,
+
               returnSchema: { type: TypeName.Any },
               config: {
                 featureId: feature.id,
@@ -366,7 +497,7 @@ export const nodeDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // TODO: Support multiple layers of dependencies
       // Validation
-      const { configSchema } = NODE_TYPE_DEFS[input.nodeDef.type];
+      const { configSchema } = NODE_TYPE_REGISTRY[input.nodeDef.type];
       configSchema.parse(input.nodeDef.config);
 
       // Create feature getter nodes
@@ -379,7 +510,7 @@ export const nodeDefsRouter = createTRPCRouter({
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.nodeDef.eventTypes,
+              eventType: input.nodeDef.eventType,
               returnSchema: feature.schema as object,
               config: {
                 featureId: feature.id,
@@ -415,7 +546,7 @@ export const nodeDefsRouter = createTRPCRouter({
             ...featureDeps.map((node) => node.id),
             ...input.nodeDeps.map((node) => node.id),
           ],
-          eventTypes: input.nodeDef.eventTypes,
+          eventType: input.nodeDef.eventType,
           returnSchema: input.nodeDef.returnSchema,
           config: {
             ...input.nodeDef.config,
@@ -432,7 +563,7 @@ export const nodeDefsRouter = createTRPCRouter({
               name: feature.name,
               type: NodeType.LogEntityFeature,
               dependsOn: [nodeDef.id],
-              eventTypes: input.nodeDef.eventTypes,
+              eventType: input.nodeDef.eventType,
               returnSchema: { type: TypeName.Any },
               config: {
                 featureId: feature.id,
@@ -479,7 +610,7 @@ export const nodeDefsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // TODO: Support multiple layers of dependencies
       // Validation
-      const { configSchema } = NODE_TYPE_DEFS[input.nodeDef.type];
+      const { configSchema } = NODE_TYPE_REGISTRY[input.nodeDef.type];
       configSchema.parse(input.nodeDef.config);
 
       // Create feature getter nodes
@@ -492,7 +623,7 @@ export const nodeDefsRouter = createTRPCRouter({
               type: NodeType.GetEntityFeature,
               dependsOn: [],
               // Make sure frontend passes this
-              eventTypes: input.nodeDef.eventTypes,
+              eventType: input.nodeDef.eventType,
               returnSchema: {
                 type: TypeName.Boolean,
               },
@@ -530,7 +661,7 @@ export const nodeDefsRouter = createTRPCRouter({
             ...featureDeps.map((node) => node.id),
             ...input.nodeDeps.map((node) => node.id),
           ],
-          eventTypes: input.nodeDef.eventTypes,
+          eventType: input.nodeDef.eventType,
           returnSchema: {
             type: TypeName.Boolean,
           },
@@ -588,26 +719,12 @@ export const nodeDefsRouter = createTRPCRouter({
       return nodeDef;
     }),
 
-  create: protectedProcedure
-    .input(nodeDefSchema.omit({ id: true }))
-    .mutation(async ({ ctx, input }) => {
-      const { configSchema } = NODE_TYPE_DEFS[input.type];
-      configSchema.parse(input.config);
-
-      const nodeDef = await ctx.prisma.node.create({ data: input });
-
-      await publish();
-
-      return nodeDef;
-    }),
-
   update: protectedProcedure
     .input(
       z.object({
         id: z.string(),
         name: z.string().optional(),
         dependsOn: z.array(z.string()).optional(),
-        eventTypes: z.array(z.string()).optional(),
         config: z.record(z.any()).optional(),
       })
     )
@@ -616,7 +733,7 @@ export const nodeDefsRouter = createTRPCRouter({
         where: { id: input.id },
       });
 
-      const { configSchema } = NODE_TYPE_DEFS[nodeDef.type as NodeType];
+      const { configSchema } = NODE_TYPE_REGISTRY[nodeDef.type as NodeType];
       configSchema.parse(input.config);
 
       return ctx.prisma.node.update({
@@ -627,7 +744,6 @@ export const nodeDefsRouter = createTRPCRouter({
           name: input.name,
           dependsOn: input.dependsOn,
           config: input.config,
-          eventTypes: input.eventTypes,
         },
       });
     }),
@@ -642,14 +758,16 @@ export const nodeDefsRouter = createTRPCRouter({
 });
 
 const publish = async () => {
-  const nodeDefs = await prisma.node.findMany();
+  const nodeDefs = await prisma.node.findMany({
+    include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
 
   const engine = await prisma.executionEngine.create({
     data: {
-      nodes: {
+      nodeSnapshots: {
         createMany: {
           data: nodeDefs.map((nodeDef) => ({
-            nodeId: nodeDef.id,
+            nodeSnapshotId: nodeDef.snapshots[0]!.id,
           })),
         },
       },
@@ -664,9 +782,7 @@ const publish = async () => {
       key: GlobalStateKey.ActiveEngineId,
       value: engine.id,
     },
-    update: {
-      value: engine.id,
-    },
+    update: { value: engine.id },
   });
 };
 

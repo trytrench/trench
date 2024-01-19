@@ -100,7 +100,7 @@ const Page: NextPageWithLayout = () => {
           enableHiding: false,
         },
         {
-          accessorKey: "type",
+          accessorKey: "id",
           header: "Name",
         },
         {
@@ -114,7 +114,7 @@ const Page: NextPageWithLayout = () => {
                       <Info className="h-4 w-4" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Created by {row.original.createdBy} on{" "}
+                      Created by {"somewun"} on{" "}
                       {format(row.original.createdAt, "MMM d, yyyy")}
                     </TooltipContent>
                   </Tooltip>

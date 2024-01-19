@@ -1,5 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NodeDefsMap, NodeType, TypeName } from "event-processing";
+import {
+  NodeDefsMap,
+  NodeType,
+  TypeName,
+  buildNodeDef,
+  dataPathZodSchema,
+} from "event-processing";
 import {
   Check,
   ChevronLeft,
@@ -8,11 +14,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import SettingsLayout from "~/components/SettingsLayout";
-import { SchemaDisplay } from "~/components/features/SchemaDisplay";
+import { EventTypeNodesSchemaDisplay } from "~/components/features/SchemaDisplay";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -48,8 +54,7 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { RouterOutputs, api } from "~/utils/api";
-import AssignEntities from "../AssignEntities";
-import EntityFeatureDialog from "../EntityFeatureDialog";
+import AssignEntities from "../../../../components/nodes/AssignEntities";
 
 import {
   Command,
@@ -66,41 +71,45 @@ import {
 import { cn } from "~/lib/utils";
 import { DataTable } from "~/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
-import AssignEventFeatureDialog from "../AssignEventFeatureDialog";
+import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog";
+import { AssignEntityFeatureDialog } from "../../../../components/nodes/AssignEntityFeatureDialog";
+import { SelectDataPath } from "../../../../components/nodes/SelectDataPath";
+import { handleError } from "../../../../lib/handleError";
+import { useMutateNode } from "../../../../components/nodes/editor/useMutateNode";
 
-const columns: ColumnDef<RouterOutputs["nodeDefs"]["list"][number]>[] = [
-  {
-    accessorKey: "name",
-    header: "Name",
-  },
-];
-
-const entitySchema = z.object({
+const formSchema = z.object({
   entityTypeId: z.string(),
-  path: z.string(),
+  path: dataPathZodSchema,
 });
 
-const EntityDialog = ({
-  title,
-  children,
-  onSubmit,
-  path,
-}: {
+type FormType = z.infer<typeof formSchema>;
+
+function EntityDialog(props: {
   title: string;
   children: React.ReactNode;
-  onSubmit: (values: z.infer<typeof entitySchema>) => void;
-  path: string;
-}) => {
+  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  defaults: Partial<FormType>;
+  eventType: string;
+}) {
+  const { title, children, onSubmit, defaults, eventType } = props;
+
   const [open, setOpen] = useState(false);
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
-  const form = useForm<z.infer<typeof entitySchema>>({
-    resolver: zodResolver(entitySchema),
+  const form = useForm<FormType>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       entityTypeId: "",
-      path,
+      path: {
+        nodeId: "",
+        path: [],
+      },
     },
   });
+
+  useEffect(() => {
+    form.reset(defaults);
+  }, [defaults, form]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -111,6 +120,7 @@ const EntityDialog = ({
         </DialogHeader>
         <Form {...form}>
           <form
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             onSubmit={form.handleSubmit((values) => {
               onSubmit(values);
               setOpen(false);
@@ -158,7 +168,11 @@ const EntityDialog = ({
                     <FormItem className="col-span-3">
                       <FormLabel>Path</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <SelectDataPath
+                          eventType={eventType}
+                          onChange={field.onChange}
+                          value={field.value}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -174,25 +188,21 @@ const EntityDialog = ({
       </DialogContent>
     </Dialog>
   );
-};
+}
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const { toast } = useToast();
 
-  const { data: eventType } = api.eventTypes.get.useQuery(
-    { id: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
-  );
+  const eventType = router.query.eventType as string;
 
-  const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery(
-    { eventTypeId: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
-  );
+  const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery({
+    eventType: eventType,
+  });
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
-  const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
+  const { createNodeDef } = useMutateNode();
 
   const [open, setOpen] = useState(false);
   const [nodeSelectOpen, setNodeSelectOpen] = useState(false);
@@ -207,7 +217,7 @@ const Page: NextPageWithLayout = () => {
         Back to event types
       </Link>
       <div className="mt-1 mb-4 flex items-center">
-        <h1 className="text-2xl text-emphasis-foreground">{eventType?.type}</h1>
+        <h1 className="text-2xl text-emphasis-foreground">{eventType}</h1>
 
         <Popover open={nodeSelectOpen} onOpenChange={setNodeSelectOpen}>
           <PopoverTrigger asChild>
@@ -242,7 +252,7 @@ const Page: NextPageWithLayout = () => {
                       onSelect={() =>
                         void router.push(
                           `/settings/event-types/${
-                            router.query.eventTypeId as string
+                            router.query.eventType as string
                           }/node/${node.id}`
                         )
                       }
@@ -275,7 +285,7 @@ const Page: NextPageWithLayout = () => {
                   onSelect={() =>
                     void router.push(
                       `/settings/event-types/${
-                        router.query.eventTypeId as string
+                        router.query.eventType as string
                       }/node`
                     )
                   }
@@ -287,8 +297,8 @@ const Page: NextPageWithLayout = () => {
                   onSelect={() =>
                     void router.push(
                       `/settings/event-types/${
-                        router.query.eventTypeId as string
-                      }/node?type=count`
+                        router.query.eventType as string
+                      }/node?type=${NodeType.Counter}`
                     )
                   }
                 >
@@ -299,8 +309,8 @@ const Page: NextPageWithLayout = () => {
                   onSelect={() =>
                     void router.push(
                       `/settings/event-types/${
-                        router.query.eventTypeId as string
-                      }/node?type=unique-count`
+                        router.query.eventType as string
+                      }/node?type=${NodeType.UniqueCounter}`
                     )
                   }
                 >
@@ -311,8 +321,8 @@ const Page: NextPageWithLayout = () => {
                   onSelect={() =>
                     void router.push(
                       `/settings/event-types/${
-                        router.query.eventTypeId as string
-                      }/node?type=rule`
+                        router.query.eventType as string
+                      }/node?type=${NodeType.Rule}`
                     )
                   }
                 >
@@ -324,11 +334,9 @@ const Page: NextPageWithLayout = () => {
         </Popover>
       </div>
       <Card className="h-96 overflow-auto p-6">
-        <SchemaDisplay
-          basePath="input.event.data"
-          baseName="event.data"
-          eventTypeId={router.query.eventTypeId as string}
-          renderRightComponent={(path) => (
+        <EventTypeNodesSchemaDisplay
+          eventType={eventType}
+          renderRightComponent={(dataPath) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="iconXs" variant="link">
@@ -337,59 +345,69 @@ const Page: NextPageWithLayout = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent>
-                <AssignEventFeatureDialog
+                <AssignFeature
                   title="Assign Event Property"
-                  path={path}
+                  defaults={{
+                    dataPath: dataPath,
+                    entityDataPath: undefined,
+                    featureId: "",
+                  }}
                 >
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     Assign to event
                   </DropdownMenuItem>
-                </AssignEventFeatureDialog>
+                </AssignFeature>
 
-                <EntityFeatureDialog title="Assign Entity Property" path={path}>
+                <AssignFeature
+                  title="Assign Entity Property"
+                  defaults={{
+                    dataPath: dataPath,
+                    entityDataPath: undefined,
+                    featureId: "",
+                  }}
+                >
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     Assign to entity
                   </DropdownMenuItem>
-                </EntityFeatureDialog>
+                </AssignFeature>
 
                 <EntityDialog
-                  path={path}
+                  eventType={eventType}
+                  defaults={{ path: dataPath }}
                   title="New Entity"
                   onSubmit={(values) => {
                     // Create entity appearance
-                    createNodeDef({
-                      eventTypes: [router.query.eventTypeId as string],
-                      name:
-                        entityTypes?.find(
-                          (entityType) => entityType.id === values.entityTypeId
-                        )?.type ?? "Entity",
-                      type: NodeType.EntityAppearance,
-                      returnSchema: {
-                        type: TypeName.Entity,
-                        entityType: values.entityTypeId,
-                      } as NodeDefsMap[NodeType.EntityAppearance]["returnSchema"],
-                      dependsOn: [],
-                      config: {
-                        entityType: values.entityTypeId,
-                        valueAccessor: {
-                          nodeId: null,
-                          path: values.path.replace("input.event.data.", ""),
+                    const entityType = entityTypes?.find(
+                      (entityType) => entityType.id === values.entityTypeId
+                    );
+                    if (!entityType) {
+                      toast({
+                        variant: "destructive",
+                        title: "Failed to create entity",
+                        description: "Entity type not found",
+                      });
+                      return;
+                    }
+
+                    createNodeDef(
+                      buildNodeDef(NodeType.EntityAppearance, {
+                        type: NodeType.EntityAppearance,
+                        returnSchema: {
+                          type: TypeName.Entity,
+                          entityType: values.entityTypeId,
                         },
-                      } as NodeDefsMap[NodeType.EntityAppearance]["config"],
-                    })
+                        config: {
+                          entityType: values.entityTypeId,
+                          dataPath: values.path,
+                        },
+                        name: `${entityType.type} appearance`,
+                        eventType: eventType,
+                      })
+                    )
                       .then(() => {
-                        toast({
-                          title: "Entity created",
-                          // description: `${values.entity}`,
-                        });
                         return refetchNodes();
                       })
-                      .catch(() => {
-                        toast({
-                          variant: "destructive",
-                          title: "Failed to create entity",
-                        });
-                      });
+                      .catch(handleError);
                   }}
                 >
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

@@ -95,7 +95,7 @@ CREATE TABLE "EntityFeature" (
 -- CreateTable
 CREATE TABLE "EventFeature" (
     "id" TEXT NOT NULL DEFAULT nanoid(),
-    "eventTypeId" TEXT NOT NULL,
+    "eventType" TEXT NOT NULL,
     "featureId" TEXT NOT NULL,
     "name" TEXT,
     "color" TEXT,
@@ -190,7 +190,7 @@ CREATE UNIQUE INDEX "EventType_type_projectId_key" ON "EventType"("type", "proje
 CREATE UNIQUE INDEX "EntityFeature_entityTypeId_featureId_key" ON "EntityFeature"("entityTypeId", "featureId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EventFeature_eventTypeId_featureId_key" ON "EventFeature"("eventTypeId", "featureId");
+CREATE UNIQUE INDEX "EventFeature_eventType_featureId_key" ON "EventFeature"("eventType", "featureId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Feature_feature_projectId_key" ON "Feature"("feature", "projectId");
@@ -250,7 +250,7 @@ ALTER TABLE "EntityFeature" ADD CONSTRAINT "EntityFeature_entityTypeId_fkey" FOR
 ALTER TABLE "EntityFeature" ADD CONSTRAINT "EntityFeature_featureId_fkey" FOREIGN KEY ("featureId") REFERENCES "Feature"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventFeature" ADD CONSTRAINT "EventFeature_eventTypeId_fkey" FOREIGN KEY ("eventTypeId") REFERENCES "EventType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EventFeature" ADD CONSTRAINT "EventFeature_eventType_fkey" FOREIGN KEY ("eventType") REFERENCES "EventType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "EventFeature" ADD CONSTRAINT "EventFeature_featureId_fkey" FOREIGN KEY ("featureId") REFERENCES "Feature"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

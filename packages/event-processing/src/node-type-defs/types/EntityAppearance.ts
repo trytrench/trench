@@ -6,39 +6,32 @@ import { ClickhouseClient } from "databases";
 import { StoreTable } from "../lib/store";
 import { getUnixTime } from "date-fns";
 import { get } from "lodash";
+import { dataPathZodSchema } from "../../data-path";
 
 export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.EntityAppearance)
   .setConfigSchema(
     z.object({
       entityType: z.string(),
-      valueAccessor: z.object({
-        nodeId: z.string().nullable(),
-        path: z.string().optional(),
-      }),
+      dataPath: dataPathZodSchema,
     })
   )
+  .setGetDependencies((config) => {
+    const result = new Set<string>();
+    result.add(config.dataPath.nodeId);
+    return result;
+  })
   .setReturnSchema(TypeName.Entity)
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
       // Access node value
-      const { valueAccessor } = nodeDef.config;
-      const { nodeId, path } = valueAccessor;
-      const obj = nodeId
-        ? await getDependency({
-            nodeId: nodeId,
-            expectedSchema: {
-              type: TypeName.Any,
-            },
-          })
-        : event.data;
-      const value = path ? get(obj, path) : obj;
-
-      if (typeof value !== "string") {
-        throw new Error(
-          `Expected string value for entity id, got ${typeof value}`
-        );
-      }
+      const { dataPath } = nodeDef.config;
+      const value = await getDependency({
+        dataPath,
+        expectedSchema: {
+          type: TypeName.String,
+        },
+      });
 
       const entity = {
         type: nodeDef.config.entityType,

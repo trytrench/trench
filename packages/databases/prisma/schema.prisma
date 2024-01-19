@@ -66,36 +66,50 @@ model Node {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type         String
   name         String
-  returnSchema Json
+  type         String
 
-  eventTypes String[]
-  dependsOn  String[]
-  config     Json
+  eventTypeObj   EventType @relation(fields: [eventType], references: [id])
+  eventType String
 
-  executionEngines ExecutionEngineToNode[]
+  snapshots       NodeSnapshot[]
 }
 
-model ExecutionEngineToNode {
+model NodeSnapshot {
+  id       String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  node   Node   @relation(fields: [nodeId], references: [id])
+  nodeId String
+
+  returnSchema Json
+  dependsOn String[]
+  config    Json
+
+  executionEngines ExecutionEngineToNodeSnapshot[]
+
+}
+
+model ExecutionEngineToNodeSnapshot {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  nodeId String
-  node   Node   @relation(fields: [nodeId], references: [id])
+  nodeSnapshotId String
+  nodeSnapshot   NodeSnapshot   @relation(fields: [nodeSnapshotId], references: [id])
 
   executionEngineId String
   executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
 
-  @@unique([nodeId, executionEngineId])
+  @@unique([nodeSnapshotId, executionEngineId])
 }
 
 model ExecutionEngine {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
 
-  nodes ExecutionEngineToNode[]
+  nodeSnapshots ExecutionEngineToNodeSnapshot[]
 }
 
 enum GlobalStateKey {
@@ -114,7 +128,7 @@ model EntityType {
   updatedAt DateTime @updatedAt
 
   features Feature[]
-  pages EntityTypePage[]
+  pages    EntityTypePage[]
 
   type String @unique
 }
@@ -124,20 +138,18 @@ model EntityTypePage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  entityType EntityType @relation(fields: [entityTypeId], references: [id])
+  entityType   EntityType @relation(fields: [entityTypeId], references: [id])
   entityTypeId String
 
   config Json
 }
 
 model EventType {
-  id        String   @id @default(dbgenerated("nanoid()"))
+  id        String   @id
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type         String @unique
-  schema      Json?
-  exampleEvent Json?
+  nodes Node[]
 }
 
 // Necessary for Next auth

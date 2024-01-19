@@ -1,24 +1,28 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
-import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
+import {
+  Entity,
+  TSchema,
+  TypeName,
+  createDataType,
+  tSchemaZod,
+} from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
 import { hashObject } from "../lib/counts";
 import { RedisInterface } from "databases";
+import { dataPathZodSchema } from "../../data-path";
 
 export const cacheEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.CacheEntityFeature)
   .setConfigSchema(
     z.object({
       featureId: z.string(),
-      featureSchema: z.record(z.any()),
-      entityAppearanceNodeId: z.string(),
-      dataPath: z.object({
-        nodeId: z.string(),
-        path: z.array(z.string()).optional(),
-      }),
+      featureSchema: tSchemaZod,
+      entityDataPath: dataPathZodSchema,
+      dataPath: dataPathZodSchema,
     })
   )
   .setContextType<{
@@ -26,36 +30,26 @@ export const cacheEntityFeatureNodeDef = createNodeTypeDefBuilder()
   }>()
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    set.add(config.entityAppearanceNodeId);
-    if (config.dataPath.nodeId) {
-      set.add(config.dataPath.nodeId);
-    }
+    set.add(config.entityDataPath.nodeId);
+    set.add(config.dataPath.nodeId);
     return set;
   })
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, featureSchema, dataPath, entityAppearanceNodeId } =
+      const { featureId, featureSchema, dataPath, entityDataPath } =
         nodeDef.config;
 
-      const { nodeId, path } = dataPath;
-
       let assignToEntity = await getDependency({
-        nodeId: entityAppearanceNodeId,
+        dataPath: entityDataPath,
         expectedSchema: {
           type: TypeName.Entity,
         },
       });
 
-      const obj =
-        nodeId === "event"
-          ? await getDependency({
-              nodeId: nodeId,
-              expectedSchema: {
-                type: TypeName.Any,
-              },
-            })
-          : event.data;
-      const value = path ? get(obj, path) : obj;
+      const value = await getDependency({
+        dataPath: dataPath,
+        expectedSchema: dataPath.schema,
+      });
 
       const redisKey = hashObject({
         featureId,

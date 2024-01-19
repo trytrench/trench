@@ -1,4 +1,4 @@
-import { type } from "os";
+import { z } from "zod";
 
 // Enums and Interfaces for DataType and Schemas
 export enum TypeName {
@@ -11,6 +11,7 @@ export enum TypeName {
   Object = "Object",
   Array = "Array",
   Any = "Any",
+  Date = "Date",
 }
 
 export type Entity = {
@@ -63,6 +64,10 @@ interface TAnySchema extends TSchemaBase {
   type: TypeName.Any;
 }
 
+interface TDateSchema extends TSchemaBase {
+  type: TypeName.Date;
+}
+
 type SchemaTypeMap = {
   [TypeName.Boolean]: boolean;
   [TypeName.Float64]: number;
@@ -73,6 +78,7 @@ type SchemaTypeMap = {
   [TypeName.Array]: any[]; // Placeholder, will be refined later
   [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
   [TypeName.Any]: any; // Placeholder, will be refined later
+  [TypeName.Date]: Date;
 };
 
 export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
@@ -235,6 +241,18 @@ class AnyDataType extends IDataType<TAnySchema> {
   }
 }
 
+class DateDataType extends IDataType<TDateSchema> {
+  parse(input: any): Date {
+    if (typeof input !== "string") this.throwParseError(input);
+    const date = new Date(input);
+    if (input !== date.toISOString()) this.throwParseError(input);
+    return date;
+  }
+  toTypescript(): string {
+    return "string";
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -280,6 +298,10 @@ export const DATA_TYPES_REGISTRY = {
     type: AnyDataType,
     defaultSchema: { type: TypeName.Any },
   },
+  [TypeName.Date]: {
+    type: DateDataType,
+    defaultSchema: { type: TypeName.Date },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -296,7 +318,17 @@ export type TSchema =
   | TEntitySchema
   | TArraySchema
   | TObjectSchema
-  | TAnySchema;
+  | TAnySchema
+  | TDateSchema;
+
+export const tSchemaZod = z.custom<TSchema>((input) => {
+  if (!input) return false;
+  if (typeof input !== "object") return false;
+  if (!("type" in input)) return false;
+  if (typeof input.type !== "string") return false;
+  if (!(input.type in TypeName)) return false;
+  return true;
+});
 
 export function createDataType<T extends TSchema>(schema: T): IDataType<T> {
   const registry: RegistryConfig = DATA_TYPES_REGISTRY;
@@ -347,6 +379,15 @@ function isEqual(...args: TSchema[]) {
 
 export function inferSchemaFromJsonObject(jsonObj: any): TSchema {
   if (typeof jsonObj === "string") {
+    try {
+      const date = new Date(jsonObj);
+      if (jsonObj === date.toISOString()) {
+        return { type: TypeName.Date };
+      }
+    } catch {
+      return { type: TypeName.String };
+    }
+
     return { type: TypeName.String };
   } else if (typeof jsonObj === "boolean") {
     return { type: TypeName.Boolean };

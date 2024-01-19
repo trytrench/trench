@@ -1,14 +1,15 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
+import { TypeName } from "../../data-types";
 
 export const computedNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.Computed)
   .setConfigSchema(
     z.object({
-      depsMap: z.record(z.string()),
-      tsCode: z.string(),
-      compiledJs: z.string(),
+      depsMap: z.record(z.string(), z.string()),
+      tsCode: z.string().min(1),
+      compiledJs: z.string().min(1),
     })
   )
   .setGetDependencies((config) => {
@@ -21,7 +22,11 @@ export const computedNodeDef = createNodeTypeDefBuilder()
       const depValues: Record<string, any> = {};
       for (const [key, depFeatureId] of Object.entries(depsMap)) {
         const featureValue = await getDependency({
-          nodeId: depFeatureId,
+          dataPath: {
+            nodeId: depFeatureId,
+            path: [],
+            schema: { type: TypeName.Any },
+          },
         });
         depValues[key] = featureValue;
       }

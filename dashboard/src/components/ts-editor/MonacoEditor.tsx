@@ -7,7 +7,6 @@ import { COMPILER_OPTIONS } from "./compilerOptions";
 // @ts-ignore
 import libSource from "!!raw-loader?esModule=false!./editorLib.ts";
 import { useTheme } from "next-themes";
-import { useEventTypes } from "./useEventTypes";
 
 export type ChangeHandler = (
   value: string,
@@ -87,7 +86,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     );
   }, [editorRef.current, monacoEditorObj.state, markers]);
 
-  const eventTypes = useEventTypes();
   useEffect(() => {
     if (monacoEditorObj.state !== "success" || !containerRef.current) return;
 
@@ -101,7 +99,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     );
 
     monacoEditor.languages.typescript.typescriptDefaults.addExtraLib(
-      `${eventTypes}`,
+      ``,
       "file:///node_modules/@my-project/package-one/index.d.ts" // irrelevant?
     );
 

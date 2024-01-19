@@ -1,35 +1,37 @@
 import { z } from "zod";
 import { NodeType } from "./_enum";
 import { createNodeTypeDefBuilder } from "../builder";
-import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
+import {
+  Entity,
+  TSchema,
+  TypeName,
+  createDataType,
+  tSchemaZod,
+} from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
+import { dataPathZodSchema } from "../../data-path";
 
 export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
   .setNodeType(NodeType.LogEntityFeature)
   .setConfigSchema(
     z.object({
       featureId: z.string(),
-      featureSchema: z.record(z.any()),
-      entityAppearanceNodeId: z.string().optional(),
-      dataPath: z.object({
-        nodeId: z.string(),
-        path: z.array(z.string()).optional(),
-      }),
+      featureSchema: tSchemaZod,
+      entityDataPath: dataPathZodSchema.optional(),
+      dataPath: dataPathZodSchema,
     })
   )
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    if (config.entityAppearanceNodeId) set.add(config.entityAppearanceNodeId);
-    if (config.dataPath.nodeId) {
-      set.add(config.dataPath.nodeId);
-    }
+    if (config.entityDataPath) set.add(config.entityDataPath.nodeId);
+    set.add(config.dataPath.nodeId);
     return set;
   })
   .setCreateResolver(({ nodeDef }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, featureSchema, dataPath, entityAppearanceNodeId } =
+      const { featureId, featureSchema, dataPath, entityDataPath } =
         nodeDef.config;
 
       const { nodeId, path } = dataPath;
@@ -51,9 +53,9 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
       };
 
       try {
-        if (entityAppearanceNodeId) {
+        if (entityDataPath) {
           assignToEntity = await getDependency({
-            nodeId: entityAppearanceNodeId,
+            dataPath: entityDataPath,
             expectedSchema: {
               type: TypeName.Entity,
             },
@@ -64,7 +66,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
 
         const obj = nodeId
           ? await getDependency({
-              nodeId: nodeId,
+              dataPath: dataPath,
               expectedSchema: {
                 type: TypeName.Any,
               },
@@ -72,8 +74,8 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
           : event.data;
         const value = path ? get(obj, path) : obj;
 
-        const topLevelType = featureSchema.type as TypeName;
-        const dataType = createDataType(featureSchema as TSchema);
+        const topLevelType = featureSchema.type;
+        const dataType = createDataType(featureSchema);
         const parsedValue = dataType.parse(value);
 
         const rowToSave = {

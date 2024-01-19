@@ -1,11 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  DataPath,
   FeatureDef,
   NodeDef,
   NodeDefsMap,
   NodeType,
   TSchema,
   TypeName,
+  tSchemaZod,
 } from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
@@ -52,19 +54,20 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
-import EntityFeatureDialog from "./EntityFeatureDialog";
-import { SchemaBuilder } from "../../../components/SchemaBuilder";
-import AssignEventFeatureDialog from "./AssignEventFeatureDialog";
+import { AssignEntityFeatureDialog } from "./AssignEntityFeatureDialog";
+import { SchemaBuilder } from "../SchemaBuilder";
+import { AssignFeature } from "./AssignFeatureDialog";
+import { RenderDataPath } from "./RenderDataPath";
 
 const featureSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
-  schema: z.record(z.any()),
+  schema: tSchemaZod,
 });
 
 const eventFeatureSchema = z.object({
   name: z.string(),
-  schema: z.record(z.any()),
+  schema: tSchemaZod,
 });
 
 const EventFeatureDialog = ({
@@ -130,7 +133,7 @@ const EventFeatureDialog = ({
                       <FormLabel>Data Type</FormLabel>
                       <div>
                         <SchemaBuilder
-                          value={field.value as TSchema}
+                          value={field.value}
                           onChange={field.onChange}
                         />
                       </div>
@@ -268,12 +271,12 @@ const FeatureDialog = ({
   );
 };
 
-const FeatureCard = ({ name, path }: { name: string; path?: string }) => {
+const FeatureCard = ({ name, path }: { name: string; path?: DataPath }) => {
   return (
     <Card className="px-4 flex justify-between items-center">
       <div className="flex gap-2">
         <div className="text-emphasis-foreground text-sm">{name}</div>
-        <div className="text-sm">{path}</div>
+        {path && <RenderDataPath dataPath={path} />}
       </div>
 
       <DropdownMenu>
@@ -297,7 +300,7 @@ const EntityCard = ({
   children,
 }: {
   name: string;
-  path: string;
+  path?: DataPath;
   children: React.ReactNode;
 }) => {
   return (
@@ -305,7 +308,9 @@ const EntityCard = ({
       <div className="flex justify-between items-center">
         <div>
           <div className="font-semibold text-emphasis-foreground">{name}</div>
-          <div className="text-sm">{path}</div>
+          <div className="text-sm">
+            {path && <RenderDataPath dataPath={path} />}
+          </div>
         </div>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm">
@@ -331,6 +336,8 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const eventType = router.query.eventType as string;
+
   const { data: features, refetch: refetchFeatures } =
     api.features.list.useQuery();
 
@@ -338,10 +345,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
   const { mutateAsync: createEventFeature } =
     api.features.createEventFeature.useMutation();
 
-  const { data: nodes } = api.nodeDefs.list.useQuery(
-    { eventTypeId: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
-  );
+  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
   const featureToNodeMap = useMemo(() => {
     if (!nodes) return {};
@@ -356,23 +360,18 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     );
   }, [nodes]);
 
+  const eventNode = nodes?.find((node) => node.type === NodeType.Event);
+
   return (
     <div className="space-y-4">
-      <EntityCard name="Event" path="">
+      <EntityCard name="Event">
         {features
-          ?.filter(
-            (feature) => !feature.entityTypeId && featureToNodeMap[feature.id]
-          )
+          ?.filter((feature) => !feature.entityTypeId)
           .map((feature) => (
             <FeatureCard
               key={feature.id}
               name={feature.name}
-              path={
-                featureToNodeMap[feature.id]?.config.valueAccessor.path
-                  ? `input.event.data.${featureToNodeMap[feature.id]?.config
-                      .valueAccessor.path}`
-                  : undefined
-              }
+              path={featureToNodeMap[feature.id]?.config.dataPath}
             />
           ))}
 
@@ -395,14 +394,18 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                   <Plus className="h-3 w-3" />
                 </Button>
               ) : (
-                <AssignEventFeatureDialog
+                <AssignFeature
                   title="Assign Event Property"
-                  feature={feature}
+                  defaults={{
+                    featureId: feature.id,
+                    dataPath: null,
+                    entityDataPath: undefined,
+                  }}
                 >
                   <Button size="iconXs" variant="outline">
                     <Plus className="h-3 w-3" />
                   </Button>
-                </AssignEventFeatureDialog>
+                </AssignFeature>
               )}
             </div>
           ))}
@@ -438,7 +441,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
         node.type === NodeType.EntityAppearance ? (
           <EntityCard
             name={node.name}
-            path={`input.event.data.${node.config.valueAccessor.path}`}
+            path={node.config.dataPath}
             key={node.id}
           >
             {features
@@ -451,12 +454,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                 <FeatureCard
                   key={feature.id}
                   name={feature.name}
-                  path={
-                    featureToNodeMap[feature.id]?.config.dataPath.path
-                      ? `input.event.data.${featureToNodeMap[feature.id]?.config
-                          .dataPath.path}`
-                      : undefined
-                  }
+                  path={featureToNodeMap[feature.id]?.config.dataPath}
                 />
               ))}
 
@@ -481,15 +479,22 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                       <Plus className="h-3 w-3" />
                     </Button>
                   ) : (
-                    <EntityFeatureDialog
+                    <AssignFeature
                       title="Assign Entity Property"
-                      entityTypeId={node.returnSchema?.entityType}
-                      featureId={feature.id}
+                      defaults={{
+                        featureId: feature.id,
+                        dataPath: null,
+                        entityDataPath: {
+                          nodeId: node.id,
+                          path: [],
+                          schema: node.returnSchema,
+                        },
+                      }}
                     >
                       <Button size="iconXs" variant="outline">
                         <Plus className="h-3 w-3" />
                       </Button>
-                    </EntityFeatureDialog>
+                    </AssignFeature>
                   )}
                 </div>
               ))}

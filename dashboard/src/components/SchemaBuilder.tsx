@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { DATA_TYPES_REGISTRY, type TSchema, TypeName } from "event-processing";
 import * as Select from "@radix-ui/react-select";
 import { SelectContent, SelectItem } from "./ui/select";
 import { ChevronDown } from "lucide-react";
-import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
 import { api } from "../utils/api";
+import { EditableProperty } from "./EditableProperty";
 
 const ANY_STRING = "__any__";
 
@@ -131,8 +131,8 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
               ([propKey, propSchema], index) => (
                 <span key={index} className="">
                   <EditableProperty
-                    initialKey={propKey}
-                    value={value}
+                    value={propKey}
+                    currentProperties={Object.keys(value.properties)}
                     onChange={(newKey) => {
                       const newProps = Object.fromEntries(
                         Object.entries(value.properties).map(([key, value]) => {
@@ -185,148 +185,3 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
     </span>
   );
 };
-
-interface AutoResizeInputProps
-  extends Pick<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    "onFocus" | "onBlur"
-  > {
-  value: string;
-  onChange: (newValue: string) => void;
-  className?: string;
-  active: boolean;
-  onClick?: () => void;
-  onClickOutside?: (event: MouseEvent) => void;
-}
-
-const AutoResizeInput: React.FC<AutoResizeInputProps> = ({
-  value,
-  onChange,
-  className,
-  active,
-  onClick,
-  onFocus,
-  onBlur,
-  onClickOutside,
-}) => {
-  const spanRef = useRef<HTMLSpanElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (spanRef.current && inputRef.current) {
-      inputRef.current.style.width = `${spanRef.current.offsetWidth}px`;
-    }
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        console.log("Clicked outside");
-        onClickOutside?.(event);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClickOutside]);
-
-  return (
-    <span ref={containerRef} className="relative" onClick={onClick}>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        ref={inputRef}
-        style={{
-          minWidth: "1rem",
-        }}
-        className={cn(className, {
-          "bg-gray-200": active,
-        })}
-        readOnly={!active}
-      />
-      <span
-        ref={spanRef}
-        className={`${className} pointer-events-none absolute opacity-0`}
-      >
-        {value || " "}
-      </span>
-    </span>
-  );
-};
-
-type TObjectSchema = Extract<TSchema, { type: TypeName.Object }>;
-interface EditablePropertyProps {
-  initialKey: string;
-  value: TObjectSchema;
-  onChange: (newKey: string) => void;
-  onInvalid: (message: string) => void;
-}
-
-const EditableProperty: React.FC<EditablePropertyProps> = ({
-  initialKey,
-  value,
-  onChange,
-  onInvalid,
-}) => {
-  const [editKey, setEditKey] = useState(initialKey);
-  const [isEditing, setIsEditing] = useState(false);
-
-  useEffect(() => {
-    setEditKey(initialKey);
-  }, [initialKey]);
-
-  const handleDefocus = () => {
-    setIsEditing(false);
-
-    if (editKey === "") {
-      onInvalid("Property name cannot be empty");
-      setEditKey(initialKey);
-      return;
-    }
-
-    if (!isValidPropertyName(editKey)) {
-      onInvalid(
-        `Property name "${editKey}" is not a valid property identifier. It must start with a letter and not contain any special characters except for "$" and "_".`
-      );
-      setEditKey(initialKey);
-      return;
-    }
-
-    if (
-      editKey !== initialKey &&
-      Object.keys(value.properties).includes(editKey)
-    ) {
-      onInvalid(`Property "${editKey}" already exists`);
-      setEditKey(initialKey);
-      return;
-    }
-
-    onChange(editKey);
-  };
-
-  return (
-    <AutoResizeInput
-      value={editKey}
-      onChange={setEditKey}
-      active={isEditing}
-      className="inline font-bold outline-none mr-4"
-      onFocus={() => setIsEditing(true)}
-      onBlur={handleDefocus}
-    />
-  );
-};
-
-function isValidPropertyName(name: string) {
-  const validIdentifier = /^[a-zA-Z_$][a-zA-Z_$0-9]*$/;
-
-  return validIdentifier.test(name);
-}

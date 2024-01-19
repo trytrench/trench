@@ -1,7 +1,7 @@
 import { redis } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
-  NODE_TYPE_DEFS,
+  NODE_TYPE_REGISTRY,
   NodeDef,
   NodeDefsMap,
   NodeType,
@@ -16,6 +16,7 @@ import { db } from "databases";
 import { TSchema, createDataType } from "./data-types";
 import { StoreRow, StoreTable } from "./node-type-defs/lib/store";
 import { getUnixTime } from "date-fns";
+import { get } from "lodash";
 /**
  * Execution Engine
  *
@@ -28,9 +29,12 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.Computed]: {},
   [NodeType.Counter]: { redis },
   [NodeType.UniqueCounter]: { redis },
-  [NodeType.GetEntityFeature]: { clickhouse: db },
+  [NodeType.GetEntityFeature]: { redis },
   [NodeType.EntityAppearance]: {},
   [NodeType.LogEntityFeature]: {},
+  [NodeType.CacheEntityFeature]: { redis },
+  [NodeType.Rule]: {},
+  [NodeType.Event]: {},
 };
 
 type TrenchError = {
@@ -98,7 +102,7 @@ export class ExecutionEngine {
 
     const nodeInstances: NodeInstance[NodeType][] = nodeDefs.map((nodeDef) => {
       const nodeType = nodeDef.type;
-      const nodeTypeDef = NODE_TYPE_DEFS[nodeType] as NodeTypeDef;
+      const nodeTypeDef = NODE_TYPE_REGISTRY[nodeType] as NodeTypeDef;
 
       const resolver = nodeTypeDef.createResolver({
         nodeDef,
@@ -161,9 +165,8 @@ export class ExecutionEngine {
         const resolvedOutput = await resolver({
           event,
           engineId: this.engineId,
-          getDependency: async ({ nodeId, expectedSchema }) => {
-            const depNodeDef = this.getNodeInstance(nodeId).nodeDef;
-
+          getDependency: async ({ dataPath, expectedSchema }) => {
+            const depNodeDef = this.getNodeInstance(dataPath.nodeId).nodeDef;
             const result = await this.evaluateNode(nodeId);
             if (result.type === "error") {
               throw new Error(
@@ -172,10 +175,11 @@ export class ExecutionEngine {
                 )}, which failed with error: ${result.output.message}`
               );
             } else {
+              const resolvedValue = get(result.output.data, dataPath.path);
               if (expectedSchema) {
                 const type = createDataType(expectedSchema);
                 try {
-                  type.parse(result.output.data);
+                  type.parse(resolvedValue);
                 } catch (e: any) {
                   throw new Error(
                     `Node ${printNodeDef(
@@ -188,7 +192,7 @@ export class ExecutionEngine {
                   );
                 }
               }
-              return result.output.data;
+              return resolvedValue;
             }
           },
         });

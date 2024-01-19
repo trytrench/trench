@@ -1,55 +1,73 @@
-import type { NextPageWithLayout } from "~/pages/_app";
-import { api } from "~/utils/api";
-import { NodeType } from "event-processing";
+import { NodeDefsMap, NodeType } from "event-processing";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import SettingsLayout from "~/components/SettingsLayout";
+import { EditComputed } from "~/pages/settings/event-types/[eventType]/node/EditComputed";
 import { toast } from "~/components/ui/use-toast";
-import { EditUniqueCount } from "./EditUniqueCount";
+import type { NextPageWithLayout } from "~/pages/_app";
+import { api } from "~/utils/api";
 import { EditCount } from "./EditCount";
-import { EditComputed } from "./EditComputed";
-import { EditRule } from "./EditRule";
+import { EditUniqueCount } from "./EditUniqueCount";
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
   const { data: eventType } = api.eventTypes.get.useQuery(
-    { id: router.query.eventTypeId as string },
-    { enabled: !!router.query.eventTypeId }
+    { id: router.query.eventType as string },
+    { enabled: !!router.query.eventType }
   );
 
   const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
-    { eventTypeId: router.query.eventTypeId as string },
+    { eventType: router.query.eventType as string },
     { enabled: false }
   );
 
-  const { mutateAsync: createCount } = api.nodeDefs.createCount.useMutation();
+  const { data: nodeDef } = api.nodeDefs.get.useQuery(
+    { id: router.query.nodeId as string },
+    { enabled: !!router.query.nodeId }
+  );
 
-  const { mutateAsync: createUniqueCount } =
-    api.nodeDefs.createUniqueCount.useMutation();
+  const { mutateAsync: updateNodeDef } = api.nodeDefs.update.useMutation();
 
-  const { mutateAsync: createComputed } =
-    api.nodeDefs.createComputed.useMutation();
-
-  const { mutateAsync: createRule } = api.nodeDefs.createRule.useMutation();
+  function handleSave(def: NodeDefsMap[NodeType.Computed]) {
+    updateNodeDef({
+      ...def,
+      dependsOn: [],
+      eventTypes: [router.query.eventType as string],
+    })
+      .then(() => {
+        toast({
+          title: "Node updated",
+          // description: `${values.entity}`,
+        });
+        return refetchNodes();
+      })
+      .catch(() => {
+        toast({
+          variant: "destructive",
+          title: "Failed to update node",
+        });
+      });
+  }
 
   return (
     <div>
       <Link
-        href={`/settings/event-types/${router.query.eventTypeId as string}`}
+        href={`/settings/event-types/${router.query.eventType as string}`}
         className="text-sm text-muted-foreground flex items-center gap-1"
       >
         <ChevronLeft className="w-3 h-3" />
         Back to {eventType?.type}
       </Link>
-      {router.query.type === "count" ? (
+
+      {!nodeDef ? null : nodeDef.type === NodeType.Count ? (
         <EditCount
           onRename={() => {}}
           onSave={(name, assignToFeatures, countConfig) => {
             createCount({
               name,
-              eventTypes: [router.query.eventTypeId as string],
+              eventTypes: [router.query.eventType as string],
               assignToFeatures,
               countConfig,
             })
@@ -69,13 +87,13 @@ const Page: NextPageWithLayout = () => {
               });
           }}
         />
-      ) : router.query.type === "unique-count" ? (
+      ) : nodeDef.type === NodeType.UniqueCounter ? (
         <EditUniqueCount
           onRename={() => {}}
           onSave={(name, assignToFeatures, countUniqueConfig) => {
             createUniqueCount({
               name,
-              eventTypes: [router.query.eventTypeId as string],
+              eventTypes: [router.query.eventType as string],
               assignToFeatures,
               countUniqueConfig,
             })
@@ -95,43 +113,6 @@ const Page: NextPageWithLayout = () => {
               });
           }}
         />
-      ) : router.query.type === "rule" ? (
-        <EditRule
-          onRename={() => {}}
-          onSave={(
-            def,
-            assignToFeatures,
-            featureDeps,
-            nodeDeps,
-            assignToEventFeature
-          ) => {
-            createRule({
-              nodeDef: {
-                name: def.name,
-                type: NodeType.Rule,
-                eventTypes: [router.query.eventTypeId as string],
-                config: def.config,
-              },
-              featureDeps,
-              nodeDeps,
-              assignToFeatures,
-              assignToEventFeature,
-            })
-              .then(() => {
-                toast({
-                  title: "Node created",
-                  // description: `${values.entity}`,
-                });
-                return refetchNodes();
-              })
-              .catch(() => {
-                toast({
-                  variant: "destructive",
-                  title: "Failed to create node",
-                });
-              });
-          }}
-        />
       ) : (
         <EditComputed
           onRename={() => {}}
@@ -140,7 +121,7 @@ const Page: NextPageWithLayout = () => {
               nodeDef: {
                 name: def.name,
                 type: NodeType.Computed,
-                eventTypes: [router.query.eventTypeId as string],
+                eventTypes: [router.query.eventType as string],
                 returnSchema: def.returnSchema,
                 config: def.config,
               },

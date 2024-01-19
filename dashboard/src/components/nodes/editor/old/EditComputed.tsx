@@ -5,10 +5,11 @@ import {
   createDataType,
   type NodeDef,
   NodeType,
+  tSchemaZod,
 } from "event-processing";
 import { ChevronsUpDown, Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -23,13 +24,12 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
-import AssignEntities from "~/pages/settings/event-types/AssignEntities";
+import AssignEntities from "~/components/nodes/AssignEntities";
 import {
   FeatureDep,
   NodeDepSelector,
-} from "~/pages/settings/event-types/[eventTypeId]/node/NodeDepSelector";
+} from "~/pages/settings/event-types/[eventType]/node/NodeDepSelector";
 import { SchemaBuilder } from "../../../../../components/SchemaBuilder";
-import { useEventTypes } from "../../../../../components/ts-editor/useEventTypes";
 import {
   Dialog,
   DialogContent,
@@ -40,8 +40,8 @@ import {
   DialogTrigger,
 } from "../../../../../components/ui/dialog";
 import {
+  EventTypeNodesSchemaDisplay,
   SchemaDisplay,
-  SchemaEntry,
   useDepsSchema,
   useDepsTypes,
 } from "../../../../../components/features/SchemaDisplay";
@@ -51,7 +51,7 @@ import {
   CompileStatusMessage,
 } from "../../../../../components/features/shared/CodeEditor";
 import { api } from "~/utils/api";
-import FeatureAssignSelector from "~/pages/settings/event-types/[eventTypeId]/node/FeatureAssignSelector";
+import FeatureAssignSelector from "~/pages/settings/event-types/[eventType]/node/FeatureAssignSelector";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -63,7 +63,7 @@ const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}
 export const featureDefSchema = z.object({
   id: z.string(),
   name: z.string(),
-  schema: z.record(z.unknown()),
+  schema: tSchemaZod,
   entityTypeId: z.string(),
 });
 
@@ -71,15 +71,15 @@ export const nodeDefSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.nativeEnum(NodeType),
-  eventTypes: z.array(z.string()),
+  eventType: z.string(),
   dependsOn: z.array(z.string()),
   config: z.record(z.any()),
-  returnSchema: z.record(z.any()),
+  returnSchema: tSchemaZod,
 });
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  schema: z.record(z.any()),
+  schema: tSchemaZod,
   featureDeps: z.array(
     z.object({
       feature: featureDefSchema,
@@ -117,8 +117,19 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
 
   const { data: features } = api.features.list.useQuery();
   const { data: nodes } = api.nodeDefs.list.useQuery({
-    eventTypeId: router.query.eventTypeId as string,
+    eventType: router.query.eventType as string,
   });
+
+  const [initializedEventNode, setInitializedEventNode] = useState(false);
+  useEffect(() => {
+    if (!initializedEventNode && nodes) {
+      const eventNode = nodes.find((n) => n.type === NodeType.Event);
+      if (eventNode) {
+        form.setValue("nodeDeps", [eventNode]);
+        setInitializedEventNode(true);
+      }
+    }
+  }, [nodes, initializedEventNode, setInitializedEventNode, form]);
 
   const [config, setConfig] = useState(
     initialNodeDef?.config ?? {
@@ -145,7 +156,7 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
 
   const [showSchema, setShowSchema] = useState(false);
 
-  const inputType = `interface Input {\n  event: TrenchEvent;\n  deps: Dependencies;\n}`;
+  const inputType = `type Input = Dependencies;`;
   const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
     form.watch("schema")
   ).toTypescript()}>;`;
@@ -154,8 +165,6 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
     form.watch("nodeDeps"),
     form.watch("featureDeps")
   );
-
-  const eventTypes = useEventTypes([router.query.eventTypeId as string]);
 
   const deps = useDepsSchema(form.watch("nodeDeps"), form.watch("featureDeps"));
 
@@ -278,7 +287,7 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
                   form.setValue("featureDeps", deps)
                 }
                 onNodeDepsChange={(deps) => form.setValue("nodeDeps", deps)}
-                eventTypeId={router.query.eventTypeId as string}
+                eventType={router.query.eventType as string}
               />
             </div>
           </form>
@@ -293,13 +302,6 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
           onFeaturesChange={setAssignToFeatures}
         />
       </div>
-
-      {/* <EventTypes
-        eventTypes={eventTypes}
-        onChange={(v) => {
-          updateFeatureDef({ eventTypes: v });
-        }}
-      /> */}
 
       <Separator className="my-8" />
 
@@ -320,24 +322,18 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
 
       {showSchema && (
         <Card className="h-96 overflow-auto p-6 mb-4">
-          <SchemaDisplay
+          <EventTypeNodesSchemaDisplay
             basePath="input.event.data"
             baseName="event.data"
-            eventTypeId={router.query.eventTypeId as string}
+            eventType={router.query.eventType as string}
           />
-          <SchemaEntry name="deps" path="input.deps" info={deps} />
+          <SchemaDisplay name="deps" path="input.deps" info={deps} />
         </Card>
       )}
 
       <div className="h-96">
         <CodeEditor
-          typeDefs={[
-            libSource,
-            depsType,
-            eventTypes,
-            inputType,
-            functionType,
-          ].join("\n\n")}
+          typeDefs={[libSource, depsType, inputType, functionType].join("\n\n")}
           initialCode={config?.tsCode ?? FUNCTION_TEMPLATE}
           onCompileStatusChange={onCompileStatusChange}
         />

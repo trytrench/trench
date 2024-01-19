@@ -21,7 +21,7 @@ interface EventTypesProps {
   onChange?: (eventTypes: Set<string>) => void;
 }
 
-function EventTypes(props: EventTypesProps) {
+export function EventTypes(props: EventTypesProps) {
   const { eventTypes, onChange } = props;
 
   // todo: query event types
@@ -98,5 +98,3 @@ function EventTypes(props: EventTypesProps) {
     </div>
   );
 }
-
-export { EventTypes };
