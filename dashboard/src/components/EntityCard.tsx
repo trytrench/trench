@@ -1,9 +1,11 @@
 import { format } from "date-fns";
 import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
-import { api, type RouterOutputs } from "~/utils/api";
-import { FeatureGrid } from "./FeatureGrid";
+import { useDecision } from "~/hooks/useDecision";
 import { useEntityName } from "~/hooks/useEntityName";
+import { type RouterOutputs } from "~/utils/api";
+import { FeatureGrid } from "./FeatureGrid";
+import { RenderDecision } from "./RenderDecision";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -13,6 +15,7 @@ interface Props {
 
 export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
   const { entityName, entityTypeName: entityType } = useEntityName(entity);
+  const decision = useDecision(entity.features);
 
   return (
     <a
@@ -27,11 +30,15 @@ export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
             entity.entityType
           )}/${encodeURIComponent(entity.entityId)}`}
         >
-          <div className="flex">
+          <div className="flex items-center">
             <h1 className="text-lg text-emphasis-foreground">
               {entityType}: {entityName ?? entity.entityId}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
+
+            <div className="ml-3">
+              {decision && <RenderDecision decision={decision} />}
+            </div>
           </div>
         </Link>
         {entity.lastSeenAt && (
