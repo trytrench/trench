@@ -281,6 +281,8 @@ function prune(_nodeDefs: NodeDef[]): NodeDef[] {
         featureIdsToCache.add(def.config.featureId);
         return allDependsOn.has(def.id);
       }
+      default:
+        return true;
     }
   });
 
@@ -289,6 +291,8 @@ function prune(_nodeDefs: NodeDef[]): NodeDef[] {
       case NodeType.CacheEntityFeature: {
         return featureIdsToCache.has(def.config.featureId);
       }
+      default:
+        return true;
     }
   });
 }

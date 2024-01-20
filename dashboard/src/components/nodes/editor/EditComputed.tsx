@@ -222,13 +222,13 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
                   ...computedNodeDef,
                 })
                   .then(() => {
-                    void router.push(`/settings/event-types/${eventType}/node`);
+                    void router.push(`/settings/event-types/${eventType}`);
                   })
                   .catch(handleError);
               } else {
                 createNodeDef(computedNodeDef)
                   .then(() => {
-                    void router.push(`/settings/event-types/${eventType}/node`);
+                    void router.push(`/settings/event-types/${eventType}`);
                   })
                   .catch(handleError);
               }
