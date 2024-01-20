@@ -1,6 +1,7 @@
 import {
   DataPath,
   NodeDef,
+  NodeType,
   TSchema,
   TypeName,
   createDataType,
@@ -13,11 +14,22 @@ import { ComboboxSelector } from "../ComboboxSelector";
 import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
 
+const HIDDEN_NODE_TYPES = [
+  NodeType.GetEntityFeature,
+  NodeType.LogEntityFeature,
+  NodeType.CacheEntityFeature,
+];
+
 function useFlattenedDataPaths(props: {
   eventType: string;
   filterNodeOptions?: (nodeDef: NodeDef) => boolean;
 }) {
-  const { eventType, filterNodeOptions = () => true } = props;
+  const {
+    eventType,
+    filterNodeOptions = (nodeDef) => {
+      return !HIDDEN_NODE_TYPES.includes(nodeDef.type);
+    },
+  } = props;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 

@@ -10,11 +10,11 @@ export const dataPathZodSchema = z.object({
 export type DataPath = z.infer<typeof dataPathZodSchema>;
 
 export const DataPathUtils = {
-  equals: (a: DataPath, b: DataPath) => {
+  equals: (a?: DataPath, b?: DataPath) => {
     return (
-      a.nodeId === b.nodeId &&
-      a.path.length === b.path.length &&
-      a.path.every((v, i) => v === b.path[i])
+      a?.nodeId === b?.nodeId &&
+      a?.path.length === b?.path.length &&
+      a?.path.every((v, i) => v === b?.path[i])
     );
   },
 };

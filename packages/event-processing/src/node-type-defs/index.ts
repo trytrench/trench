@@ -66,7 +66,10 @@ export type NodeTypeContextMap = {
 
 // Build node def
 
-type Args<T extends NodeType> = Omit<NodeDefsMap[T], "id" | "dependsOn">;
+type Args<T extends NodeType> = Omit<
+  NodeDefsMap[T],
+  "id" | "dependsOn" | "snapshotId"
+>;
 
 export function buildNodeDef<T extends NodeType>(
   type: T,

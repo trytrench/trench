@@ -10,6 +10,7 @@ export type NodeDef<
   TConfig = any,
 > = {
   id: string;
+  snapshotId: string;
   eventType: string;
   name: string;
   type: TNodeType;
@@ -21,6 +22,7 @@ export type NodeDef<
 export function getNodeDefSchema<T extends ZodType<any>>(configSchema: T) {
   return z.object({
     id: z.string(),
+    snapshotId: z.string(),
     eventType: z.string(),
     name: z.string(),
     type: z.nativeEnum(NodeType),

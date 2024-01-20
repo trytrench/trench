@@ -54,7 +54,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
     if (!valueNode) return null;
 
     if (valueNode.type === NodeType.GetEntityFeature) {
-      return valueNode.config.entityDataPath;
+      return valueNode.config.entityDataPath ?? null;
     } else {
       return value;
     }

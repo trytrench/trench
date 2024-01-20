@@ -21,7 +21,7 @@ export const cacheEntityFeatureNodeDef = createNodeTypeDefBuilder()
     z.object({
       featureId: z.string(),
       featureSchema: tSchemaZod,
-      entityDataPath: dataPathZodSchema,
+      entityDataPath: dataPathZodSchema.optional(),
       dataPath: dataPathZodSchema,
     })
   )
@@ -30,7 +30,7 @@ export const cacheEntityFeatureNodeDef = createNodeTypeDefBuilder()
   }>()
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    set.add(config.entityDataPath.nodeId);
+    if (config.entityDataPath) set.add(config.entityDataPath.nodeId);
     set.add(config.dataPath.nodeId);
     return set;
   })
@@ -39,12 +39,14 @@ export const cacheEntityFeatureNodeDef = createNodeTypeDefBuilder()
       const { featureId, featureSchema, dataPath, entityDataPath } =
         nodeDef.config;
 
-      let assignToEntity = await getDependency({
-        dataPath: entityDataPath,
-        expectedSchema: {
-          type: TypeName.Entity,
-        },
-      });
+      let assignToEntity = entityDataPath
+        ? await getDependency({
+            dataPath: entityDataPath,
+            expectedSchema: {
+              type: TypeName.Entity,
+            },
+          })
+        : null;
 
       const value = await getDependency({
         dataPath: dataPath,

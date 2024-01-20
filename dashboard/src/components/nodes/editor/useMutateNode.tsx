@@ -4,8 +4,13 @@ import { api } from "../../../utils/api";
 export function useMutateNode() {
   const { toast } = useToast();
 
+  const { refetch } = api.nodeDefs.list.useQuery();
   const { mutateAsync: _createNodeDef, ...createRest } =
-    api.nodeDefs.create.useMutation();
+    api.nodeDefs.create.useMutation({
+      async onSuccess() {
+        await refetch();
+      },
+    });
   const { mutateAsync: _updateNodeDef, ...updateRest } =
     api.nodeDefs.update.useMutation();
 
