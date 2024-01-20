@@ -1,22 +1,19 @@
 import { format } from "date-fns";
+import { Entity } from "event-processing";
+import { uniq } from "lodash";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
-import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
-import SuperJSON from "superjson";
 import { Toggle } from "~/components/ui/toggle";
 import { type EventFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
-import { EntityChip } from "./EntityChip";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
-import { EventFilter } from "./ListFilter";
+import { FeatureGrid } from "./FeatureGrid";
 import { EditEventFilters } from "./filters/EditEventFilters";
-import { FeatureGrid } from "./ui/custom/feature-grid";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Entity } from "event-processing";
-import { RenderResult, RenderTypedData } from "./RenderResult";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 
 interface EventsListProps {
   entity: Entity;
@@ -53,6 +50,11 @@ export default function EventsList({ entity }: EventsListProps) {
   const allEvents = useMemo(() => {
     return events?.pages.flatMap((page) => page.rows) ?? [];
   }, [events]);
+
+  const entityIds = useMemo(() => {
+    return uniq(allEvents.flatMap((event) => event.entities.map((e) => e.id)));
+  }, [allEvents]);
+  const entityNameMap = useEntityNameMap(entityIds);
 
   type DividerItem = {
     type: "divider";
@@ -167,6 +169,7 @@ export default function EventsList({ entity }: EventsListProps) {
                         event={item.event}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
+                        entityNameMap={entityNameMap}
                       />
                     ) : (
                       <TimeDivider
@@ -281,11 +284,10 @@ interface EventCardProps {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isFirst: boolean;
   isLast: boolean;
+  entityNameMap: Record<string, string>;
 }
 
-function EventCard({ event, isFirst, isLast }: EventCardProps) {
-  const router = useRouter();
-
+function EventCard({ event, isFirst, isLast, entityNameMap }: EventCardProps) {
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
@@ -305,64 +307,9 @@ function EventCard({ event, isFirst, isLast }: EventCardProps) {
         <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
         </div>
-        <div className="flex flex-wrap gap-1 mt-3">
-          {/* {eventLabels.length > 0 ? (
-            eventLabels.map((label, idx) => {
-              return (
-                <Badge key={idx} variant="default">
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <></>
-          )} */}
-        </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {/* {rules.length > 0 && (
-          <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
-            {rules.map(({ name, color }) => (
-              <div key={name} className="flex space-x-1 items-center">
-                <div
-                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
-                ></div>
-                <div className="font-semibold">{name}</div>
-              </div>
-            ))}
-          </div>
-        )} */}
-
-        {event.features.length > 0 ? (
-          <>
-            <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
-              {event.features.map((f, idx) => {
-                const { featureId, featureName, featureType, result } = f;
-                return (
-                  <div key={featureId}>
-                    <div className="font-semibold">{featureName}</div>
-                    <RenderResult result={result} />
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <div className="italic text-gray-400">No features</div>
-        )}
-        <div className="h-2"></div>
-
-        {/* <div className="flex gap-1.5 flex-wrap mt-2">
-          {event.entities.map((entity) => {
-            return (
-              <EntityChip
-                key={entity.id}
-                entity={entity}
-                href={`/${router.query.project as string}/entity/${entity.id}`}
-              />
-            );
-          })}
-        </div> */}
+        <FeatureGrid features={event.features} entityNameMap={entityNameMap} />
       </Panel>
     </div>
   );

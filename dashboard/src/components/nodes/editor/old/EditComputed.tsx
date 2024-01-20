@@ -142,6 +142,9 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
 
   const [assignToFeatures, setAssignToFeatures] = useState<FeatureDep[]>([]);
 
+  const [assignToEventFeature, setAssignToEventFeature] =
+    useState<FeatureDef | null>(null);
+
   const isValid = useMemo(
     () => form.formState.isValid && isCodeValid,
     [form.formState.isValid, isCodeValid]
@@ -300,6 +303,8 @@ export function EditComputed({ initialNodeDef, onSave, onRename }: Props) {
         <FeatureAssignSelector
           features={assignToFeatures}
           onFeaturesChange={setAssignToFeatures}
+          eventFeature={assignToEventFeature}
+          onEventFeatureChange={setAssignToEventFeature}
         />
       </div>
 

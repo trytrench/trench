@@ -286,54 +286,27 @@ const Page: NextPageWithLayout = () => {
             <Command>
               <CommandInput placeholder="Search types..." />
               <CommandEmpty>No framework found.</CommandEmpty>
+
               <CommandGroup>
-                <CommandItem
-                  onSelect={() =>
-                    void router.push(
-                      `/settings/event-types/${
-                        router.query.eventType as string
-                      }/node`
-                    )
-                  }
-                >
-                  Code
-                </CommandItem>
-
-                <CommandItem
-                  onSelect={() =>
-                    void router.push(
-                      `/settings/event-types/${
-                        router.query.eventType as string
-                      }/node?type=${NodeType.Counter}`
-                    )
-                  }
-                >
-                  Count
-                </CommandItem>
-
-                <CommandItem
-                  onSelect={() =>
-                    void router.push(
-                      `/settings/event-types/${
-                        router.query.eventType as string
-                      }/node?type=${NodeType.UniqueCounter}`
-                    )
-                  }
-                >
-                  Unique Count
-                </CommandItem>
-
-                <CommandItem
-                  onSelect={() =>
-                    void router.push(
-                      `/settings/event-types/${
-                        router.query.eventType as string
-                      }/node?type=${NodeType.Rule}`
-                    )
-                  }
-                >
-                  Rule
-                </CommandItem>
+                {[
+                  { name: "Computed", type: NodeType.Computed },
+                  { name: "Counter", type: NodeType.Counter },
+                  { name: "Unique Counter", type: NodeType.UniqueCounter },
+                  { name: "Decision", type: NodeType.Decision },
+                ].map((node) => (
+                  <CommandItem
+                    key={node.type}
+                    onSelect={() =>
+                      void router.push(
+                        `/settings/event-types/${
+                          router.query.eventType as string
+                        }/node?type=${node.type}`
+                      )
+                    }
+                  >
+                    {node.name}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </Command>
           </PopoverContent>
@@ -406,7 +379,7 @@ const Page: NextPageWithLayout = () => {
                           entityType: values.entityTypeId,
                           dataPath: values.path,
                         },
-                        name: `${entityType.type} appearance`,
+                        name: entityType.type,
                         eventType: eventType,
                       })
                     )

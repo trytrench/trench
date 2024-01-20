@@ -3,17 +3,16 @@ import { NodeDef, NodeTypeDef } from "./nodeTypeDef";
 import { cacheEntityFeatureNodeDef } from "./types/CacheEntityFeature";
 import { computedNodeDef } from "./types/Computed";
 import { counterNodeDef } from "./types/Counter";
+import { decisionNodeDef } from "./types/Decision";
 import { entityAppearanceNodeDef } from "./types/EntityAppearance";
 import { eventNodeDef } from "./types/Event";
 import { getEntityFeatureNodeDef } from "./types/GetEntityFeature";
 import { logEntityFeatureNodeDef } from "./types/LogEntityFeature";
-import { ruleNodeDef } from "./types/Rule";
 import { uniqueCounterNodeDef } from "./types/UniqueCounter";
 import { NodeType } from "./types/_enum";
 
 const NODE_TYPE_DEFS = {
   [NodeType.Computed]: computedNodeDef,
-  [NodeType.Rule]: ruleNodeDef,
   [NodeType.Counter]: counterNodeDef,
   [NodeType.UniqueCounter]: uniqueCounterNodeDef,
   [NodeType.GetEntityFeature]: getEntityFeatureNodeDef,
@@ -21,6 +20,7 @@ const NODE_TYPE_DEFS = {
   [NodeType.LogEntityFeature]: logEntityFeatureNodeDef,
   [NodeType.CacheEntityFeature]: cacheEntityFeatureNodeDef,
   [NodeType.Event]: eventNodeDef,
+  [NodeType.Decision]: decisionNodeDef,
 } satisfies {
   [TNodeType in NodeType]: NodeTypeDef<TNodeType, any, any, any>;
 };

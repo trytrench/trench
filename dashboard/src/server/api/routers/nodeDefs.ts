@@ -1,52 +1,16 @@
 import { GlobalStateKey, prisma } from "databases";
-import { add } from "date-fns";
 import {
   NODE_TYPE_REGISTRY,
-  NodeDef,
-  NodeDefsMap,
+  type NodeDef,
+  type NodeDefsMap,
   NodeType,
-  NodeTypeDef,
-  TSchema,
-  TypeName,
+  type TSchema,
   getNodeDefSchema,
-  tSchemaZod,
 } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { eventFeatureDefSchema, featureDefSchema } from "./features";
 
 export const nodeDefSchema = getNodeDefSchema(z.any());
-
-const countConfigSchema = z.object({
-  countByFeatureDeps: z.array(
-    z.object({
-      feature: featureDefSchema,
-      node: nodeDefSchema,
-    })
-  ),
-  countByNodeDeps: z.array(nodeDefSchema),
-  conditionFeatureDep: z
-    .object({
-      feature: featureDefSchema,
-      node: nodeDefSchema,
-    })
-    .nullable(),
-  conditionNodeDep: nodeDefSchema.nullable(),
-  timeWindow: z.object({
-    value: z.number(),
-    unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
-  }),
-});
-
-const countUniqueConfigSchema = countConfigSchema.extend({
-  countUniqueFeatureDeps: z.array(
-    z.object({
-      feature: featureDefSchema,
-      node: nodeDefSchema,
-    })
-  ),
-  countUniqueNodeDeps: z.array(nodeDefSchema),
-});
 
 export const nodeDefsRouter = createTRPCRouter({
   get: protectedProcedure

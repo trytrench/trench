@@ -1,4 +1,4 @@
-import type { EntityType, EventType, Feature } from "@prisma/client";
+import type { EntityType, EventType, Feature, Rule } from "@prisma/client";
 import { FeatureDef, TSchema, TypeName, getTypedData } from "event-processing";
 import { AnnotatedFeature } from "../../shared/types";
 import { prisma } from "databases";
@@ -6,8 +6,15 @@ import { prisma } from "databases";
 export function getAnnotatedFeatures(
   featureDefs: FeatureDef[],
   entityTypes: EntityType[],
-  featuresArray: Array<[string, string | null, string | null]> // featureId, value, error
+  featuresArray: Array<[string, string | null, string | null]>, // featureId, value, error
+  rules?: Rule[]
 ) {
+  const featureToRuleMap =
+    rules?.reduce(
+      (acc, rule) => ({ ...acc, [rule.featureId]: rule }),
+      {} as Record<string, Rule>
+    ) ?? {};
+
   const featureDefsMap = new Map<string, FeatureDef>();
   for (const featureDef of featureDefs) {
     featureDefsMap.set(featureDef.id, featureDef);
@@ -27,6 +34,7 @@ export function getAnnotatedFeatures(
       annotatedFeatures.push({
         featureId,
         featureName: featureDef.name,
+        rule: featureToRuleMap[featureId],
         result: error
           ? { type: "error", message: error }
           : {
@@ -43,6 +51,7 @@ export function getAnnotatedFeatures(
       annotatedFeatures.push({
         featureId,
         featureName: entityType,
+        rule: featureToRuleMap[featureId],
         result: error
           ? { type: "error", message: error }
           : {

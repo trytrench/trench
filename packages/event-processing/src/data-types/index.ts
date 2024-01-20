@@ -12,6 +12,7 @@ export enum TypeName {
   Array = "Array",
   Any = "Any",
   Date = "Date",
+  Rule = "Rule",
 }
 
 export type Entity = {
@@ -68,6 +69,10 @@ interface TDateSchema extends TSchemaBase {
   type: TypeName.Date;
 }
 
+interface TRuleSchema extends TSchemaBase {
+  type: TypeName.Rule;
+}
+
 type SchemaTypeMap = {
   [TypeName.Boolean]: boolean;
   [TypeName.Float64]: number;
@@ -79,6 +84,7 @@ type SchemaTypeMap = {
   [TypeName.Object]: Record<string, any>; // Placeholder, will be refined later
   [TypeName.Any]: any; // Placeholder, will be refined later
   [TypeName.Date]: Date;
+  [TypeName.Rule]: boolean;
 };
 
 export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
@@ -253,6 +259,16 @@ class DateDataType extends IDataType<TDateSchema> {
   }
 }
 
+class RuleDataType extends IDataType<TRuleSchema> {
+  parse(input: any): boolean {
+    if (typeof input !== "boolean") this.throwParseError(input);
+    return input;
+  }
+  toTypescript(): string {
+    return "boolean";
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -302,6 +318,10 @@ export const DATA_TYPES_REGISTRY = {
     type: DateDataType,
     defaultSchema: { type: TypeName.Date },
   },
+  [TypeName.Rule]: {
+    type: RuleDataType,
+    defaultSchema: { type: TypeName.Rule },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -319,7 +339,8 @@ export type TSchema =
   | TArraySchema
   | TObjectSchema
   | TAnySchema
-  | TDateSchema;
+  | TDateSchema
+  | TRuleSchema;
 
 export const tSchemaZod = z.custom<TSchema>((input) => {
   if (!input) return false;

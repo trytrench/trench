@@ -26,6 +26,7 @@ import {
   RenderTypedData,
 } from "../../../components/RenderResult";
 import { EntityPageEditor } from "../../../components/entity-page/EntityPageEditor";
+import { useEntityName } from "~/hooks/useEntityName";
 
 type Option = {
   label: string;
@@ -86,35 +87,28 @@ const Page: NextPageWithLayout = () => {
   const entityType = decodeURIComponent(router.query.entityType as string);
 
   const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
-    {
-      entityFilters: {
-        entityId,
-        entityType,
-      },
-    },
-    {
-      enabled: !!entityId && !!entityType,
-    }
+    { entityFilters: { entityId, entityType } },
+    { enabled: !!entityId && !!entityType }
   );
 
-  const entityData = entityDataRows?.rows[0];
+  const entity = useMemo(() => entityDataRows?.rows[0], [entityDataRows]);
+  const { entityName, entityTypeName } = useEntityName(entity);
 
   const entityInfo = useMemo(
     () =>
-      entityData
+      entity
         ? {
-            Type: entityData.entityType,
+            Type: entityTypeName,
             // Name: entityData.name,
-            ID: entityData.entityId,
-            "First Seen": format(entityData.firstSeenAt, "yyyy-MM-dd HH:mm:ss"),
-            "Last Seen": format(entityData.lastSeenAt, "yyyy-MM-dd HH:mm:ss"),
+            ID: entity.entityId,
+            "First Seen": format(entity.firstSeenAt, "yyyy-MM-dd HH:mm:ss"),
+            "Last Seen": format(entity.lastSeenAt, "yyyy-MM-dd HH:mm:ss"),
           }
         : {},
-    [entityData]
+    [entity, entityTypeName]
   );
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
-  const eType = entityTypes?.find((et) => et.id === entityData?.entityType);
 
   const [tab, setTab] = useQueryParam("tab", StringParam);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -122,8 +116,8 @@ const Page: NextPageWithLayout = () => {
   return (
     <main className="h-full flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
-        <h1 className="text-2xl">{entityData?.entityId}</h1>
-        <Badge className="-translate-y-0.5">{eType?.type}</Badge>
+        <h1 className="text-2xl">{entityName ?? entity?.entityId}</h1>
+        <Badge className="-translate-y-0.5">{entityTypeName}</Badge>
       </div>
       <div className="grid grid-cols-4 flex-1">
         <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
@@ -156,7 +150,7 @@ const Page: NextPageWithLayout = () => {
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
             <PropertyList
               entries={
-                entityData?.features.map((feature) => ({
+                entity?.features.map((feature) => ({
                   label: feature.featureName,
                   value: <RenderResult result={feature.result} />,
                 })) ?? []

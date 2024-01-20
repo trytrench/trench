@@ -33,8 +33,8 @@ const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
   [NodeType.EntityAppearance]: {},
   [NodeType.LogEntityFeature]: {},
   [NodeType.CacheEntityFeature]: { redis },
-  [NodeType.Rule]: {},
   [NodeType.Event]: {},
+  [NodeType.Decision]: {},
 };
 
 type TrenchError = {
@@ -167,7 +167,7 @@ export class ExecutionEngine {
           engineId: this.engineId,
           getDependency: async ({ dataPath, expectedSchema }) => {
             const depNodeDef = this.getNodeInstance(dataPath.nodeId).nodeDef;
-            const result = await this.evaluateNode(nodeId);
+            const result = await this.evaluateNode(dataPath.nodeId);
             if (result.type === "error") {
               throw new Error(
                 `Node ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
@@ -175,7 +175,10 @@ export class ExecutionEngine {
                 )}, which failed with error: ${result.output.message}`
               );
             } else {
-              const resolvedValue = get(result.output.data, dataPath.path);
+              const resolvedValue = dataPath.path.length
+                ? get(result.output.data, dataPath.path)
+                : result.output.data;
+
               if (expectedSchema) {
                 const type = createDataType(expectedSchema);
                 try {
@@ -197,8 +200,8 @@ export class ExecutionEngine {
           },
         });
 
-        const dataType = createDataType(instance.nodeDef.returnSchema);
-        dataType.parse(resolvedOutput.data);
+        // const dataType = createDataType(instance.nodeDef.returnSchema);
+        // dataType.parse(resolvedOutput.data);
 
         // Register state updaters
         this.state.stateUpdaters.push(...(resolvedOutput.stateUpdaters ?? []));

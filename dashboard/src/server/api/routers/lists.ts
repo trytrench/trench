@@ -51,6 +51,7 @@ export const listsRouter = createTRPCRouter({
 
       const featureDefs = await getLatestFeatureDefs();
       const entityTypes = await prisma.entityType.findMany();
+      const rules = await prisma.rule.findMany();
 
       return {
         count: 0,
@@ -65,7 +66,8 @@ export const listsRouter = createTRPCRouter({
             features: getAnnotatedFeatures(
               featureDefs,
               entityTypes,
-              entity.features_array
+              entity.features_array,
+              rules
             ),
           };
         }),
@@ -83,14 +85,16 @@ export const listsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const filters = input.eventFilters;
 
-      const events = await getEventsList({
-        filter: filters,
-        limit: input.limit,
-        cursor: input.cursor,
-      });
-
-      const featureDefs = await getLatestFeatureDefs();
-      const entityTypes = await prisma.entityType.findMany();
+      const [events, featureDefs, entityTypes, rules] = await Promise.all([
+        getEventsList({
+          filter: filters,
+          limit: input.limit,
+          cursor: input.cursor,
+        }),
+        getLatestFeatureDefs(),
+        prisma.entityType.findMany(),
+        prisma.rule.findMany(),
+      ]);
 
       return {
         count: 0,
@@ -103,7 +107,8 @@ export const listsRouter = createTRPCRouter({
           features: getAnnotatedFeatures(
             featureDefs,
             entityTypes,
-            event.features_array
+            event.features_array,
+            rules
           ),
         })),
       };

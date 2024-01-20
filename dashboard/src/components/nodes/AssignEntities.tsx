@@ -54,6 +54,12 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/utils/api";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { Rule } from "@prisma/client";
 import { AssignEntityFeatureDialog } from "./AssignEntityFeatureDialog";
 import { SchemaBuilder } from "../SchemaBuilder";
 import { AssignFeature } from "./AssignFeatureDialog";
@@ -68,6 +74,10 @@ const featureSchema = z.object({
 const eventFeatureSchema = z.object({
   name: z.string(),
   schema: tSchemaZod,
+});
+
+const ruleSchema = z.object({
+  name: z.string(),
 });
 
 const EventFeatureDialog = ({
@@ -271,12 +281,130 @@ const FeatureDialog = ({
   );
 };
 
+const RuleDialog = ({
+  title,
+  children,
+  onSubmit,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onSubmit: (values: { name: string; color: string }) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof ruleSchema>>({
+    resolver: zodResolver(ruleSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const [color, setColor] = useState("bg-gray-400");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit({
+                name: values.name,
+                color,
+              });
+              setOpen(false);
+              form.reset();
+            })}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="col-span-3">
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div>
+                <div className="text-sm font-medium mb-2">Color</div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <div className={`rounded-full ${color} w-3 h-3`}></div>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="flex space-x-2">
+                      {[
+                        "bg-gray-400",
+                        "bg-green-600",
+                        "bg-yellow-300",
+                        "bg-orange-400",
+                        "bg-red-500",
+                      ].map((color) => (
+                        <div
+                          key={color}
+                          onClick={() => {
+                            setColor(color);
+                          }}
+                          className={`rounded-full ${color} w-4 h-4`}
+                        />
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const FeatureCard = ({ name, path }: { name: string; path?: DataPath }) => {
   return (
     <Card className="px-4 flex justify-between items-center">
       <div className="flex gap-2">
         <div className="text-emphasis-foreground text-sm">{name}</div>
         {path && <RenderDataPath dataPath={path} />}
+      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="link">
+            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent>
+          <DropdownMenuItem>Delete</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Card>
+  );
+};
+
+const RuleCard = ({ name, color }: { name: string; color: string }) => {
+  return (
+    <Card className="px-4 flex justify-between items-center">
+      <div className="flex gap-2 items-center">
+        <div className={`rounded-full ${color} w-2 h-2`} />
+        <div className="text-emphasis-foreground text-sm">{name}</div>
       </div>
 
       <DropdownMenu>
@@ -341,9 +469,12 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
   const { data: features, refetch: refetchFeatures } =
     api.features.list.useQuery();
 
+  const { data: rules, refetch: refetchRules } = api.rules.list.useQuery();
+
   const { mutateAsync: createFeature } = api.features.create.useMutation();
   const { mutateAsync: createEventFeature } =
     api.features.createEventFeature.useMutation();
+  const { mutateAsync: createRule } = api.rules.create.useMutation();
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
@@ -360,13 +491,63 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     );
   }, [nodes]);
 
+  const featureToRuleMap = useMemo(() => {
+    if (!rules) return {};
+    return rules.reduce(
+      (acc, rule) => {
+        return { ...acc, [rule.featureId]: rule };
+      },
+      {} as Record<string, Rule>
+    );
+  }, [rules]);
+
   const eventNode = nodes?.find((node) => node.type === NodeType.Event);
 
   return (
     <div className="space-y-4">
       <EntityCard name="Event">
+        {rules
+          ?.filter(
+            (rule) =>
+              !rule.feature.entityTypeId && featureToNodeMap[rule.featureId]
+          )
+          .map((rule) => (
+            <RuleCard
+              key={rule.id}
+              name={rule.feature.name}
+              color={rule.color}
+            />
+          ))}
+
+        {rules
+          ?.filter(
+            (rule) =>
+              !rule.feature.entityTypeId && !featureToNodeMap[rule.featureId]
+          )
+          .map((rule) => (
+            <div key={rule.id} className="flex items-center space-x-2">
+              <div className={`rounded-full ${rule.color} w-2 h-2`} />
+              <div className="text-emphasis-foreground text-sm">
+                {rule.feature.name}
+              </div>
+
+              <Button
+                size="iconXs"
+                variant="outline"
+                onClick={() => onAssignToEvent?.(rule.feature)}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+
         {features
-          ?.filter((feature) => !feature.entityTypeId)
+          ?.filter(
+            (feature) =>
+              !feature.entityTypeId &&
+              featureToNodeMap[feature.id] &&
+              !featureToRuleMap[feature.id]
+          )
           .map((feature) => (
             <FeatureCard
               key={feature.id}
@@ -377,7 +558,10 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
 
         {features
           ?.filter(
-            (feature) => !feature.entityTypeId && !featureToNodeMap[feature.id]
+            (feature) =>
+              !feature.entityTypeId &&
+              !featureToNodeMap[feature.id] &&
+              !featureToRuleMap[feature.id]
           )
           .map((feature) => (
             <div key={feature.id} className="flex items-center space-x-2">
@@ -410,32 +594,92 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             </div>
           ))}
 
-        <EventFeatureDialog
-          title="Create Event Property"
-          onSubmit={(values) => {
-            createEventFeature({
-              name: values.name,
-              schema: values.schema,
-            })
-              .then(() => {
-                toast({
-                  title: "Event property created",
-                  description: `${values.name}`,
-                });
-                return refetchFeatures();
-              })
-              .catch(() => {
-                toast({
-                  variant: "destructive",
-                  title: "Failed to create entity property",
-                });
-              });
-          }}
-        >
-          <Button size="sm" variant="outline">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </EventFeatureDialog>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <RuleDialog
+              title="Create Rule"
+              onSubmit={(values) => {
+                createRule({
+                  name: values.name,
+                  color: values.color,
+                  eventTypeId: router.query.eventTypeId as string,
+                })
+                  .then(() => {
+                    toast({
+                      title: "Rule created",
+                    });
+
+                    return refetchRules();
+                  })
+                  .catch(() => {
+                    toast({
+                      variant: "destructive",
+                      title: "Failed to create rule",
+                    });
+                  });
+              }}
+            >
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                Create rule
+              </DropdownMenuItem>
+            </RuleDialog>
+            <FeatureDialog
+              title="Create Entity Property"
+              onSubmit={(values) => {
+                createFeature({
+                  name: values.name,
+                  entityTypeId: values.entityTypeId,
+                  schema: values.schema,
+                })
+                  .then(() => {
+                    toast({
+                      title: "Entity property created",
+                      description: `${values.name}`,
+                    });
+                    return refetchFeatures();
+                  })
+                  .catch(() => {
+                    toast({
+                      variant: "destructive",
+                      title: "Failed to create entity property",
+                    });
+                  });
+              }}
+            >
+              <EventFeatureDialog
+                title="Create Event Property"
+                onSubmit={(values) => {
+                  createEventFeature({
+                    name: values.name,
+                    schema: values.schema,
+                  })
+                    .then(() => {
+                      toast({
+                        title: "Event property created",
+                        description: `${values.name}`,
+                      });
+                      return refetchFeatures();
+                    })
+                    .catch(() => {
+                      toast({
+                        variant: "destructive",
+                        title: "Failed to create entity property",
+                      });
+                    });
+                }}
+              >
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  Create property
+                </DropdownMenuItem>
+              </EventFeatureDialog>
+            </FeatureDialog>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </EntityCard>
       {nodes?.map((node) =>
         node.type === NodeType.EntityAppearance ? (
@@ -444,11 +688,49 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             path={node.config.dataPath}
             key={node.id}
           >
+            {rules
+              ?.filter(
+                (rule) =>
+                  rule.feature.entityTypeId === node.returnSchema.entityType &&
+                  featureToNodeMap[rule.featureId]
+              )
+              .map((rule) => (
+                <RuleCard
+                  key={rule.id}
+                  name={rule.feature.name}
+                  color={rule.color}
+                />
+              ))}
+
+            {rules
+              ?.filter(
+                (rule) =>
+                  rule.feature.entityTypeId === node.returnSchema.entityType &&
+                  !featureToNodeMap[rule.featureId]
+              )
+              .map((rule) => (
+                <div key={rule.id} className="flex items-center space-x-2">
+                  <div className={`rounded-full ${rule.color} w-2 h-2`} />
+                  <div className="text-emphasis-foreground text-sm">
+                    {rule.feature.name}
+                  </div>
+
+                  <Button
+                    size="iconXs"
+                    variant="outline"
+                    onClick={() => onAssign?.(node, rule.feature)}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+
             {features
               ?.filter(
                 (feature) =>
                   feature.entityTypeId === node.returnSchema.entityType &&
-                  featureToNodeMap[feature.id]
+                  featureToNodeMap[feature.id] &&
+                  !featureToRuleMap[feature.id]
               )
               .map((feature) => (
                 <FeatureCard
@@ -462,7 +744,8 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
               ?.filter(
                 (feature) =>
                   feature.entityTypeId === node.returnSchema?.entityType &&
-                  !featureToNodeMap[feature.id]
+                  !featureToNodeMap[feature.id] &&
+                  !featureToRuleMap[feature.id]
               )
               .map((feature) => (
                 <div key={feature.id} className="flex items-center space-x-2">
@@ -499,34 +782,71 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                 </div>
               ))}
 
-            <FeatureDialog
-              title="Create Entity Property"
-              entityTypeId={node.returnSchema?.entityType}
-              onSubmit={(values) => {
-                createFeature({
-                  name: values.name,
-                  entityTypeId: values.entityTypeId,
-                  schema: values.schema,
-                })
-                  .then(() => {
-                    toast({
-                      title: "Entity property created",
-                      description: `${values.name}`,
-                    });
-                    return refetchFeatures();
-                  })
-                  .catch(() => {
-                    toast({
-                      variant: "destructive",
-                      title: "Failed to create entity property",
-                    });
-                  });
-              }}
-            >
-              <Button size="sm" variant="outline">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </FeatureDialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent>
+                <RuleDialog
+                  title="Create Rule"
+                  onSubmit={(values) => {
+                    createRule({
+                      name: values.name,
+                      color: values.color,
+                      entityTypeId: node.returnSchema?.entityType,
+                    })
+                      .then(() => {
+                        toast({
+                          title: "Rule created",
+                        });
+
+                        return refetchRules();
+                      })
+                      .catch(() => {
+                        toast({
+                          variant: "destructive",
+                          title: "Failed to create rule",
+                        });
+                      });
+                  }}
+                >
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Create rule
+                  </DropdownMenuItem>
+                </RuleDialog>
+                <FeatureDialog
+                  title="Create Entity Property"
+                  entityTypeId={node.returnSchema?.entityType}
+                  onSubmit={(values) => {
+                    createFeature({
+                      name: values.name,
+                      entityTypeId: values.entityTypeId,
+                      schema: values.schema,
+                    })
+                      .then(() => {
+                        toast({
+                          title: "Entity property created",
+                          description: `${values.name}`,
+                        });
+                        return refetchFeatures();
+                      })
+                      .catch(() => {
+                        toast({
+                          variant: "destructive",
+                          title: "Failed to create entity property",
+                        });
+                      });
+                  }}
+                >
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    Create property
+                  </DropdownMenuItem>
+                </FeatureDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </EntityCard>
         ) : null
       )}

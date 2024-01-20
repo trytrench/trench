@@ -43,8 +43,6 @@ model Event {
   @@index([timestamp])
 }
 
-// TODO: Change to one to many
-
 model Feature {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
@@ -56,8 +54,53 @@ model Feature {
   // Immutable
   schema Json
 
+  eventType   EventType? @relation(fields: [eventTypeId], references: [id])
+  eventTypeId String?
+
   entityType   EntityType? @relation(fields: [entityTypeId], references: [id])
   entityTypeId String?
+
+  rule Rule?
+}
+
+model Rule {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  description String?
+  color       String?
+
+  feature   Feature @relation(fields: [featureId], references: [id])
+  featureId String  @unique
+}
+
+model Decision {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  description String?
+  type        String
+}
+
+model EventViews {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name    String
+  filters Json
+}
+
+model EntityViews {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name    String
+  filters Json
 }
 
 model Node {
@@ -66,17 +109,17 @@ model Node {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name         String
-  type         String
+  name String
+  type String
 
-  eventTypeObj   EventType @relation(fields: [eventType], references: [id])
-  eventType String
+  eventTypeObj EventType @relation(fields: [eventType], references: [id])
+  eventType    String
 
-  snapshots       NodeSnapshot[]
+  snapshots NodeSnapshot[]
 }
 
 model NodeSnapshot {
-  id       String   @id @default(dbgenerated("nanoid()"))
+  id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -84,11 +127,10 @@ model NodeSnapshot {
   nodeId String
 
   returnSchema Json
-  dependsOn String[]
-  config    Json
+  dependsOn    String[]
+  config       Json
 
   executionEngines ExecutionEngineToNodeSnapshot[]
-
 }
 
 model ExecutionEngineToNodeSnapshot {
@@ -97,7 +139,7 @@ model ExecutionEngineToNodeSnapshot {
   updatedAt DateTime @updatedAt
 
   nodeSnapshotId String
-  nodeSnapshot   NodeSnapshot   @relation(fields: [nodeSnapshotId], references: [id])
+  nodeSnapshot   NodeSnapshot @relation(fields: [nodeSnapshotId], references: [id])
 
   executionEngineId String
   executionEngine   ExecutionEngine @relation(fields: [executionEngineId], references: [id])
@@ -149,7 +191,8 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  nodes Node[]
+  features Feature[]
+  nodes    Node[]
 }
 
 // Necessary for Next auth
