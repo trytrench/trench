@@ -7,8 +7,9 @@ import {
 } from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { api } from "~/utils/api";
+import { Badge } from "../ui/badge";
 
 interface EventTypeNodesSchemaDisplayProps {
   eventType: string;
@@ -32,7 +33,7 @@ export function EventTypeNodesSchemaDisplay({
         return (
           <div key={node.id}>
             <SchemaDisplay
-              name={node.name}
+              name={<Badge>{node.name}</Badge>}
               path={[]}
               schema={node.returnSchema}
               onItemClick={({ path, schema }) => {
@@ -58,16 +59,11 @@ export function EventTypeNodesSchemaDisplay({
 }
 
 interface SchemaDisplayProps {
-  name: string;
+  name: ReactNode;
   path: string[];
   schema: TSchema;
-  onItemClick?: (props: {
-    name: string;
-    path: string[];
-    schema: TSchema;
-  }) => void;
+  onItemClick?: (props: { path: string[]; schema: TSchema }) => void;
   renderRightComponent?: (props: {
-    name: string;
     path: string[];
     schema: TSchema;
   }) => React.ReactNode;
@@ -84,7 +80,7 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
         <div className="flex items-center gap-1 pt-0.5">
           <button
             onClick={() => {
-              onItemClick?.({ name, path, schema });
+              onItemClick?.({ path, schema });
             }}
           >
             {name}
@@ -131,12 +127,12 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
     <div className="pt-0.5 flex items-center">
       <button
         onClick={() => {
-          onItemClick?.({ name, path, schema });
+          onItemClick?.({ path, schema });
         }}
       >
         {name}: <span className="opacity-50">{schema.type ?? "?"}</span>
       </button>
-      {renderRightComponent?.({ name, path, schema })}
+      {renderRightComponent?.({ path, schema })}
     </div>
   );
 }

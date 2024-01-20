@@ -49,6 +49,7 @@ import { useMutateNode } from "./editor/useMutateNode";
 import { handleError } from "../../lib/handleError";
 import { SelectDataPath } from "./SelectDataPath";
 import { ComboboxSelector } from "../ComboboxSelector";
+import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 
 const formSchema = z.object({
   dataPath: dataPathZodSchema.nullable(),
@@ -161,7 +162,7 @@ export function AssignFeature({
                     <FormItem className="col-span-3">
                       <FormLabel>Assign data from:</FormLabel>
                       <FormControl>
-                        <SelectDataPath
+                        <SelectDataPathOrEntityFeature
                           value={field.value}
                           onChange={(val) => {
                             console.log(val);

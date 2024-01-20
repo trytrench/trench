@@ -5,7 +5,6 @@ import {
   TypeName,
   TypedData,
   createDataType,
-  getNodeDefFromSnapshot,
   getTypedData,
 } from "event-processing";
 import { get, uniq, uniqBy } from "lodash";
