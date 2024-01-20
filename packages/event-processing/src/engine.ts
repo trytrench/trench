@@ -239,7 +239,9 @@ export class ExecutionEngine {
 
     // Initialize all promises
     for (const instance of allInstances) {
-      this.evaluateNode(instance.nodeDef.id);
+      if (instance.nodeDef.eventType === this.state.event.type) {
+        this.evaluateNode(instance.nodeDef.id);
+      }
     }
 
     // Await all promises
