@@ -12,7 +12,7 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
     z.object({
       featureId: z.string(),
       featureSchema: z.record(z.any()),
-      entityDataPath: dataPathZodSchema,
+      entityDataPath: dataPathZodSchema.optional(),
     })
   )
   .setContextType<{
@@ -20,19 +20,21 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
   }>()
   .setGetDependencies((config) => {
     const set = new Set<string>();
-    set.add(config.entityDataPath.nodeId);
+    if (config.entityDataPath) set.add(config.entityDataPath.nodeId);
     return set;
   })
   .setCreateResolver(({ nodeDef, context }) => {
     return async ({ event, getDependency, engineId }) => {
       const { featureId, entityDataPath } = nodeDef.config;
 
-      let entity = await getDependency({
-        dataPath: entityDataPath,
-        expectedSchema: {
-          type: TypeName.Entity,
-        },
-      });
+      let entity = entityDataPath
+        ? await getDependency({
+            dataPath: entityDataPath,
+            expectedSchema: {
+              type: TypeName.Entity,
+            },
+          })
+        : null;
 
       const redisKey = hashObject({
         featureId,

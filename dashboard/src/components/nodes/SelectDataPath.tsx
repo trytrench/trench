@@ -1,4 +1,11 @@
-import { DataPath, TSchema, TypeName, createDataType } from "event-processing";
+import {
+  DataPath,
+  NodeDef,
+  NodeType,
+  TSchema,
+  TypeName,
+  createDataType,
+} from "event-processing";
 import { api } from "../../utils/api";
 import { useMemo } from "react";
 import { SchemaTag } from "../SchemaTag";
@@ -7,8 +14,22 @@ import { ComboboxSelector } from "../ComboboxSelector";
 import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
 
-function useFlattenedDataPaths(props: { eventType: string }) {
-  const { eventType } = props;
+const HIDDEN_NODE_TYPES = [
+  NodeType.GetEntityFeature,
+  NodeType.LogEntityFeature,
+  NodeType.CacheEntityFeature,
+];
+
+function useFlattenedDataPaths(props: {
+  eventType: string;
+  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+}) {
+  const {
+    eventType,
+    filterNodeOptions = (nodeDef) => {
+      return !HIDDEN_NODE_TYPES.includes(nodeDef.type);
+    },
+  } = props;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
@@ -43,7 +64,9 @@ function useFlattenedDataPaths(props: { eventType: string }) {
       return allPaths;
     };
 
-    for (const node of nodes ?? []) {
+    const filteredNodes = nodes?.filter(filterNodeOptions);
+
+    for (const node of filteredNodes ?? []) {
       const paths = getPaths(node.returnSchema, []);
       for (const path of paths) {
         dataPaths.push({
@@ -55,7 +78,7 @@ function useFlattenedDataPaths(props: { eventType: string }) {
     }
 
     return dataPaths;
-  }, [nodes]);
+  }, [filterNodeOptions, nodes]);
 
   return {
     flattenedDataPaths,
@@ -65,6 +88,9 @@ function useFlattenedDataPaths(props: { eventType: string }) {
 interface SelectDataPathProps {
   eventType: string;
   value: DataPath | null;
+  disablePathSelection?: boolean;
+
+  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
 
   onChange: (value: DataPath | null) => void;
   onIsValidChange?: (isValid: boolean) => void;
@@ -73,12 +99,20 @@ interface SelectDataPathProps {
 }
 
 export function SelectDataPath(props: SelectDataPathProps) {
-  const { eventType, value, onChange, desiredSchema } = props;
+  const {
+    eventType,
+    value,
+    onChange,
+    filterNodeOptions,
+    desiredSchema,
+    disablePathSelection = false,
+  } = props;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
   const { flattenedDataPaths } = useFlattenedDataPaths({
     eventType,
+    filterNodeOptions,
   });
 
   const filteredPaths = flattenedDataPaths.filter((path) => {
@@ -142,7 +176,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
           );
         }}
       />
-      {filteredOptions.length > 0 && (
+      {filteredOptions.length > 0 && !disablePathSelection && (
         <ComboboxSelector
           value={value?.path.join(".") ?? ""}
           onSelect={(newValue) => {
@@ -150,8 +184,8 @@ export function SelectDataPath(props: SelectDataPathProps) {
               (path) => path.path.join(".") === newValue
             );
             onChange({
-              path: newDataPath?.path ?? [],
               nodeId: value?.nodeId ?? "",
+              path: newDataPath?.path ?? [],
               schema: newDataPath?.schema ?? { type: TypeName.Any },
             });
           }}
@@ -175,7 +209,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
           renderTrigger={({ value }) => {
             if (!value) {
               return (
-                <button className="flex justify-start items-center text-sm text-gray-400 font-mono">
+                <button className="flex justify-start items-center text-sm text-gray-400 font-mono whitespace-nowrap">
                   Select a path...
                   <ChevronDown className="w-3 h-3 ml-1" />
                 </button>

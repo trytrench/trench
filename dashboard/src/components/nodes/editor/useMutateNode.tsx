@@ -4,8 +4,15 @@ import { api } from "../../../utils/api";
 export function useMutateNode() {
   const { toast } = useToast();
 
-  const { mutateAsync: _createNodeDef } = api.nodeDefs.create.useMutation();
-  const { mutateAsync: _updateNodeDef } = api.nodeDefs.update.useMutation();
+  const { refetch } = api.nodeDefs.list.useQuery();
+  const { mutateAsync: _createNodeDef, ...createRest } =
+    api.nodeDefs.create.useMutation({
+      async onSuccess() {
+        await refetch();
+      },
+    });
+  const { mutateAsync: _updateNodeDef, ...updateRest } =
+    api.nodeDefs.update.useMutation();
 
   const createNodeDef: typeof _createNodeDef = async (data) => {
     return _createNodeDef(data)
@@ -48,7 +55,13 @@ export function useMutateNode() {
   };
 
   return {
-    createNodeDef,
-    updateNodeDef,
+    create: {
+      ...createRest,
+      mutateAsync: createNodeDef,
+    },
+    update: {
+      ...updateRest,
+      mutateAsync: updateNodeDef,
+    },
   };
 }

@@ -93,9 +93,14 @@ export function AssignFeature({
     }
   }, [defaults, form, initializedForm]);
 
+  console.log(form.watch("entityDataPath"));
+
   const { data: features } = api.features.list.useQuery();
 
-  const { createNodeDef } = useMutateNode();
+  const {
+    create: { mutateAsync: createNodeDef },
+    update: { mutateAsync: updateNodeDef },
+  } = useMutateNode();
 
   const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
     { eventType: router.query.eventType as string },

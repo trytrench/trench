@@ -7,6 +7,9 @@ import {
   getNodeDefSchema,
   getConfigSchema,
   tSchemaZod,
+  dataPathZodSchema,
+  buildNodeDef,
+  DataPath,
 } from "event-processing";
 import { Pencil, Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -50,13 +53,22 @@ import { ComboboxSelector } from "../../ComboboxSelector";
 import { handleError } from "../../../lib/handleError";
 import { useMutateNode } from "./useMutateNode";
 import { NodeEditorProps } from "./types";
+import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 const formSchema = z.object({
   returnSchema: tSchemaZod,
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(NodeType.Computed),
+  config: getConfigSchema(NodeType.Computed)
+    .omit({
+      depsMap: true,
+    })
+    .merge(
+      z.object({
+        depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
+      })
+    ),
 });
 
 type FormType = z.infer<typeof formSchema>;
@@ -107,7 +119,11 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       const eventNode = nodes.find((n) => n.type === NodeType.Event);
       if (eventNode) {
         form.setValue("config.depsMap", {
-          event: eventNode.id,
+          event: {
+            nodeId: eventNode.id,
+            path: [],
+            schema: eventNode.returnSchema,
+          },
         });
         setInitializedEventNode(true);
       }
@@ -152,10 +168,9 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       type Input = {
         ${Object.entries(deps)
           .map(([key, value]) => {
-            const node = nodes?.find((n) => n.id === value);
-            if (!node) return "";
-            const schemaTs = createDataType(node.returnSchema).toTypescript();
-
+            const schemaTs = value
+              ? createDataType(value.schema).toTypescript()
+              : "unknown";
             return `${key}: ${schemaTs};`;
           })
           .join("\n")}
@@ -166,7 +181,10 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
     form.watch("returnSchema")
   ).toTypescript()}>;`;
 
-  const { createNodeDef, updateNodeDef } = useMutateNode();
+  const {
+    create: { mutateAsync: createNodeDef },
+    update: { mutateAsync: updateNodeDef },
+  } = useMutateNode();
 
   return (
     <div>
@@ -181,27 +199,36 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
             onClick={(event) => {
               event.preventDefault();
 
+              const { depsMap, ...restOfConfig } = form.getValues("config");
+              const depsMapWithoutNulls: Record<string, DataPath> = {};
+              Object.entries(depsMap).forEach(([key, value]) => {
+                if (!value) return;
+                depsMapWithoutNulls[key] = value;
+              });
+
+              const computedNodeDef = buildNodeDef(NodeType.Computed, {
+                ...form.getValues(),
+                eventType: eventType,
+                type: NodeType.Computed,
+                config: {
+                  ...restOfConfig,
+                  depsMap: depsMapWithoutNulls,
+                },
+              });
+
               if (isEditing && initialNodeId) {
                 updateNodeDef({
                   id: initialNodeId,
-                  ...form.getValues(),
+                  ...computedNodeDef,
                 })
                   .then(() => {
-                    void router.push(
-                      `/settings/event-types/${eventType}/nodes`
-                    );
+                    void router.push(`/settings/event-types/${eventType}/node`);
                   })
                   .catch(handleError);
               } else {
-                createNodeDef({
-                  ...form.getValues(),
-                  eventType: eventType,
-                  type: NodeType.Computed,
-                })
+                createNodeDef(computedNodeDef)
                   .then(() => {
-                    void router.push(
-                      `/settings/event-types/${eventType}/nodes`
-                    );
+                    void router.push(`/settings/event-types/${eventType}/node`);
                   })
                   .catch(handleError);
               }
@@ -294,55 +321,6 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
   );
 }
 
-function RenameDialog(props: {
-  name?: string;
-  onRename: (name: string) => void;
-}) {
-  const { name, onRename } = props;
-
-  const [open, setOpen] = useState(false);
-  const [newName, setNewName] = useState(name ?? "");
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          {/* todo */}
-          <Pencil className="w-4 h-4" /> Rename
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rename</DialogTitle>
-          <DialogDescription>
-            Names are not tied to versioning. The name change applies
-            immediately.
-          </DialogDescription>
-        </DialogHeader>
-        <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setOpen(false);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              onRename(newName);
-              setOpen(false);
-            }}
-          >
-            Confirm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 type DepsMap = FormType["config"]["depsMap"];
 
 function EditDepsMap(props: {
@@ -372,8 +350,20 @@ function EditDepsMap(props: {
     <div>
       <div className="flex items-center gap-4 mt-4 mb-2">
         <div className="text-sm font-medium">Dependencies</div>
-
-        <ComboboxSelector
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          onClick={() => {
+            const newDepsMap = { ...depsMapValue };
+            const key = getNewPropertyName(Object.keys(newDepsMap));
+            newDepsMap[key] = null;
+            onChange(newDepsMap);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        {/* <ComboboxSelector
           value={null}
           onSelect={(nodeId) => {
             if (!nodeId) return;
@@ -384,7 +374,10 @@ function EditDepsMap(props: {
             if (!node) return;
 
             const newKey = stringToPropertyKey(node.name);
-            newDepsMap[newKey] = nodeId;
+            newDepsMap[newKey] = {
+              nodeId,
+              path: [],
+            }
 
             onChange(newDepsMap);
           }}
@@ -394,11 +387,10 @@ function EditDepsMap(props: {
               <Plus className="h-4 w-4" />
             </Button>
           )}
-        />
+        /> */}
       </div>
 
       {Object.entries(depsMapValue).map(([key, value]) => {
-        const node = nodes?.find((n) => n.id === value);
         return (
           <div className="flex items-center" key={key}>
             <EditableProperty
@@ -419,20 +411,16 @@ function EditDepsMap(props: {
               }}
             />
 
-            <ComboboxSelector
+            <SelectDataPathOrEntityFeature
+              eventType={eventType}
               value={value}
-              onSelect={(nodeId) => {
-                if (!nodeId) return;
+              onChange={(newValue) => {
+                if (!newValue) return;
 
                 const newDepsMap = { ...depsMapValue };
-                newDepsMap[key] = nodeId;
+                newDepsMap[key] = newValue;
+                onChange(newDepsMap);
               }}
-              options={nodeOptions}
-              renderTrigger={({ value }) => (
-                <Button variant="outline" size="xs">
-                  {node?.name}
-                </Button>
-              )}
             />
 
             <button
@@ -457,4 +445,15 @@ function stringToPropertyKey(str: string): string {
     .replace(/[^a-zA-Z0-9]/g, "_")
     .toLowerCase()
     .replace(/^_+/g, "_");
+}
+
+function getNewPropertyName(existingProperties: string[]): string {
+  let i = 0;
+  while (true) {
+    const newProp = `prop_${i}`;
+    if (!existingProperties.includes(newProp)) {
+      return newProp;
+    }
+    i++;
+  }
 }
