@@ -39,7 +39,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
     value,
     onChange,
     desiredSchema,
-    disablePathSelection = true,
+    disablePathSelection = false,
   } = props;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({

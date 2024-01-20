@@ -42,7 +42,7 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
       });
 
       const buf = await context.redis.get(redisKey);
-      const bufStr = buf.toString();
+      const bufStr = buf?.toString() ?? null;
       const val = JSON.parse(bufStr);
       return {
         data: val,
