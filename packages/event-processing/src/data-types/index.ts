@@ -424,6 +424,10 @@ export function inferSchemaFromJsonObject(jsonObj: any): TSchema {
         items: inferSchemaFromJsonObject(jsonObj[0]),
       };
     }
+  } else if (jsonObj === null) {
+    return { type: TypeName.Any };
+  } else if (typeof jsonObj === "undefined") {
+    return { type: TypeName.Any };
   } else if (typeof jsonObj === "object") {
     const properties: Record<string, TSchema> = {};
     for (const key in jsonObj) {
