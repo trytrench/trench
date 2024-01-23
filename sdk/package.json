@@ -1,0 +1,25 @@
+{
+  "name": "@trytrench/sdk",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/trench.umd.cjs",
+  "module": "./dist/trench.js",
+  "exports": {
+    ".": {
+      "import": "./dist/trench.js",
+      "require": "./dist/trench.umd.cjs"
+    }
+  },
+  "devDependencies": {
+    "@types/ua-parser-js": "^0.7.39",
+    "vite": "^5.0.12"
+  },
+  "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^3.4.2",
+    "ua-parser-js": "1"
+  }
+}
