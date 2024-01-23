@@ -84,6 +84,7 @@
     "next-auth": "^4.22.4",
     "next-query-params": "^4.2.3",
     "next-themes": "^0.2.1",
+    "nextjs-cors": "^2.2.0",
     "pluralize": "^8.0.0",
     "raw-loader": "^4.0.2",
     "react": "18.2.0",

@@ -1,18 +1,17 @@
-import FingerprintJS, { Agent, GetResult } from "@fingerprintjs/fingerprintjs";
+import FingerprintJS, { Agent } from "@fingerprintjs/fingerprintjs";
 import UAParser from "ua-parser-js";
 
 class Trench {
   baseUrl: string;
   sessionId: string;
   clientKey: string;
-  deviceToken: string | null;
-  fp: Agent | null;
+  deviceToken = localStorage.getItem("deviceToken");
+  fp: Agent | null = null;
 
   constructor(baseUrl: string, sessionId: string, clientKey: string) {
     this.baseUrl = baseUrl;
     this.sessionId = sessionId;
     this.clientKey = clientKey;
-    this.fp = null;
   }
 
   private async initFingerprint(): Promise<void> {
@@ -28,7 +27,7 @@ class Trench {
     const userAgentData = new UAParser().getResult();
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/event`, {
+      const response = await fetch(`${this.baseUrl}/api/sdk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,7 +43,7 @@ class Trench {
             cpu: userAgentData.cpu,
             engine: userAgentData.engine,
             currentUrl: window?.location.href,
-            referrer: document?.referrer || "$direct",
+            referrer: document?.referrer ?? "$direct",
             host: window?.location.host,
             pathname: window?.location.pathname,
             browserLanguage: navigator.language,
@@ -53,7 +52,7 @@ class Trench {
             viewportHeight: window?.innerHeight,
             viewportWidth: window?.innerWidth,
             sessionId: this.sessionId,
-            deviceToken: localStorage.getItem("deviceToken"),
+            deviceToken: this.deviceToken,
             fingerprintComponents: components.components,
           },
         }),

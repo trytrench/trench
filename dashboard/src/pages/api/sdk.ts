@@ -6,6 +6,7 @@ import { prisma } from "~/server/db";
 import jwt from "jsonwebtoken";
 import { hashComponents, sources } from "@fingerprintjs/fingerprintjs";
 import { mapValues } from "lodash";
+import cors from "nextjs-cors";
 
 const componentSchema = z.object({
   value: z.any(),
@@ -35,13 +36,6 @@ const eventSchema = z.object({
       name: z.string().optional(),
       version: z.string().optional(),
     }),
-    cpu: z.object({
-      architecture: z.string().optional(),
-    }),
-    engine: z.object({
-      name: z.string().optional(),
-      version: z.string().optional(),
-    }),
     currentUrl: z.string().optional(),
     referrer: z.string().optional(),
     host: z.string().optional(),
@@ -58,6 +52,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  await cors(req, res, {
+    methods: ["POST"],
+    origin: "*",
+  });
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ message: "Method Not Allowed" });
@@ -71,15 +70,13 @@ export default async function handler(
   if (!parsedResult.success) {
     return res.status(400).json({ error: parsedResult.error.message });
   }
-  const event = parsedResult.data;
+  const { fingerprintComponents, deviceToken, ...eventData } =
+    parsedResult.data.data;
 
   let existingDeviceId;
-  if (event.data.deviceToken) {
+  if (deviceToken) {
     try {
-      const { deviceId } = jwt.verify(
-        event.data.deviceToken,
-        env.JWT_SECRET
-      ) as {
+      const { deviceId } = jwt.verify(deviceToken, env.JWT_SECRET) as {
         deviceId?: string;
       };
       existingDeviceId = deviceId;
@@ -91,7 +88,7 @@ export default async function handler(
   const deviceId = existingDeviceId ?? ulid();
 
   const ipAddress = req.headers["x-forwarded-for"] as string | undefined;
-  const fingerprint = hashComponents(event.data.fingerprintComponents);
+  const fingerprint = hashComponents(fingerprintComponents);
 
   const eventId = ulid(Date.now());
 
@@ -99,12 +96,12 @@ export default async function handler(
     data: {
       id: eventId,
       timestamp: new Date().toISOString(),
-      type: event.type,
+      type: parsedResult.data.type,
       data: {
         deviceId,
         ipAddress,
         fingerprint,
-        ...event.data,
+        ...eventData,
       },
     },
   });
