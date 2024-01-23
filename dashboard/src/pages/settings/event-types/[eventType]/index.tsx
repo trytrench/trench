@@ -318,7 +318,7 @@ const Page: NextPageWithLayout = () => {
           renderRightComponent={(dataPath) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="iconXs" variant="link">
+                <Button size="iconXs" variant="link" className="h-3">
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>

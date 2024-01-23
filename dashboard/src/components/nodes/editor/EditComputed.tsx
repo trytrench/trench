@@ -46,7 +46,7 @@ import { api } from "~/utils/api";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import libSource from "!!raw-loader?esModule=false!./nodeDefLib.ts";
+import libSource from "!!raw-loader?esModule=false!event-processing/src/node-type-defs/lib/computedNodeLib.ts";
 import { EditableProperty } from "../../EditableProperty";
 import { useToast } from "../../ui/use-toast";
 import { ComboboxSelector } from "../../ComboboxSelector";

@@ -1,6 +1,7 @@
 import {
   DataPath,
   NodeDef,
+  NodeType,
   TSchema,
   TypeName,
   createDataType,
@@ -17,6 +18,12 @@ interface EventTypeNodesSchemaDisplayProps {
   renderRightComponent?: (dataPath: DataPath) => React.ReactNode;
 }
 
+const HIDDEN_NODE_TYPES = [
+  NodeType.CacheEntityFeature,
+  NodeType.GetEntityFeature,
+  NodeType.LogEntityFeature,
+];
+
 export function EventTypeNodesSchemaDisplay({
   eventType,
   onItemClick,
@@ -27,13 +34,19 @@ export function EventTypeNodesSchemaDisplay({
     { enabled: !!eventType }
   );
 
+  const filteredNodes = useMemo(() => {
+    return nodes?.filter((node) => {
+      return !HIDDEN_NODE_TYPES.includes(node.type);
+    });
+  }, [nodes]);
+
   return (
-    <div>
-      {nodes?.map((node) => {
+    <div className="font-mono">
+      {filteredNodes?.map((node) => {
         return (
           <div key={node.id}>
             <SchemaDisplay
-              name={<Badge>{node.name}</Badge>}
+              name={<span className="font-bold">{node.name}</span>}
               path={[]}
               schema={node.returnSchema}
               onItemClick={({ path, schema }) => {
@@ -116,9 +129,7 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
                 );
               })}
             </div>
-          ) : (
-            <span className="italic opacity-40 ml-4">empty</span>
-          ))}
+          ) : null)}
       </>
     );
   }
@@ -130,7 +141,10 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
           onItemClick?.({ path, schema });
         }}
       >
-        {name}: <span className="opacity-50">{schema.type ?? "?"}</span>
+        {name}:{" "}
+        <span className="text-blue-300 text-xs font-bold">
+          {schema.type ?? "?"}
+        </span>
       </button>
       {renderRightComponent?.({ path, schema })}
     </div>
