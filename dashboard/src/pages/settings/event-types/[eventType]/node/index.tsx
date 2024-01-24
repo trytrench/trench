@@ -10,12 +10,14 @@ import { EditComputed } from "~/components/nodes/editor/EditComputed";
 import { NodeEditorProps } from "../../../../../components/nodes/editor/types";
 import { EditCounter } from "../../../../../components/nodes/editor/EditCounter";
 import { EditDecision } from "~/components/nodes/editor/EditDecision";
+import { EditUniqueCounter } from "../../../../../components/nodes/editor/EditUniqueCounter";
 
 const MAP_NODE_TYPE_TO_EDITOR: Partial<
   Record<FnType, React.FC<NodeEditorProps>>
 > = {
   [FnType.Computed]: EditComputed,
   [FnType.Counter]: EditCounter,
+  [FnType.UniqueCounter]: EditUniqueCounter,
   [FnType.Decision]: EditDecision,
 };
 
