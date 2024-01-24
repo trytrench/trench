@@ -1,24 +1,24 @@
 import { z } from "zod";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
-import { TypeName } from "../../data-types";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
+import { TypeName, tSchemaZod } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
 
-export const computedNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.Computed)
-  .setConfigSchema(
+export const computedFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.Computed)
+  .setInputSchema(
     z.object({
-      depsMap: z.record(z.string(), dataPathZodSchema),
       tsCode: z.string().min(1),
       compiledJs: z.string().min(1),
+      depsMap: z.record(z.string(), dataPathZodSchema),
     })
   )
-  .setGetDependencies((config) => {
-    return new Set(Object.values(config.depsMap).map((path) => path.nodeId));
+  .setGetDependencies((input) => {
+    return new Set(Object.values(input.depsMap).map((path) => path.nodeId));
   })
-  .setCreateResolver(({ nodeDef }) => {
+  .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {
-      const { depsMap, compiledJs } = nodeDef.config;
+      const { depsMap, compiledJs } = input;
 
       const depValues: Record<string, any> = {};
       for (const [key, depPath] of Object.entries(depsMap)) {

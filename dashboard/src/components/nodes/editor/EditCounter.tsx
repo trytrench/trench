@@ -1,13 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   TypeName,
-  type NodeDef,
   getConfigSchema,
-  NodeType,
+  FnType,
+  getInputSchema,
+  buildNodeDefWithFn,
 } from "event-processing";
-import { Pencil, Plus, Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -20,19 +21,18 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import FeatureAssignSelector from "./old/FeatureAssignSelector";
-import { type FeatureDep } from "./old/NodeDepSelector";
 import { NodeEditorProps } from "./types";
 import { api } from "../../../utils/api";
-import { nanoid } from "nanoid";
-import config from "next/config";
 import { SelectDataPath } from "../SelectDataPath";
 import { SelectDataPathList } from "../SelectDataPathList";
 import { TimeWindowDialog, RenderTimeWindow } from "./TimeWindowDialog";
+import { useMutationToasts } from "./useMutationToasts";
+import { handleError } from "../../../lib/handleError";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(NodeType.Counter),
+  config: getConfigSchema(FnType.Counter),
+  inputs: getInputSchema(FnType.Counter),
 });
 
 type FormType = z.infer<typeof formSchema>;
@@ -45,13 +45,13 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
     defaultValues: {
       name: "",
       config: {
-        counter: {
-          id: nanoid(),
-          timeWindow: {
-            value: 1,
-            unit: "minutes",
-          },
+        timeWindow: {
+          value: 1,
+          unit: "minutes",
         },
+        countByArgs: [],
+      },
+      inputs: {
         countByDataPaths: [],
         conditionDataPath: undefined,
       },
@@ -72,12 +72,17 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
   useEffect(() => {
     if (!initializedForm && thisNode) {
       form.setValue("name", thisNode.name);
-      form.setValue("config", thisNode.config as FormType["config"]);
+      form.setValue("config", thisNode.fn.config as FormType["config"]);
+
       setInitializedForm(true);
     }
   }, [thisNode, initializedForm, setInitializedForm, form]);
 
   const isFormValid = form.formState.isValid;
+
+  const toasts = useMutationToasts();
+  const { mutateAsync: createNodeWithFn } =
+    api.nodeDefs.createWithFn.useMutation();
 
   return (
     <div>
@@ -91,6 +96,26 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
             disabled={!isFormValid}
             onClick={(event) => {
               event.preventDefault();
+
+              const nodeDef = buildNodeDefWithFn(FnType.Counter, {
+                name: "Counter",
+                eventType: eventType,
+                inputs: form.getValues("inputs"),
+                fn: {
+                  name: "Counter",
+                  type: FnType.Counter,
+                  config: form.getValues("config"),
+                  returnSchema: {
+                    type: TypeName.Int64,
+                  },
+                },
+              });
+
+              createNodeWithFn(nodeDef)
+                .then(toasts.createNode.onSuccess)
+                .catch(toasts.createNode.onError)
+                .then(() => router.push(`/events/${eventType}`))
+                .catch(handleError);
             }}
           >
             <Save className="w-4 h-4 mr-2" />
@@ -123,10 +148,14 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
 
           <div className="text-md font-bold mt-4 mb-2">By</div>
           <SelectDataPathList
+            args={form.watch("config.countByArgs")}
+            onArgsChange={(countByArgs) =>
+              form.setValue("config.countByArgs", countByArgs)
+            }
             eventType={eventType}
-            value={form.watch("config.countByDataPaths")}
+            value={form.watch("inputs.countByDataPaths")}
             onChange={(countByDataPaths) =>
-              form.setValue("config.countByDataPaths", countByDataPaths)
+              form.setValue("inputs.countByDataPaths", countByDataPaths)
             }
           />
           <div className="text-md font-bold mt-4 mb-2">Where</div>
@@ -136,12 +165,12 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
             desiredSchema={{
               type: TypeName.Boolean,
             }}
-            value={form.watch("config.conditionDataPath") ?? null}
+            value={form.watch("inputs.conditionDataPath") ?? null}
             onChange={(conditionDataPath) => {
               if (conditionDataPath) {
-                form.setValue("config.conditionDataPath", conditionDataPath);
+                form.setValue("inputs.conditionDataPath", conditionDataPath);
               } else {
-                form.setValue("config.conditionDataPath", undefined);
+                form.setValue("inputs.conditionDataPath", undefined);
               }
             }}
           />
@@ -151,15 +180,13 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
           <div className="text-md font-bold mt-4 mb-2">In the last</div>
 
           <TimeWindowDialog
-            value={form.watch("config.counter.timeWindow")}
+            value={form.watch("config.timeWindow")}
             onSubmit={(timeWindow) =>
-              form.setValue("config.counter.timeWindow", timeWindow)
+              form.setValue("config.timeWindow", timeWindow)
             }
           >
             <div className="flex items-center">
-              <RenderTimeWindow
-                value={form.watch("config.counter.timeWindow")}
-              />
+              <RenderTimeWindow value={form.watch("config.timeWindow")} />
               <Button variant="outline" size="xs">
                 <Plus className="h-4 w-4" />
               </Button>

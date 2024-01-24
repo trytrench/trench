@@ -1,20 +1,22 @@
 import { redis } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
-  NODE_TYPE_REGISTRY,
+  FN_TYPE_REGISTRY,
+  FnDef,
+  FnDefsMap,
+  FnType,
+  FnTypeContextMap,
+  FnTypeDef,
   NodeDef,
   NodeDefsMap,
-  NodeType,
-  NodeTypeContextMap,
-  NodeTypeDef,
   Resolver,
   StateUpdater,
   TrenchEvent,
-} from "./node-type-defs";
-import { printNodeDef } from "./node-type-defs/lib/print";
+} from "./function-type-defs";
+import { printNodeDef } from "./function-type-defs/lib/print";
 import { db } from "databases";
 import { TSchema, createDataType } from "./data-types";
-import { StoreRow, StoreTable } from "./node-type-defs/lib/store";
+import { StoreRow, StoreTable } from "./function-type-defs/lib/store";
 import { getUnixTime } from "date-fns";
 import { get } from "lodash";
 /**
@@ -25,16 +27,16 @@ import { get } from "lodash";
  * node's value.
  */
 
-const MAP_NODE_TYPE_TO_CONTEXT: NodeTypeContextMap = {
-  [NodeType.Computed]: {},
-  [NodeType.Counter]: { redis },
-  [NodeType.UniqueCounter]: { redis },
-  [NodeType.GetEntityFeature]: { redis },
-  [NodeType.EntityAppearance]: {},
-  [NodeType.LogEntityFeature]: {},
-  [NodeType.CacheEntityFeature]: { redis },
-  [NodeType.Event]: {},
-  [NodeType.Decision]: {},
+const MAP_FN_TYPE_TO_CONTEXT: FnTypeContextMap = {
+  [FnType.Computed]: {},
+  [FnType.Counter]: { redis },
+  [FnType.UniqueCounter]: { redis },
+  [FnType.GetEntityFeature]: { redis },
+  [FnType.EntityAppearance]: {},
+  [FnType.LogEntityFeature]: {},
+  [FnType.CacheEntityFeature]: { redis },
+  [FnType.Event]: {},
+  [FnType.Decision]: {},
 };
 
 type TrenchError = {
@@ -72,8 +74,8 @@ type ExecutionState = {
 };
 
 type NodeInstance = {
-  [TNodeType in NodeType]: {
-    nodeDef: NodeDefsMap[TNodeType];
+  [TFnType in FnType]: {
+    nodeDef: NodeDefsMap[TFnType];
     resolver: Resolver;
   };
 };
@@ -87,7 +89,7 @@ export type EngineResult = {
 export class ExecutionEngine {
   engineId: string;
 
-  nodeInstances: Record<string, NodeInstance[NodeType]> = {};
+  nodeInstances: Record<string, NodeInstance[FnType]> = {};
 
   state: ExecutionState | null = null;
 
@@ -100,26 +102,27 @@ export class ExecutionEngine {
 
     this.engineId = engineId;
 
-    const nodeInstances: NodeInstance[NodeType][] = nodeDefs.map((nodeDef) => {
-      const nodeType = nodeDef.type;
-      const nodeTypeDef = NODE_TYPE_REGISTRY[nodeType] as NodeTypeDef;
+    const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {
+      const fnType = nodeDef.fn.type;
+      const nodeTypeDef = FN_TYPE_REGISTRY[fnType] as FnTypeDef;
 
       const resolver = nodeTypeDef.createResolver({
-        nodeDef,
-        context: MAP_NODE_TYPE_TO_CONTEXT[nodeDef.type],
+        fnDef: nodeDef.fn,
+        input: nodeDef.inputs,
+        context: MAP_FN_TYPE_TO_CONTEXT[fnType],
       });
 
       return {
         nodeDef,
         resolver,
-      } as NodeInstance[NodeType];
+      } as NodeInstance[FnType];
     });
 
     nodeInstances.forEach((instance) => {
       this.nodeInstances[instance.nodeDef.id] = instance;
     });
 
-    validateNodeInstanceMap(this.nodeInstances);
+    validateFnInstanceMap(this.nodeInstances);
   }
 
   public initState(event: TrenchEvent) {
@@ -141,24 +144,24 @@ export class ExecutionEngine {
     };
   }
 
-  private getNodeInstance(nodeId: string) {
+  private getFnInstance(nodeId: string) {
     const instance = this.nodeInstances[nodeId];
     assert(instance, `No node instance for id: ${nodeId}`);
     return instance;
   }
 
-  public async evaluateNode(nodeId: string): Promise<NodeResult> {
+  public async evaluateFn(nodeId: string): Promise<NodeResult> {
     assert(this.state, "Must call initState with a TrenchEvent first");
 
     const { event, nodePromises } = this.state;
 
     // If node processing has not started, start it
     if (!nodePromises[nodeId]) {
-      const processNode = async () => {
+      const processFn = async () => {
         assert(this.state, "No state");
 
         // Get dependencies
-        const instance = this.getNodeInstance(nodeId);
+        const instance = this.getFnInstance(nodeId);
         const { nodeDef, resolver } = instance;
 
         // Run getter
@@ -166,12 +169,12 @@ export class ExecutionEngine {
           event,
           engineId: this.engineId,
           getDependency: async ({ dataPath, expectedSchema }) => {
-            const depNodeDef = this.getNodeInstance(dataPath.nodeId).nodeDef;
-            const result = await this.evaluateNode(dataPath.nodeId);
+            const depFnDef = this.getFnInstance(dataPath.nodeId).nodeDef;
+            const result = await this.evaluateFn(dataPath.nodeId);
             if (result.type === "error") {
               throw new Error(
-                `Node ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
-                  depNodeDef
+                `Fn ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
+                  depFnDef
                 )}, which failed with error: ${result.output.message}`
               );
             } else {
@@ -185,10 +188,10 @@ export class ExecutionEngine {
                   type.parse(resolvedValue);
                 } catch (e: any) {
                   throw new Error(
-                    `Node ${printNodeDef(
+                    `Fn ${printNodeDef(
                       nodeDef
                     )} expects dependency ${printNodeDef(
-                      depNodeDef
+                      depFnDef
                     )} to be of type ${JSON.stringify(
                       expectedSchema
                     )}, but parsing failed with error: ${e.message}`
@@ -214,7 +217,7 @@ export class ExecutionEngine {
         return createSuccess(resolvedOutput);
       };
 
-      const promise = processNode().catch((e) => {
+      const promise = processFn().catch((e) => {
         // console.error(e);
         return createError(e.message);
       });
@@ -240,7 +243,7 @@ export class ExecutionEngine {
     // Initialize all promises
     for (const instance of allInstances) {
       if (instance.nodeDef.eventType === this.state.event.type) {
-        this.evaluateNode(instance.nodeDef.id);
+        this.evaluateFn(instance.nodeDef.id);
       }
     }
 
@@ -253,7 +256,7 @@ export class ExecutionEngine {
       //   continue;
       // }
 
-      const result = await this.evaluateNode(nodeDef.id);
+      const result = await this.evaluateFn(nodeDef.id);
 
       engineResults[nodeDef.id] = {
         nodeResult: result,
@@ -267,17 +270,17 @@ export class ExecutionEngine {
   }
 }
 
-function validateNodeInstanceMap(map: Record<string, NodeInstance[NodeType]>) {
+function validateFnInstanceMap(map: Record<string, NodeInstance[FnType]>) {
   // Check dependencies are valid
   for (const node of Object.values(map)) {
     const def = node.nodeDef;
-    for (const depNodeId of def.dependsOn) {
-      const depNode = map[depNodeId];
+    for (const depFnId of def.dependsOn) {
+      const depFn = map[depFnId];
       assert(
-        depNode,
-        `Node ${printNodeDef(
+        depFn,
+        `Fn ${printNodeDef(
           def
-        )} depends on node of ID ${depNodeId}, which is not included in the engine's node set.`
+        )} depends on node of ID ${depFnId}, which is not included in the engine's node set.`
       );
     }
   }

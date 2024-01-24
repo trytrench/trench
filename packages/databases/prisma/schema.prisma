@@ -110,7 +110,6 @@ model Node {
   updatedAt DateTime @updatedAt
 
   name String
-  type String
 
   eventTypeObj EventType @relation(fields: [eventType], references: [id])
   eventType    String
@@ -126,11 +125,27 @@ model NodeSnapshot {
   node   Node   @relation(fields: [nodeId], references: [id])
   nodeId String
 
-  returnSchema Json
-  dependsOn    String[]
-  config       Json
+  function   Function @relation(fields: [functionId], references: [id])
+  functionId String
+
+  dependsOn String[]
+  inputs    Json
 
   executionEngines ExecutionEngineToNodeSnapshot[]
+}
+
+model Function {
+  id        String   @id @default(dbgenerated("nanoid()"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name         String
+  description  String?
+  type         String
+  config       Json
+  returnSchema Json
+
+  nodeSnapshots NodeSnapshot[]
 }
 
 model ExecutionEngineToNodeSnapshot {

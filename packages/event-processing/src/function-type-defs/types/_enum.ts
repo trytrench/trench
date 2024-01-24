@@ -1,4 +1,4 @@
-export enum NodeType {
+export enum FnType {
   Computed = "Computed",
   Counter = "Counter",
   UniqueCounter = "UniqueCounter",

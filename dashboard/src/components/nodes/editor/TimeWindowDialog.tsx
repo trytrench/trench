@@ -1,5 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { timeWindowSchema } from "event-processing/src/node-type-defs/lib/timeWindow";
+import {
+  TimeWindow,
+  timeWindowSchema,
+} from "event-processing/src/function-type-defs/lib/timeWindow";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -27,8 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-
-type TimeWindow = z.infer<typeof timeWindowSchema>;
 
 interface Props {
   children: React.ReactNode;

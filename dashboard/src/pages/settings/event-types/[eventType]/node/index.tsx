@@ -1,6 +1,6 @@
 import type { NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import { NodeType } from "event-processing";
+import { FnType } from "event-processing";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -12,18 +12,18 @@ import { EditCounter } from "../../../../../components/nodes/editor/EditCounter"
 import { EditDecision } from "~/components/nodes/editor/EditDecision";
 
 const MAP_NODE_TYPE_TO_EDITOR: Partial<
-  Record<NodeType, React.FC<NodeEditorProps>>
+  Record<FnType, React.FC<NodeEditorProps>>
 > = {
-  [NodeType.Computed]: EditComputed,
-  [NodeType.Counter]: EditCounter,
-  [NodeType.Decision]: EditDecision,
+  [FnType.Computed]: EditComputed,
+  [FnType.Counter]: EditCounter,
+  [FnType.Decision]: EditDecision,
 };
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
 
   const eventType = router.query.eventType as string;
-  const nodeType = (router.query.type ?? NodeType.Computed) as NodeType;
+  const nodeType = (router.query.type ?? FnType.Computed) as FnType;
   const NodeEditor = MAP_NODE_TYPE_TO_EDITOR[nodeType] ?? null;
 
   return (

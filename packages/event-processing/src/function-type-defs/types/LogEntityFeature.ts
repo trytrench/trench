@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
 import {
   Entity,
   TSchema,
@@ -13,12 +13,16 @@ import { StoreTable } from "../lib/store";
 import { get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
 
-export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.LogEntityFeature)
+export const logEntityFeatureFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.LogEntityFeature)
   .setConfigSchema(
     z.object({
       featureId: z.string(),
       featureSchema: tSchemaZod,
+    })
+  )
+  .setInputSchema(
+    z.object({
       entityDataPath: dataPathZodSchema.optional(),
       dataPath: dataPathZodSchema,
     })
@@ -29,10 +33,10 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
     set.add(config.dataPath.nodeId);
     return set;
   })
-  .setCreateResolver(({ nodeDef }) => {
+  .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, featureSchema, dataPath, entityDataPath } =
-        nodeDef.config;
+      const { featureId, featureSchema } = fnDef.config;
+      const { entityDataPath, dataPath } = input;
 
       const { nodeId, path } = dataPath;
 
@@ -44,7 +48,7 @@ export const logEntityFeatureNodeDef = createNodeTypeDefBuilder()
         event_type: event.type,
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
-        feature_type: nodeDef.type,
+        feature_type: fnDef.type,
         feature_id: featureId,
         data_type: featureSchema.type,
         is_deleted: 0,

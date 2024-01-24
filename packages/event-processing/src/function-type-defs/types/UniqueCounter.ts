@@ -1,28 +1,31 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { StateUpdater } from "../nodeTypeDef";
-import {
-  getPastNCountBucketHashes,
-  hashObject,
-  uniqueCounterSchema,
-} from "../lib/counts";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
+import { StateUpdater } from "../functionTypeDef";
+import { getPastNCountBucketHashes, hashObject } from "../lib/counts";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { type RedisInterface } from "databases";
 import { TypeName } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
-import { getTimeWindowMs } from "../lib/timeWindow";
+import { getTimeWindowMs, timeWindowSchema } from "../lib/timeWindow";
+import { countArgsSchema } from "../lib/args";
 
 const N_BUCKETS = 10;
 
-export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.UniqueCounter)
+export const uniqueCounterFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.UniqueCounter)
   .setConfigSchema(
     z.object({
-      uniqueCounter: uniqueCounterSchema,
-      countDataPaths: z.array(dataPathZodSchema),
+      timeWindow: timeWindowSchema,
+      countByArgs: countArgsSchema,
+      countArgs: countArgsSchema,
+    })
+  )
+  .setInputSchema(
+    z.object({
       countByDataPaths: z.array(dataPathZodSchema),
+      countDataPaths: z.array(dataPathZodSchema),
       conditionDataPath: dataPathZodSchema.optional(),
     })
   )
@@ -43,14 +46,10 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
   .setContextType<{
     redis: RedisInterface;
   }>()
-  .setCreateResolver(({ nodeDef: featureDef, context }) => {
+  .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency }) => {
-      const {
-        uniqueCounter,
-        conditionDataPath,
-        countDataPaths,
-        countByDataPaths,
-      } = featureDef.config;
+      const { timeWindow, countArgs, countByArgs } = fnDef.config;
+      const { conditionDataPath, countDataPaths, countByDataPaths } = input;
 
       let shouldUpdateCount = true;
       if (conditionDataPath) {
@@ -73,8 +72,8 @@ export const uniqueCounterNodeDef = createNodeTypeDefBuilder()
       const bucketHashes = getPastNCountBucketHashes({
         n: N_BUCKETS,
         currentTime: event.timestamp,
-        timeWindowMs: getTimeWindowMs(uniqueCounter.timeWindow),
-        counterId: uniqueCounter.id,
+        timeWindowMs: getTimeWindowMs(timeWindow),
+        counterId: fnDef.id,
         countBy,
       });
 

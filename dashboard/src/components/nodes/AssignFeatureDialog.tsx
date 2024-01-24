@@ -45,11 +45,11 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { cn } from "~/lib/utils";
 import { api } from "~/utils/api";
-import { useMutateNode } from "./editor/useMutateNode";
 import { handleError } from "../../lib/handleError";
 import { SelectDataPath } from "./SelectDataPath";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
+import { useMutationToasts } from "./editor/useMutationToasts";
 
 const formSchema = z.object({
   dataPath: dataPathZodSchema.nullable(),
@@ -98,10 +98,8 @@ export function AssignFeature({
 
   const { data: features } = api.features.list.useQuery();
 
-  const {
-    create: { mutateAsync: createNodeDef },
-    update: { mutateAsync: updateNodeDef },
-  } = useMutateNode();
+  const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
+  const mutationToasts = useMutationToasts();
 
   const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
     { eventType: router.query.eventType as string },
@@ -131,9 +129,12 @@ export function AssignFeature({
       },
     });
     createNodeDef(nodeDef)
-      .then(() => {
-        return refetchNodes();
+      .then(async (res) => {
+        await refetchNodes();
+        return res;
       })
+      .then(mutationToasts.createNode.onSuccess)
+      .catch(mutationToasts.createNode.onError)
       .catch(handleError);
   };
 

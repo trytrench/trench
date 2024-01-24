@@ -8,7 +8,6 @@ import { Badge } from "~/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
 import { RouterOutputs, api } from "~/utils/api";
 import { PropertyList } from "./ui/custom/property-list";
-import { decodeTypedData } from "event-processing";
 import { RenderResult, RenderTypedData } from "./RenderResult";
 
 export function EventDrawer(props: {

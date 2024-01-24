@@ -1,6 +1,6 @@
 import { prisma } from "databases";
 import {
-  NodeType,
+  FnType,
   TrenchEvent,
   inferSchemaFromJsonObject,
 } from "event-processing";
@@ -32,12 +32,18 @@ export async function recordEventType(
       nodes: {
         create: [
           {
-            type: NodeType.Event,
             name: `Event: ${eventType}`,
             snapshots: {
               create: {
-                returnSchema: schema as any,
-                config: {},
+                inputs: {},
+                function: {
+                  create: {
+                    name: `Event: ${eventType}`,
+                    type: FnType.Event,
+                    config: {},
+                    returnSchema: schema as any,
+                  },
+                },
               },
             },
           },

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { createNodeTypeDefBuilder } from "../builder";
-import { NodeType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
+import { FnType } from "./_enum";
 import { TypeName } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
 
-export const decisionNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.Decision)
-  .setConfigSchema(
+export const decisionFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.Decision)
+  .setInputSchema(
     z.object({
       conditions: z.array(
         z.object({
@@ -18,16 +18,16 @@ export const decisionNodeDef = createNodeTypeDefBuilder()
     })
   )
   .setReturnSchema(TypeName.String)
-  .setGetDependencies((config) => {
+  .setGetDependencies((input) => {
     return new Set(
-      config.conditions.flatMap((condition) =>
+      input.conditions.flatMap((condition) =>
         condition.rules.map((rule) => rule.nodeId)
       )
     );
   })
-  .setCreateResolver(({ nodeDef }) => {
+  .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {
-      const { conditions, elseDecisionId } = nodeDef.config;
+      const { conditions, elseDecisionId } = input;
 
       for (const condition of conditions) {
         let isTrue = true;

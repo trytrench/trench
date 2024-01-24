@@ -1,17 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  TSchema,
+  type TSchema,
   TypeName,
   createDataType,
-  NodeType,
-  getNodeDefSchema,
-  getConfigSchema,
   tSchemaZod,
   dataPathZodSchema,
-  buildNodeDef,
-  DataPath,
+  type DataPath,
+  FnType,
+  buildFnDef,
+  getInputSchema,
 } from "event-processing";
-import { Pencil, Plus, Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -29,41 +28,29 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { SchemaBuilder } from "../../SchemaBuilder";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../ui/dialog";
-import {
   CodeEditor,
-  CompileStatus,
+  type CompileStatus,
   CompileStatusMessage,
 } from "../../features/shared/CodeEditor";
 import { api } from "~/utils/api";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import libSource from "!!raw-loader?esModule=false!event-processing/src/node-type-defs/lib/computedNodeLib.ts";
+import libSource from "!!raw-loader?esModule=false!event-processing/src/function-type-defs/lib/computedNodeLib.ts";
 import { EditableProperty } from "../../EditableProperty";
 import { useToast } from "../../ui/use-toast";
-import { ComboboxSelector } from "../../ComboboxSelector";
 import { handleError } from "../../../lib/handleError";
-import { useMutateNode } from "./useMutateNode";
-import { NodeEditorProps } from "./types";
+import { type NodeEditorProps } from "./types";
 import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature";
+import { useMutationToasts } from "./useMutationToasts";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 const formSchema = z.object({
   returnSchema: tSchemaZod,
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(NodeType.Computed)
-    .omit({
-      depsMap: true,
-    })
+  inputs: getInputSchema(FnType.Computed)
+    .omit({ depsMap: true })
     .merge(
       z.object({
         depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
@@ -83,10 +70,10 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       returnSchema: {
         type: TypeName.String,
       },
-      config: {
+      inputs: {
         depsMap: {},
-        tsCode: "",
         compiledJs: "",
+        tsCode: "",
       },
     },
   });
@@ -96,7 +83,7 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
   const eventType = router.query.eventType as string;
 
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
-  const { data: thisNode } = api.nodeDefs.get.useQuery(
+  const { data: initialNode } = api.nodeDefs.get.useQuery(
     { id: initialNodeId ?? "" },
     { enabled: !!initialNodeId }
   );
@@ -104,31 +91,37 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
   // Initialize form values with initial node
   const [initializedForm, setInitializedForm] = useState(false);
   useEffect(() => {
-    if (!initializedForm && thisNode) {
-      form.setValue("name", thisNode.name);
-      form.setValue("returnSchema", thisNode.returnSchema);
-      form.setValue("config", thisNode.config as FormType["config"]);
+    if (!initializedForm && initialNode) {
+      form.setValue("name", initialNode.name);
+      form.setValue("returnSchema", initialNode.fn.returnSchema);
+      form.setValue("inputs", initialNode.inputs as FormType["inputs"]);
       setInitializedForm(true);
     }
-  }, [thisNode, initializedForm, setInitializedForm, form]);
+  }, [initialNode, initializedForm, setInitializedForm, form]);
 
   // Initialize Deps Map with event node
   const [initializedEventDep, setInitializedEventNode] = useState(false);
   useEffect(() => {
-    if (!initializedEventDep && nodes) {
-      const eventNode = nodes.find((n) => n.type === NodeType.Event);
+    if (!initializedEventDep && nodes && !initialNodeId) {
+      const eventNode = nodes.find((n) => n.fn.type === FnType.Event);
       if (eventNode) {
-        form.setValue("config.depsMap", {
+        form.setValue("inputs.depsMap", {
           event: {
             nodeId: eventNode.id,
             path: [],
-            schema: eventNode.returnSchema,
+            schema: eventNode.fn.returnSchema,
           },
         });
         setInitializedEventNode(true);
       }
     }
-  }, [nodes, initializedEventDep, setInitializedEventNode, form]);
+  }, [
+    nodes,
+    initializedEventDep,
+    setInitializedEventNode,
+    form,
+    initialNodeId,
+  ]);
 
   // Code validity
   const [compileStatus, setCompileStatus] = useState<CompileStatus>({
@@ -140,18 +133,18 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       setCompileStatus(compileStatus);
 
       if (compileStatus.status === "success") {
-        form.setValue("config.tsCode", compileStatus.code);
+        form.setValue("inputs.tsCode", compileStatus.code);
 
         // Remove const so that we can eval it as a function
         form.setValue(
-          "config.compiledJs",
+          "inputs.compiledJs",
           compileStatus.compiled
             .slice(compileStatus.compiled.indexOf("async"))
             .replace(/[;\n]+$/, "")
         );
       } else {
-        form.setValue("config.tsCode", "");
-        form.setValue("config.compiledJs", "");
+        form.setValue("inputs.tsCode", "");
+        form.setValue("inputs.compiledJs", "");
       }
     },
     [form]
@@ -181,10 +174,10 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
     form.watch("returnSchema")
   ).toTypescript()}>;`;
 
-  const {
-    create: { mutateAsync: createNodeDef },
-    update: { mutateAsync: updateNodeDef },
-  } = useMutateNode();
+  const toasts = useMutationToasts();
+  const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
+  const { mutateAsync: updateNodeDef } = api.nodeDefs.update.useMutation();
+  const { mutateAsync: createFunction } = api.fnDefs.create.useMutation();
 
   return (
     <div>
@@ -199,39 +192,53 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
             onClick={(event) => {
               event.preventDefault();
 
-              const { depsMap, ...restOfConfig } = form.getValues("config");
-              const depsMapWithoutNulls: Record<string, DataPath> = {};
-              Object.entries(depsMap).forEach(([key, value]) => {
-                if (!value) return;
-                depsMapWithoutNulls[key] = value;
-              });
+              async function handleClick() {
+                const { depsMap } = form.getValues("inputs");
 
-              const computedNodeDef = buildNodeDef(NodeType.Computed, {
-                ...form.getValues(),
-                eventType: eventType,
-                type: NodeType.Computed,
-                config: {
-                  ...restOfConfig,
-                  depsMap: depsMapWithoutNulls,
-                },
-              });
+                const depsMapWithoutNulls: Record<string, DataPath> = {};
+                Object.entries(depsMap).forEach(([key, value]) => {
+                  if (!value) return;
+                  depsMapWithoutNulls[key] = value;
+                });
 
-              if (isEditing && initialNodeId) {
-                updateNodeDef({
-                  id: initialNodeId,
-                  ...computedNodeDef,
-                })
-                  .then(() => {
-                    void router.push(`/settings/event-types/${eventType}`);
+                const computedNodeFn = buildFnDef(FnType.Computed, {
+                  ...form.getValues(),
+                  type: FnType.Computed,
+                  config: {},
+                  returnSchema: form.getValues("returnSchema"),
+                });
+
+                const fnDef = await createFunction(computedNodeFn).catch(
+                  toasts.createFunction.onError
+                );
+
+                if (isEditing && initialNodeId) {
+                  updateNodeDef({
+                    id: initialNodeId,
+                    name: form.getValues("name"),
+                    inputs: form.getValues("inputs"),
+                    fnId: fnDef.id,
                   })
-                  .catch(handleError);
-              } else {
-                createNodeDef(computedNodeDef)
-                  .then(() => {
-                    void router.push(`/settings/event-types/${eventType}`);
+                    .then(toasts.updateNode.onSuccess)
+
+                    .catch(toasts.updateNode.onError);
+                } else {
+                  createNodeDef({
+                    name: form.getValues("name"),
+                    eventType: router.query.eventType as string,
+                    inputs: form.getValues("inputs"),
+                    fnId: fnDef.id,
                   })
-                  .catch(handleError);
+                    .then(toasts.createNode.onSuccess)
+                    .catch(toasts.createNode.onError);
+                }
               }
+
+              handleClick()
+                .then(() => {
+                  void router.push(`/settings/event-types/${eventType}`);
+                })
+                .catch(handleError);
             }}
           >
             <Save className="w-4 h-4 mr-2" />
@@ -278,7 +285,7 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
 
             <FormField
               control={form.control}
-              name="config.depsMap"
+              name="inputs.depsMap"
               render={({ field }) => (
                 <FormItem className="w-[16rem] mt-4">
                   <FormLabel>Type</FormLabel>
@@ -310,7 +317,7 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
         <CodeEditor
           typeDefs={[
             libSource,
-            getInputTsTypeFromDepsMap(form.watch("config.depsMap")),
+            getInputTsTypeFromDepsMap(form.watch("inputs.depsMap")),
             functionType,
           ].join("\n\n")}
           initialCode={FUNCTION_TEMPLATE}
@@ -321,7 +328,7 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
   );
 }
 
-type DepsMap = FormType["config"]["depsMap"];
+type DepsMap = FormType["inputs"]["depsMap"];
 
 function EditDepsMap(props: {
   eventType: string;
@@ -341,11 +348,6 @@ function EditDepsMap(props: {
   const { toast } = useToast();
   const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
 
-  const nodeOptions =
-    nodes?.map((node) => ({
-      label: node.name,
-      value: node.id,
-    })) ?? [];
   return (
     <div>
       <div className="flex items-center gap-4 mt-4 mb-2">
@@ -363,31 +365,6 @@ function EditDepsMap(props: {
         >
           <Plus className="h-4 w-4" />
         </Button>
-        {/* <ComboboxSelector
-          value={null}
-          onSelect={(nodeId) => {
-            if (!nodeId) return;
-
-            const newDepsMap = { ...depsMapValue };
-            const node = nodes?.find((n) => n.id === nodeId);
-
-            if (!node) return;
-
-            const newKey = stringToPropertyKey(node.name);
-            newDepsMap[newKey] = {
-              nodeId,
-              path: [],
-            }
-
-            onChange(newDepsMap);
-          }}
-          options={nodeOptions}
-          renderTrigger={({ value }) => (
-            <Button variant="outline" size="xs">
-              <Plus className="h-4 w-4" />
-            </Button>
-          )}
-        /> */}
       </div>
 
       {Object.entries(depsMapValue).map(([key, value]) => {
@@ -414,6 +391,7 @@ function EditDepsMap(props: {
             <SelectDataPathOrEntityFeature
               eventType={eventType}
               value={value}
+              disablePathSelection={true}
               onChange={(newValue) => {
                 if (!newValue) return;
 

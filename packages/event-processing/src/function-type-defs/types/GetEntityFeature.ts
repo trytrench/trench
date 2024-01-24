@@ -1,17 +1,21 @@
 import { z } from "zod";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
 import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
 import { hashObject } from "../lib/counts";
 import { RedisInterface } from "databases";
 import { dataPathZodSchema } from "../../data-path";
 
-export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.GetEntityFeature)
+export const getEntityFeatureFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.GetEntityFeature)
   .setConfigSchema(
     z.object({
       featureId: z.string(),
       featureSchema: z.record(z.any()),
+    })
+  )
+  .setInputSchema(
+    z.object({
       entityDataPath: dataPathZodSchema.optional(),
     })
   )
@@ -23,9 +27,10 @@ export const getEntityFeatureNodeDef = createNodeTypeDefBuilder()
     if (config.entityDataPath) set.add(config.entityDataPath.nodeId);
     return set;
   })
-  .setCreateResolver(({ nodeDef, context }) => {
+  .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, entityDataPath } = nodeDef.config;
+      const { featureId } = fnDef.config;
+      const { entityDataPath } = input;
 
       let entity = entityDataPath
         ? await getDependency({

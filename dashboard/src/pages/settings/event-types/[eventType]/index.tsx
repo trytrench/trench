@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  NodeDefsMap,
-  NodeType,
+  FnDefsMap,
+  FnType,
   TypeName,
-  buildNodeDef,
+  buildFnDef,
+  buildNodeDefWithFn,
   dataPathZodSchema,
 } from "event-processing";
 import {
@@ -74,7 +75,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog";
 import { SelectDataPath } from "../../../../components/nodes/SelectDataPath";
 import { handleError } from "../../../../lib/handleError";
-import { useMutateNode } from "../../../../components/nodes/editor/useMutateNode";
+import { useMutationToasts } from "../../../../components/nodes/editor/useMutationToasts";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -199,19 +200,18 @@ const Page: NextPageWithLayout = () => {
 
   const eventType = router.query.eventType as string;
 
-  const { data: nodes, refetch: refetchNodes } = api.nodeDefs.list.useQuery({
+  const { data: nodes, refetch: refetchFns } = api.nodeDefs.list.useQuery({
     eventType: eventType,
   });
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
-  const {
-    create: { mutateAsync: createNodeDef },
-    update: { mutateAsync: updateNodeDef },
-  } = useMutateNode();
+  const toasts = useMutationToasts();
+  const { mutateAsync: createNodeWithFn } =
+    api.nodeDefs.createWithFn.useMutation();
 
   const [open, setOpen] = useState(false);
-  const [nodeSelectOpen, setNodeSelectOpen] = useState(false);
+  const [nodeSelectOpen, setFnSelectOpen] = useState(false);
 
   return (
     <div>
@@ -225,7 +225,7 @@ const Page: NextPageWithLayout = () => {
       <div className="mt-1 mb-4 flex items-center">
         <h1 className="text-2xl text-emphasis-foreground">{eventType}</h1>
 
-        <Popover open={nodeSelectOpen} onOpenChange={setNodeSelectOpen}>
+        <Popover open={nodeSelectOpen} onOpenChange={setFnSelectOpen}>
           <PopoverTrigger asChild>
             <Button
               size="sm"
@@ -247,10 +247,10 @@ const Page: NextPageWithLayout = () => {
                 {nodes
                   ?.filter((node) =>
                     [
-                      NodeType.Computed,
-                      NodeType.Counter,
-                      NodeType.UniqueCounter,
-                    ].includes(node.type)
+                      FnType.Computed,
+                      FnType.Counter,
+                      FnType.UniqueCounter,
+                    ].includes(node.fn.type)
                   )
                   .map((node) => (
                     <CommandItem
@@ -289,10 +289,10 @@ const Page: NextPageWithLayout = () => {
 
               <CommandGroup>
                 {[
-                  { name: "Computed", type: NodeType.Computed },
-                  { name: "Counter", type: NodeType.Counter },
-                  { name: "Unique Counter", type: NodeType.UniqueCounter },
-                  { name: "Decision", type: NodeType.Decision },
+                  { name: "Computed", type: FnType.Computed },
+                  { name: "Counter", type: FnType.Counter },
+                  { name: "Unique Counter", type: FnType.UniqueCounter },
+                  { name: "Decision", type: FnType.Decision },
                 ].map((node) => (
                   <CommandItem
                     key={node.type}
@@ -361,31 +361,48 @@ const Page: NextPageWithLayout = () => {
                     );
                     if (!entityType) {
                       toast({
-                        variant: "destructive",
                         title: "Failed to create entity",
                         description: "Entity type not found",
                       });
                       return;
                     }
+                    if (!eventType) {
+                      toast({
+                        title: "Failed to create entity",
+                        description: "Event type not found",
+                      });
+                      return;
+                    }
 
-                    createNodeDef(
-                      buildNodeDef(NodeType.EntityAppearance, {
-                        type: NodeType.EntityAppearance,
-                        returnSchema: {
-                          type: TypeName.Entity,
-                          entityType: values.entityTypeId,
-                        },
-                        config: {
-                          entityType: values.entityTypeId,
+                    const nodeDefWithFn = buildNodeDefWithFn(
+                      FnType.EntityAppearance,
+                      {
+                        name: entityType.type,
+                        eventType,
+                        inputs: {
                           dataPath: values.path,
                         },
-                        name: entityType.type,
-                        eventType: eventType,
+                        fn: {
+                          type: FnType.EntityAppearance,
+                          returnSchema: {
+                            type: TypeName.Entity,
+                            entityType: values.entityTypeId,
+                          },
+                          config: {
+                            entityType: values.entityTypeId,
+                          },
+                          name: entityType.type,
+                        },
+                      }
+                    );
+
+                    createNodeWithFn(nodeDefWithFn)
+                      .then(async (res) => {
+                        await refetchFns();
+                        return res;
                       })
-                    )
-                      .then(() => {
-                        return refetchNodes();
-                      })
+                      .then(toasts.createNode.onSuccess)
+                      .catch(toasts.createNode.onError)
                       .catch(handleError);
                   }}
                 >
@@ -410,7 +427,7 @@ const Page: NextPageWithLayout = () => {
 
       {/* <DataTable
         columns={columns}
-        data={nodes?.filter((node) => node.type === NodeType.Rule) ?? []}
+        data={nodes?.filter((node) => node.type === FnType.Rule) ?? []}
       /> */}
 
       <div className="h-9" />

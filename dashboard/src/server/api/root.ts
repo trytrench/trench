@@ -12,6 +12,7 @@ import { featuresRouter } from "./routers/features";
 import { rulesRouter } from "./routers/rules";
 import { entityViewsRouter } from "./routers/entityViews";
 import { decisionsRouter } from "./routers/decisions";
+import { fnDefsRouter } from "./routers/fnDefs";
 
 /**
  * This is the primary router for your server.
@@ -27,6 +28,7 @@ export const appRouter = createTRPCRouter({
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,
   nodeDefs: nodeDefsRouter,
+  fnDefs: fnDefsRouter,
   lists2: lists2Router,
   features: featuresRouter,
   rules: rulesRouter,

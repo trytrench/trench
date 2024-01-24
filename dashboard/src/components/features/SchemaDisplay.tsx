@@ -1,14 +1,14 @@
 import {
-  DataPath,
+  type DataPath,
   NodeDef,
-  NodeType,
-  TSchema,
+  FnType,
+  type TSchema,
   TypeName,
   createDataType,
 } from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 import { Badge } from "../ui/badge";
 
@@ -19,9 +19,9 @@ interface EventTypeNodesSchemaDisplayProps {
 }
 
 const HIDDEN_NODE_TYPES = [
-  NodeType.CacheEntityFeature,
-  NodeType.GetEntityFeature,
-  NodeType.LogEntityFeature,
+  FnType.CacheEntityFeature,
+  FnType.GetEntityFeature,
+  FnType.LogEntityFeature,
 ];
 
 export function EventTypeNodesSchemaDisplay({
@@ -36,7 +36,7 @@ export function EventTypeNodesSchemaDisplay({
 
   const filteredNodes = useMemo(() => {
     return nodes?.filter((node) => {
-      return !HIDDEN_NODE_TYPES.includes(node.type);
+      return !HIDDEN_NODE_TYPES.includes(node.fn.type);
     });
   }, [nodes]);
 
@@ -48,7 +48,7 @@ export function EventTypeNodesSchemaDisplay({
             <SchemaDisplay
               name={<span className="font-bold">{node.name}</span>}
               path={[]}
-              schema={node.returnSchema}
+              schema={node.fn.returnSchema}
               onItemClick={({ path, schema }) => {
                 onItemClick?.({
                   nodeId: node.id,

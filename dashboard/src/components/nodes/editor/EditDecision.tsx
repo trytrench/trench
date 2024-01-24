@@ -1,4 +1,10 @@
-import { DataPath, NodeType, TypeName, buildNodeDef } from "event-processing";
+import {
+  DataPath,
+  FnType,
+  TypeName,
+  buildNodeDef,
+  buildNodeDefWithFn,
+} from "event-processing";
 import { Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/router";
 import { useState } from "react";
@@ -13,12 +19,14 @@ import {
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
 import { SelectDataPath } from "../SelectDataPath";
-import { useMutateNode } from "./useMutateNode";
+import { useMutationToasts } from "./useMutationToasts";
 
 export const EditDecision = () => {
   const router = useRouter();
 
-  const { createNodeDef, updateNodeDef } = useMutateNode();
+  const toasts = useMutationToasts();
+  const { mutateAsync: createNodeDefWithFn } =
+    api.nodeDefs.createWithFn.useMutation();
 
   const [conditions, setConditions] = useState<
     { rules: DataPath[]; decisionId: string | null }[]
@@ -42,20 +50,23 @@ export const EditDecision = () => {
             onClick={(event) => {
               event.preventDefault();
 
-              createNodeDef(
-                buildNodeDef(NodeType.Decision, {
-                  name: "Decision",
-                  type: NodeType.Decision,
-                  eventType: router.query.eventType as string,
+              const newDef = buildNodeDefWithFn(FnType.Decision, {
+                name: "Decision",
+                eventType: router.query.eventType as string,
+                inputs: {
+                  conditions,
+                  elseDecisionId: elseDecisionId,
+                },
+                fn: {
+                  name: "decision",
+                  type: FnType.Decision,
                   returnSchema: {
                     type: TypeName.String,
                   },
-                  config: {
-                    conditions,
-                    elseDecisionId: elseDecisionId,
-                  },
-                })
-              )
+                  config: {},
+                },
+              });
+              createNodeDef()
                 .then(() => {})
                 .catch(() => {});
             }}

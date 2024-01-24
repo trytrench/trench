@@ -1,5 +1,5 @@
 import { db } from "databases";
-import { TrenchEvent } from "../nodeTypeDef";
+import { TrenchEvent } from "../functionTypeDef";
 import { getUnixTime } from "date-fns";
 
 export type FeatureRow = {

@@ -1,4 +1,4 @@
-import { NodeDef } from "../nodeTypeDef";
+import { NodeDef } from "../nodeDef";
 
 function truncId(id: string) {
   return id.slice(0, 8);
