@@ -31,12 +31,12 @@ import { useMutateNode } from "./useMutateNode";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(NodeType.Counter),
+  config: getConfigSchema(NodeType.UniqueCounter),
 });
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditCounter({ initialNodeId }: NodeEditorProps) {
+export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -44,13 +44,14 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
     defaultValues: {
       name: "",
       config: {
-        counter: {
+        uniqueCounter: {
           id: nanoid(),
           timeWindow: {
             value: 1,
             unit: "minutes",
           },
         },
+        countDataPaths: [],
         countByDataPaths: [],
         conditionDataPath: undefined,
       },
@@ -60,7 +61,6 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
   const router = useRouter();
   const eventType = router.query.eventType as string;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
   const { data: thisNode } = api.nodeDefs.get.useQuery(
     { id: initialNodeId ?? "" },
     { enabled: !!initialNodeId }
@@ -96,10 +96,10 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
             onClick={(event) => {
               event.preventDefault();
 
-              const counterNodeDef = buildNodeDef(NodeType.Counter, {
+              const counterNodeDef = buildNodeDef(NodeType.UniqueCounter, {
                 ...form.getValues(),
                 eventType: eventType,
-                type: NodeType.Counter,
+                type: NodeType.UniqueCounter,
                 returnSchema: {
                   type: TypeName.Int64,
                 },
@@ -149,7 +149,14 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
             </form>
           </Form>
 
-          <div className="text-md font-bold mt-4 mb-2">Count</div>
+          <div className="text-md font-bold mt-4 mb-2">Count Unique</div>
+          <SelectDataPathList
+            eventType={eventType}
+            value={form.watch("config.countDataPaths")}
+            onChange={(countDataPaths) =>
+              form.setValue("config.countDataPaths", countDataPaths)
+            }
+          />
 
           <div className="text-md font-bold mt-4 mb-2">By</div>
           <SelectDataPathList
@@ -181,14 +188,14 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
           <div className="text-md font-bold mt-4 mb-2">In the last</div>
 
           <TimeWindowDialog
-            value={form.watch("config.counter.timeWindow")}
+            value={form.watch("config.uniqueCounter.timeWindow")}
             onSubmit={(timeWindow) =>
-              form.setValue("config.counter.timeWindow", timeWindow)
+              form.setValue("config.uniqueCounter.timeWindow", timeWindow)
             }
           >
             <div className="flex items-center">
               <RenderTimeWindow
-                value={form.watch("config.counter.timeWindow")}
+                value={form.watch("config.uniqueCounter.timeWindow")}
               />
               <Button variant="outline" size="xs">
                 <Plus className="h-4 w-4" />
