@@ -1,4 +1,4 @@
-import { redis } from "./../../databases/src/redis";
+import { createRedisService } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
   FN_TYPE_REGISTRY,
@@ -26,6 +26,8 @@ import { get } from "lodash";
  * It is initialized with a set of node instances, which are in-memory objects that define how to compute a
  * node's value.
  */
+
+const redis = createRedisService();
 
 const MAP_FN_TYPE_TO_CONTEXT: FnTypeContextMap = {
   [FnType.Computed]: {},
