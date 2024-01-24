@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
 import { RouterOutputs, api } from "~/utils/api";
 import { PropertyList } from "./ui/custom/property-list";
 import { RenderResult, RenderTypedData } from "./RenderResult";
+import { useEntityNameMap } from "../hooks/useEntityNameMap";
 
 export function EventDrawer(props: {
   selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number] | null;
@@ -33,6 +34,9 @@ export function EventDrawer(props: {
       enabled: !!selectedEvent?.id,
     }
   );
+
+  const entityIds = entitiesList?.rows.map((entity) => entity.entityId) ?? [];
+  const entityNameMap = useEntityNameMap(entityIds);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -96,7 +100,13 @@ export function EventDrawer(props: {
         <div className="h-4"></div>
         <div className="flex flex-col gap-2">
           {entitiesList?.rows.map((entity) => {
-            return <EntityCard key={entity.entityId} entity={entity} />;
+            return (
+              <EntityCard
+                key={entity.entityId}
+                entity={entity}
+                entityNameMap={entityNameMap}
+              />
+            );
           })}
         </div>
       </SheetContent>

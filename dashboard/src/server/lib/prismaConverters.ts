@@ -20,6 +20,7 @@ type FnSnapshot = PrismaFnSnapshot & {
 
 export function prismaFnSnapshotToFnDef(val: FnSnapshot): FnDefsMap[FnType] {
   const fn = val.fn;
+
   return {
     id: fn.id,
     snapshotId: val.id,

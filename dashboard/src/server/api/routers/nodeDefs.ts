@@ -48,7 +48,8 @@ export const nodeDefsRouter = createTRPCRouter({
       const { fn } = input;
       const result = await ctx.prisma.fn.create({
         data: {
-          ...fn,
+          type: fn.type,
+          name: fn.name,
           snapshots: {
             create: {
               config: fn.config as unknown as any,

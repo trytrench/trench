@@ -188,8 +188,7 @@ const EntityList = () => {
                   {allEntities.map((entity) => {
                     return (
                       <EntityCard
-                        key={entity.entityId}
-                        href={`/entity/${entity.id}`}
+                        key={`${entity.entityType}:${entity.entityId}`}
                         entity={entity}
                         entityNameMap={entityNameMap}
                       />
