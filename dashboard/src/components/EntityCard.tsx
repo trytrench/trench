@@ -14,7 +14,7 @@ interface Props {
 }
 
 export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
-  const { entityName, entityTypeName: entityType } = useEntityName(entity);
+  const { entityName, entityTypeName } = useEntityName(entity);
   const decision = useDecision(entity.features);
 
   return (
