@@ -28,10 +28,7 @@ export const computedNodeDef = createNodeTypeDefBuilder()
         depValues[key] = featureValue;
       }
 
-      const value = await eval(`(${compiledJs})`)({
-        deps: depValues,
-        event,
-      });
+      const value = await eval(`(${compiledJs})`)(depValues);
 
       return {
         data: value,

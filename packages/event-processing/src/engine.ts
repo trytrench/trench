@@ -249,9 +249,9 @@ export class ExecutionEngine {
     for (const instance of allInstances) {
       const { nodeDef } = instance;
 
-      // if (!nodeDef.eventTypes.has(this.state.event.type)) {
-      //   continue;
-      // }
+      if (nodeDef.eventType !== this.state.event.type) {
+        continue;
+      }
 
       const result = await this.evaluateNode(nodeDef.id);
 

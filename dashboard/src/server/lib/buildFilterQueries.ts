@@ -147,6 +147,11 @@ export async function getEntitiesList(props: {
       ? `WHERE ${seenWhereClauses.join(" AND ")}`
       : "";
 
+  const finalWhereClause =
+    whereClauses.length > 0
+      ? `WHERE (entity_type, entity_id) IN (SELECT DISTINCT entity_type, entity_id FROM features ${whereClause})`
+      : "";
+
   const finalQuery = `
     WITH results AS (
       SELECT
@@ -164,7 +169,7 @@ export async function getEntitiesList(props: {
               row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
           FROM features
           FINAL
-          ${whereClause}
+          ${finalWhereClause}
       ) AS latest_features
       WHERE latest_features.rn = 1
       GROUP BY entity_type, entity_id
