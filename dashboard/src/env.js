@@ -31,6 +31,9 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     ADMIN_USERNAME: z.string().optional(),
     ADMIN_PASSWORD: z.string().optional(),
+    API_KEY: z.string().optional(),
+    CLIENT_KEY: z.string().optional(),
+    JWT_SECRET: z.string().optional(),
   },
 
   /**
@@ -60,6 +63,9 @@ export const env = createEnv({
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:
       process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+    API_KEY: process.env.API_KEY,
+    CLIENT_KEY: process.env.CLIENT_KEY,
+    JWT_SECRET: process.env.JWT_SECRET,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

@@ -68,15 +68,12 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
           baseData.entity_id.push(assignToEntity.id);
         }
 
-        const obj = nodeId
-          ? await getDependency({
-              dataPath: dataPath,
-              expectedSchema: {
-                type: TypeName.Any,
-              },
-            })
-          : event.data;
-        const value = path.length ? get(obj, path) : obj;
+        const value = await getDependency({
+          dataPath: dataPath,
+          expectedSchema: {
+            type: TypeName.Any,
+          },
+        });
 
         const topLevelType = featureSchema.type;
         const dataType = createDataType(featureSchema);

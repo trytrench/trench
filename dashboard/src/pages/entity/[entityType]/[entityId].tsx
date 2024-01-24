@@ -27,6 +27,11 @@ import {
 } from "../../../components/RenderResult";
 import { EntityPageEditor } from "../../../components/entity-page/EntityPageEditor";
 import { useEntityName } from "~/hooks/useEntityName";
+import { FeatureGrid } from "~/components/FeatureGrid";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
+import { TypeName } from "event-processing";
+import { useDecision } from "~/hooks/useDecision";
+import { RenderDecision } from "~/components/RenderDecision";
 
 type Option = {
   label: string;
@@ -94,6 +99,17 @@ const Page: NextPageWithLayout = () => {
   const entity = useMemo(() => entityDataRows?.rows[0], [entityDataRows]);
   const { entityName, entityTypeName } = useEntityName(entity);
 
+  const entityNameMap = useEntityNameMap(
+    entity?.features
+      .filter(
+        (feature) =>
+          feature.result.type === "success" &&
+          feature.result.data.schema.type === TypeName.Entity
+      )
+      .map((feature) => feature.result.data!.value.id as string) ?? []
+  );
+  const decision = useDecision(entity?.features ?? []);
+
   const entityInfo = useMemo(
     () =>
       entity
@@ -108,8 +124,6 @@ const Page: NextPageWithLayout = () => {
     [entity, entityTypeName]
   );
 
-  const { data: entityTypes } = api.entityTypes.list.useQuery();
-
   const [tab, setTab] = useQueryParam("tab", StringParam);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
@@ -118,6 +132,7 @@ const Page: NextPageWithLayout = () => {
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
         <h1 className="text-2xl">{entityName ?? entity?.entityId}</h1>
         <Badge className="-translate-y-0.5">{entityTypeName}</Badge>
+        {decision && <RenderDecision decision={decision} />}
       </div>
       <div className="grid grid-cols-4 flex-1">
         <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
@@ -148,13 +163,10 @@ const Page: NextPageWithLayout = () => {
           </Panel> */}
           <Panel>
             <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
-            <PropertyList
-              entries={
-                entity?.features.map((feature) => ({
-                  label: feature.featureName,
-                  value: <RenderResult result={feature.result} />,
-                })) ?? []
-              }
+            <FeatureGrid
+              features={entity?.features ?? []}
+              entityNameMap={entityNameMap}
+              cols={1}
             />
           </Panel>
         </div>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const timeWindowSchema = z.object({
-  value: z.number(),
+  value: z.coerce.number(),
   unit: z.enum(["minutes", "hours", "days", "weeks", "months"]),
 });
 

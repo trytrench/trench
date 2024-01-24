@@ -10,25 +10,27 @@ interface Props {
 }
 
 export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
+  const rulesToShow = features.filter(
+    (feature) =>
+      feature.rule &&
+      feature.result.type === "success" &&
+      feature.result.data.value
+  );
+
   return features.length > 0 ? (
     <>
-      <div
-        className={`grid grid-cols-${cols} gap-x-8 gap-y-2 text-sm text-foreground mb-4`}
-      >
-        {features
-          .filter(
-            (feature) =>
-              feature.rule &&
-              feature.result.type === "success" &&
-              feature.result.data.value
-          )
-          .map(({ featureId, featureName, rule }) => (
+      {rulesToShow.length > 0 && (
+        <div
+          className={`grid grid-cols-${cols} gap-x-8 gap-y-2 text-sm text-foreground mb-4`}
+        >
+          {rulesToShow.map(({ featureId, featureName, rule }) => (
             <div key={featureId} className="flex space-x-1 items-center">
               <div className={`rounded-full ${rule!.color} w-2 h-2`} />
               <div className="font-semibold">{featureName}</div>
             </div>
           ))}
-      </div>
+        </div>
+      )}
 
       <div
         className={`grid grid-cols-${cols} gap-x-8 gap-y-2 text-sm text-foreground`}

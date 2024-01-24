@@ -3,6 +3,7 @@ import { createEngine, fetchCurrentEngineId } from "event-processing";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
 import { z } from "zod";
+import { env } from "~/env";
 import { prisma } from "~/server/db";
 
 const eventSchema = z.object({
@@ -26,7 +27,11 @@ export default async function handler(
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
+    return res.status(405).json({ message: "Method Not Allowed" });
+  }
+
+  if (req.headers["x-api-key"] !== env.API_KEY) {
+    return res.status(401).json({ message: "Invalid API Key" });
   }
 
   const parsedResult = eventSchema.safeParse(req.body);

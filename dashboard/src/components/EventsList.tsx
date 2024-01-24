@@ -4,16 +4,18 @@ import { uniq } from "lodash";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Toggle } from "~/components/ui/toggle";
+import { useDecision } from "~/hooks/useDecision";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { type EventFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
 import { FeatureGrid } from "./FeatureGrid";
+import { RenderDecision } from "./RenderDecision";
 import { EditEventFilters } from "./filters/EditEventFilters";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 
 interface EventsListProps {
   entity: Entity;
@@ -288,6 +290,8 @@ interface EventCardProps {
 }
 
 function EventCard({ event, isFirst, isLast, entityNameMap }: EventCardProps) {
+  const decision = useDecision(event.features);
+
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
@@ -306,6 +310,9 @@ function EventCard({ event, isFirst, isLast, entityNameMap }: EventCardProps) {
         </div>
         <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
+        </div>
+        <div className="flex text-sm items-center mt-2">
+          {decision && <RenderDecision decision={decision} />}
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
