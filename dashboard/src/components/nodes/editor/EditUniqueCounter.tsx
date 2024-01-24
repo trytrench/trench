@@ -146,7 +146,6 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
             </form>
           </Form>
 
-<<<<<<< HEAD
           <div className="text-md font-bold mt-4 mb-2">Count</div>
 
           <SelectDataPathList
@@ -158,20 +157,11 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
             value={form.watch("inputs.countDataPaths")}
             onChange={(countDataPaths) =>
               form.setValue("inputs.countDataPaths", countDataPaths)
-=======
-          <div className="text-md font-bold mt-4 mb-2">Count Unique</div>
-          <SelectDataPathList
-            eventType={eventType}
-            value={form.watch("config.countDataPaths")}
-            onChange={(countDataPaths) =>
-              form.setValue("config.countDataPaths", countDataPaths)
->>>>>>> origin/bowen/frontend
             }
           />
 
           <div className="text-md font-bold mt-4 mb-2">By</div>
           <SelectDataPathList
-<<<<<<< HEAD
             args={form.watch("config.countByArgs")}
             onArgsChange={(countByArgs) =>
               form.setValue("config.countByArgs", countByArgs)
@@ -180,12 +170,6 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
             value={form.watch("inputs.countByDataPaths")}
             onChange={(countByDataPaths) =>
               form.setValue("inputs.countByDataPaths", countByDataPaths)
-=======
-            eventType={eventType}
-            value={form.watch("config.countByDataPaths")}
-            onChange={(countByDataPaths) =>
-              form.setValue("config.countByDataPaths", countByDataPaths)
->>>>>>> origin/bowen/frontend
             }
           />
           <div className="text-md font-bold mt-4 mb-2">Where</div>
@@ -195,21 +179,12 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
             desiredSchema={{
               type: TypeName.Boolean,
             }}
-<<<<<<< HEAD
             value={form.watch("inputs.conditionDataPath") ?? null}
             onChange={(conditionDataPath) => {
               if (conditionDataPath) {
                 form.setValue("inputs.conditionDataPath", conditionDataPath);
               } else {
                 form.setValue("inputs.conditionDataPath", undefined);
-=======
-            value={form.watch("config.conditionDataPath") ?? null}
-            onChange={(conditionDataPath) => {
-              if (conditionDataPath) {
-                form.setValue("config.conditionDataPath", conditionDataPath);
-              } else {
-                form.setValue("config.conditionDataPath", undefined);
->>>>>>> origin/bowen/frontend
               }
             }}
           />
@@ -219,7 +194,6 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
           <div className="text-md font-bold mt-4 mb-2">In the last</div>
 
           <TimeWindowDialog
-<<<<<<< HEAD
             value={form.watch("config.timeWindow")}
             onSubmit={(timeWindow) =>
               form.setValue("config.timeWindow", timeWindow)
@@ -227,17 +201,6 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
           >
             <div className="flex items-center">
               <RenderTimeWindow value={form.watch("config.timeWindow")} />
-=======
-            value={form.watch("config.uniqueCounter.timeWindow")}
-            onSubmit={(timeWindow) =>
-              form.setValue("config.uniqueCounter.timeWindow", timeWindow)
-            }
-          >
-            <div className="flex items-center">
-              <RenderTimeWindow
-                value={form.watch("config.uniqueCounter.timeWindow")}
-              />
->>>>>>> origin/bowen/frontend
               <Button variant="outline" size="xs">
                 <Plus className="h-4 w-4" />
               </Button>

@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-<<<<<<< HEAD
   TypeName,
   getConfigSchema,
   FnType,
@@ -8,15 +7,6 @@ import {
   buildNodeDefWithFn,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
-=======
-  NodeType,
-  TypeName,
-  buildNodeDef,
-  getConfigSchema,
-} from "event-processing";
-import { Plus, Save } from "lucide-react";
-import { nanoid } from "nanoid";
->>>>>>> origin/bowen/frontend
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -31,7 +21,6 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-<<<<<<< HEAD
 import { NodeEditorProps } from "./types";
 import { api } from "../../../utils/api";
 import { SelectDataPath } from "../SelectDataPath";
@@ -39,15 +28,6 @@ import { SelectDataPathList } from "../SelectDataPathList";
 import { TimeWindowDialog, RenderTimeWindow } from "./TimeWindowDialog";
 import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
-=======
-import { handleError } from "~/lib/handleError";
-import { api } from "../../../utils/api";
-import { SelectDataPath } from "../SelectDataPath";
-import { SelectDataPathList } from "../SelectDataPathList";
-import { RenderTimeWindow, TimeWindowDialog } from "./TimeWindowDialog";
-import { NodeEditorProps } from "./types";
-import { useMutateNode } from "./useMutateNode";
->>>>>>> origin/bowen/frontend
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
