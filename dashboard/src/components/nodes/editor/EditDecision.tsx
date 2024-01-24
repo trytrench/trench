@@ -2,7 +2,6 @@ import {
   DataPath,
   FnType,
   TypeName,
-  buildNodeDef,
   buildNodeDefWithFn,
 } from "event-processing";
 import { Plus, Save, X } from "lucide-react";
@@ -20,6 +19,7 @@ import {
 import { api } from "~/utils/api";
 import { SelectDataPath } from "../SelectDataPath";
 import { useMutationToasts } from "./useMutationToasts";
+import { handleError } from "../../../lib/handleError";
 
 export const EditDecision = () => {
   const router = useRouter();
@@ -29,9 +29,8 @@ export const EditDecision = () => {
     api.nodeDefs.createWithFn.useMutation();
 
   const [conditions, setConditions] = useState<
-    { rules: DataPath[]; decisionId: string | null }[]
-  >([{ rules: [], decisionId: null }]);
-  console.log(conditions);
+    { rules: DataPath[]; decisionId: string }[]
+  >([{ rules: [], decisionId: "" }]);
 
   const [elseDecisionId, setElseDecisionId] = useState<string>("");
 
@@ -54,7 +53,7 @@ export const EditDecision = () => {
                 name: "Decision",
                 eventType: router.query.eventType as string,
                 inputs: {
-                  conditions,
+                  conditions: conditions.filter((d) => !!d.decisionId),
                   elseDecisionId: elseDecisionId,
                 },
                 fn: {
@@ -66,9 +65,10 @@ export const EditDecision = () => {
                   config: {},
                 },
               });
-              createNodeDef()
-                .then(() => {})
-                .catch(() => {});
+              createNodeDefWithFn(newDef)
+                .then(toasts.createNode.onSuccess)
+                .catch(toasts.createNode.onError)
+                .catch(handleError);
             }}
           >
             <Save className="w-4 h-4 mr-2" />

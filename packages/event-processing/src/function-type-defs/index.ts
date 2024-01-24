@@ -11,6 +11,7 @@ import { getEntityFeatureFnDef } from "./types/GetEntityFeature";
 import { logEntityFeatureFnDef } from "./types/LogEntityFeature";
 import { uniqueCounterFnDef } from "./types/UniqueCounter";
 import { FnType } from "./types/_enum";
+import { blocklistFnDef } from "./types/BlockList";
 
 const FN_TYPE_DEFS = {
   [FnType.Computed]: computedFnDef,
@@ -22,6 +23,7 @@ const FN_TYPE_DEFS = {
   [FnType.CacheEntityFeature]: cacheEntityFeatureFnDef,
   [FnType.Event]: eventFnDef,
   [FnType.Decision]: decisionFnDef,
+  [FnType.Blocklist]: blocklistFnDef,
 } satisfies {
   [TFnType in FnType]: FnTypeDef<TFnType, any, any, any>;
 };
@@ -67,7 +69,7 @@ export type FnTypeContextMap = {
 
 // Build fn def
 
-type Args<T extends FnType> = Omit<FnDefsMap[T], "id">;
+type Args<T extends FnType> = Omit<FnDefsMap[T], "id" | "snapshotId">;
 
 export function buildFnDef<T extends FnType>(type: T, args: Args<T>): Args<T> {
   return args;

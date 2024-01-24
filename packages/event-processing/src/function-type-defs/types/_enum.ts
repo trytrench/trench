@@ -8,4 +8,5 @@ export enum FnType {
   CacheEntityFeature = "CacheEntityFeature",
   Event = "Event",
   Decision = "Decision",
+  Blocklist = "Blocklist",
 }

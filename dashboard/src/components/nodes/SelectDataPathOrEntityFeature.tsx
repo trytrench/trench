@@ -67,6 +67,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
         value={dataPathSelectorValue}
         onChange={onChange}
         disablePathSelection={disablePathSelection}
+        desiredSchema={desiredSchema}
         // filterNodeOptions={(nodeDef) => {
         //   return (
         //     nodeDef.type !== FnType.GetEntityFeature &&

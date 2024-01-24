@@ -11,6 +11,7 @@ import { NodeEditorProps } from "../../../../../components/nodes/editor/types";
 import { EditCounter } from "../../../../../components/nodes/editor/EditCounter";
 import { EditDecision } from "~/components/nodes/editor/EditDecision";
 import { EditUniqueCounter } from "../../../../../components/nodes/editor/EditUniqueCounter";
+import { EditBlocklist } from "../../../../../components/nodes/editor/EditBlocklist";
 
 const MAP_NODE_TYPE_TO_EDITOR: Partial<
   Record<FnType, React.FC<NodeEditorProps>>
@@ -19,6 +20,7 @@ const MAP_NODE_TYPE_TO_EDITOR: Partial<
   [FnType.Counter]: EditCounter,
   [FnType.UniqueCounter]: EditUniqueCounter,
   [FnType.Decision]: EditDecision,
+  [FnType.Blocklist]: EditBlocklist,
 };
 
 const Page: NextPageWithLayout = () => {

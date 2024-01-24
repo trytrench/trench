@@ -1,5 +1,7 @@
 import {
-  type Function as PrismaFunction,
+  Prisma,
+  type Fn as PrismaFn,
+  type FnSnapshot as PrismaFnSnapshot,
   type Node as PrismaNode,
   type NodeSnapshot as PrismaNodeSnapshot,
 } from "@prisma/client";
@@ -12,20 +14,39 @@ import {
   FnDefsMap,
 } from "event-processing";
 
-export function prismaToFnDef(val: PrismaFunction): FnDef<FnType> {
+type FnSnapshot = PrismaFnSnapshot & {
+  fn: PrismaFn;
+};
+
+export function prismaFnSnapshotToFnDef(val: FnSnapshot): FnDefsMap[FnType] {
+  const fn = val.fn;
   return {
-    id: val.id,
-    type: val.type as unknown as FnType,
-    name: val.name,
+    id: fn.id,
+    snapshotId: val.id,
+    type: fn.type as unknown as FnType,
+    name: fn.name,
     returnSchema: val.returnSchema as unknown as TSchema,
     config: val.config as unknown as any,
-  } as any;
+  } satisfies FnDef as any;
+}
+
+export function prismaFnToFnDef(
+  val: PrismaFn & { snapshots: PrismaFnSnapshot[] }
+) {
+  const snapshot = val.snapshots[0];
+  if (!snapshot) {
+    throw new Error("No snapshot found for fn. This should never happen");
+  }
+  return prismaFnSnapshotToFnDef({
+    ...snapshot,
+    fn: val,
+  });
 }
 
 export function prismaToNodeDef(
   val: PrismaNode & {
     snapshots: (PrismaNodeSnapshot & {
-      function: PrismaFunction;
+      fnSnapshot: FnSnapshot;
     })[];
   }
 ): NodeDef<FnType> {
@@ -34,7 +55,7 @@ export function prismaToNodeDef(
     throw new Error("No snapshot found for node. This should never happen");
   }
 
-  const fn = prismaToFnDef(snapshot.function);
+  const fn = prismaFnSnapshotToFnDef(snapshot.fnSnapshot);
   return {
     id: val.id,
     name: val.name,
@@ -45,3 +66,18 @@ export function prismaToNodeDef(
     fn: fn as any,
   };
 }
+
+export const FN_INCLUDE_ARGS = {
+  snapshots: {
+    orderBy: { createdAt: "desc" },
+    take: 1,
+  },
+} satisfies Prisma.FnInclude;
+
+export const NODE_INCLUDE_ARGS = {
+  snapshots: {
+    include: { fnSnapshot: { include: { fn: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 1,
+  },
+} satisfies Prisma.NodeInclude;

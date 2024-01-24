@@ -10,6 +10,7 @@ export type FnDef<
   TConfig = any,
 > = {
   id: string;
+  snapshotId: string;
   type: TFnType;
   name: string;
   returnSchema: TReturnSchema;

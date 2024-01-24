@@ -113,8 +113,11 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
 
               createNodeWithFn(nodeDef)
                 .then(toasts.createNode.onSuccess)
+                .then(async (res) => {
+                  await router.push(`/events/${eventType}`);
+                  return res;
+                })
                 .catch(toasts.createNode.onError)
-                .then(() => router.push(`/events/${eventType}`))
                 .catch(handleError);
             }}
           >

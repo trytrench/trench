@@ -39,7 +39,7 @@ type Args<T extends FnType> = Omit<
   NodeDefsMap[T],
   "id" | "dependsOn" | "snapshotId" | "fn"
 > & {
-  fn: Omit<FnDefsMap[T], "id">;
+  fn: Omit<FnDefsMap[T], "id" | "snapshotId">;
 };
 
 export function buildNodeDefWithFn<T extends FnType>(

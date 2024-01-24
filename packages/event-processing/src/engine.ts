@@ -37,6 +37,7 @@ const MAP_FN_TYPE_TO_CONTEXT: FnTypeContextMap = {
   [FnType.CacheEntityFeature]: { redis },
   [FnType.Event]: {},
   [FnType.Decision]: {},
+  [FnType.Blocklist]: {},
 };
 
 type TrenchError = {

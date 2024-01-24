@@ -293,6 +293,7 @@ const Page: NextPageWithLayout = () => {
                   { name: "Counter", type: FnType.Counter },
                   { name: "Unique Counter", type: FnType.UniqueCounter },
                   { name: "Decision", type: FnType.Decision },
+                  { name: "Blocklist", type: FnType.Blocklist },
                 ].map((node) => (
                   <CommandItem
                     key={node.type}

@@ -50,6 +50,33 @@ export function useMutationToasts() {
     throw err;
   };
 
+  const handleCreateFunctionSuccess = (newDef: FnDef) => {
+    toast({
+      title: "Function created",
+      description: `Function "${newDef.name}" created successfully`,
+      duration: 5000,
+    });
+    return newDef;
+  };
+
+  const handleUpdateFunctionSuccess = (updatedDef: FnDef) => {
+    toast({
+      title: "Function updated",
+      description: `Function "${updatedDef.name}" updated successfully`,
+      duration: 5000,
+    });
+    return updatedDef;
+  };
+
+  const handleUpdateFunctionError = (err: Error) => {
+    toast({
+      title: "Error updating function",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
   return {
     createNode: {
       onSuccess: handleCreateNodeSuccess,
@@ -61,6 +88,11 @@ export function useMutationToasts() {
     },
     createFunction: {
       onError: handleCreateFunctionError,
+      onSuccess: handleCreateFunctionSuccess,
+    },
+    updateFunction: {
+      onError: handleUpdateFunctionError,
+      onSuccess: handleUpdateFunctionSuccess,
     },
   };
 }
