@@ -27,21 +27,6 @@ import { get } from "lodash";
  * node's value.
  */
 
-const redis = createRedisService();
-
-const MAP_FN_TYPE_TO_CONTEXT: FnTypeContextMap = {
-  [FnType.Computed]: {},
-  [FnType.Counter]: { redis },
-  [FnType.UniqueCounter]: { redis },
-  [FnType.GetEntityFeature]: { redis },
-  [FnType.EntityAppearance]: {},
-  [FnType.LogEntityFeature]: {},
-  [FnType.CacheEntityFeature]: { redis },
-  [FnType.Event]: {},
-  [FnType.Decision]: {},
-  [FnType.Blocklist]: {},
-};
-
 type TrenchError = {
   message: string;
 };
@@ -96,6 +81,7 @@ export class ExecutionEngine {
 
   state: ExecutionState | null = null;
 
+  context: FnTypeContextMap | null = null;
   constructor(props: {
     nodeDefs: Array<NodeDef>;
     engineId: string;
@@ -105,14 +91,33 @@ export class ExecutionEngine {
 
     this.engineId = engineId;
 
+    const redis = createRedisService();
+
+    this.context = {
+      [FnType.Computed]: {},
+      [FnType.Counter]: { redis },
+      [FnType.UniqueCounter]: { redis },
+      [FnType.GetEntityFeature]: { redis },
+      [FnType.EntityAppearance]: {},
+      [FnType.LogEntityFeature]: {},
+      [FnType.CacheEntityFeature]: { redis },
+      [FnType.Event]: {},
+      [FnType.Decision]: {},
+      [FnType.Blocklist]: {},
+    };
+
     const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {
       const fnType = nodeDef.fn.type;
       const nodeTypeDef = FN_TYPE_REGISTRY[fnType] as FnTypeDef;
 
+      if (!this.context) {
+        throw new Error("No engine context");
+      }
+
       const resolver = nodeTypeDef.createResolver({
         fnDef: nodeDef.fn,
         input: nodeDef.inputs,
-        context: MAP_FN_TYPE_TO_CONTEXT[fnType],
+        context: this.context[fnType],
       });
 
       return {

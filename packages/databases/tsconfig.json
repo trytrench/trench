@@ -1,14 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "moduleResolution": "node",
-    "preserveWatchOutput": true,
+    "outDir": "dist",
+    "target": "es2022",
+    "lib": ["es2022"],
+    "allowJs": true,
+    "checkJs": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "strict": true
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": "./src",
+    "preserveWatchOutput": true
   },
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
