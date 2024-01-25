@@ -552,7 +552,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             <FeatureCard
               key={feature.id}
               name={feature.name}
-              path={featureToNodeMap[feature.id]?.config.dataPath}
+              path={featureToNodeMap[feature.id]?.inputs.dataPath}
             />
           ))}
 

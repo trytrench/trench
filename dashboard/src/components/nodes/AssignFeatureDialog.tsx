@@ -98,7 +98,7 @@ export function AssignFeature({
 
   const { data: features } = api.features.list.useQuery();
 
-  const { mutateAsync: createNodeDef } =
+  const { mutateAsync: createNodeDefWithFn } =
     api.nodeDefs.createWithFn.useMutation();
   const mutationToasts = useMutationToasts();
 
@@ -132,7 +132,7 @@ export function AssignFeature({
         },
       },
     });
-    createNodeDef(nodeDef)
+    createNodeDefWithFn(nodeDef)
       .then(async (res) => {
         await refetchNodes();
         return res;

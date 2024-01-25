@@ -3,6 +3,7 @@ import { FnType } from "./_enum";
 import { createFnTypeDefBuilder } from "../builder";
 import { TypeName, tSchemaZod } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
+import { functions } from "../lib/computedNodeFunctions";
 
 export const computedFnDef = createFnTypeDefBuilder()
   .setFnType(FnType.Computed)
@@ -28,7 +29,13 @@ export const computedFnDef = createFnTypeDefBuilder()
         depValues[key] = featureValue;
       }
 
-      const value = await eval(`(${compiledJs})`)(depValues);
+      const functionCode = `
+      async function __runCode(inputs, fn) {
+        return (${compiledJs})(inputs);
+      }
+      `;
+
+      const value = await eval(`(${functionCode})`)(depValues, functions);
 
       return {
         data: value,

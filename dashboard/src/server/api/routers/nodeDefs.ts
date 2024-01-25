@@ -67,12 +67,6 @@ export const nodeDefsRouter = createTRPCRouter({
       const dependsOn = getDependencies(input.inputs);
       inputSchema.parse(input.inputs);
 
-      // Only publish engine if function is "important"
-      const UNIMPORTANT_FN_TYPES = [FnType.GetEntityFeature];
-      if (!UNIMPORTANT_FN_TYPES.includes(createdFnDef.type)) {
-        await publish();
-      }
-
       const newNodeDef = await ctx.prisma.node.create({
         data: {
           eventType: input.eventType,
@@ -90,6 +84,12 @@ export const nodeDefsRouter = createTRPCRouter({
         },
         include: NODE_INCLUDE_ARGS,
       });
+
+      // Only publish engine if function is "important"
+      const UNIMPORTANT_FN_TYPES = [FnType.GetEntityFeature];
+      if (!UNIMPORTANT_FN_TYPES.includes(createdFnDef.type)) {
+        await publish();
+      }
 
       return prismaToNodeDef(newNodeDef);
     }),
