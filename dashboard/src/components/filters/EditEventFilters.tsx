@@ -70,8 +70,8 @@ export function EditEventFilters(props: EditEventFiltersProps) {
             <TypeSelectorSubItem
               types={
                 allEventTypes?.map((e) => ({
-                  id: e.type,
-                  name: e.type,
+                  id: e.id,
+                  name: e.id,
                 })) ?? []
               }
               value={eventType ?? null}

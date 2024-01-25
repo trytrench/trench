@@ -132,7 +132,7 @@ export const nodeDefsRouter = createTRPCRouter({
               dependsOn: Array.from(dependsOn),
               inputs: input.inputs as unknown as any,
               fnSnapshot: {
-                connect: { id: fnDef.id },
+                connect: { id: fnDef.snapshotId },
               },
             },
           },

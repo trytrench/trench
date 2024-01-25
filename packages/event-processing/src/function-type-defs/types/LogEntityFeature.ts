@@ -38,8 +38,6 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
       const { featureId, featureSchema } = fnDef.config;
       const { entityDataPath, dataPath } = input;
 
-      const { nodeId, path } = dataPath;
-
       let assignToEntity: Entity | null = null;
 
       const baseData = {

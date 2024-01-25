@@ -97,6 +97,7 @@ export function createFnTypeDefBuilder<
   const partialDef = {
     configSchema: z.object({}),
     inputSchema: z.object({}),
+    getDependencies: () => new Set(),
     ...def,
   } satisfies Partial<FnTypeDef>;
 

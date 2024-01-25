@@ -13,7 +13,7 @@ import {
   StateUpdater,
   TrenchEvent,
 } from "./function-type-defs";
-import { printNodeDef } from "./function-type-defs/lib/print";
+import { printNodeDef, truncId } from "./function-type-defs/lib/print";
 import { db } from "databases";
 import { TSchema, createDataType } from "./data-types";
 import { StoreRow, StoreTable } from "./function-type-defs/lib/store";
@@ -229,7 +229,17 @@ export class ExecutionEngine {
 
     const nodePromise = nodePromises[nodeId];
     assert(nodePromise, "No node promise... this should never happen");
-    return await nodePromise;
+
+    const result = await nodePromise;
+    const instance = this.getFnInstance(nodeId);
+
+    // if (instance.nodeDef.fn.type !== "Event" && result.type === "success") {
+    //   console.log(
+    //     `${instance.nodeDef.fn.type} node ${truncId(nodeId)}:`,
+    //     JSON.stringify(result.output.data)
+    //   );
+    // }
+    return result;
   }
 
   public async executeStateUpdates() {
@@ -277,6 +287,18 @@ function validateFnInstanceMap(map: Record<string, NodeInstance[FnType]>) {
   // Check dependencies are valid
   for (const node of Object.values(map)) {
     const def = node.nodeDef;
+
+    // console.log("---");
+    // console.log("id:\t", truncId(def.id));
+    // console.log("name:\t", def.name);
+    // console.log("fn_type:\t", def.fn.type);
+    // console.log("fn_name:\t", def.fn.name);
+    // console.log(
+    //   "deps_on:\t",
+    //   Array.from(def.dependsOn).map(truncId).join(", ")
+    // );
+    // console.log("---");
+
     for (const depFnId of def.dependsOn) {
       const depFn = map[depFnId];
       assert(
