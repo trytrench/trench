@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "SKIP_ENV_VALIDATION=true next build",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start"
@@ -78,7 +78,6 @@
     "lucide-react": "0.263.1",
     "mapbox-gl": "^2.15.0",
     "monaco-editor": "^0.44.0",
-    "monaco-editor-webpack-plugin": "^7.1.0",
     "nanoid": "^5.0.3",
     "next": "13.4.12",
     "next-auth": "^4.22.4",

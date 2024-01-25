@@ -531,13 +531,22 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                 {rule.feature.name}
               </div>
 
-              <Button
-                size="iconXs"
-                variant="outline"
-                onClick={() => onAssignToEvent?.(rule.feature)}
+              <AssignFeature
+                title="Assign Rule"
+                defaults={{
+                  featureId: rule.featureId,
+                  dataPath: null,
+                  entityDataPath: undefined,
+                }}
               >
-                <Plus className="h-3 w-3" />
-              </Button>
+                <Button
+                  size="iconXs"
+                  variant="outline"
+                  // onClick={() => onAssignToEvent?.(rule.feature)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </AssignFeature>
             </div>
           ))}
 

@@ -2,21 +2,16 @@
   "name": "@trytrench/sdk",
   "version": "1.0.0",
   "description": "",
-  "files": [
-    "dist"
-  ],
-  "main": "./dist/trench.umd.js",
-  "module": "./dist/trench.mjs",
-  "exports": {
-    ".": {
-      "import": "./dist/trench.mjs",
-      "require": "./dist/trench.umd.js"
-    }
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --minify"
   },
   "devDependencies": {
+    "@swc/core": "^1.3.105",
     "@types/ua-parser-js": "^0.7.39",
-    "vite": "^5.0.12",
-    "vite-plugin-dts": "^3.7.1"
+    "tsup": "^8.0.1"
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^3.4.2",

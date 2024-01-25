@@ -24,52 +24,53 @@ interface TSchemaBase {
   type: TypeName;
 }
 
-interface TBooleanSchema extends TSchemaBase {
+export interface TBooleanSchema extends TSchemaBase {
   type: TypeName.Boolean;
 }
 
-interface TFloat64Schema extends TSchemaBase {
+export interface TFloat64Schema extends TSchemaBase {
   type: TypeName.Float64;
 }
 
-interface TInt64Schema extends TSchemaBase {
+export interface TInt64Schema extends TSchemaBase {
   type: TypeName.Int64;
 }
 
-interface TStringSchema extends TSchemaBase {
+export interface TStringSchema extends TSchemaBase {
   type: TypeName.String;
 }
 
-interface TLocationSchema extends TSchemaBase {
+export interface TLocationSchema extends TSchemaBase {
   type: TypeName.Location;
 }
 
-interface TEntitySchema<T extends string = string> extends TSchemaBase {
+export interface TEntitySchema<T extends string = string> extends TSchemaBase {
   type: TypeName.Entity;
   entityType?: T;
 }
 
-interface TArraySchema<TItems extends TSchema = TSchema> extends TSchemaBase {
+export interface TArraySchema<TItems extends TSchema = TSchema>
+  extends TSchemaBase {
   type: TypeName.Array;
   items: TItems;
 }
 
-interface TObjectSchema<
+export interface TObjectSchema<
   TProps extends Record<string, TSchema> = Record<string, TSchema>,
 > extends TSchemaBase {
   type: TypeName.Object;
   properties: TProps;
 }
 
-interface TAnySchema extends TSchemaBase {
+export interface TAnySchema extends TSchemaBase {
   type: TypeName.Any;
 }
 
-interface TDateSchema extends TSchemaBase {
+export interface TDateSchema extends TSchemaBase {
   type: TypeName.Date;
 }
 
-interface TRuleSchema extends TSchemaBase {
+export interface TRuleSchema extends TSchemaBase {
   type: TypeName.Rule;
 }
 

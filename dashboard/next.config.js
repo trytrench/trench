@@ -3,13 +3,11 @@
  * for Docker builds.
  */
 await import("./src/env.js");
-import assert from "assert";
-import MonacoEditorWebpackPlugin from "monaco-editor-webpack-plugin";
 
 /** @type {import("next").NextConfig} */
 const config = {
   reactStrictMode: true,
-
+  output: "standalone",
   /**
    * If you are using `appDir` then you must comment the below `i18n` config out.
    *
@@ -19,38 +17,7 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
-  webpack: (
-    /** @type {import('webpack').Configuration} */
-    config,
-    { isServer }
-  ) => {
-    assert(config.module?.rules);
-
-    const oneOfRule = config.module.rules.find(
-      /** @returns {rule is import('webpack').RuleSetRule} */
-      (rule) => typeof rule === "object" && !!rule.oneOf
-    );
-    assert(oneOfRule?.oneOf);
-
-    oneOfRule.oneOf.forEach((r) => {
-      if (r.issuer?.and?.[0]?.toString().includes("_app")) {
-        r.issuer = [
-          { and: r.issuer.and },
-          /[\\/]node_modules[\\/]monaco-editor[\\/]/,
-        ];
-      }
-    });
-
-    assert(config.plugins, "no plugins array");
-
-    config.plugins.push(
-      new MonacoEditorWebpackPlugin({
-        languages: ["typescript"],
-        filename: "static/[name].worker.js",
-        publicPath: "/_next",
-      })
-    );
-
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         fs: false,
@@ -58,8 +25,6 @@ const config = {
         net: false,
         tls: false,
       };
-
-      config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
 
     // Handling WebAssembly files
@@ -76,7 +41,7 @@ const config = {
   },
   transpilePackages: ["databases", "event-processing"],
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,5 +1,6 @@
 import { assert } from "common";
 import Redis from "ioredis";
+import { env } from "./env";
 
 export interface RedisInterface {
   increment(key: Buffer, amount?: number): Promise<number>;
@@ -24,8 +25,7 @@ class RedisService implements RedisInterface {
   private conn: any;
 
   constructor(address?: string) {
-    const [host, port] = addressToHostPort(address || "localhost", 6379);
-    this.conn = new Redis({ host, port });
+    this.conn = new Redis(address ?? env.REDIS_URL);
   }
 
   async ping() {

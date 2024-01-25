@@ -12,7 +12,6 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     CLICKHOUSE_URL: z.string().url(),
-    REDIS_URL: z.string().url(),
     NEXTAUTH_SECRET:
       process.env.NODE_ENV === "production"
         ? z.string()
@@ -53,7 +52,6 @@ export const env = createEnv({
   runtimeEnv: {
     POSTGRES_URL: process.env.POSTGRES_URL,
     CLICKHOUSE_URL: process.env.CLICKHOUSE_URL,
-    REDIS_URL: process.env.REDIS_URL,
     NODE_ENV: process.env.NODE_ENV,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,

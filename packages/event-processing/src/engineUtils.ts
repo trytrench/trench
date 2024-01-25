@@ -3,7 +3,7 @@ import { ExecutionEngine } from "./engine";
 import { NodeDef, NodeType } from "./node-type-defs";
 import { TSchema } from "./data-types";
 
-async function fetchFeatureDefSnapshots({
+async function fetchNodeDefSnapshots({
   engineId,
 }: {
   engineId: string;
@@ -32,6 +32,7 @@ async function fetchFeatureDefSnapshots({
     const { node } = snapshot;
     return {
       id: snapshot.nodeId,
+      snapshotId: snapshot.id,
       type: node.type as NodeType,
       eventType: node.eventType,
       name: node.name,
@@ -50,6 +51,6 @@ export async function fetchCurrentEngineId() {
 }
 
 export async function createEngine({ engineId }: { engineId: string }) {
-  const nodeDefs = await fetchFeatureDefSnapshots({ engineId });
+  const nodeDefs = await fetchNodeDefSnapshots({ engineId });
   return new ExecutionEngine({ nodeDefs, engineId, getContext: () => null });
 }
