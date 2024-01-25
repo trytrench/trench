@@ -6,6 +6,7 @@ export const env = createEnv({
     POSTGRES_URL: z.string().url(),
     NODE_ENV: z.enum(["development", "production", "test"]),
     CLICKHOUSE_URL: z.string().url(),
+    REDIS_URL: z.string().url(),
   },
 
   /**

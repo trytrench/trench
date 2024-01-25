@@ -1,13 +1,13 @@
 import { uniq } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { getBins } from "~/server/utils/getBins";
 import { eventFiltersZod } from "../../../shared/validation";
 import { getFiltersWhereQuery } from "../../lib/filters";
 
 export const eventsRouter = createTRPCRouter({
-  getEventTypeTimeData: publicProcedure
+  getEventTypeTimeData: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -55,7 +55,7 @@ export const eventsRouter = createTRPCRouter({
       };
     }),
 
-  getEntityTypeTimeData: publicProcedure
+  getEntityTypeTimeData: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -102,7 +102,7 @@ export const eventsRouter = createTRPCRouter({
       };
     }),
 
-  getEventLabelTimeData: publicProcedure
+  getEventLabelTimeData: protectedProcedure
     .input(
       z.object({
         // interval: z.number(),
@@ -172,7 +172,7 @@ export const eventsRouter = createTRPCRouter({
       return { bins, labels };
     }),
 
-  getEntityLabelTimeData: publicProcedure
+  getEntityLabelTimeData: protectedProcedure
     .input(
       z.object({
         // interval: z.number(),
@@ -240,7 +240,7 @@ export const eventsRouter = createTRPCRouter({
       return { bins, labels };
     }),
 
-  getEventLabelDistributions: publicProcedure
+  getEventLabelDistributions: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -282,7 +282,7 @@ export const eventsRouter = createTRPCRouter({
       return data;
     }),
 
-  getEntityLabelDistributions: publicProcedure
+  getEntityLabelDistributions: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -325,7 +325,7 @@ export const eventsRouter = createTRPCRouter({
       return data;
     }),
 
-  getEntityTypeDistributions: publicProcedure
+  getEntityTypeDistributions: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -365,7 +365,7 @@ export const eventsRouter = createTRPCRouter({
       return data;
     }),
 
-  getEventTypeDistributions: publicProcedure
+  getEventTypeDistributions: protectedProcedure
     .input(
       z.object({
         start: z.date(),
@@ -407,7 +407,7 @@ export const eventsRouter = createTRPCRouter({
       return data;
     }),
 
-  findMany: publicProcedure
+  findMany: protectedProcedure
     .input(
       z.object({
         offset: z.number().optional(),

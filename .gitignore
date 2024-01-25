@@ -1,3 +1,5 @@
 .turbo
 .env
 node_modules/
+localdata/
+dist

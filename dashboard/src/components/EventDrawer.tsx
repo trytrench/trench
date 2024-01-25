@@ -1,27 +1,42 @@
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { uniq } from "lodash";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
-import { RouterOutputs } from "~/utils/api";
-import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
-import { useRouter } from "next/router";
 import { Badge } from "~/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
+import { RouterOutputs, api } from "~/utils/api";
 import { PropertyList } from "./ui/custom/property-list";
+import { RenderResult, RenderTypedData } from "./RenderResult";
+import { useEntityNameMap } from "../hooks/useEntityNameMap";
 
 export function EventDrawer(props: {
-  datasetId: string;
   selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number] | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { isOpen, selectedEvent, onOpenChange, datasetId } = props;
+  const { isOpen, selectedEvent, onOpenChange } = props;
   const [expandData, setExpandData] = useState(false);
   const router = useRouter();
 
   const eventLabels = uniq(
     selectedEvent?.labels?.filter((label) => label !== "") ?? []
   );
+
+  const { data: entitiesList } = api.lists.getEntitiesList.useQuery(
+    {
+      entityFilters: {
+        eventId: selectedEvent?.id,
+      },
+    },
+    {
+      enabled: !!selectedEvent?.id,
+    }
+  );
+
+  const entityIds = entitiesList?.rows.map((entity) => entity.entityId) ?? [];
+  const entityNameMap = useEntityNameMap(entityIds);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -55,12 +70,10 @@ export function EventDrawer(props: {
               label: "Type",
               value: selectedEvent?.type ?? "--",
             },
-            ...Object.entries(selectedEvent?.features ?? {}).map(
-              ([key, value]) => ({
-                label: key,
-                value: value as string,
-              })
-            ),
+            ...(selectedEvent?.features.map((feature) => ({
+              label: feature.featureName,
+              value: <RenderResult result={feature.result} />,
+            })) ?? []),
           ]}
         />
 
@@ -86,14 +99,12 @@ export function EventDrawer(props: {
         <div className="text-sm">Entities</div>
         <div className="h-4"></div>
         <div className="flex flex-col gap-2">
-          {selectedEvent?.entities.map((entity) => {
+          {entitiesList?.rows.map((entity) => {
             return (
               <EntityCard
-                key={entity.id}
+                key={entity.entityId}
                 entity={entity}
-                datasetId={datasetId}
-                relation={entity.relation}
-                href={`/${router.query.project as string}/entity/${entity.id}`}
+                entityNameMap={entityNameMap}
               />
             );
           })}

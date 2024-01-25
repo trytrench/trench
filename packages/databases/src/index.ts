@@ -1,13 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { createClient } from "@clickhouse/client";
 import { env } from "./env";
-import crypto from "crypto";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export { DatasetType } from "@prisma/client";
+export { GlobalStateKey } from "@prisma/client";
+
+export { createRedisService, type RedisInterface } from "./redis";
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -31,3 +32,5 @@ if (env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 export const db = createClient({
   host: env.CLICKHOUSE_URL,
 });
+
+export type ClickhouseClient = typeof db;

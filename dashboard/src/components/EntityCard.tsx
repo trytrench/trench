@@ -1,37 +1,44 @@
-import { Badge } from "~/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
+import { Badge } from "~/components/ui/badge";
+import { useDecision } from "~/hooks/useDecision";
+import { useEntityName } from "~/hooks/useEntityName";
 import { type RouterOutputs } from "~/utils/api";
-import { FeatureGrid } from "./ui/custom/feature-grid";
-import { EntityChip } from "./EntityChip";
-import { useRouter } from "next/router";
+import { FeatureGrid } from "./FeatureGrid";
+import { RenderDecision } from "./RenderDecision";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   relation?: string;
-  href: string;
+  entityNameMap: Record<string, string>;
 }
 
-export const EntityCard = ({
-  entity,
-  relation,
-  href,
-  features,
-  rules,
-  name,
-  datasetId,
-}: Props) => {
-  const router = useRouter();
+export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
+  const { entityName, entityTypeName } = useEntityName(entity);
+  const decision = useDecision(entity.features);
 
   return (
-    <div className="border rounded-lg shadow-sm p-8 bg-card">
+    <a
+      className="flex flex-col text-left border rounded-lg shadow-sm p-8 bg-card"
+      href={`/entity/${encodeURIComponent(
+        entity.entityType
+      )}/${encodeURIComponent(entity.entityId)}`}
+    >
       <div className="">
-        <Link href={href}>
-          <div className="flex">
+        <Link
+          href={`/entity/${encodeURIComponent(
+            entity.entityType
+          )}/${encodeURIComponent(entity.entityId)}`}
+        >
+          <div className="flex items-center">
             <h1 className="text-lg text-emphasis-foreground">
-              {entity.type}: {name}
+              {entityTypeName}: {entityName ?? entity.entityId}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
+
+            <div className="ml-3">
+              {decision && <RenderDecision decision={decision} />}
+            </div>
           </div>
         </Link>
         {entity.lastSeenAt && (
@@ -43,59 +50,8 @@ export const EntityCard = ({
 
         <div className="h-4"></div>
 
-        {/* <FeatureGrid features={entity.features} /> */}
-        <div className="flex flex-wrap gap-1 mt-3">
-          {/* {entityLabels.length > 0 ? (
-            entityLabels.map((label) => {
-              return (
-                <Badge key={label} variant="default">
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <div className="italic text-sm">No labels</div>
-          )} */}
-        </div>
-        <div className="h-2"></div>
-        {rules.length > 0 && (
-          <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground mb-4">
-            {rules.map(({ name, color }) => (
-              <div key={name} className="flex space-x-1 items-center">
-                <div
-                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
-                ></div>
-                <div className="font-semibold">{name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="grid grid-cols-5 gap-x-8 gap-y-4 text-sm text-foreground">
-          {features.map(({ name, value, dataType, entityName, entityType }) => (
-            <div key={name}>
-              <div className="font-semibold">{name}</div>
-
-              {dataType === "entity" && value ? (
-                <EntityChip
-                  entity={{ id: value, name: entityName, type: entityType }}
-                  href={`/${router.query.project as string}/entity/${value}`}
-                  datasetId={datasetId}
-                />
-              ) : (
-                <div className="truncate">
-                  {value === 0
-                    ? "0"
-                    : value === true
-                    ? "True"
-                    : value === false
-                    ? "False"
-                    : (JSON.stringify(value) as string) || "-"}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <FeatureGrid features={entity.features} entityNameMap={entityNameMap} />
       </div>
-    </div>
+    </a>
   );
 };

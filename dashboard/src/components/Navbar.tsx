@@ -1,20 +1,20 @@
+import { DropdownMenu } from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
 import { Menu } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useRef } from "react";
-import { Button } from "~/components/ui/button";
-import { handleError } from "../lib/handleError";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/custom/light-tabs";
-import {
-  Select,
-  SelectItem,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { api } from "../utils/api";
+import { handleError } from "../lib/handleError";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ThemeToggle } from "./ui/custom/theme-toggle";
+import {
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { getInitials } from "~/utils/getInitials";
 
 interface Props {
   href: string;
@@ -43,120 +43,84 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Code", path: "code" },
-  { name: "Explore", path: "explore" },
   { name: "Settings", path: "settings" },
 ];
 
 export const Navbar = () => {
+  const session = useSession();
+
   // const isDesktop = useBreakpointValue({ base: false, lg: true });
   const isDesktop = true;
   const btnRef = useRef(null);
 
   const router = useRouter();
-  const { data: projects } = api.project.list.useQuery();
 
-  const project = router.query.project as string;
-
-  const activeTab = router.pathname.split("/")[2];
-  const activeTabChildren = TABS.find((tab) => tab.path === activeTab)
-    ?.children;
-  const activeChildTab = router.pathname.split("/")[3] ?? "";
+  const activeTab = router.pathname.split("/")[1];
 
   return (
-    <nav
-      className={clsx({
-        "w-full self-center shrink-0 flex flex-col justify-start p-0": true,
-      })}
-    >
-      <div className="flex mt-2 px-4 items-center justify-start gap-4">
-        {!isDesktop && (
-          // missing onclick
-          <button className="-m-3 p-3" ref={btnRef}>
-            <Menu height={24} width={24} />
-          </button>
-        )}
-        <NextLink href="/">
-          <h1 className="text-lg font-bold text-emphasis-foreground mr-12">
-            Trench
-          </h1>
-        </NextLink>
-        <div>
-          <Select
-            value={project}
-            onValueChange={(value) => {
-              router.push(`/${value}/events`).catch(handleError);
-            }}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select project..." />
-            </SelectTrigger>
-            <SelectContent>
-              {projects?.map((project) => {
-                return (
-                  <SelectItem key={project.name} value={project.name}>
-                    {project.name}
-                  </SelectItem>
-                );
-              }) ?? []}
-            </SelectContent>
-          </Select>
-        </div>
+    <nav className="flex mt-2 px-4 items-center justify-start gap-4 border-b pb-2">
+      {!isDesktop && (
+        // missing onclick
+        <button className="-m-3 p-3" ref={btnRef}>
+          <Menu height={24} width={24} />
+        </button>
+      )}
+      <NextLink href="/">
+        <h1 className="text-lg font-bold text-emphasis-foreground mx-4">
+          Trench
+        </h1>
+      </NextLink>
 
-        <div className="grow" />
+      <Tabs
+        className=""
+        value={activeTab}
+        onValueChange={(tab) => {
+          router.push(`/${tab}`).catch(handleError);
+        }}
+      >
+        <TabsList className="pl-2 border-b-0">
+          {TABS.map((tab) => {
+            return (
+              <TabsTrigger
+                key={tab.path}
+                value={tab.path}
+                className="border-b-0 text-muted-foreground data-[state=active]:text-emphasis-foreground hover:text-emphasis-foreground"
+              >
+                {tab.name}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
+      <div className="grow" />
+
+      <div className="flex items-center gap-4 text-sm">
         <ThemeToggle />
+        <NavItem href="/changelog">Changelog</NavItem>
+        <NavItem href="/help">Help</NavItem>
+        <NavItem href="/docs">Docs</NavItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Avatar className="w-9 h-9">
+              {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
+              <AvatarFallback>
+                {getInitials(session.data?.user.name ?? "")}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
 
-        <div className="flex gap-4 text-sm">
-          <NavItem href="/changelog">Changelog</NavItem>
-          <NavItem href="/help">Help</NavItem>
-          <NavItem href="/docs">Docs</NavItem>
-          <div className="grow" />
-          {/* <UserButton afterSignOutUrl="/" /> */}
-        </div>
-      </div>
-
-      <div>
-        <Tabs
-          value={activeTab}
-          onValueChange={(tab) => {
-            router.push(`/${project}/${tab}`).catch(handleError);
-          }}
-        >
-          <TabsList className="pl-2">
-            {TABS.map((tab) => {
-              return (
-                <TabsTrigger key={tab.path} value={tab.path}>
-                  {tab.name}
-                </TabsTrigger>
-              );
-            })}
-
-            {activeTabChildren && (
-              <div className="flex animate-in fade-in-60">
-                <div className="border-r my-2 mx-4 rotate-12" />
-                <Tabs
-                  value={activeChildTab}
-                  onValueChange={(tab) => {
-                    router
-                      .push(`/${project}/${activeTab}/${tab}`)
-                      .catch(handleError);
-                  }}
-                >
-                  <TabsList>
-                    {activeTabChildren.map((childTab) => {
-                      return (
-                        <TabsTrigger key={childTab.path} value={childTab.path}>
-                          {childTab.name}
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
-                </Tabs>
-              </div>
-            )}
-          </TabsList>
-        </Tabs>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={() => {
+                void signOut();
+                void router.push("/login");
+              }}
+            >
+              Log Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
@@ -174,7 +138,7 @@ export const Navbar = () => {
               <NavItem href="/settings">Settings</NavItem>
             </VStack>
           </DrawerBody>
-        </DrawerContent>
+        </DrawerContent>p
       </Drawer> */}
     </nav>
   );

@@ -1,15 +1,17 @@
 import { createTRPCRouter } from "~/server/api/trpc";
 import { dashboardRouter } from "./routers/dashboard";
-import { datasetsRouter } from "./routers/datasets";
-import { entitiesRouter } from "./routers/entities";
+import { entityTypesRouter } from "./routers/entityTypes";
+import { eventTypesRouter } from "./routers/eventTypes";
 import { eventsRouter } from "./routers/events";
-import { featuresRouter } from "./routers/features";
-import { labelsRouter } from "./routers/labels";
+import { nodeDefsRouter } from "./routers/nodeDefs";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
-import { projectRouter } from "./routers/project";
-import { eventHandlersRouter } from "./routers/eventHandlers";
-import { backtestsRouter } from "./routers/backtests";
+import { lists2Router } from "./routers/lists2";
+import { featuresRouter } from "./routers/features";
+import { rulesRouter } from "./routers/rules";
+import { entityViewsRouter } from "./routers/entityViews";
+import { decisionsRouter } from "./routers/decisions";
+import { fnDefsRouter } from "./routers/fnDefs";
 
 /**
  * This is the primary router for your server.
@@ -18,16 +20,18 @@ import { backtestsRouter } from "./routers/backtests";
  */
 export const appRouter = createTRPCRouter({
   events: eventsRouter,
-  entities: entitiesRouter,
-  labels: labelsRouter,
   lists: listsRouter,
   dashboard: dashboardRouter,
   links: linksRouter,
-  datasets: datasetsRouter,
-  eventHandlers: eventHandlersRouter,
+  eventTypes: eventTypesRouter,
+  entityTypes: entityTypesRouter,
+  nodeDefs: nodeDefsRouter,
+  fnDefs: fnDefsRouter,
+  lists2: lists2Router,
   features: featuresRouter,
-  project: projectRouter,
-  backtests: backtestsRouter,
+  rules: rulesRouter,
+  entityViews: entityViewsRouter,
+  decisions: decisionsRouter,
 });
 
 // export type definition of API

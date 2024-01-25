@@ -1,126 +1,85 @@
-import type {
-  EntityFeature,
-  EntityType,
-  EventFeature,
-  EventType,
-  Feature,
-} from "@prisma/client";
+import type { EntityType, EventType, Feature, Rule } from "@prisma/client";
+import { FeatureDef, TSchema, TypeName, getTypedData } from "event-processing";
+import { AnnotatedFeature } from "../../shared/types";
+import { prisma } from "databases";
 
-type CommonArgs = {
-  features: Feature[];
-  entities: (Record<string, string> & { id: string; type: string })[];
-  entityTypes: (EntityType & {
-    nameFeature: (EntityFeature & { feature: Feature }) | null;
-  })[];
-  isRule?: boolean;
-};
+export function getAnnotatedFeatures(
+  featureDefs: FeatureDef[],
+  entityTypes: EntityType[],
+  featuresArray: Array<[string, string | null, string | null]>, // featureId, value, error
+  rules?: Rule[]
+) {
+  const featureToRuleMap =
+    rules?.reduce(
+      (acc, rule) => ({ ...acc, [rule.featureId]: rule }),
+      {} as Record<string, Rule>
+    ) ?? {};
 
-type EventArgs = {
-  type: "event";
-  eventOrEntity: { type: string; features: Record<string, string> };
-  eventOrEntityTypes: EventType[];
-  eventOrEntityFeatures: (EventFeature & { eventType: EventType })[];
-} & CommonArgs;
+  const featureDefsMap = new Map<string, FeatureDef>();
+  for (const featureDef of featureDefs) {
+    featureDefsMap.set(featureDef.id, featureDef);
+  }
 
-type EntityArgs = {
-  type: "entity";
-  eventOrEntity: { type: string; features: Record<string, string> };
-  eventOrEntityTypes: EntityType[];
-  eventOrEntityFeatures: (EntityFeature & { entityType: EntityType })[];
-} & CommonArgs;
+  const entityTypesMap = new Map<string, string>();
+  for (const entityType of entityTypes) {
+    entityTypesMap.set(entityType.id, entityType.type);
+  }
 
-type FunctionArg = EventArgs | EntityArgs;
+  const annotatedFeatures: AnnotatedFeature[] = [];
+  for (const [featureId, value, error] of featuresArray) {
+    const featureDef = featureDefsMap.get(featureId);
+    if (featureDef) {
+      const parsed = JSON.parse(value ?? "null");
 
-export function getOrderedFeatures({
-  type,
-  eventOrEntity,
-  eventOrEntityTypes,
-  eventOrEntityFeatures,
-  features,
-  entities,
-  entityTypes,
-  isRule,
-}: FunctionArg) {
-  // Find the event type for the current event
-  const eventOrEntityType = eventOrEntityTypes.find(
-    (type) => type.type === eventOrEntity.type
-  );
-  if (!eventOrEntityType) return [];
-
-  const filteredEventOrEntityFeatures =
-    type === "event"
-      ? eventOrEntityFeatures.filter(
-          (feature) => feature.eventType.type === eventOrEntity.type
-        )
-      : eventOrEntityFeatures.filter(
-          (feature) => feature.entityType.type === eventOrEntity.type
-        );
-
-  const featureOverrides = filteredEventOrEntityFeatures.reduce(
-    (acc, feature) => {
-      acc[feature.featureId] = feature;
-      return acc;
-    },
-    {} as Record<string, EventFeature | EntityFeature>
-  );
-
-  const featureMap = features.reduce(
-    (acc, feature) => {
-      acc[feature.id] = feature;
-      return acc;
-    },
-    {} as Record<string, Feature>
-  );
-
-  const entityTypeToNameFeature = entityTypes.reduce(
-    (acc, type) => ({
-      ...acc,
-      [type.type]: type.nameFeature?.feature.feature,
-    }),
-    {} as Record<string, string | undefined>
-  );
-
-  const orderKey = isRule ? "ruleOrder" : "featureOrder";
-
-  // Get the features for the event with overrides applied
-  const orderedFeatures = eventOrEntityType[orderKey].map((featureId) => {
-    const featureData = featureMap[featureId];
-    if (!featureData) throw new Error(`Feature ${featureId} not found`);
-
-    if (featureData.dataType === "entity") {
-      const entityId = eventOrEntity.features[featureData.feature];
-      const entityData = entities.find((e) => e.id === entityId);
-      if (!entityData || !entityId)
-        return {
-          id: featureId,
-          name: featureOverrides[featureId]?.name ?? featureData.feature,
-          value: undefined,
-          dataType: featureData.dataType,
-        };
-
-      const entityNameFeature = entityTypeToNameFeature[entityData.type];
-      const entityName = entityNameFeature && entityData[entityNameFeature];
-
-      return {
-        id: featureId,
-        name: featureOverrides[featureId]?.name ?? featureData.feature,
-        value: eventOrEntity.features[featureData.feature],
-        dataType: featureData.dataType,
-        entityName,
-        entityType: entityData.type,
-      };
+      annotatedFeatures.push({
+        featureId,
+        featureName: featureDef.name,
+        rule: featureToRuleMap[featureId],
+        result: error
+          ? { type: "error", message: error }
+          : {
+              type: "success",
+              data: getTypedData(parsed, featureDef.schema),
+            },
+      });
+      continue;
     }
 
-    return {
-      id: featureId,
-      name: featureOverrides[featureId]?.name ?? featureData.feature,
-      value: eventOrEntity.features[featureData.feature],
-      dataType: featureData.dataType,
-      color: featureOverrides[featureId]?.color,
-    };
+    const entityType = entityTypesMap.get(featureId);
+    if (entityType) {
+      const parsed = JSON.parse(value ?? "null");
+      annotatedFeatures.push({
+        featureId,
+        featureName: entityType,
+        rule: featureToRuleMap[featureId],
+        result: error
+          ? { type: "error", message: error }
+          : {
+              type: "success",
+              data: getTypedData(parsed, {
+                type: TypeName.Entity,
+                entityType: featureId,
+              }),
+            },
+      });
+    }
+  }
+
+  return annotatedFeatures;
+}
+
+export async function getLatestFeatureDefs(): Promise<FeatureDef[]> {
+  const result = await prisma.feature.findMany({
+    orderBy: { createdAt: "desc" },
   });
 
-  if (isRule)
-    return orderedFeatures.filter((feature) => feature.value === "true");
-  return orderedFeatures;
+  return result.map((f) => {
+    return {
+      id: f.id,
+      name: f.name,
+      description: f.description ?? undefined,
+      schema: f.schema as unknown as TSchema,
+      entityTypeId: f.entityTypeId,
+    };
+  });
 }

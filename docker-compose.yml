@@ -11,10 +11,10 @@ services:
       file: docker-compose.base.yml
       service: postgres
 
-  clickhouse-server:
+  clickhouse:
     extends:
       file: docker-compose.base.yml
-      service: clickhouse-server
+      service: clickhouse
 
   consumer:
     build:
@@ -22,12 +22,12 @@ services:
       dockerfile: ./consumer/Dockerfile
     depends_on:
       - postgres
-      - clickhouse-server
+      - clickhouse
       - redis
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
-      CLICKHOUSE_URL: "clickhouse://default:@clickhouse-server:8123/default"
-      REDIS_URL: "redis:6379"
+      CLICKHOUSE_URL: "http://clickhouse:8123"
+      REDIS_URL: "redis://redis:6379"
       NODE_ENV: "development"
 
   dashboard:
@@ -37,14 +37,14 @@ services:
     restart: on-failure
     depends_on:
       - postgres
-      - redis
-      - clickhouse-server
-      - consumer
+      - clickhouse
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
-      CLICKHOUSE_URL: "clickhouse://default:@clickhouse-server:8123/default"
-      REDIS_URL: "redis:6379"
+      CLICKHOUSE_URL: "http://clickhouse:8123"
+      REDIS_URL: "redis://redis:6379"
       NODE_ENV: "development"
+    env_file:
+      - .env
     ports:
       - "3000:3000"
 

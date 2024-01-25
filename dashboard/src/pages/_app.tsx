@@ -8,6 +8,7 @@ import { NextAdapter } from "next-query-params";
 import type { NextPage } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { ThemeProvider } from "~/components/ui/custom/theme-provider";
+import { Toaster } from "../components/ui/toaster";
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -33,6 +34,7 @@ function MyApp({
           disableTransitionOnChange
         >
           {getLayout(<Component {...pageProps} />)}
+          <Toaster />
         </ThemeProvider>
       </SessionProvider>
     </QueryParamProvider>

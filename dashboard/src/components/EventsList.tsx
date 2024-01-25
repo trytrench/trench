@@ -1,32 +1,31 @@
 import { format } from "date-fns";
+import { Entity } from "event-processing";
+import { uniq } from "lodash";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
-import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { Toggle } from "~/components/ui/toggle";
-import { EventFilters } from "~/shared/validation";
+import { useDecision } from "~/hooks/useDecision";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
+import { type EventFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
-import { EntityChip } from "./EntityChip";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
+import { FeatureGrid } from "./FeatureGrid";
+import { RenderDecision } from "./RenderDecision";
+import { EditEventFilters } from "./filters/EditEventFilters";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
-import { EventFilter } from "./ListFilter";
-import { EventFilters } from "~/shared/validation";
-import SuperJSON from "superjson";
-import { FeatureGrid } from "./ui/custom/feature-grid";
 
-interface Props {
-  entityId?: string;
-  datasetId: string;
-  projectId: string;
+interface EventsListProps {
+  entity: Entity;
 }
 
-export default function EventsList({ entityId, datasetId, projectId }: Props) {
+export default function EventsList({ entity }: EventsListProps) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
-  const [filters, setFilters] = useState<EventFilters>(undefined);
+  const [eventFilters, setEventFilters] = useState<EventFilters>({});
 
   const {
     data: events,
@@ -36,12 +35,13 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: { ...filters, entityId },
-      datasetId,
+      eventFilters: {
+        ...eventFilters,
+        entities: entity ? [entity] : undefined,
+      },
       limit,
     },
     {
-      enabled: !!datasetId,
       getNextPageParam: (lastPage, pages) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
@@ -52,6 +52,11 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
   const allEvents = useMemo(() => {
     return events?.pages.flatMap((page) => page.rows) ?? [];
   }, [events]);
+
+  const entityIds = useMemo(() => {
+    return uniq(allEvents.flatMap((event) => event.entities.map((e) => e.id)));
+  }, [allEvents]);
+  const entityNameMap = useEntityNameMap(entityIds);
 
   type DividerItem = {
     type: "divider";
@@ -100,7 +105,6 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
   return (
     <>
       <EventDrawer
-        datasetId={datasetId}
         isOpen={!!selectedEvent}
         onOpenChange={(open) => {
           if (!open) setSelectedEvent(null);
@@ -111,7 +115,12 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <EventFilter projectId={projectId} onChange={setFilters} />
+          <EditEventFilters
+            value={eventFilters ?? {}}
+            onChange={(newFilters) => {
+              setEventFilters(newFilters);
+            }}
+          />
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle
@@ -160,10 +169,9 @@ export default function EventsList({ entityId, datasetId, projectId }: Props) {
                       <EventCard
                         key={item.event.id}
                         event={item.event}
-                        features={item.event.features ?? []}
-                        rules={item.event.rules}
                         isFirst={idx === 0}
                         isLast={idx === listItems.length - 1}
+                        entityNameMap={entityNameMap}
                       />
                     ) : (
                       <TimeDivider
@@ -278,24 +286,11 @@ interface EventCardProps {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isFirst: boolean;
   isLast: boolean;
-  features: {
-    id: string;
-    name: string;
-    value: string;
-    dataType: string;
-  }[];
-  rules: any[];
+  entityNameMap: Record<string, string>;
 }
 
-function EventCard({
-  event,
-  isFirst,
-  isLast,
-  features,
-  rules,
-  datasetId,
-}: EventCardProps) {
-  const router = useRouter();
+function EventCard({ event, isFirst, isLast, entityNameMap }: EventCardProps) {
+  const decision = useDecision(event.features);
 
   return (
     <div className="flex">
@@ -316,85 +311,12 @@ function EventCard({
         <div className="text-xs text-muted-foreground">
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
         </div>
-        <div className="flex flex-wrap gap-1 mt-3">
-          {/* {eventLabels.length > 0 ? (
-            eventLabels.map((label, idx) => {
-              return (
-                <Badge key={idx} variant="default">
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <></>
-          )} */}
+        <div className="flex text-sm items-center mt-2">
+          {decision && <RenderDecision decision={decision} />}
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {rules.length > 0 && (
-          <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground mb-4">
-            {rules.map(({ name, color }) => (
-              <div key={name} className="flex space-x-1 items-center">
-                <div
-                  className={`rounded-full ${color || "bg-gray-400"} w-2 h-2`}
-                ></div>
-                <div className="font-semibold">{name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {features.length > 0 ? (
-          <>
-            <div className="grid grid-cols-5 gap-x-8 gap-y-2 text-sm text-foreground">
-              {features.map(
-                ({ name, value, dataType, entityName, entityType }, idx) => (
-                  <div key={name}>
-                    <div className="font-semibold">{name}</div>
-                    {dataType === "entity" && value ? (
-                      <EntityChip
-                        entity={{
-                          id: value,
-                          name: entityName,
-                          type: entityType,
-                        }}
-                        datasetId={datasetId}
-                        href={`/${
-                          router.query.project as string
-                        }/entity/${value}`}
-                      />
-                    ) : (
-                      <div className="truncate">
-                        {value === 0
-                          ? "0"
-                          : value === true
-                          ? "True"
-                          : value === false
-                          ? "False"
-                          : (JSON.stringify(value) as string) || "-"}
-                      </div>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="italic text-gray-400">No features</div>
-        )}
-        <div className="h-2"></div>
-
-        {/* <div className="flex gap-1.5 flex-wrap mt-2">
-          {event.entities.map((entity) => {
-            return (
-              <EntityChip
-                key={entity.id}
-                entity={entity}
-                href={`/${router.query.project as string}/entity/${entity.id}`}
-              />
-            );
-          })}
-        </div> */}
+        <FeatureGrid features={event.features} entityNameMap={entityNameMap} />
       </Panel>
     </div>
   );

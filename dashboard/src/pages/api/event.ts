@@ -1,11 +1,10 @@
 import { type Prisma } from "@prisma/client";
+import { createEngine, fetchCurrentEngineId } from "event-processing";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
-import { bigint, z } from "zod";
-import { db, prisma } from "~/server/db";
-import { batchInsertEvents, getDatasetData } from "event-processing";
-import { errorIfFalse } from "../../server/lib/throwIfFalse";
-import { processEvents } from "sqrl-helpers";
+import { z } from "zod";
+import { env } from "~/env";
+import { prisma } from "~/server/db";
 
 const eventSchema = z.object({
   timestamp: z
@@ -28,7 +27,11 @@ export default async function handler(
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
+    return res.status(405).json({ message: "Method Not Allowed" });
+  }
+
+  if (req.headers["x-api-key"] !== env.API_KEY) {
+    return res.status(401).json({ message: "Invalid API Key" });
   }
 
   const parsedResult = eventSchema.safeParse(req.body);
@@ -40,7 +43,7 @@ export default async function handler(
 
   const eventId = ulid(event.timestamp.getTime());
 
-  await prisma.eventLog.create({
+  await prisma.event.create({
     data: {
       id: eventId,
       timestamp: event.timestamp,
@@ -51,35 +54,25 @@ export default async function handler(
   });
 
   if (event.options?.sync) {
-    // Get result immediately, then add to output log.
+    // Get latest engine
+    const engineId = await fetchCurrentEngineId();
+    if (!engineId) {
+      throw new Error("No engine deployed");
+    }
+    const engine = await createEngine({ engineId });
 
-    const project = await prisma.project.findFirst();
-
-    errorIfFalse(!!project, "No project found");
-    errorIfFalse(!!project?.productionDatasetId, "No prod dataset Id");
-
-    const { datasetId, code } = await getDatasetData({
-      datasetId: project.productionDatasetId,
-      dbClient: prisma,
+    engine.initState({
+      id: eventId,
+      type: event.type,
+      data: event.data,
+      timestamp: event.timestamp,
     });
 
-    const result = await processEvents({
-      events: [{ ...event, id: eventId }],
-      files: code,
-      datasetId: datasetId,
-    });
-
-    await batchInsertEvents({
-      events: result,
-      clickhouseClient: db,
-    });
-
-    const output = result[0]!;
+    const results = await engine.getAllEngineResults();
 
     return res.status(200).json({
       output: {
-        ...output,
-        datasetId: Number(output.datasetId),
+        results,
       },
     });
   }

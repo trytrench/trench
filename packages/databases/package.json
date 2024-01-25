@@ -1,7 +1,8 @@
 {
   "name": "databases",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "db:generate": "prisma generate",
     "db:migrate": "pnpm run db:prisma:migrate && pnpm run db:clickhouse:migrate",
@@ -9,12 +10,13 @@
     "db:clickhouse:migrate": "npx dbmate -e \"CLICKHOUSE_URL\" --migrations-dir clickhouse/migrations --no-dump-schema up",
     "db:seed": "npx prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "build": "tsc",
-    "dev": "npx tsc --watch"
+    "build": "tsup",
+    "dev": "tsup --watch"
   },
   "devDependencies": {
     "dbmate": "^2.6.0",
     "prisma": "^5.3.1",
+    "tsup": "^8.0.1",
     "typescript": "^5.2.2"
   },
   "prisma": {
@@ -24,7 +26,8 @@
     "@clickhouse/client": "^0.2.2",
     "@prisma/client": "^5.3.1",
     "@t3-oss/env-core": "^0.6.1",
-    "zod": "^3.22.2",
-    "sqrl-helpers": "workspace:*"
+    "common": "workspace:*",
+    "ioredis": "^5.3.2",
+    "zod": "^3.22.2"
   }
 }

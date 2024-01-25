@@ -1,15 +1,18 @@
-import { prisma } from "databases";
 import data from "./data.json";
-import { type Event } from "sqrl-helpers/src";
 import { ulid } from "ulid";
 import { getUnixTime } from "date-fns";
+import { TrenchEvent } from "event-processing";
+import { PrismaClient } from "@prisma/client";
 
-const allEvents = data as Event[];
-const events = allEvents.slice(0, 1000);
+const prisma = new PrismaClient({
+  datasourceUrl:
+    "postgresql://postgres:postgres@localhost:5432/postgres?schema=public",
+});
+const allEvents = data as TrenchEvent[];
 
 async function main() {
-  await prisma.eventLog.createMany({
-    data: events.map((event) => ({
+  await prisma.event.createMany({
+    data: allEvents.map((event) => ({
       ...event,
       id: ulid(getUnixTime(new Date(event.timestamp))),
     })),
