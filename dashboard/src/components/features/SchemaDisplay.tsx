@@ -1,13 +1,14 @@
 import {
-  DataPath,
+  type DataPath,
   NodeDef,
-  TSchema,
+  FnType,
+  type TSchema,
   TypeName,
   createDataType,
 } from "event-processing";
 import { run } from "json_typegen_wasm";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 import { Badge } from "../ui/badge";
 
@@ -16,6 +17,12 @@ interface EventTypeNodesSchemaDisplayProps {
   onItemClick?: (dataPath: DataPath) => void;
   renderRightComponent?: (dataPath: DataPath) => React.ReactNode;
 }
+
+const HIDDEN_NODE_TYPES = [
+  FnType.CacheEntityFeature,
+  FnType.GetEntityFeature,
+  FnType.LogEntityFeature,
+];
 
 export function EventTypeNodesSchemaDisplay({
   eventType,
@@ -27,15 +34,21 @@ export function EventTypeNodesSchemaDisplay({
     { enabled: !!eventType }
   );
 
+  const filteredNodes = useMemo(() => {
+    return nodes?.filter((node) => {
+      return !HIDDEN_NODE_TYPES.includes(node.fn.type);
+    });
+  }, [nodes]);
+
   return (
-    <div>
-      {nodes?.map((node) => {
+    <div className="font-mono">
+      {filteredNodes?.map((node) => {
         return (
           <div key={node.id}>
             <SchemaDisplay
-              name={<Badge>{node.name}</Badge>}
+              name={<span className="font-bold">{node.name}</span>}
               path={[]}
-              schema={node.returnSchema}
+              schema={node.fn.returnSchema}
               onItemClick={({ path, schema }) => {
                 onItemClick?.({
                   nodeId: node.id,
@@ -116,9 +129,7 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
                 );
               })}
             </div>
-          ) : (
-            <span className="italic opacity-40 ml-4">empty</span>
-          ))}
+          ) : null)}
       </>
     );
   }
@@ -130,7 +141,10 @@ export function SchemaDisplay(props: SchemaDisplayProps) {
           onItemClick?.({ path, schema });
         }}
       >
-        {name}: <span className="opacity-50">{schema.type ?? "?"}</span>
+        {name}:{" "}
+        <span className="text-blue-300 text-xs font-bold">
+          {schema.type ?? "?"}
+        </span>
       </button>
       {renderRightComponent?.({ path, schema })}
     </div>

@@ -1,4 +1,4 @@
-export enum NodeType {
+export enum FnType {
   Computed = "Computed",
   Counter = "Counter",
   UniqueCounter = "UniqueCounter",
@@ -8,4 +8,5 @@ export enum NodeType {
   CacheEntityFeature = "CacheEntityFeature",
   Event = "Event",
   Decision = "Decision",
+  Blocklist = "Blocklist",
 }

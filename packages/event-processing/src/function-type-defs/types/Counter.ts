@@ -1,21 +1,27 @@
 import { z } from "zod";
-import { StateUpdater } from "../nodeTypeDef";
-import { counterSchema, getPastNCountBucketHashes } from "../lib/counts";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
+import { StateUpdater } from "../functionTypeDef";
+import { getPastNCountBucketHashes } from "../lib/counts";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { RedisInterface } from "databases";
 import { TypeName } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
-import { getTimeWindowMs } from "../lib/timeWindow";
+import { getTimeWindowMs, timeWindowSchema } from "../lib/timeWindow";
+import { countArgsSchema } from "../lib/args";
 
 const N_BUCKETS = 10;
 
-export const counterNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.Counter)
+export const counterFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.Counter)
   .setConfigSchema(
     z.object({
-      counter: counterSchema,
+      timeWindow: timeWindowSchema,
+      countByArgs: countArgsSchema,
+    })
+  )
+  .setInputSchema(
+    z.object({
       countByDataPaths: z.array(dataPathZodSchema),
       conditionDataPath: dataPathZodSchema.optional(),
     })
@@ -34,7 +40,7 @@ export const counterNodeDef = createNodeTypeDefBuilder()
   .setContextType<{
     redis: RedisInterface;
   }>()
-  .setCreateResolver(({ nodeDef, context }) => {
+  .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency }) => {
       /**
        * 1. In order to get the count, we need to get the counts of the previous 10 time buckets and add them up.
@@ -42,7 +48,8 @@ export const counterNodeDef = createNodeTypeDefBuilder()
        * 2. Then, we need to return a callback that increments the count of the current time bucket.
        */
 
-      const { counter, countByDataPaths, conditionDataPath } = nodeDef.config;
+      const { timeWindow } = fnDef.config;
+      const { countByDataPaths, conditionDataPath } = input;
 
       let shouldIncrementCount = true;
       if (conditionDataPath) {
@@ -64,8 +71,8 @@ export const counterNodeDef = createNodeTypeDefBuilder()
 
       const bucketHashes = getPastNCountBucketHashes({
         n: N_BUCKETS,
-        timeWindowMs: getTimeWindowMs(counter.timeWindow),
-        counterId: counter.id,
+        timeWindowMs: getTimeWindowMs(timeWindow),
+        counterId: fnDef.id,
         countBy: valuesToCountBy,
         currentTime: event.timestamp,
       });

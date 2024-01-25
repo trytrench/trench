@@ -1,58 +1,134 @@
-import React, { useState } from "react";
-import { DataPath, TSchema, TypeName, tSchemaZod } from "event-processing";
+import React, { useState, useEffect } from "react";
+import {
+  type DataPath,
+  type TSchema,
+  TypeName,
+  tSchemaZod,
+} from "event-processing";
 import { SelectDataPath } from "./SelectDataPath"; // Make sure this path is correct
 import { z } from "zod";
-import { argsSchema } from "event-processing/src/node-type-defs/lib/counts";
 import { MinusCircle, PlusCircle } from "lucide-react";
+import { type CountArgs } from "event-processing/src/function-type-defs/lib/args";
 
 interface SelectDataPathListProps {
   eventType: string;
   value: DataPath[];
   onChange: (value: DataPath[]) => void;
-  args?: z.infer<typeof argsSchema>;
+  args?: CountArgs;
+  onArgsChange?: (value: CountArgs) => void;
+  isEditingArgs?: boolean;
 }
 
 export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
   eventType,
-  value,
+  value: initialValue,
   onChange,
-  args,
+  args: initialArgs,
+  onArgsChange,
+  isEditingArgs = true,
 }) => {
-  // Add a new DataPath with default or predefined structure
-  const addDataPath = (argSchema?: TSchema) => {
+  const [dataPaths, setDataPaths] = useState<DataPath[]>(initialValue ?? []);
+  const [args, setArgs] = useState<CountArgs>(initialArgs ?? []);
+
+  // Sync local `dataPaths` and `args` state with props
+  useEffect(() => {
+    setDataPaths(initialValue ?? []);
+    setArgs(initialArgs ?? []);
+  }, [initialValue, initialArgs]);
+
+  const handleArgNameChange = (index: number, newName: string) => {
+    const updatedArgs = [...args];
+    const arg = updatedArgs[index];
+    if (arg) {
+      arg.argName = newName;
+      setArgs(updatedArgs);
+      if (onArgsChange) {
+        onArgsChange(updatedArgs);
+      }
+    }
+  };
+
+  const addDataPath = () => {
     const newDataPath: DataPath = {
       nodeId: "",
       path: [],
-      schema: argSchema ?? { type: TypeName.Any }, // Default to 'Any' if no schema is provided
+      schema: { type: TypeName.Any },
     };
-    onChange([...value, newDataPath]);
+    const newDataPaths = [...dataPaths, newDataPath];
+    setDataPaths(newDataPaths);
+    onChange(newDataPaths);
+
+    if (isEditingArgs) {
+      const newArg = {
+        argName: `arg${dataPaths.length + 1}`,
+        schema: newDataPath.schema,
+      };
+      const updatedArgs = [...args, newArg];
+      setArgs(updatedArgs);
+      if (onArgsChange) {
+        onArgsChange(updatedArgs);
+      }
+    }
   };
 
-  // Update a specific DataPath in the list
   const updateDataPath = (index: number, newDataPath: DataPath) => {
-    const updatedValue = [...value];
-    updatedValue[index] = newDataPath;
-    onChange(updatedValue);
+    const updatedDataPaths = [...dataPaths];
+    updatedDataPaths[index] = newDataPath;
+    setDataPaths(updatedDataPaths);
+    onChange(updatedDataPaths);
+
+    const arg = args[index];
+    if (isEditingArgs && arg) {
+      const updatedArgs = [...args];
+      updatedArgs[index] = {
+        ...arg,
+        schema: newDataPath.schema,
+      };
+      setArgs(updatedArgs);
+      if (onArgsChange) {
+        onArgsChange(updatedArgs);
+      }
+    }
   };
 
-  // Remove a specific DataPath from the list
   const removeDataPath = (index: number) => {
-    const updatedValue = [...value];
-    updatedValue.splice(index, 1);
-    onChange(updatedValue);
+    const updatedDataPaths = [...dataPaths];
+    updatedDataPaths.splice(index, 1);
+    setDataPaths(updatedDataPaths);
+    onChange(updatedDataPaths);
+
+    if (isEditingArgs) {
+      const updatedArgs = [...args];
+      updatedArgs.splice(index, 1);
+      setArgs(updatedArgs);
+      if (onArgsChange) {
+        onArgsChange(updatedArgs);
+      }
+    }
   };
+
+  console.log(args);
 
   return (
     <div>
-      {value.map((dataPath, index) => (
+      {args.map((arg, index) => (
         <div key={index} className="flex items-center space-x-2 mb-2">
+          {isEditingArgs && (
+            <input
+              type="text"
+              value={arg.argName}
+              onChange={(e) => handleArgNameChange(index, e.target.value)}
+              className="border p-1"
+              placeholder="Arg Name"
+            />
+          )}
           <SelectDataPath
             eventType={eventType}
-            value={dataPath}
+            value={dataPaths[index] ?? null}
             onChange={(newValue) => {
               if (newValue) updateDataPath(index, newValue);
             }}
-            desiredSchema={args ? args[index]?.schema : undefined}
+            desiredSchema={isEditingArgs ? undefined : arg.schema}
           />
           <button
             onClick={() => removeDataPath(index)}
@@ -62,11 +138,9 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
           </button>
         </div>
       ))}
-      {(!args || value.length < args.length) && (
+      {isEditingArgs && args.length < dataPaths.length + 1 && (
         <button
-          onClick={() => {
-            addDataPath(args?.[value.length]?.schema);
-          }}
+          onClick={addDataPath}
           className="p-1 text-green-500 hover:text-green-700"
         >
           <PlusCircle size={20} />

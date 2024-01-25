@@ -1,4 +1,9 @@
-import { DataPath, NodeType, TypeName, buildNodeDef } from "event-processing";
+import {
+  DataPath,
+  FnType,
+  TypeName,
+  buildNodeDefWithFn,
+} from "event-processing";
 import { Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/router";
 import { useState } from "react";
@@ -13,17 +18,19 @@ import {
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
 import { SelectDataPath } from "../SelectDataPath";
-import { useMutateNode } from "./useMutateNode";
+import { useMutationToasts } from "./useMutationToasts";
+import { handleError } from "../../../lib/handleError";
 
 export const EditDecision = () => {
   const router = useRouter();
 
-  const { createNodeDef, updateNodeDef } = useMutateNode();
+  const toasts = useMutationToasts();
+  const { mutateAsync: createNodeDefWithFn } =
+    api.nodeDefs.createWithFn.useMutation();
 
   const [conditions, setConditions] = useState<
-    { rules: DataPath[]; decisionId: string | null }[]
-  >([{ rules: [], decisionId: null }]);
-  console.log(conditions);
+    { rules: DataPath[]; decisionId: string }[]
+  >([{ rules: [], decisionId: "" }]);
 
   const [elseDecisionId, setElseDecisionId] = useState<string>("");
 
@@ -42,22 +49,26 @@ export const EditDecision = () => {
             onClick={(event) => {
               event.preventDefault();
 
-              createNodeDef(
-                buildNodeDef(NodeType.Decision, {
-                  name: "Decision",
-                  type: NodeType.Decision,
-                  eventType: router.query.eventType as string,
+              const newDef = buildNodeDefWithFn(FnType.Decision, {
+                name: "Decision",
+                eventType: router.query.eventType as string,
+                inputs: {
+                  conditions: conditions.filter((d) => !!d.decisionId),
+                  elseDecisionId: elseDecisionId,
+                },
+                fn: {
+                  name: "decision",
+                  type: FnType.Decision,
                   returnSchema: {
                     type: TypeName.String,
                   },
-                  config: {
-                    conditions,
-                    elseDecisionId: elseDecisionId,
-                  },
-                })
-              )
-                .then(() => {})
-                .catch(() => {});
+                  config: {},
+                },
+              });
+              createNodeDefWithFn(newDef)
+                .then(toasts.createNode.onSuccess)
+                .catch(toasts.createNode.onError)
+                .catch(handleError);
             }}
           >
             <Save className="w-4 h-4 mr-2" />

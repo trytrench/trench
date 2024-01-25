@@ -13,6 +13,7 @@ export enum TypeName {
   Any = "Any",
   Date = "Date",
   Rule = "Rule",
+  Tuple = "Tuple",
 }
 
 export type Entity = {
@@ -74,7 +75,14 @@ export interface TRuleSchema extends TSchemaBase {
   type: TypeName.Rule;
 }
 
-type SchemaTypeMap = {
+interface TTupleSchema<T extends TSchema[] = TSchema[]> extends TSchemaBase {
+  type: TypeName.Tuple;
+  items: {
+    [K in keyof T]: T[K];
+  };
+}
+
+interface SchemaTypeMap {
   [TypeName.Boolean]: boolean;
   [TypeName.Float64]: number;
   [TypeName.Int64]: number;
@@ -86,13 +94,18 @@ type SchemaTypeMap = {
   [TypeName.Any]: any; // Placeholder, will be refined later
   [TypeName.Date]: Date;
   [TypeName.Rule]: boolean;
-};
+  [TypeName.Tuple]: any[]; // Placeholder, will be refined later
+}
+
+type InferTupleItemType<T> = T extends TSchema ? InferSchemaType<T> : never;
 
 export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
   ? Array<InferSchemaType<U>>
   : T extends TObjectSchema<infer U>
   ? { [K in keyof U]: InferSchemaType<U[K]> }
-  : T["type"] extends keyof SchemaTypeMap
+  : // : T extends TTupleSchema<infer U>
+  // ? { [K in keyof U]: InferTupleItemType<U[K]> }
+  T["type"] extends keyof SchemaTypeMap
   ? SchemaTypeMap[T["type"]]
   : never;
 
@@ -142,6 +155,11 @@ class Float64DataType extends IDataType<TFloat64Schema> {
   }
   toTypescript(): string {
     return "number";
+  }
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.Float64) return true;
+    if (schema.type === TypeName.Int64) return true;
+    return false;
   }
 }
 
@@ -270,6 +288,25 @@ class RuleDataType extends IDataType<TRuleSchema> {
   }
 }
 
+class TupleDataType<TItems extends TSchema[]> extends IDataType<
+  TTupleSchema<TItems>
+> {
+  parse(input: any): InferSchemaType<TTupleSchema<TItems>> {
+    if (!Array.isArray(input)) this.throwParseError(input);
+    if (input.length !== this.schema.items.length) this.throwParseError(input);
+
+    return this.schema.items.map((itemSchema, index) =>
+      (createDataType(itemSchema) as IDataType<any>).parse(input[index])
+    ) as InferSchemaType<TTupleSchema<TItems>>;
+  }
+
+  toTypescript(): string {
+    return `[${this.schema.items
+      .map((item) => createDataType(item).toTypescript())
+      .join(", ")}]`;
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -323,6 +360,10 @@ export const DATA_TYPES_REGISTRY = {
     type: RuleDataType,
     defaultSchema: { type: TypeName.Rule },
   },
+  [TypeName.Tuple]: {
+    type: TupleDataType,
+    defaultSchema: { type: TypeName.Tuple, items: [] },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -341,7 +382,8 @@ export type TSchema =
   | TObjectSchema
   | TAnySchema
   | TDateSchema
-  | TRuleSchema;
+  | TRuleSchema
+  | TTupleSchema;
 
 export const tSchemaZod = z.custom<TSchema>((input) => {
   if (!input) return false;

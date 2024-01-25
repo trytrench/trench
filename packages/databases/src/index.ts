@@ -8,7 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 
 export { GlobalStateKey } from "@prisma/client";
 
-export { redis, type RedisInterface } from "./redis";
+export { createRedisService, type RedisInterface } from "./redis";
 
 export const prisma =
   globalForPrisma.prisma ??

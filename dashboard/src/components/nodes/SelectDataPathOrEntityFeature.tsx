@@ -1,16 +1,16 @@
 import {
   DataPath,
   DataPathUtils,
-  NodeType,
+  FnType,
   TSchema,
   TypeName,
-  buildNodeDef,
+  buildNodeDefWithFn,
   createDataType,
+  hasFnType,
 } from "event-processing";
 import { api } from "../../utils/api";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { ComboboxSelector } from "../ComboboxSelector";
-import { Badge } from "../ui/badge";
 import { SelectDataPath } from "./SelectDataPath";
 import { useToast } from "../ui/use-toast";
 
@@ -53,8 +53,8 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
   const dataPathSelectorValue: DataPath | null = useMemo(() => {
     if (!valueNode) return null;
 
-    if (valueNode.type === NodeType.GetEntityFeature) {
-      return valueNode.config.entityDataPath ?? null;
+    if (hasFnType(valueNode, FnType.GetEntityFeature)) {
+      return valueNode.inputs.entityDataPath ?? null;
     } else {
       return value;
     }
@@ -67,10 +67,11 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
         value={dataPathSelectorValue}
         onChange={onChange}
         disablePathSelection={disablePathSelection}
+        desiredSchema={desiredSchema}
         // filterNodeOptions={(nodeDef) => {
         //   return (
-        //     nodeDef.type !== NodeType.GetEntityFeature &&
-        //     nodeDef.type !== NodeType.LogEntityFeature
+        //     nodeDef.type !== FnType.GetEntityFeature &&
+        //     nodeDef.type !== FnType.LogEntityFeature
         //   );
         // }}
       />
@@ -98,8 +99,8 @@ function SelectEntityFeatureNodeDataPath(props: {
 
   const { data: nodes, refetch } = api.nodeDefs.list.useQuery({ eventType });
 
-  const { mutateAsync: createNodeDef, isLoading: isLoadingCreate } =
-    api.nodeDefs.create.useMutation({
+  const { mutateAsync: createNodeWithFn, isLoading: isLoadingCreate } =
+    api.nodeDefs.createWithFn.useMutation({
       async onSuccess() {
         await refetch();
       },
@@ -113,9 +114,9 @@ function SelectEntityFeatureNodeDataPath(props: {
   const selectedEntityDataPath = useMemo(() => {
     if (!valueNode) return null;
 
-    if (valueNode.type === NodeType.GetEntityFeature) {
-      return valueNode.config.entityDataPath;
-    } else if (valueNode.returnSchema.type === TypeName.Entity) {
+    if (hasFnType(valueNode, FnType.GetEntityFeature)) {
+      return valueNode.inputs.entityDataPath;
+    } else if (valueNode.fn.returnSchema.type === TypeName.Entity) {
       return value;
     } else {
       return null;
@@ -123,8 +124,8 @@ function SelectEntityFeatureNodeDataPath(props: {
   }, [value, valueNode]);
 
   const selectedFeatureId =
-    valueNode?.type === NodeType.GetEntityFeature
-      ? valueNode?.config.featureId ?? null
+    valueNode && hasFnType(valueNode, FnType.GetEntityFeature)
+      ? valueNode.fn.config.featureId ?? null
       : null;
 
   const { data: features } = api.features.list.useQuery({
@@ -165,12 +166,12 @@ function SelectEntityFeatureNodeDataPath(props: {
 
         const foundNode = nodes?.find((nodeDef) => {
           return (
-            nodeDef.type === NodeType.GetEntityFeature &&
+            hasFnType(nodeDef, FnType.GetEntityFeature) &&
             DataPathUtils.equals(
-              nodeDef.config.entityDataPath,
+              nodeDef.inputs.entityDataPath,
               selectedEntityDataPath
             ) &&
-            nodeDef.config.featureId === newFeatureId
+            nodeDef.fn.config.featureId === newFeatureId
           );
         });
 
@@ -178,27 +179,32 @@ function SelectEntityFeatureNodeDataPath(props: {
           onChange({
             nodeId: foundNode.id,
             path: [],
-            schema: foundNode.returnSchema,
+            schema: foundNode.fn.returnSchema,
           });
         } else {
-          const newNode = buildNodeDef(NodeType.GetEntityFeature, {
-            type: NodeType.GetEntityFeature,
+          const newNode = buildNodeDefWithFn(FnType.GetEntityFeature, {
+            fn: {
+              name: `Get Feature: ${feature.name}`,
+              type: FnType.GetEntityFeature,
+              config: {
+                featureId: newFeatureId,
+                featureSchema: feature.schema,
+              },
+              returnSchema: feature.schema,
+            },
             eventType: eventType,
             name: `Get Feature: ${feature.name}`,
-            config: {
+            inputs: {
               entityDataPath: selectedEntityDataPath,
-              featureId: newFeatureId,
-              featureSchema: feature.schema,
             },
-            returnSchema: feature?.schema,
           });
 
-          createNodeDef(newNode)
+          createNodeWithFn(newNode)
             .then((newDef) => {
               onChange({
                 nodeId: newDef.id,
                 path: [],
-                schema: newDef.returnSchema,
+                schema: newDef.fn.returnSchema,
               });
             })
             .catch((err) => {

@@ -67,6 +67,8 @@
     "clsx": "^2.0.0",
     "cmdk": "^0.2.0",
     "common": "workspace:*",
+    "d3": "^7.8.5",
+    "d3-dag": "^1.1.0",
     "databases": "workspace:*",
     "date-fns": "^2.30.0",
     "dayjs": "^1.11.9",
@@ -103,6 +105,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "@types/eslint": "^8.37.0",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/lodash": "^4.14.197",
@@ -120,7 +123,8 @@
     "prettier-plugin-tailwindcss": "^0.5.7",
     "prisma": "^5.1.1",
     "tailwindcss": "^3.3.3",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "webpack": "^5.88.2"
   },
   "ct3aMetadata": {
     "initVersion": "7.18.0"

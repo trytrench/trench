@@ -1,6 +1,6 @@
 import { prisma } from "databases";
 import {
-  NodeType,
+  FnType,
   TrenchEvent,
   inferSchemaFromJsonObject,
 } from "event-processing";
@@ -23,6 +23,23 @@ export async function recordEventType(
     data: exampleEvent.data,
   });
 
+  const fnSnapshot = await prisma.fnSnapshot.upsert({
+    where: {
+      id: `event-source-${eventType}`,
+    },
+    create: {
+      config: {},
+      returnSchema: schema as any,
+      fn: {
+        create: {
+          name: `Event Grabber`,
+          type: FnType.Event,
+        },
+      },
+    },
+    update: {},
+  });
+
   await prisma.eventType.upsert({
     where: {
       id: eventType,
@@ -32,12 +49,16 @@ export async function recordEventType(
       nodes: {
         create: [
           {
-            type: NodeType.Event,
             name: `Event: ${eventType}`,
+            fnId: fnSnapshot.fnId,
             snapshots: {
               create: {
-                returnSchema: schema as any,
-                config: {},
+                inputs: {},
+                fnSnapshot: {
+                  connect: {
+                    id: fnSnapshot.id,
+                  },
+                },
               },
             },
           },

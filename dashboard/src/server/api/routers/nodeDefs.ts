@@ -1,208 +1,210 @@
 import { GlobalStateKey, prisma } from "databases";
 import {
-  NODE_TYPE_REGISTRY,
+  FN_TYPE_REGISTRY,
+  FnType,
   type NodeDef,
-  type NodeDefsMap,
-  NodeType,
-  type TSchema,
-  getNodeDefSchema,
+  bareNodeDefSchema,
+  fnDefSchema,
 } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-
-export const nodeDefSchema = getNodeDefSchema(z.any());
+import {
+  FN_INCLUDE_ARGS,
+  NODE_INCLUDE_ARGS,
+  prismaFnToFnDef,
+  prismaToNodeDef,
+} from "../../lib/prismaConverters";
+import { type Prisma } from "@prisma/client";
+import { publish } from "../../lib/nodes/publish";
 
 export const nodeDefsRouter = createTRPCRouter({
   get: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
+    .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const nodeDef = await ctx.prisma.node.findUniqueOrThrow({
         where: { id: input.id },
-        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+        include: NODE_INCLUDE_ARGS,
       });
-
-      const snapshot = nodeDef.snapshots[0]!;
-      const ret: NodeDefsMap[keyof NodeDefsMap] = {
-        id: nodeDef.id,
-        snapshotId: snapshot.id,
-        name: nodeDef.name,
-        eventType: nodeDef.eventType,
-        config: snapshot.config as unknown as any,
-        type: nodeDef.type as unknown as any,
-        dependsOn: new Set(snapshot.dependsOn),
-        returnSchema: snapshot as unknown as TSchema,
-      };
-      return ret;
+      return prismaToNodeDef(nodeDef);
     }),
 
   list: protectedProcedure
-    .input(
-      z
-        .object({
-          eventType: z.string().optional(),
-        })
-        .optional()
-    )
+    .input(z.object({ eventType: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
       const nodes = await ctx.prisma.node.findMany({
-        where: {
-          eventType: input?.eventType,
-        },
-        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+        where: { eventType: input?.eventType },
+        include: NODE_INCLUDE_ARGS,
       });
-
-      const arr: NodeDefsMap[NodeType][] = nodes.map((nodeDef) => {
-        const snapshot = nodeDef.snapshots[0]!;
-        const ret: NodeDefsMap[NodeType] = {
-          id: nodeDef.id,
-          snapshotId: snapshot.id,
-          name: nodeDef.name,
-          eventType: nodeDef.eventType,
-          config: snapshot.config as unknown as any,
-          type: nodeDef.type as unknown as any,
-          dependsOn: new Set(snapshot.dependsOn),
-          returnSchema: snapshot.returnSchema as unknown as TSchema,
-        };
-        return ret;
-      });
-      return arr;
+      return nodes.map(prismaToNodeDef);
     }),
 
-  create: protectedProcedure
-    .input(nodeDefSchema.omit({ id: true, dependsOn: true, snapshotId: true }))
+  createWithFn: protectedProcedure
+    .input(
+      bareNodeDefSchema
+        .omit({ id: true, dependsOn: true, snapshotId: true })
+        .merge(z.object({ fn: fnDefSchema.omit({ id: true }) }))
+    )
     .mutation(async ({ ctx, input }) => {
-      const { configSchema, getDependencies } = NODE_TYPE_REGISTRY[input.type];
-      configSchema.parse(input.config);
-      const dependsOn = getDependencies(input.config);
-      const nodeDef = await ctx.prisma.node.create({
+      const { fn } = input;
+      const result = await ctx.prisma.fn.create({
         data: {
-          name: input.name,
-          type: input.type,
-          eventType: input.eventType,
+          type: fn.type,
+          name: fn.name,
           snapshots: {
             create: {
-              returnSchema: input.returnSchema as unknown as any,
-              dependsOn: Array.from(dependsOn),
-              config: input.config,
+              config: fn.config as unknown as any,
+              returnSchema: fn.returnSchema as unknown as any,
             },
           },
         },
-        include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
+        include: FN_INCLUDE_ARGS,
       });
+      const createdFnDef = prismaFnToFnDef(result);
 
-      // If we create a LogEntityFeature node, we need to create a corresponding CacheEntityFeature node.
-      // At compile time, we prune CacheEntityFeature nodes that don't have a corresponding GetEntityFeature node.
-      if (input.type === NodeType.LogEntityFeature) {
-        await ctx.prisma.node.create({
-          data: {
-            name: `Cache data logged in ${nodeDef.id}`,
-            type: NodeType.CacheEntityFeature,
-            eventType: input.eventType,
-            snapshots: {
-              create: {
-                dependsOn: Array.from(dependsOn),
-                config: input.config,
-                returnSchema: input.returnSchema as unknown as any,
+      // Validate inputs based on function
+      const { getDependencies, inputSchema } =
+        FN_TYPE_REGISTRY[createdFnDef.type];
+      const dependsOn = getDependencies(input.inputs);
+      inputSchema.parse(input.inputs);
+
+      const newNodeDef = await ctx.prisma.node.create({
+        data: {
+          eventType: input.eventType,
+          name: input.name,
+          fnId: createdFnDef.id,
+          snapshots: {
+            create: {
+              dependsOn: Array.from(dependsOn),
+              inputs: input.inputs as unknown as any,
+              fnSnapshot: {
+                connect: { id: createdFnDef.snapshotId },
               },
             },
           },
-        });
-      }
+        },
+        include: NODE_INCLUDE_ARGS,
+      });
 
-      if (input.type !== NodeType.GetEntityFeature) {
+      // Only publish engine if function is "important"
+      const UNIMPORTANT_FN_TYPES = [FnType.GetEntityFeature];
+      if (!UNIMPORTANT_FN_TYPES.includes(createdFnDef.type)) {
         await publish();
       }
 
-      const snapshot = nodeDef.snapshots[0]!;
-      const ret: NodeDefsMap[keyof NodeDefsMap] = {
-        id: nodeDef.id,
-        snapshotId: snapshot.id,
-        name: nodeDef.name,
-        eventType: nodeDef.eventType,
-        config: snapshot.config as unknown as any,
-        type: nodeDef.type as unknown as any,
-        dependsOn: new Set(snapshot.dependsOn),
-        returnSchema: snapshot.returnSchema as unknown as TSchema,
-      };
-      return ret;
+      return prismaToNodeDef(newNodeDef);
+    }),
+
+  create: protectedProcedure
+    .input(
+      bareNodeDefSchema
+        .omit({ id: true, dependsOn: true, snapshotId: true })
+        .merge(z.object({ fnId: z.string() }))
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Grab latest function definition
+      const _func = await ctx.prisma.fn.findUniqueOrThrow({
+        where: { id: input.fnId },
+        include: FN_INCLUDE_ARGS,
+      });
+      const fnDef = prismaFnToFnDef(_func);
+
+      // Validate node inputs using function definition
+      const { getDependencies, inputSchema } = FN_TYPE_REGISTRY[fnDef.type];
+      const dependsOn = getDependencies(input.inputs);
+      inputSchema.parse(input.inputs);
+
+      // Only publish engine if function is "important"
+      // (i.e. function does something that tangibly affects engine output.
+      //  for example, GetEntityFeature doesn't affect engine output unless
+      //  it's used by another function)
+      const UNIMPORTANT_FN_TYPES = [FnType.GetEntityFeature];
+      if (!UNIMPORTANT_FN_TYPES.includes(fnDef.type)) {
+        await publish();
+      }
+
+      const nodeDef = await ctx.prisma.node.create({
+        data: {
+          eventType: input.eventType,
+          name: input.name,
+          fnId: fnDef.id,
+          snapshots: {
+            create: {
+              dependsOn: Array.from(dependsOn),
+              inputs: input.inputs as unknown as any,
+              fnSnapshot: {
+                connect: { id: fnDef.snapshotId },
+              },
+            },
+          },
+        },
+        include: NODE_INCLUDE_ARGS,
+      });
+
+      return prismaToNodeDef(nodeDef);
     }),
 
   update: protectedProcedure
     .input(
-      nodeDefSchema.omit({
-        dependsOn: true,
-        returnSchema: true,
-        eventType: true,
-        snapshotId: true,
-      })
+      bareNodeDefSchema
+        .pick({
+          // Pick updatable fields
+          name: true,
+          inputs: true,
+        })
+        .partial()
+        .merge(z.object({ id: z.string(), fnId: z.string().optional() }))
     )
     .mutation(async ({ ctx, input }) => {
-      const nodeDef = await ctx.prisma.node.findUniqueOrThrow({
+      const _rawNode = await ctx.prisma.node.findUniqueOrThrow({
         where: { id: input.id },
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
-        },
+        include: NODE_INCLUDE_ARGS,
       });
+      const originalNodeDef = prismaToNodeDef(_rawNode);
 
-      const { configSchema, getDependencies } =
-        NODE_TYPE_REGISTRY[nodeDef.type as NodeType];
-      configSchema.parse(input.config);
-      const dependsOn = getDependencies(input.config);
+      async function createNewSnapshotArgs(): Promise<Omit<
+        Prisma.NodeSnapshotCreateInput,
+        "node"
+      > | null> {
+        if (!input.inputs && !input.fnId) return null;
+        if (input.fnId === originalNodeDef.fn.id) return null;
 
-      const snapshotKeys = ["config"];
-      const shouldCreateSnapshot = Object.keys(input).some((key) =>
-        snapshotKeys.includes(key)
-      );
+        const fnDef = input.fnId
+          ? prismaFnToFnDef(
+              await ctx.prisma.fn.findUniqueOrThrow({
+                where: { id: input.fnId },
+                include: FN_INCLUDE_ARGS,
+              })
+            )
+          : originalNodeDef.fn;
 
-      const snapshot = nodeDef.snapshots[0]!;
+        const { inputSchema, getDependencies } = FN_TYPE_REGISTRY[fnDef.type];
+        inputSchema.parse(input.inputs);
+
+        const newInputs = input.inputs ?? originalNodeDef.inputs;
+        const dependsOn = getDependencies(newInputs);
+
+        return {
+          dependsOn: Array.from(dependsOn),
+          inputs: newInputs,
+          fnSnapshot: {
+            connect: { id: fnDef.snapshotId },
+          },
+        };
+      }
+
+      const newSnapshotArgs = await createNewSnapshotArgs();
 
       const updatedNodeDef = await ctx.prisma.node.update({
-        where: {
-          id: input.id,
-        },
+        where: { id: input.id },
         data: {
           name: input.name,
-          snapshots: shouldCreateSnapshot
-            ? {
-                create: {
-                  returnSchema: snapshot.returnSchema as unknown as any,
-                  dependsOn: Array.from(dependsOn),
-                  config: input.config,
-                },
-              }
-            : undefined,
+          fnId: input.fnId ?? originalNodeDef.fn.id,
+          snapshots: newSnapshotArgs ? { create: newSnapshotArgs } : undefined,
         },
-        include: {
-          snapshots: {
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 1,
-          },
-        },
+        include: NODE_INCLUDE_ARGS,
       });
 
-      const updatedSnapshot = updatedNodeDef.snapshots[0]!;
-      const ret: NodeDefsMap[keyof NodeDefsMap] = {
-        id: updatedNodeDef.id,
-        snapshotId: snapshot.id,
-        name: updatedNodeDef.name,
-        eventType: updatedNodeDef.eventType,
-        config: updatedSnapshot.config as unknown as any,
-        type: updatedNodeDef.type as unknown as any,
-        dependsOn: new Set(updatedSnapshot.dependsOn),
-        returnSchema: updatedSnapshot.returnSchema as unknown as TSchema,
-      };
-      return ret;
+      return prismaToNodeDef(updatedNodeDef);
     }),
 
   delete: protectedProcedure
@@ -213,86 +215,3 @@ export const nodeDefsRouter = createTRPCRouter({
       });
     }),
 });
-
-const publish = async () => {
-  const nodeDefsRaw = await prisma.node.findMany({
-    include: { snapshots: { orderBy: { createdAt: "desc" }, take: 1 } },
-  });
-
-  const nodeDefs: NodeDefsMap[NodeType][] = nodeDefsRaw.map((nodeDef) => {
-    const snapshot = nodeDef.snapshots[0]!;
-    const ret = {
-      id: nodeDef.id,
-      snapshotId: snapshot.id,
-      name: nodeDef.name,
-      eventType: nodeDef.eventType,
-      config: snapshot.config as unknown as any,
-      type: nodeDef.type as unknown as any,
-      dependsOn: new Set(snapshot.dependsOn),
-      returnSchema: snapshot.returnSchema as unknown as TSchema,
-    };
-    return ret;
-  });
-
-  const prunedNodeDefs = prune(nodeDefs);
-
-  const engine = await prisma.executionEngine.create({
-    data: {
-      nodeSnapshots: {
-        createMany: {
-          data: prunedNodeDefs.map((nodeDef) => ({
-            nodeSnapshotId: nodeDef.snapshotId,
-          })),
-        },
-      },
-    },
-  });
-
-  await prisma.globalState.upsert({
-    where: {
-      key: GlobalStateKey.ActiveEngineId,
-    },
-    create: {
-      key: GlobalStateKey.ActiveEngineId,
-      value: engine.id,
-    },
-    update: { value: engine.id },
-  });
-};
-
-function prune(_nodeDefs: NodeDef[]): NodeDef[] {
-  const nodeDefs = _nodeDefs as NodeDefsMap[NodeType][];
-
-  const map = new Map<string, NodeDef>();
-  const allDependsOn = new Set<string>();
-  for (const nodeDef of nodeDefs) {
-    map.set(nodeDef.id, nodeDef);
-
-    for (const dep of nodeDef.dependsOn) {
-      allDependsOn.add(dep);
-    }
-  }
-
-  const featureIdsToCache = new Set<string>();
-
-  const nodeDefs2 = nodeDefs.filter((def) => {
-    switch (def.type) {
-      case NodeType.GetEntityFeature: {
-        featureIdsToCache.add(def.config.featureId);
-        return allDependsOn.has(def.id);
-      }
-      default:
-        return true;
-    }
-  });
-
-  return nodeDefs2.filter((def) => {
-    switch (def.type) {
-      case NodeType.CacheEntityFeature: {
-        return featureIdsToCache.has(def.config.featureId);
-      }
-      default:
-        return true;
-    }
-  });
-}

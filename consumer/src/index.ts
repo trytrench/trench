@@ -10,7 +10,7 @@ import { recordEventType } from "./recordEventType";
 import {
   StoreRow,
   writeStoreRows,
-} from "event-processing/src/node-type-defs/lib/store";
+} from "event-processing/src/function-type-defs/lib/store";
 
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {

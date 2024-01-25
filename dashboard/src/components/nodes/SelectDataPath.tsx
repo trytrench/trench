@@ -1,7 +1,7 @@
 import {
   DataPath,
   NodeDef,
-  NodeType,
+  FnType,
   TSchema,
   TypeName,
   createDataType,
@@ -15,9 +15,9 @@ import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
 
 const HIDDEN_NODE_TYPES = [
-  NodeType.GetEntityFeature,
-  NodeType.LogEntityFeature,
-  NodeType.CacheEntityFeature,
+  FnType.GetEntityFeature,
+  FnType.LogEntityFeature,
+  FnType.CacheEntityFeature,
 ];
 
 function useFlattenedDataPaths(props: {
@@ -27,7 +27,7 @@ function useFlattenedDataPaths(props: {
   const {
     eventType,
     filterNodeOptions = (nodeDef) => {
-      return !HIDDEN_NODE_TYPES.includes(nodeDef.type);
+      return !HIDDEN_NODE_TYPES.includes(nodeDef.fn.type);
     },
   } = props;
 
@@ -67,7 +67,7 @@ function useFlattenedDataPaths(props: {
     const filteredNodes = nodes?.filter(filterNodeOptions);
 
     for (const node of filteredNodes ?? []) {
-      const paths = getPaths(node.returnSchema, []);
+      const paths = getPaths(node.fn.returnSchema, []);
       for (const path of paths) {
         dataPaths.push({
           nodeId: node.id,
@@ -148,8 +148,8 @@ export function SelectDataPath(props: SelectDataPathProps) {
           onChange({
             path: [],
             nodeId: newValue,
-            schema: nodes?.find((node) => node.id === newValue)
-              ?.returnSchema ?? { type: TypeName.Any },
+            schema: nodes?.find((node) => node.id === newValue)?.fn
+              .returnSchema ?? { type: TypeName.Any },
           });
         }}
         options={validNodes}

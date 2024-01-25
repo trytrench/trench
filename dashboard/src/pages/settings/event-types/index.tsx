@@ -149,7 +149,7 @@ const Page: NextPageWithLayout = () => {
           },
         },
       ],
-      []
+      [deleteEventType, refetchEventTypes]
     );
 
   function onSubmit(values: z.infer<typeof formSchema>) {

@@ -1,36 +1,29 @@
-import { ZodType, z } from "zod";
-import { NodeType } from "./types/_enum";
+import { AnyZodObject, ZodObject, z } from "zod";
+import { FnType } from "./types/_enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
 import { DataPath } from "../data-path";
 
-export type NodeDef<
-  TNodeType extends NodeType = NodeType,
+export type FnDef<
+  TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
   TConfig = any,
 > = {
   id: string;
   snapshotId: string;
-  eventType: string;
+  type: TFnType;
   name: string;
-  type: TNodeType;
   returnSchema: TReturnSchema;
   config: TConfig;
-  dependsOn: Set<string>;
 };
 
-export function getNodeDefSchema<T extends ZodType<any>>(configSchema: T) {
-  return z.object({
-    id: z.string(),
-    snapshotId: z.string(),
-    eventType: z.string(),
-    name: z.string(),
-    type: z.nativeEnum(NodeType),
-    returnSchema: tSchemaZod,
-    config: configSchema,
-    dependsOn: z.set(z.string()),
-  });
-}
+export const fnDefSchema = z.object({
+  id: z.string(),
+  type: z.nativeEnum(FnType),
+  name: z.string(),
+  returnSchema: tSchemaZod,
+  config: z.record(z.any()),
+});
 
 export type TrenchEvent = {
   id: string;
@@ -54,17 +47,20 @@ export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   data: InferSchemaType<TReturn>;
 }>;
 
-export type NodeTypeDef<
-  TNodeType extends NodeType = any,
+export type FnTypeDef<
+  TFnType extends FnType = any,
   TReturn extends TSchema = any,
-  TConfigSchema extends ZodType = any,
+  TConfigSchema extends AnyZodObject = ZodObject<{}>,
+  TInputSchema extends AnyZodObject = ZodObject<{}>,
   TContext = any,
 > = {
-  nodeType: TNodeType;
+  fnType: TFnType;
   configSchema: TConfigSchema;
+  inputSchema: TInputSchema;
   createResolver: (options: {
-    nodeDef: NodeDef<TNodeType, TReturn, z.infer<TConfigSchema>>;
+    fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
+    input: z.infer<TInputSchema>;
     context: TContext;
   }) => Resolver<TReturn>;
-  getDependencies: (config: TConfigSchema) => Set<string>;
+  getDependencies: (config: z.infer<TInputSchema>) => Set<string>;
 };

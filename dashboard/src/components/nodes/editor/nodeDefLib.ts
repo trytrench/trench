@@ -12,4 +12,13 @@ declare let fn: {
     lat: number;
     lng: number;
   }>;
+
+  getIpData: (ip: string) => Promise<{
+    lat: number;
+    lng: number;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  }>;
 };

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { NodeType } from "./_enum";
-import { createNodeTypeDefBuilder } from "../builder";
+import { FnType } from "./_enum";
+import { createFnTypeDefBuilder } from "../builder";
 import { TypeName } from "../../data-types";
 import { ClickhouseClient } from "databases";
 import { StoreTable } from "../lib/store";
@@ -8,24 +8,29 @@ import { getUnixTime } from "date-fns";
 import { get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
 
-export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
-  .setNodeType(NodeType.EntityAppearance)
+export const entityAppearanceFnDef = createFnTypeDefBuilder()
+  .setFnType(FnType.EntityAppearance)
   .setConfigSchema(
     z.object({
       entityType: z.string(),
+    })
+  )
+  .setInputSchema(
+    z.object({
       dataPath: dataPathZodSchema,
     })
   )
-  .setGetDependencies((config) => {
+  .setGetDependencies((input) => {
     const result = new Set<string>();
-    result.add(config.dataPath.nodeId);
+    result.add(input.dataPath.nodeId);
     return result;
   })
   .setReturnSchema(TypeName.Entity)
-  .setCreateResolver(({ nodeDef, context }) => {
+  .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency, engineId }) => {
       // Access node value
-      const { dataPath } = nodeDef.config;
+      const { entityType } = fnDef.config;
+      const { dataPath } = input;
       const value = await getDependency({
         dataPath,
         expectedSchema: {
@@ -34,7 +39,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
       });
 
       const entity = {
-        type: nodeDef.config.entityType,
+        type: entityType,
         id: value,
       };
 
@@ -44,7 +49,7 @@ export const entityAppearanceNodeDef = createNodeTypeDefBuilder()
         event_type: event.type,
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
-        feature_type: nodeDef.type,
+        feature_type: FnType.EntityAppearance,
         feature_id: entity.type,
         entity_type: [entity.type],
         entity_id: [entity.id],

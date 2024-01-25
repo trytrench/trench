@@ -2,9 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FeatureDef,
   NodeDefsMap,
-  NodeType,
+  FnType,
   TypeName,
-  buildNodeDef,
+  buildNodeDefWithFn,
   dataPathZodSchema,
 } from "event-processing";
 import { ChevronsUpDown } from "lucide-react";
@@ -45,11 +45,11 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { cn } from "~/lib/utils";
 import { api } from "~/utils/api";
-import { useMutateNode } from "./editor/useMutateNode";
 import { handleError } from "../../lib/handleError";
 import { SelectDataPath } from "./SelectDataPath";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
+import { useMutationToasts } from "./editor/useMutationToasts";
 
 const formSchema = z.object({
   dataPath: dataPathZodSchema.nullable(),
@@ -98,17 +98,14 @@ export function AssignFeature({
 
   const { data: features } = api.features.list.useQuery();
 
-  const {
-    create: { mutateAsync: createNodeDef },
-    update: { mutateAsync: updateNodeDef },
-  } = useMutateNode();
+  const { mutateAsync: createNodeDefWithFn } =
+    api.nodeDefs.createWithFn.useMutation();
+  const mutationToasts = useMutationToasts();
 
   const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
     { eventType: router.query.eventType as string },
     { enabled: false }
   );
-
-  const [entityDepsDropdownOpen, setEntityDepsDropdownOpen] = useState(false);
 
   const createEventFeature = (values: FormType) => {
     const feature = features?.find((f) => f.id === values.featureId);
@@ -116,26 +113,47 @@ export function AssignFeature({
     const dataPath = form.getValues("dataPath");
     if (!dataPath) throw new Error("Data path not set");
 
-    const nodeDef = buildNodeDef(NodeType.LogEntityFeature, {
-      type: NodeType.LogEntityFeature,
+    const nodeDef = buildNodeDefWithFn(FnType.LogEntityFeature, {
       eventType: eventType,
-      name: "",
-      returnSchema: {
-        type: TypeName.Any,
-      },
-      config: {
-        featureId: feature.id,
-        featureSchema: feature.schema,
+      name: "<no name>",
+      inputs: {
         dataPath: dataPath,
         entityDataPath: form.getValues("entityDataPath"),
       },
+      fn: {
+        name: "Log Entity Feature",
+        type: FnType.LogEntityFeature,
+        returnSchema: {
+          type: TypeName.Any,
+        },
+        config: {
+          featureId: feature.id,
+          featureSchema: feature.schema,
+        },
+      },
     });
-    createNodeDef(nodeDef)
-      .then(() => {
-        return refetchNodes();
+    createNodeDefWithFn(nodeDef)
+      .then(async (res) => {
+        await refetchNodes();
+        return res;
       })
+      .then(mutationToasts.createNode.onSuccess)
+      .catch(mutationToasts.createNode.onError)
       .catch(handleError);
   };
+
+  const filteedFeatures =
+    features?.filter((feature) => {
+      const entitySchema = form.watch("entityDataPath")?.schema;
+      if (entitySchema?.type === TypeName.Entity) {
+        return feature.entityTypeId === entitySchema.entityType;
+      }
+      return true;
+    }) ?? [];
+
+  const selectedFeature = filteedFeatures.find(
+    (f) => f.id === form.watch("featureId")
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -169,6 +187,7 @@ export function AssignFeature({
                             field.onChange(val);
                           }}
                           eventType={eventType}
+                          desiredSchema={selectedFeature?.schema ?? undefined}
                         />
                       </FormControl>
                       <FormMessage />
@@ -187,21 +206,10 @@ export function AssignFeature({
                       value={field.value}
                       onSelect={field.onChange}
                       options={
-                        features
-                          ?.filter((feature) => {
-                            const entitySchema =
-                              form.watch("entityDataPath")?.schema;
-                            if (entitySchema?.type === TypeName.Entity) {
-                              return (
-                                feature.entityTypeId === entitySchema.entityType
-                              );
-                            }
-                            return true;
-                          })
-                          .map((f) => ({
-                            label: f.name,
-                            value: f.id,
-                          })) ?? []
+                        filteedFeatures.map((f) => ({
+                          label: f.name,
+                          value: f.id,
+                        })) ?? []
                       }
                     />
                     <FormMessage />

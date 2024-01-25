@@ -2,7 +2,7 @@ import { BoxIcon } from "lucide-react";
 import { EntityHoverCard } from "./EntityHoverCard";
 
 interface Props {
-  href: string;
+  href?: string;
   name: string;
   entityId: string;
   entityType: string;

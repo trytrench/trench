@@ -4,10 +4,11 @@ import {
   FeatureDef,
   NodeDef,
   NodeDefsMap,
-  NodeType,
   TSchema,
   TypeName,
   tSchemaZod,
+  FnType,
+  hasFnType,
 } from "event-processing";
 import { ChevronsUpDown, MoreHorizontal, Plus } from "lucide-react";
 import { useRouter } from "next/router";
@@ -60,7 +61,6 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Rule } from "@prisma/client";
-import { AssignEntityFeatureDialog } from "./AssignEntityFeatureDialog";
 import { SchemaBuilder } from "../SchemaBuilder";
 import { AssignFeature } from "./AssignFeatureDialog";
 import { RenderDataPath } from "./RenderDataPath";
@@ -399,7 +399,7 @@ const FeatureCard = ({ name, path }: { name: string; path?: DataPath }) => {
   );
 };
 
-const RuleCard = ({ name, color }: { name: string; color: string }) => {
+const RuleCard = ({ name, color }: { name: string; color: string | null }) => {
   return (
     <Card className="px-4 flex justify-between items-center">
       <div className="flex gap-2 items-center">
@@ -482,12 +482,12 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     if (!nodes) return {};
     return nodes.reduce(
       (acc, node) => {
-        if (node.type === NodeType.LogEntityFeature) {
-          return { ...acc, [node.config.featureId]: node };
+        if (hasFnType(node, FnType.LogEntityFeature)) {
+          return { ...acc, [node.fn.config.featureId]: node };
         }
         return acc;
       },
-      {} as Record<string, NodeDefsMap[NodeType.LogEntityFeature]>
+      {} as Record<string, NodeDefsMap[FnType.LogEntityFeature]>
     );
   }, [nodes]);
 
@@ -501,7 +501,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     );
   }, [rules]);
 
-  const eventNode = nodes?.find((node) => node.type === NodeType.Event);
+  const eventNode = nodes?.find((node) => node.fn.type === FnType.Event);
 
   return (
     <div className="space-y-4">
@@ -561,7 +561,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             <FeatureCard
               key={feature.id}
               name={feature.name}
-              path={featureToNodeMap[feature.id]?.config.dataPath}
+              path={featureToNodeMap[feature.id]?.inputs.dataPath}
             />
           ))}
 
@@ -691,16 +691,17 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
         </DropdownMenu>
       </EntityCard>
       {nodes?.map((node) =>
-        node.type === NodeType.EntityAppearance ? (
+        hasFnType(node, FnType.EntityAppearance) ? (
           <EntityCard
             name={node.name}
-            path={node.config.dataPath}
+            path={node.inputs.dataPath}
             key={node.id}
           >
             {rules
               ?.filter(
                 (rule) =>
-                  rule.feature.entityTypeId === node.returnSchema.entityType &&
+                  rule.feature.entityTypeId ===
+                    node.fn.returnSchema.entityType &&
                   featureToNodeMap[rule.featureId]
               )
               .map((rule) => (
@@ -714,7 +715,8 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             {rules
               ?.filter(
                 (rule) =>
-                  rule.feature.entityTypeId === node.returnSchema.entityType &&
+                  rule.feature.entityTypeId ===
+                    node.fn.returnSchema.entityType &&
                   !featureToNodeMap[rule.featureId]
               )
               .map((rule) => (
@@ -737,7 +739,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
             {features
               ?.filter(
                 (feature) =>
-                  feature.entityTypeId === node.returnSchema.entityType &&
+                  feature.entityTypeId === node.fn.returnSchema.entityType &&
                   featureToNodeMap[feature.id] &&
                   !featureToRuleMap[feature.id]
               )
@@ -745,14 +747,14 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                 <FeatureCard
                   key={feature.id}
                   name={feature.name}
-                  path={featureToNodeMap[feature.id]?.config.dataPath}
+                  path={featureToNodeMap[feature.id]?.inputs.dataPath}
                 />
               ))}
 
             {features
               ?.filter(
                 (feature) =>
-                  feature.entityTypeId === node.returnSchema?.entityType &&
+                  feature.entityTypeId === node.fn.returnSchema?.entityType &&
                   !featureToNodeMap[feature.id] &&
                   !featureToRuleMap[feature.id]
               )
@@ -779,7 +781,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                         entityDataPath: {
                           nodeId: node.id,
                           path: [],
-                          schema: node.returnSchema,
+                          schema: node.fn.returnSchema,
                         },
                       }}
                     >
@@ -805,7 +807,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                     createRule({
                       name: values.name,
                       color: values.color,
-                      entityTypeId: node.returnSchema?.entityType,
+                      entityTypeId: node.fn.returnSchema?.entityType,
                     })
                       .then(() => {
                         toast({
@@ -828,7 +830,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
                 </RuleDialog>
                 <FeatureDialog
                   title="Create Entity Property"
-                  entityTypeId={node.returnSchema?.entityType}
+                  entityTypeId={node.fn.returnSchema?.entityType}
                   onSubmit={(values) => {
                     createFeature({
                       name: values.name,

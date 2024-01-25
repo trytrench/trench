@@ -1,6 +1,6 @@
 import { GlobalStateKey, prisma } from "databases";
 import { ExecutionEngine } from "./engine";
-import { NodeDef, NodeType } from "./node-type-defs";
+import { NodeDef, FnType } from "./function-type-defs";
 import { TSchema } from "./data-types";
 
 async function fetchNodeDefSnapshots({
@@ -17,6 +17,11 @@ async function fetchNodeDefSnapshots({
           nodeSnapshot: {
             include: {
               node: true,
+              fnSnapshot: {
+                include: {
+                  fn: true,
+                },
+              },
             },
           },
         },
@@ -28,18 +33,24 @@ async function fetchNodeDefSnapshots({
     throw new Error(`No engine found for engineId ${engineId}`);
   }
   return engineDef.nodeSnapshots.map((obj) => {
-    const snapshot = obj.nodeSnapshot;
-    const { node } = snapshot;
+    const nodeSnapshot = obj.nodeSnapshot;
+    const { node, fnSnapshot } = nodeSnapshot;
     return {
-      id: snapshot.nodeId,
-      snapshotId: snapshot.id,
-      type: node.type as NodeType,
+      id: nodeSnapshot.nodeId,
+      snapshotId: nodeSnapshot.id,
       eventType: node.eventType,
       name: node.name,
-      config: snapshot.config,
-      returnSchema: snapshot.returnSchema as unknown as TSchema,
-      dependsOn: new Set(snapshot.dependsOn),
-    };
+      inputs: nodeSnapshot.inputs as unknown as any,
+      dependsOn: new Set(nodeSnapshot.dependsOn),
+      fn: {
+        id: fnSnapshot.fnId,
+        snapshotId: fnSnapshot.id,
+        type: fnSnapshot.fn.type as any,
+        name: fnSnapshot.fn.name,
+        config: fnSnapshot.config as unknown as any,
+        returnSchema: fnSnapshot.returnSchema as unknown as TSchema,
+      },
+    } satisfies NodeDef as any;
   });
 }
 

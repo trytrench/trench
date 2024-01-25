@@ -94,7 +94,9 @@ class RedisService implements RedisInterface {
   }
 }
 
-export const redis = new RedisService();
+export function createRedisService(address?: string) {
+  return new RedisService(address);
+}
 
 function addressToHostPort(
   address: string,

@@ -14,7 +14,7 @@ interface Props {
 }
 
 export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
-  const { entityName, entityTypeName: entityType } = useEntityName(entity);
+  const { entityName, entityTypeName } = useEntityName(entity);
   const decision = useDecision(entity.features);
 
   return (
@@ -32,7 +32,7 @@ export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
         >
           <div className="flex items-center">
             <h1 className="text-lg text-emphasis-foreground">
-              {entityType}: {entityName ?? entity.entityId}
+              {entityTypeName}: {entityName ?? entity.entityId}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
 

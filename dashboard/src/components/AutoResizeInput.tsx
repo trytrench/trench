@@ -9,7 +9,7 @@ export interface AutoResizeInputProps
   value: string;
   onChange: (newValue: string) => void;
   className?: string;
-  active: boolean;
+  active?: boolean;
   onClick?: () => void;
   onClickOutside?: (event: MouseEvent) => void;
 }
@@ -18,7 +18,7 @@ export function AutoResizeInput({
   value,
   onChange,
   className,
-  active,
+  active = false,
   onClick,
   onFocus,
   onBlur,

@@ -17,7 +17,11 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
-  webpack: (config, { isServer }) => {
+  webpack: (
+    /** @type {import('webpack').Configuration} */
+    config,
+    { isServer }
+  ) => {
     if (!isServer) {
       config.resolve.fallback = {
         fs: false,
