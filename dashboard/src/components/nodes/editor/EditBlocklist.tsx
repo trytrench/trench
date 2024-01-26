@@ -59,8 +59,6 @@ import { AutoResizeInput } from "../../AutoResizeInput";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { cn } from "../../../lib/utils";
 
-const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
-
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
   inputs: getInputSchema(FnType.Blocklist).partial(),

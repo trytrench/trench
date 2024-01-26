@@ -10,7 +10,6 @@ export type FnDef<
   TConfig = any,
 > = {
   id: string;
-  snapshotId: string;
   type: TFnType;
   name: string;
   returnSchema: TReturnSchema;
@@ -62,5 +61,5 @@ export type FnTypeDef<
     input: z.infer<TInputSchema>;
     context: TContext;
   }) => Resolver<TReturn>;
-  getDependencies: (config: z.infer<TInputSchema>) => Set<string>;
+  getDependencies: (inputs: z.infer<TInputSchema>) => Set<string>;
 };

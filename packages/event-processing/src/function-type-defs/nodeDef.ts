@@ -6,7 +6,6 @@ import { FnDefsMap, FnTypeDefsMap } from ".";
 
 export const bareNodeDefSchema = z.object({
   id: z.string(),
-  snapshotId: z.string(),
   name: z.string(),
   eventType: z.string(),
   inputs: z.record(z.any()),
@@ -21,7 +20,6 @@ export const nodeDefSchema = bareNodeDefSchema.merge(
 
 export interface NodeDef<T extends FnType = FnType> {
   id: string;
-  snapshotId: string;
   name: string;
   eventType: string;
   inputs: FnTypeDefsMap[T]["inputSchema"]["_input"];

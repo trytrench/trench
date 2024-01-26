@@ -293,16 +293,16 @@ function validateFnInstanceMap(map: Record<string, NodeInstance[FnType]>) {
   for (const node of Object.values(map)) {
     const def = node.nodeDef;
 
-    console.log("---");
-    console.log("id:\t", truncId(def.id));
-    console.log("name:\t", def.name);
-    console.log("fn_type:\t", def.fn.type);
-    console.log("fn_name:\t", def.fn.name);
-    console.log(
-      "deps_on:\t",
-      Array.from(def.dependsOn).map(truncId).join(", ")
-    );
-    console.log("---");
+    // console.log("---");
+    // console.log("id:\t", truncId(def.id));
+    // console.log("name:\t", def.name);
+    // console.log("fn_type:\t", def.fn.type);
+    // console.log("fn_name:\t", def.fn.name);
+    // console.log(
+    //   "deps_on:\t",
+    //   Array.from(def.dependsOn).map(truncId).join(", ")
+    // );
+    // console.log("---");
 
     for (const depFnId of def.dependsOn) {
       const depFn = map[depFnId];
