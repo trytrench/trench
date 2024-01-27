@@ -12,6 +12,7 @@ import { rulesRouter } from "./routers/rules";
 import { entityViewsRouter } from "./routers/entityViews";
 import { decisionsRouter } from "./routers/decisions";
 import { fnDefsRouter } from "./routers/fnDefs";
+import { editorRouter } from "./routers/editor";
 
 /**
  * This is the primary router for your server.
@@ -25,13 +26,12 @@ export const appRouter = createTRPCRouter({
   links: linksRouter,
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,
-  nodeDefs: nodeDefsRouter,
-  fnDefs: fnDefsRouter,
   lists2: lists2Router,
   features: featuresRouter,
   rules: rulesRouter,
   entityViews: entityViewsRouter,
   decisions: decisionsRouter,
+  editor: editorRouter,
 });
 
 // export type definition of API

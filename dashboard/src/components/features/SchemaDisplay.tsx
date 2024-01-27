@@ -11,6 +11,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { api } from "~/utils/api";
 import { Badge } from "../ui/badge";
+import { selectors, useEditorStore } from "../nodes/editor/state/zustand";
 
 interface EventTypeNodesSchemaDisplayProps {
   eventType: string;
@@ -29,10 +30,7 @@ export function EventTypeNodesSchemaDisplay({
   onItemClick,
   renderRightComponent,
 }: EventTypeNodesSchemaDisplayProps) {
-  const { data: nodes } = api.nodeDefs.list.useQuery(
-    { eventType },
-    { enabled: !!eventType }
-  );
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const filteredNodes = useMemo(() => {
     return nodes?.filter((node) => {

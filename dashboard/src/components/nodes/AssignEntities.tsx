@@ -63,6 +63,7 @@ import { Rule } from "@prisma/client";
 import { SchemaBuilder } from "../SchemaBuilder";
 import { AssignFeature } from "./AssignFeatureDialog";
 import { RenderDataPath } from "./RenderDataPath";
+import { selectors, useEditorStore } from "./editor/state/zustand";
 
 const featureSchema = z.object({
   name: z.string(),
@@ -475,7 +476,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
     api.features.createEventFeature.useMutation();
   const { mutateAsync: createRule } = api.rules.create.useMutation();
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const featureToNodeMap = useMemo(() => {
     if (!nodes) return {};

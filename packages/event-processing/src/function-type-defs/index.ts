@@ -65,6 +65,14 @@ export function buildFnDef<T extends FnType>(type: T, args: Args<T>): Args<T> {
   return args;
 }
 
+export function hasType<T extends FnType>(
+  fnDef: FnDef,
+  fnType?: T
+): fnDef is FnDef<T extends FnType ? T : FnType> {
+  if (!fnType) return true;
+  return fnDef.type === fnType;
+}
+
 export * from "./functionTypeDef";
 export * from "./types/_enum";
 export * from "./nodeDef";

@@ -8,7 +8,7 @@ import { prisma } from "databases";
 import { uniqBy } from "lodash";
 import { assert, generateNanoId } from "../../../../../packages/common/src";
 
-export const fnDefsRouter = createTRPCRouter({
+export const editorRouter = createTRPCRouter({
   getLatestEngine: protectedProcedure.query(async ({ ctx }) => {
     const latestEngineId = await ctx.prisma.executionEngine.findFirstOrThrow({
       orderBy: { createdAt: "desc" },

@@ -4,7 +4,6 @@ import {
   getConfigSchema,
   FnType,
   getInputSchema,
-  buildNodeDefWithFn,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -22,12 +21,13 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { NodeEditorProps } from "./types";
-import { api } from "../../../utils/api";
 import { SelectDataPath } from "../SelectDataPath";
 import { SelectDataPathList } from "../SelectDataPathList";
 import { TimeWindowDialog, RenderTimeWindow } from "./TimeWindowDialog";
 import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
+import { selectors, useEditorStore } from "./state/zustand";
+import { generateNanoId } from "../../../../../packages/common/src";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
@@ -61,28 +61,23 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
   const router = useRouter();
   const eventType = router.query.eventType as string;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
-  const { data: thisNode } = api.nodeDefs.get.useQuery(
-    { id: initialNodeId ?? "" },
-    { enabled: !!initialNodeId }
-  );
+  const initialNode = useEditorStore(selectors.getNodeDef(initialNodeId ?? ""));
 
   // Initialize form values with initial node
   const [initializedForm, setInitializedForm] = useState(false);
   useEffect(() => {
-    if (!initializedForm && thisNode) {
-      form.setValue("name", thisNode.name);
-      form.setValue("config", thisNode.fn.config as FormType["config"]);
+    if (!initializedForm && initialNode) {
+      form.setValue("name", initialNode.name);
+      form.setValue("config", initialNode.fn.config as FormType["config"]);
 
       setInitializedForm(true);
     }
-  }, [thisNode, initializedForm, setInitializedForm, form]);
+  }, [initialNode, initializedForm, setInitializedForm, form]);
 
   const isFormValid = form.formState.isValid;
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const createNodeWithFn = useEditorStore.use.setNodeDefWithFn();
 
   return (
     <div>
@@ -97,11 +92,13 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
             onClick={(event) => {
               event.preventDefault();
 
-              const nodeDef = buildNodeDefWithFn(FnType.Counter, {
+              createNodeWithFn(FnType.Counter, {
+                id: initialNode?.id ?? generateNanoId(),
                 name: "Counter",
                 eventType: eventType,
                 inputs: form.getValues("inputs"),
                 fn: {
+                  id: initialNode?.fn.id ?? generateNanoId(),
                   name: "Counter",
                   type: FnType.Counter,
                   config: form.getValues("config"),
@@ -109,9 +106,7 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
                     type: TypeName.Int64,
                   },
                 },
-              });
-
-              createNodeWithFn(nodeDef)
+              })
                 .then(toasts.createNode.onSuccess)
                 .then(async (res) => {
                   await router.push(`/events/${eventType}`);

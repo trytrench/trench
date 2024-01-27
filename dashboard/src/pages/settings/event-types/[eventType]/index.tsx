@@ -75,6 +75,12 @@ import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog"
 import { SelectDataPath } from "../../../../components/nodes/SelectDataPath";
 import { handleError } from "../../../../lib/handleError";
 import { useMutationToasts } from "../../../../components/nodes/editor/useMutationToasts";
+import {
+  selectors,
+  useEditorStore,
+} from "../../../../components/nodes/editor/state/zustand";
+import { generateNanoId } from "../../../../../../packages/common/src";
+import { usePrevious } from "@dnd-kit/utilities";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -199,18 +205,24 @@ const Page: NextPageWithLayout = () => {
 
   const eventType = router.query.eventType as string;
 
-  const { data: nodes, refetch: refetchFns } = api.nodeDefs.list.useQuery({
-    eventType: eventType,
-  });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const setNodeDefWithFn = useEditorStore.use.setNodeDefWithFn();
 
   const [open, setOpen] = useState(false);
   const [nodeSelectOpen, setFnSelectOpen] = useState(false);
+
+  const { data: engineData } = api.editor.getLatestEngine.useQuery();
+  const prevEngineId = usePrevious(engineData?.engineId);
+  const initialize = useEditorStore.use.initializeFromNodeDefs();
+  useEffect(() => {
+    if (engineData && engineData?.engineId !== prevEngineId) {
+      initialize(engineData.nodeDefs);
+    }
+  }, [engineData, initialize, prevEngineId]);
 
   return (
     <div>
@@ -374,33 +386,26 @@ const Page: NextPageWithLayout = () => {
                       return;
                     }
 
-                    const nodeDefWithFn = buildNodeDefWithFn(
-                      FnType.EntityAppearance,
-                      {
+                    setNodeDefWithFn(FnType.EntityAppearance, {
+                      id: generateNanoId(),
+                      name: entityType.type,
+                      eventType,
+                      inputs: {
+                        dataPath: values.path,
+                      },
+                      fn: {
+                        id: generateNanoId(),
+                        type: FnType.EntityAppearance,
+                        returnSchema: {
+                          type: TypeName.Entity,
+                          entityType: values.entityTypeId,
+                        },
+                        config: {
+                          entityType: values.entityTypeId,
+                        },
                         name: entityType.type,
-                        eventType,
-                        inputs: {
-                          dataPath: values.path,
-                        },
-                        fn: {
-                          type: FnType.EntityAppearance,
-                          returnSchema: {
-                            type: TypeName.Entity,
-                            entityType: values.entityTypeId,
-                          },
-                          config: {
-                            entityType: values.entityTypeId,
-                          },
-                          name: entityType.type,
-                        },
-                      }
-                    );
-
-                    createNodeWithFn(nodeDefWithFn)
-                      .then(async (res) => {
-                        await refetchFns();
-                        return res;
-                      })
+                      },
+                    })
                       .then(toasts.createNode.onSuccess)
                       .catch(toasts.createNode.onError)
                       .catch(handleError);

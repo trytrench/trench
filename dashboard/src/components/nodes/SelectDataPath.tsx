@@ -13,6 +13,7 @@ import { uniqBy } from "lodash";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
+import { useEditorStore, selectors } from "./editor/state/zustand";
 
 const HIDDEN_NODE_TYPES = [
   FnType.GetEntityFeature,
@@ -31,7 +32,7 @@ function useFlattenedDataPaths(props: {
     },
   } = props;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const flattenedDataPaths = useMemo(() => {
     const dataPaths: DataPath[] = [];
@@ -108,7 +109,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
     disablePathSelection = false,
   } = props;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const { flattenedDataPaths } = useFlattenedDataPaths({
     eventType,

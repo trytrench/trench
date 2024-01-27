@@ -49,6 +49,8 @@ import { SelectDataPath } from "./SelectDataPath";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { useEditorStore } from "./editor/state/zustand";
+import { generateNanoId } from "../../../../packages/common/src";
 
 const formSchema = z.object({
   dataPath: dataPathZodSchema.nullable(),
@@ -97,14 +99,8 @@ export function AssignFeature({
 
   const { data: features } = api.features.list.useQuery();
 
-  const { mutateAsync: createNodeDefWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const createNodeDefWithFn = useEditorStore.use.setNodeDefWithFn();
   const mutationToasts = useMutationToasts();
-
-  const { refetch: refetchNodes } = api.nodeDefs.list.useQuery(
-    { eventType: router.query.eventType as string },
-    { enabled: false }
-  );
 
   const createEventFeature = (values: FormType) => {
     const feature = features?.find((f) => f.id === values.featureId);
@@ -112,7 +108,8 @@ export function AssignFeature({
     const dataPath = form.getValues("dataPath");
     if (!dataPath) throw new Error("Data path not set");
 
-    const nodeDef = buildNodeDefWithFn(FnType.LogEntityFeature, {
+    createNodeDefWithFn(FnType.LogEntityFeature, {
+      id: generateNanoId(),
       eventType: eventType,
       name: "<no name>",
       inputs: {
@@ -120,6 +117,7 @@ export function AssignFeature({
         entityDataPath: form.getValues("entityDataPath"),
       },
       fn: {
+        id: generateNanoId(),
         name: "Log Entity Feature",
         type: FnType.LogEntityFeature,
         returnSchema: {
@@ -130,12 +128,7 @@ export function AssignFeature({
           featureSchema: feature.schema,
         },
       },
-    });
-    createNodeDefWithFn(nodeDef)
-      .then(async (res) => {
-        await refetchNodes();
-        return res;
-      })
+    })
       .then(mutationToasts.createNode.onSuccess)
       .catch(mutationToasts.createNode.onError)
       .catch(handleError);

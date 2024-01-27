@@ -29,23 +29,19 @@ export interface NodeDef<T extends FnType = FnType> {
 
 // // Build node def
 
-type Args<T extends FnType> = Omit<
-  NodeDef<T>,
-  "id" | "dependsOn" | "snapshotId" | "fn"
-> & {
-  fn: Omit<FnDef<T>, "id" | "snapshotId">;
-};
+type Arg<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
 
 export function buildNodeDefWithFn<T extends FnType>(
   type: T,
-  args: Args<T>
-): Args<T> {
+  args: Arg<T>
+): Arg<T> {
   return args;
 }
 
 export function hasFnType<T extends FnType>(
   nodeDef: NodeDef,
-  fnType: T
-): nodeDef is NodeDef<T> {
+  fnType?: T
+): nodeDef is NodeDef<T extends FnType ? T : FnType> {
+  if (!fnType) return true;
   return nodeDef.fn.type === fnType;
 }

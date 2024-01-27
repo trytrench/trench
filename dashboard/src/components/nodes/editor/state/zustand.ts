@@ -1,8 +1,10 @@
 import {
   FN_TYPE_REGISTRY,
+  hasFnType,
   type FnDef,
   type FnType,
   type NodeDef,
+  hasType,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert, generateNanoId } from "../../../../../../packages/common/src";
@@ -24,30 +26,35 @@ const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
   return store;
 };
 
-type RawNode = Omit<NodeDef, "fn"> & {
+type RawNode<T extends FnType = FnType> = Omit<NodeDef<T>, "fn"> & {
   fnId: string;
 };
 
-type NodeCreateArgs = Omit<RawNode, "id" | "dependsOn">;
+type NodeDefSetArgs<T extends FnType> = Omit<RawNode<T>, "dependsOn">;
 
-type FnCreateArgs = Omit<FnDef, "id">;
+type NodeDefWithFnSetArgs<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
+
+type FnDefSetArgs<T extends FnType> = FnDef<T>;
 
 interface EditorState {
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDef>;
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[]) => void;
-  getNodeDefs: (props: { eventType?: string }) => NodeDef[];
-  getNodeDef: (nodeId: string) => NodeDef | undefined;
-  createNode: (nodeDef: NodeCreateArgs) => void;
-  deleteNode: (nodeId: string) => void;
-  updateNode: (nodeId: string, nodeDef: Partial<NodeCreateArgs>) => void;
 
-  getFnDefs: () => FnDef[];
-  getFnDef: (fnId: string) => FnDef | undefined;
-  createFnDef: (fnDef: FnCreateArgs) => void;
-  deleteFnDef: (fnId: string) => void;
-  updateFnDef: (fnId: string, fnDef: Partial<FnCreateArgs>) => void;
+  setNodeDefWithFn: <T extends FnType>(
+    fnType: T,
+    nodeDef: NodeDefWithFnSetArgs<T>
+  ) => Promise<NodeDef<T>>;
+
+  setNodeDef: <T extends FnType>(
+    nodeDef: NodeDefSetArgs<T>
+  ) => Promise<NodeDef<T>>;
+
+  setFnDef: <T extends FnType>(
+    fnId: string,
+    fnDef: FnDefSetArgs<T>
+  ) => Promise<FnDef<T>>;
 }
 
 function fnDefIsValid(fnDef: FnDef): fnDef is FnDef {
@@ -100,30 +107,52 @@ const useEditorStoreBase = create<EditorState>()(
 
         set({ nodes, fns });
       },
-      getNodeDefs: (props) => {
-        let nodes = Object.values(get().nodes);
-        if (props.eventType) {
-          nodes = nodes.filter((n) => n.eventType === props.eventType);
-        }
+      // eslint-disable-next-line @typescript-eslint/require-await
+      setNodeDefWithFn: async (fnType, nodeDef) => {
+        const fn = get().fns[nodeDef.fn.id];
+        assert(fn, `Unknown fn ${nodeDef.fn.id}`);
 
-        const nodeDefs = nodes.map((node) => {
-          const fn = get().fns[node.fnId];
-          assert(fn, `Unknown fn ${node.fnId}`);
+        const { dependsOn } = validateFnInput(fn.type, nodeDef.inputs);
+        assert(fnDefIsValid(fn), `Invalid fn def`);
 
-          return { ...node, fn };
-        });
+        set((s) => ({
+          nodes: {
+            ...s.nodes,
+            [nodeDef.id]: {
+              ...nodeDef,
+              dependsOn,
+              fnId: fn.id,
+            },
+          },
+          fns: {
+            ...s.fns,
+            [fn.id]: fn,
+          },
+        }));
 
-        return nodeDefs;
+        return {
+          ...nodeDef,
+          dependsOn,
+        };
       },
-      getNodeDef: (nodeId: string) => {
-        const node = get().nodes[nodeId];
-        if (!node) return undefined;
-        const fn = get().fns[node.fnId];
-        if (!fn) return undefined;
-        return { ...node, fn };
+      // eslint-disable-next-line @typescript-eslint/require-await
+      setFnDef: async (fnId, fnDef) => {
+        assert(fnDefIsValid(fnDef), `Invalid fn def`);
+
+        set((s) => ({
+          fns: {
+            ...s.fns,
+            [fnId]: fnDef,
+          },
+        }));
+
+        return fnDef;
       },
-      createNode: (nodeDef) => {
-        const id = generateNanoId();
+
+      // eslint-disable-next-line @typescript-eslint/require-await
+      setNodeDef: async (nodeDef) => {
+        const oldNode = get().nodes[nodeDef.id];
+        assert(oldNode, `Node ${nodeDef.id} not found`);
 
         const fn = get().fns[nodeDef.fnId];
         assert(fn, `Unknown fn ${nodeDef.fnId}`);
@@ -133,76 +162,18 @@ const useEditorStoreBase = create<EditorState>()(
         set((s) => ({
           nodes: {
             ...s.nodes,
-            [id]: {
+            [nodeDef.id]: {
               ...nodeDef,
-              id,
               dependsOn,
             },
           },
         }));
-      },
-      deleteNode: (nodeId: string) => {
-        set((s) => {
-          const nodes = { ...s.nodes };
-          delete nodes[nodeId];
-          return { nodes };
-        });
-      },
-      updateNode: (nodeId: string, node: Partial<NodeDef>) => {
-        const oldNode = get().nodes[nodeId];
-        assert(oldNode, `Node ${nodeId} not found`);
 
-        const fn = get().fns[oldNode.fnId];
-        assert(fn, `Unknown fn ${oldNode.fnId}`);
-
-        const { dependsOn } = validateFnInput(fn.type, {
-          ...oldNode.inputs,
-          ...node.inputs,
-        });
-
-        set((s) => ({
-          nodes: { ...s.nodes, [nodeId]: { ...oldNode, ...node, dependsOn } },
-        }));
-      },
-
-      getFnDefs: () => {
-        const allFnDefs = Object.values(get().fns);
-        return allFnDefs;
-      },
-      getFnDef: (fnId: string) => {
-        return get().fns[fnId];
-      },
-      createFnDef: (createArgs) => {
-        const id = generateNanoId();
-
-        const newDef = { ...createArgs, id };
-        assert(fnDefIsValid(newDef), `Invalid fn def`);
-
-        set((s) => ({
-          fns: {
-            ...s.fns,
-            [id]: newDef,
-          },
-        }));
-      },
-      deleteFnDef: (fnId: string) => {
-        set((s) => {
-          const fns = { ...s.fns };
-          delete fns[fnId];
-          return { fns };
-        });
-      },
-      updateFnDef: (fnId: string, fnDef: Partial<FnDef>) => {
-        const oldFn = get().fns[fnId];
-        assert(oldFn, `Fn ${fnId} not found`);
-
-        const newFnDef = { ...oldFn, ...fnDef };
-
-        assert(fnDefIsValid(newFnDef), `Invalid fn def`);
-
-        set((s) => ({
-          fns: { ...s.fns, [fnId]: newFnDef },
-        }));
+        return {
+          ...nodeDef,
+          dependsOn,
+          fn: fn as any,
+        };
       },
     }),
     {
@@ -213,3 +184,61 @@ const useEditorStoreBase = create<EditorState>()(
 );
 
 export const useEditorStore = createSelectors(useEditorStoreBase);
+
+export const selectors = {
+  getNodeDef:
+    <T extends FnType>(nodeId: string, fnType?: T) =>
+    (store: EditorState) => {
+      const node = store.nodes[nodeId];
+      if (!node) return undefined;
+      const fn = store.fns[node.fnId];
+      if (!fn) return undefined;
+
+      const nodeDef = { ...node, fn };
+      assert(hasFnType(nodeDef, fnType), `Unknown fn type ${fnType}`);
+      return nodeDef as NodeDef<T>;
+    },
+  getNodeDefs: (props?: { eventType?: string }) => (store: EditorState) => {
+    let nodes = Object.values(store.nodes);
+    if (props?.eventType) {
+      nodes = nodes.filter((n) => n.eventType === props.eventType);
+    }
+
+    const nodeDefs = nodes.map((node) => {
+      const fn = store.fns[node.fnId];
+      assert(fn, `Unknown fn ${node.fnId}`);
+
+      return { ...node, fn };
+    });
+
+    return nodeDefs;
+  },
+  getNode: (nodeId: string) => (store: EditorState) => {
+    return store.nodes[nodeId];
+  },
+  getNodes: (props: { eventType?: string }) => (store: EditorState) => {
+    let allNodes = Object.values(store.nodes);
+    if (props.eventType) {
+      allNodes = allNodes.filter((n) => n.eventType === props.eventType);
+    }
+    return allNodes;
+  },
+  getFnDef:
+    <T extends FnType>(fnId: string, fnType?: T) =>
+    (store: EditorState) => {
+      const fn = store.fns[fnId];
+      if (!fn) return undefined;
+
+      assert(hasType(fn, fnType), `Unknown fn type ${fnType}`);
+      return fn;
+    },
+  getFnDefs:
+    <T extends FnType = FnType>(props?: { fnType?: T }) =>
+    (store: EditorState) => {
+      let allFnDefs = Object.values(store.fns);
+      if (props?.fnType) {
+        allFnDefs = allFnDefs.filter((n) => n.type === props.fnType);
+      }
+      return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
+    },
+};
