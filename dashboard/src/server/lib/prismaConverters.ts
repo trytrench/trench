@@ -10,20 +10,17 @@ import {
   type FnType,
   type TSchema,
   type NodeDef,
-  NodeDefsMap,
-  FnDefsMap,
 } from "event-processing";
 
 type FnSnapshot = PrismaFnSnapshot & {
   fn: PrismaFn;
 };
 
-export function prismaFnSnapshotToFnDef(val: FnSnapshot): FnDefsMap[FnType] {
+export function prismaFnSnapshotToFnDef(val: FnSnapshot): FnDef<FnType> {
   const fn = val.fn;
 
   return {
     id: fn.id,
-    snapshotId: val.id,
     type: fn.type as unknown as FnType,
     name: fn.name,
     returnSchema: val.returnSchema as unknown as TSchema,
@@ -44,7 +41,7 @@ export function prismaFnToFnDef(
   });
 }
 
-export function prismaToNodeDef(
+export function prismaNodeToNodeDef(
   val: PrismaNode & {
     snapshots: (PrismaNodeSnapshot & {
       fnSnapshot: FnSnapshot;
@@ -60,12 +57,23 @@ export function prismaToNodeDef(
   return {
     id: val.id,
     name: val.name,
-    snapshotId: snapshot.id,
     eventType: val.eventType,
     inputs: snapshot.inputs as unknown as any,
     dependsOn: new Set(snapshot.dependsOn),
     fn: fn as any,
   };
+}
+
+export function prismaNodeSnapshotToNodeDef(
+  val: PrismaNodeSnapshot & {
+    node: PrismaNode;
+    fnSnapshot: FnSnapshot & { fn: PrismaFn };
+  }
+): NodeDef<FnType> {
+  return prismaNodeToNodeDef({
+    ...val.node,
+    snapshots: [val],
+  });
 }
 
 export const FN_INCLUDE_ARGS = {

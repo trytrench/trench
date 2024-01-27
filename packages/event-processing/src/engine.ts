@@ -2,13 +2,10 @@ import { createRedisService } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
   FN_TYPE_REGISTRY,
-  FnDef,
-  FnDefsMap,
   FnType,
   FnTypeContextMap,
   FnTypeDef,
   NodeDef,
-  NodeDefsMap,
   Resolver,
   StateUpdater,
   TrenchEvent,
@@ -63,7 +60,7 @@ type ExecutionState = {
 
 type NodeInstance = {
   [TFnType in FnType]: {
-    nodeDef: NodeDefsMap[TFnType];
+    nodeDef: NodeDef<FnType>;
     resolver: Resolver;
   };
 };

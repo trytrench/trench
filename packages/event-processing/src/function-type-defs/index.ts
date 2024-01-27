@@ -43,16 +43,6 @@ export function getInputSchema<T extends FnType>(fnType: T) {
 
 export type FnTypeDefsMap = typeof FN_TYPE_DEFS;
 
-export type FnDefsMap = {
-  [TFnType in keyof FnTypeDefsMap]: FnDef<
-    TFnType,
-    FnTypeDefsMap[TFnType] extends FnTypeDef<any, infer TReturnSchema, any, any>
-      ? TReturnSchema
-      : never,
-    FnTypeDefsMap[TFnType]["configSchema"]["_input"]
-  >;
-};
-
 export type ExtractFnTypeDefContext<T> = T extends FnTypeDef<
   any,
   any,
@@ -69,7 +59,7 @@ export type FnTypeContextMap = {
 
 // Build fn def
 
-type Args<T extends FnType> = Omit<FnDefsMap[T], "id" | "snapshotId">;
+type Args<T extends FnType> = Omit<FnDef<T>, "id" | "snapshotId">;
 
 export function buildFnDef<T extends FnType>(type: T, args: Args<T>): Args<T> {
   return args;

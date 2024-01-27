@@ -5,7 +5,7 @@ import {
   FN_INCLUDE_ARGS,
   NODE_INCLUDE_ARGS,
   prismaFnToFnDef,
-  prismaToNodeDef,
+  prismaNodeToNodeDef,
 } from "../prismaConverters";
 import { publish } from "./publish";
 
@@ -47,7 +47,7 @@ export async function updateFnDef(input: UpdateFnDefArgs) {
       include: NODE_INCLUDE_ARGS,
     });
 
-    const nodeDefs = nodes.map(prismaToNodeDef);
+    const nodeDefs = nodes.map(prismaNodeToNodeDef);
 
     await Promise.all(
       nodeDefs.map(async (nodeDef) => {

@@ -1,5 +1,5 @@
 import { GlobalStateKey, prisma } from "databases";
-import { NODE_INCLUDE_ARGS, prismaToNodeDef } from "../prismaConverters";
+import { NODE_INCLUDE_ARGS, prismaNodeToNodeDef } from "../prismaConverters";
 import { type NodeDef, FnType } from "event-processing";
 
 export async function publish() {
@@ -7,7 +7,7 @@ export async function publish() {
     include: NODE_INCLUDE_ARGS,
   });
 
-  const nodeDefs = nodeDefsRaw.map(prismaToNodeDef);
+  const nodeDefs = nodeDefsRaw.map(prismaNodeToNodeDef);
 
   const prunedFnDefs = prune(nodeDefs);
 
@@ -35,7 +35,7 @@ export async function publish() {
   });
 }
 
-function prune(nodeDefs: NodeDef[]): NodeDef[] {
+export function prune(nodeDefs: NodeDef[]): NodeDef[] {
   const map = new Map<string, NodeDef>();
   const allDependsOn = new Set<string>();
   for (const nodeDef of nodeDefs) {

@@ -12,7 +12,7 @@ import {
   FN_INCLUDE_ARGS,
   NODE_INCLUDE_ARGS,
   prismaFnToFnDef,
-  prismaToNodeDef,
+  prismaNodeToNodeDef,
 } from "../../lib/prismaConverters";
 import { type Prisma } from "@prisma/client";
 import { publish } from "../../lib/nodes/publish";
@@ -25,7 +25,7 @@ export const nodeDefsRouter = createTRPCRouter({
         where: { id: input.id },
         include: NODE_INCLUDE_ARGS,
       });
-      return prismaToNodeDef(nodeDef);
+      return prismaNodeToNodeDef(nodeDef);
     }),
 
   list: protectedProcedure
@@ -35,7 +35,7 @@ export const nodeDefsRouter = createTRPCRouter({
         where: { eventType: input?.eventType },
         include: NODE_INCLUDE_ARGS,
       });
-      return nodes.map(prismaToNodeDef);
+      return nodes.map(prismaNodeToNodeDef);
     }),
 
   createWithFn: protectedProcedure
@@ -91,7 +91,7 @@ export const nodeDefsRouter = createTRPCRouter({
         await publish();
       }
 
-      return prismaToNodeDef(newNodeDef);
+      return prismaNodeToNodeDef(newNodeDef);
     }),
 
   create: protectedProcedure
@@ -140,7 +140,7 @@ export const nodeDefsRouter = createTRPCRouter({
         include: NODE_INCLUDE_ARGS,
       });
 
-      return prismaToNodeDef(nodeDef);
+      return prismaNodeToNodeDef(nodeDef);
     }),
 
   update: protectedProcedure
@@ -159,7 +159,7 @@ export const nodeDefsRouter = createTRPCRouter({
         where: { id: input.id },
         include: NODE_INCLUDE_ARGS,
       });
-      const originalNodeDef = prismaToNodeDef(_rawNode);
+      const originalNodeDef = prismaNodeToNodeDef(_rawNode);
 
       async function createNewSnapshotArgs(): Promise<Omit<
         Prisma.NodeSnapshotCreateInput,
@@ -204,7 +204,7 @@ export const nodeDefsRouter = createTRPCRouter({
         include: NODE_INCLUDE_ARGS,
       });
 
-      return prismaToNodeDef(updatedNodeDef);
+      return prismaNodeToNodeDef(updatedNodeDef);
     }),
 
   delete: protectedProcedure

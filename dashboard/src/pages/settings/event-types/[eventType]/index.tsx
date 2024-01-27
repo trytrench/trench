@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  FnDefsMap,
   FnType,
   TypeName,
   buildFnDef,

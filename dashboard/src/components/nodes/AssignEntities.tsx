@@ -3,7 +3,6 @@ import {
   DataPath,
   FeatureDef,
   NodeDef,
-  NodeDefsMap,
   TSchema,
   TypeName,
   tSchemaZod,
@@ -487,7 +486,7 @@ export default function AssignEntities({ onAssign, onAssignToEvent }: Props) {
         }
         return acc;
       },
-      {} as Record<string, NodeDefsMap[FnType.LogEntityFeature]>
+      {} as Record<string, NodeDef<FnType.LogEntityFeature>>
     );
   }, [nodes]);
 
