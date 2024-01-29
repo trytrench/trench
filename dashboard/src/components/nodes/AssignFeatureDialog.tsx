@@ -94,8 +94,6 @@ export function AssignFeature({
     }
   }, [defaults, form, initializedForm]);
 
-  console.log(form.watch("entityDataPath"));
-
   const { data: features } = api.features.list.useQuery();
 
   const { mutateAsync: createNodeDefWithFn } =

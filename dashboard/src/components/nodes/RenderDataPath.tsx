@@ -8,7 +8,9 @@ export function RenderDataPath(props: { dataPath: DataPath }) {
   return (
     <div className="flex items-center space-x-2 rounded-md border px-2 py-1">
       <div className="text-sm">{node?.name}</div>
-      <div className="text-sm">{dataPath.path.join(".")}</div>
+      {dataPath.path.length > 0 && (
+        <div className="text-sm">{dataPath.path.join(".")}</div>
+      )}
     </div>
   );
 }
