@@ -3,14 +3,14 @@ import { FnType } from "./types/_enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
 import { DataPath } from "../data-path";
+import { FnTypeDefsMap } from ".";
 
 export type FnDef<
   TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
-  TConfig = any,
+  TConfig = FnTypeDefsMap[TFnType]["configSchema"]["_input"],
 > = {
   id: string;
-  snapshotId: string;
   type: TFnType;
   name: string;
   returnSchema: TReturnSchema;
@@ -62,5 +62,5 @@ export type FnTypeDef<
     input: z.infer<TInputSchema>;
     context: TContext;
   }) => Resolver<TReturn>;
-  getDependencies: (config: z.infer<TInputSchema>) => Set<string>;
+  getDependencies: (inputs: z.infer<TInputSchema>) => Set<string>;
 };

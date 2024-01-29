@@ -1,12 +1,11 @@
 import { z } from "zod";
-import { fnDefSchema } from "./functionTypeDef";
+import { FnDef, fnDefSchema } from "./functionTypeDef";
 import { TSchema, tSchemaZod } from "../data-types";
 import { FnType } from "./types/_enum";
-import { FnDefsMap, FnTypeDefsMap } from ".";
+import { FnTypeDefsMap } from ".";
 
 export const bareNodeDefSchema = z.object({
   id: z.string(),
-  snapshotId: z.string(),
   name: z.string(),
   eventType: z.string(),
   inputs: z.record(z.any()),
@@ -21,37 +20,28 @@ export const nodeDefSchema = bareNodeDefSchema.merge(
 
 export interface NodeDef<T extends FnType = FnType> {
   id: string;
-  snapshotId: string;
   name: string;
   eventType: string;
   inputs: FnTypeDefsMap[T]["inputSchema"]["_input"];
   dependsOn: Set<string>;
-  fn: FnDefsMap[T];
+  fn: FnDef<T>;
 }
-
-export type NodeDefsMap = {
-  [T in FnType]: NodeDef<T>;
-};
 
 // // Build node def
 
-type Args<T extends FnType> = Omit<
-  NodeDefsMap[T],
-  "id" | "dependsOn" | "snapshotId" | "fn"
-> & {
-  fn: Omit<FnDefsMap[T], "id" | "snapshotId">;
-};
+type Arg<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
 
 export function buildNodeDefWithFn<T extends FnType>(
   type: T,
-  args: Args<T>
-): Args<T> {
+  args: Arg<T>
+): Arg<T> {
   return args;
 }
 
 export function hasFnType<T extends FnType>(
   nodeDef: NodeDef,
-  fnType: T
-): nodeDef is NodeDef<T> {
+  fnType?: T
+): nodeDef is NodeDef<T extends FnType ? T : FnType> {
+  if (!fnType) return true;
   return nodeDef.fn.type === fnType;
 }

@@ -20,7 +20,7 @@ const config = {
   webpack: (
     /** @type {import('webpack').Configuration} */
     config,
-    { isServer }
+    { isServer, webpack }
   ) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -40,6 +40,10 @@ const config = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+
+    // Remove annoying warning message that doesn't affect anything
+    // https://github.com/jaredwray/keyv/issues/45
+    config.plugins.push(new webpack.ContextReplacementPlugin(/keyv/));
 
     return config;
   },

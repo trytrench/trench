@@ -15,7 +15,7 @@ import {
   NODE_INCLUDE_ARGS,
   prismaFnSnapshotToFnDef,
   prismaFnToFnDef,
-  prismaToNodeDef,
+  prismaNodeToNodeDef,
 } from "../../lib/prismaConverters";
 import { type Prisma } from "@prisma/client";
 import { publish } from "../../lib/nodes/publish";

@@ -3,7 +3,6 @@ import {
   DataPath,
   FeatureDef,
   NodeDef,
-  NodeDefsMap,
   TSchema,
   TypeName,
   tSchemaZod,
@@ -66,6 +65,7 @@ import { AssignFeature } from "./AssignFeatureDialog";
 import { RenderDataPath } from "./RenderDataPath";
 import clsx from "clsx";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
+import { selectors, useEditorStore } from "./editor/state/zustand";
 
 const featureSchema = z.object({
   name: z.string(),
@@ -519,7 +519,7 @@ export default function AssignEntities() {
     api.features.createEventFeature.useMutation();
   const { mutateAsync: createRule } = api.rules.create.useMutation();
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const featureToNodeMap = useMemo(() => {
     if (!nodes) return {};
@@ -530,7 +530,7 @@ export default function AssignEntities() {
         }
         return acc;
       },
-      {} as Record<string, NodeDefsMap[FnType.LogEntityFeature]>
+      {} as Record<string, NodeDef<FnType.LogEntityFeature>>
     );
   }, [nodes]);
 

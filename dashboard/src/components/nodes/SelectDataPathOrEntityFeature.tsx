@@ -13,6 +13,8 @@ import { useMemo } from "react";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { SelectDataPath } from "./SelectDataPath";
 import { useToast } from "../ui/use-toast";
+import { useEditorStore, selectors } from "./editor/state/zustand";
+import { generateNanoId } from "../../../../packages/common/src";
 
 /**
  * This component is used to select a data path or entity feature path.
@@ -42,9 +44,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
     disablePathSelection = false,
   } = props;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({
-    eventType,
-  });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const valueNode = useMemo(() => {
     return nodes?.find((n) => n.id === value?.nodeId);
@@ -68,12 +68,6 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
         onChange={onChange}
         disablePathSelection={disablePathSelection}
         desiredSchema={desiredSchema}
-        // filterNodeOptions={(nodeDef) => {
-        //   return (
-        //     nodeDef.type !== FnType.GetEntityFeature &&
-        //     nodeDef.type !== FnType.LogEntityFeature
-        //   );
-        // }}
       />
       {dataPathSelectorValue?.schema.type === TypeName.Entity && (
         <SelectEntityFeatureNodeDataPath
@@ -96,15 +90,9 @@ function SelectEntityFeatureNodeDataPath(props: {
   const { eventType, value, onChange, desiredSchema } = props;
 
   const { toast } = useToast();
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
-  const { data: nodes, refetch } = api.nodeDefs.list.useQuery({ eventType });
-
-  const { mutateAsync: createNodeWithFn, isLoading: isLoadingCreate } =
-    api.nodeDefs.createWithFn.useMutation({
-      async onSuccess() {
-        await refetch();
-      },
-    });
+  const createNodeWithFn = useEditorStore.use.setNodeDefWithFn();
 
   const valueNode = useMemo(() => {
     const node = nodes?.find((n) => n.id === value?.nodeId);
@@ -149,11 +137,6 @@ function SelectEntityFeatureNodeDataPath(props: {
   return (
     <ComboboxSelector
       value={selectedFeatureId}
-      renderTrigger={({ renderOriginal, originalChildren }) => {
-        return renderOriginal(
-          isLoadingCreate ? "Loading..." : originalChildren
-        );
-      }}
       onSelect={(newFeatureId) => {
         const feature = features?.find((f) => f.id === newFeatureId);
         if (!feature || !selectedEntityDataPath || !newFeatureId) {
@@ -182,8 +165,15 @@ function SelectEntityFeatureNodeDataPath(props: {
             schema: foundNode.fn.returnSchema,
           });
         } else {
-          const newNode = buildNodeDefWithFn(FnType.GetEntityFeature, {
+          createNodeWithFn(FnType.GetEntityFeature, {
+            id: generateNanoId(),
+            eventType: eventType,
+            name: `Get Feature: ${feature.name}`,
+            inputs: {
+              entityDataPath: selectedEntityDataPath,
+            },
             fn: {
+              id: generateNanoId(),
               name: `Get Feature: ${feature.name}`,
               type: FnType.GetEntityFeature,
               config: {
@@ -192,14 +182,7 @@ function SelectEntityFeatureNodeDataPath(props: {
               },
               returnSchema: feature.schema,
             },
-            eventType: eventType,
-            name: `Get Feature: ${feature.name}`,
-            inputs: {
-              entityDataPath: selectedEntityDataPath,
-            },
-          });
-
-          createNodeWithFn(newNode)
+          })
             .then((newDef) => {
               onChange({
                 nodeId: newDef.id,

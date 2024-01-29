@@ -114,9 +114,6 @@ model Node {
   eventTypeObj EventType @relation(fields: [eventType], references: [id])
   eventType    String
 
-  fn  Fn @relation(fields: [fnId], references: [id])
-  fnId String
-
   snapshots NodeSnapshot[]
 }
 
@@ -160,7 +157,6 @@ model Fn {
   type         String
 
   snapshots FnSnapshot[]
-  nodes    Node[]
 }
 
 model ExecutionEngineToNodeSnapshot {

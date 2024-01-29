@@ -12,5 +12,7 @@
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "nanoid": "^5.0.3"
+  }
 }
