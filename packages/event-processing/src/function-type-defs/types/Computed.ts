@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { FnType } from "./_enum";
 import { createFnTypeDefBuilder } from "../builder";
-import { TypeName, tSchemaZod } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
 import { functions } from "../lib/computedNodeFunctions";
 
@@ -11,7 +10,7 @@ export const computedFnDef = createFnTypeDefBuilder()
     z.object({
       tsCode: z.string().min(1),
       compiledJs: z.string().min(1),
-      depsSchema: z.record(z.string(), tSchemaZod),
+      // depsSchema: z.record(z.string(), tSchemaZod),
     })
   )
   .setInputSchema(

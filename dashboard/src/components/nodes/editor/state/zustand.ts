@@ -39,8 +39,9 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 interface EditorState {
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDef>;
+  initialized: boolean;
 
-  initializeFromNodeDefs: (nodeDefs: NodeDef[]) => void;
+  initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -60,12 +61,11 @@ interface EditorState {
 function fnDefIsValid(fnDef: FnDef): fnDef is FnDef {
   const fnType = FN_TYPE_REGISTRY[fnDef.type];
   assert(fnType, `Unknown fn type ${fnDef.type}`);
-  const { inputSchema } = fnType;
+  const { configSchema } = fnType;
 
-  // Validate inputs
-  const { success } = inputSchema.safeParse(fnDef.config);
-
-  return success;
+  // Validate config
+  configSchema.parse(fnDef.config);
+  return true;
 }
 
 function validateFnInput(
@@ -78,8 +78,7 @@ function validateFnInput(
   const { inputSchema, getDependencies } = type;
 
   // Validate inputs
-  const { success } = inputSchema.safeParse(inputs);
-  assert(success, `Invalid input for ${fnType}: ${JSON.stringify(inputs)}`);
+  inputSchema.parse(inputs);
 
   return {
     dependsOn: getDependencies(inputs),
@@ -91,8 +90,11 @@ const useEditorStoreBase = create<EditorState>()(
     (set, get) => ({
       nodes: {},
       fns: {},
+      initialized: false,
 
-      initializeFromNodeDefs: (nodeDefs) => {
+      initializeFromNodeDefs: (nodeDefs, force) => {
+        if (get().initialized && !force) return;
+
         const fns: Record<string, FnDef> = {};
         const nodes: Record<string, RawNode> = {};
 
@@ -105,12 +107,13 @@ const useEditorStoreBase = create<EditorState>()(
           };
         });
 
-        set({ nodes, fns });
+        set({ nodes, fns, initialized: true });
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
-        const fn = get().fns[nodeDef.fn.id];
-        assert(fn, `Unknown fn ${nodeDef.fn.id}`);
+        const fn = nodeDef.fn;
+
+        assert(hasType(fn, fnType), `Unknown fn type ${fnType}`);
 
         const { dependsOn } = validateFnInput(fn.type, nodeDef.inputs);
         assert(fnDefIsValid(fn), `Invalid fn def`);
@@ -200,6 +203,8 @@ export const selectors = {
     },
   getNodeDefs: (props?: { eventType?: string }) => (store: EditorState) => {
     let nodes = Object.values(store.nodes);
+
+    console.log(store);
     if (props?.eventType) {
       nodes = nodes.filter((n) => n.eventType === props.eventType);
     }

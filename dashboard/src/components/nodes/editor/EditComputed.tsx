@@ -32,7 +32,7 @@ import {
   CodeEditor,
   type CompileStatus,
   CompileStatusMessage,
-} from "../../features/shared/CodeEditor";
+} from "../../features/CodeEditor";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -77,7 +77,6 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
         depsMap: {},
       },
       config: {
-        depsSchema: {},
         tsCode: "",
         compiledJs: "",
       },
@@ -236,70 +235,72 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       </div>
 
       {!isEditing && (
-        <div>
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="w-[16rem]">
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <Form {...form}>
+          <form>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="w-[16rem]">
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="returnSchema"
-            render={({ field }) => (
-              <FormItem className="w-[16rem] mt-4">
-                <FormLabel>Type</FormLabel>
-                <div>
-                  <SchemaBuilder
-                    value={field.value as TSchema}
-                    onChange={(newSchema) => {
-                      field.onChange(newSchema);
-                    }}
-                  />
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="returnSchema"
+              render={({ field }) => (
+                <FormItem className="w-[16rem] mt-4">
+                  <FormLabel>Type</FormLabel>
+                  <div>
+                    <SchemaBuilder
+                      value={field.value as TSchema}
+                      onChange={(newSchema) => {
+                        field.onChange(newSchema);
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="inputs.depsMap"
-            render={({ field }) => (
-              <FormItem className="w-[16rem] mt-4">
-                <FormLabel>Type</FormLabel>
-                <div>
-                  <EditDepsMap
-                    eventType={router.query.eventType as string}
-                    value={field.value}
-                    onChange={(depsMap) => {
-                      field.onChange(depsMap);
+            <FormField
+              control={form.control}
+              name="inputs.depsMap"
+              render={({ field }) => (
+                <FormItem className="w-[16rem] mt-4">
+                  <FormLabel>Type</FormLabel>
+                  <div>
+                    <EditDepsMap
+                      eventType={router.query.eventType as string}
+                      value={field.value}
+                      onChange={(depsMap) => {
+                        field.onChange(depsMap);
 
-                      const depsSchema = Object.entries(depsMap).reduce(
-                        (acc, [key, value]) => {
-                          if (!value) return acc;
-                          acc[key] = value.schema;
-                          return acc;
-                        },
-                        {} as Record<string, TSchema>
-                      );
-                      form.setValue("config.depsSchema", depsSchema);
-                    }}
-                  />
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                        // const depsSchema = Object.entries(depsMap).reduce(
+                        //   (acc, [key, value]) => {
+                        //     if (!value) return acc;
+                        //     acc[key] = value.schema;
+                        //     return acc;
+                        //   },
+                        //   {} as Record<string, TSchema>
+                        // );
+                        // form.setValue("config.depsSchema", depsSchema);
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
       )}
 
       <Separator className="my-8" />
