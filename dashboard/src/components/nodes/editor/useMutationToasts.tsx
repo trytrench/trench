@@ -97,15 +97,15 @@ export function useMutationToasts() {
 
   const handleCreateFeatureSuccess = (feature: Feature) => {
     toast({
-      title: "Property created",
-      description: `Property "${feature.name}" created successfully`,
+      title: "Feature created",
+      description: `Feature "${feature.name}" created successfully`,
       duration: 5000,
     });
   };
 
   const handleCreateFeatureError = (err: Error) => {
     toast({
-      title: "Error creating property",
+      title: "Error creating feature",
       description: err.message,
       duration: 5000,
     });
@@ -131,7 +131,7 @@ export function useMutationToasts() {
 
   const handleCreateEventFeatureSuccess = (feature: Feature) => {
     toast({
-      title: "Event property created",
+      title: "Event feature created",
       description: `${feature.name}`,
     });
   };
@@ -139,11 +139,11 @@ export function useMutationToasts() {
   const handleCreateEventFeatureError = (err: Error) => {
     toast({
       variant: "destructive",
-      title: "Failed to create event property",
+      title: "Failed to create event feature",
     });
   };
 
-  const handleCreateEntityAppearanceSuccess = (nodeDef: NodeDef) => {
+  const handleCreateEntityAppearanceSuccess = (nodeDef: NodeDefAny) => {
     toast({
       title: "Entity appearance created",
       description: `Entity appearance "${nodeDef.name}" created successfully`,
@@ -170,6 +170,22 @@ export function useMutationToasts() {
   const handlePublishError = (err: Error) => {
     toast({
       title: "Error publishing",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleDeleteNodeSuccess = () => {
+    toast({
+      title: "Node deleted",
+      duration: 5000,
+    });
+  };
+
+  const handleDeleteNodeError = (err: Error) => {
+    toast({
+      title: "Error deleting node",
       description: err.message,
       duration: 5000,
     });
@@ -216,6 +232,10 @@ export function useMutationToasts() {
     publish: {
       onError: handlePublishError,
       onSuccess: handlePublishSuccess,
+    },
+    deleteNode: {
+      onError: handleDeleteNodeError,
+      onSuccess: handleDeleteNodeSuccess,
     },
   };
 }

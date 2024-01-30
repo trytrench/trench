@@ -60,17 +60,15 @@ export function EditNodeSheet({ eventType }: { eventType: string }) {
       <SheetPortal>
         <SheetOverlay />
         <SheetContent className="overflow-y-auto" showClose={false}>
-          <div className="bg-red-50">
-            {/* {EditNodeEditor && (
-              <EditNodeEditor
-                initialNodeId={node?.id}
-                eventType={eventType}
-                onSaveSuccess={() => {
-                  setState({ isOpen: false });
-                }}
-              />
-            )} */}
-          </div>
+          {EditNodeEditor && (
+            <EditNodeEditor
+              initialNodeId={node?.id}
+              eventType={eventType}
+              onSaveSuccess={() => {
+                setState({ isOpen: false });
+              }}
+            />
+          )}
         </SheetContent>
       </SheetPortal>
     </Sheet>

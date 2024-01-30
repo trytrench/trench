@@ -1,15 +1,10 @@
 import clsx from "clsx";
 import { FnType, NodeDef } from "event-processing";
+import { useAtom } from "jotai";
 import { MoreHorizontal } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { CreateEntityAppearanceDialog } from "~/components/nodes/CreateEntityAppearanceDialog";
-import { EditBlocklist } from "~/components/nodes/editor/EditBlocklist";
-import { EditComputed } from "~/components/nodes/editor/EditComputed";
-import { EditCounter } from "~/components/nodes/editor/EditCounter";
-import { EditDecision } from "~/components/nodes/editor/EditDecision";
-import { EditUniqueCounter } from "~/components/nodes/editor/EditUniqueCounter";
-import { NodeEditorProps } from "~/components/nodes/editor/types";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -34,9 +29,9 @@ import {
 import { ScrollArea } from "~/components/ui/scroll-area";
 import AssignEntities from "../AssignEntities";
 import { AssignFeature } from "../AssignFeatureDialog";
-import { selectors, useEditorStore } from "./state/zustand";
-import { useAtom } from "jotai";
 import { editNodeSheetAtom } from "./state/jotai";
+import { selectors, useEditorStore } from "./state/zustand";
+import { useMutationToasts } from "./useMutationToasts";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,
@@ -67,6 +62,9 @@ export function EventEditor({ eventType }: Props) {
   useEffect(() => {
     if (!selectedNode) setSelectedNode(filteredNodes?.[0] ?? null);
   }, [selectedNode, filteredNodes]);
+
+  const deleteNodeDef = useEditorStore.use.deleteNodeDef();
+  const toasts = useMutationToasts();
 
   return (
     <div>
@@ -160,6 +158,15 @@ export function EventEditor({ eventType }: Props) {
                   >
                     Edit
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      deleteNodeDef(node.id)
+                        .catch(toasts.deleteNode.onError)
+                        .catch(handleError);
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -181,7 +188,7 @@ export function EventEditor({ eventType }: Props) {
 
                   <DropdownMenuContent>
                     <AssignFeature
-                      title="Assign Event Property"
+                      title="Assign Event Feature"
                       defaults={{
                         dataPath: {
                           nodeId: selectedNode.id,
@@ -198,7 +205,7 @@ export function EventEditor({ eventType }: Props) {
                     </AssignFeature>
 
                     <AssignFeature
-                      title="Assign Entity Property"
+                      title="Assign Entity Feature"
                       defaults={{
                         dataPath: {
                           nodeId: selectedNode.id,
@@ -243,7 +250,7 @@ export function EventEditor({ eventType }: Props) {
       /> */}
 
       <div className="h-9" />
-      <div className="text-lg font-medium">Properties</div>
+      <div className="text-lg font-medium">Features</div>
       <div className="flex my-2 justify-between items-center">
         <Input className="w-[200px]" placeholder="Filter entities..." />
 

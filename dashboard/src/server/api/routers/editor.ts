@@ -2,8 +2,8 @@ import { type NodeDef, nodeDefSchema } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaNodeSnapshotToNodeDef } from "../../lib/prismaConverters";
-import { Prisma } from "@prisma/client";
 import { checkErrors, prune } from "../../../shared/publish";
+import { GlobalStateKey, Prisma } from "@prisma/client";
 import { prisma } from "databases";
 import { uniqBy } from "lodash";
 import { assert, generateNanoId } from "../../../../../packages/common/src";
@@ -32,7 +32,12 @@ export const editorRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const errors = checkErrors(input.nodeDefs);
       Object.entries(errors).forEach(([nodeId, error]) => {
-        throw new Error(`Cannoy publish: Node ${nodeId} has error: ${error}`);
+        const node = input.nodeDefs.find((def) => def.id === nodeId);
+        throw new Error(
+          `Cannoy publish: Node "${
+            node?.name ?? "<Unnamed>"
+          }" has error: "${error}"`
+        );
       });
 
       // Upsert new nodes
@@ -133,6 +138,15 @@ export const editorRouter = createTRPCRouter({
             nodeSnapshotId: snapshotId,
           } satisfies Prisma.ExecutionEngineToNodeSnapshotCreateManyInput;
         }),
+      });
+
+      await prisma.globalState.update({
+        where: {
+          key: GlobalStateKey.ActiveEngineId,
+        },
+        data: {
+          value: engine.id,
+        },
       });
 
       return {

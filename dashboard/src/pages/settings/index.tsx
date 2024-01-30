@@ -61,7 +61,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <div>
       <Navbar />
-      <div className="border-b h-32">
+      <div className="border-b h-32 px-8">
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="text-3xl text-emphasis-foreground">Data Model</div>
           <div className="flex space-x-2">

@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Command,
   CommandEmpty,
@@ -16,6 +16,8 @@ import {
 import { cn } from "~/lib/utils";
 import { api } from "../utils/api";
 import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
+import clsx from "clsx";
 
 interface ComboboxSelectorProps {
   value: string | null;
@@ -43,6 +45,15 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
   const { value, onSelect, placeholder, options, renderTrigger, renderOption } =
     props;
 
+  // Set max height of popover without using max-h to fix scrolling issue
+  // https://github.com/shadcn-ui/ui/issues/542
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    if (ref.current) setHeight(ref.current.clientHeight);
+  }, [options]);
+
   const [open, setOpen] = useState(false);
 
   const renderOriginal = (children: React.ReactNode) => (
@@ -61,7 +72,7 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
     ? options.find((option) => option.value === value)?.label
     : placeholder ?? "Select...";
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         {renderTrigger
           ? renderTrigger({
@@ -71,40 +82,45 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
             })
           : renderOriginal(originalValue)}
       </PopoverTrigger>
-      <PopoverContent className="p-0" align="start">
+      <PopoverContent className="p-0 w-auto" align="start">
         <Command>
           <CommandInput placeholder="Search nodes..." />
-          <CommandEmpty>No options found.</CommandEmpty>
-          <CommandGroup>
-            {options.map((option) => (
-              <CommandItem
-                value={option.label}
-                key={option.value}
-                onSelect={() => {
-                  setOpen(false);
-                  if (option.value === value) {
-                    onSelect(null);
-                  } else {
-                    onSelect(option.value);
-                  }
-                }}
-              >
-                {renderOption ? (
-                  renderOption({ option, selected: option.value === value })
-                ) : (
-                  <>
-                    <Check
-                      className={cn("mr-2 h-4 w-4", {
-                        "opacity-100": option.value === value,
-                        "opacity-0": option.value !== value,
-                      })}
-                    />
-                    {option.label}
-                  </>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <ScrollArea
+            ref={ref}
+            className={clsx({ "h-[300px]": height >= 300 })}
+          >
+            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  value={option.label}
+                  key={option.value}
+                  onSelect={() => {
+                    setOpen(false);
+                    if (option.value === value) {
+                      onSelect(null);
+                    } else {
+                      onSelect(option.value);
+                    }
+                  }}
+                >
+                  {renderOption ? (
+                    renderOption({ option, selected: option.value === value })
+                  ) : (
+                    <>
+                      <Check
+                        className={cn("mr-2 h-4 w-4", {
+                          "opacity-100": option.value === value,
+                          "opacity-0": option.value !== value,
+                        })}
+                      />
+                      {option.label}
+                    </>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </ScrollArea>
         </Command>
       </PopoverContent>
     </Popover>
