@@ -9,9 +9,10 @@ import {
   TypeName,
   createDataType,
   type FnDefAny,
+  type NodeDefAny,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
-import { assert, generateNanoId } from "../../../../../../packages/common/src";
+import { assert } from "../../../../../../packages/common/src";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 type WithSelectors<S> = S extends { getState: () => infer T }
@@ -42,7 +43,7 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 
 interface EditorState {
   nodes: Record<string, RawNode>;
-  fns: Record<string, FnDef>;
+  fns: Record<string, FnDefAny>;
   errors: Record<string, boolean>;
   initialized: boolean;
 
@@ -258,7 +259,7 @@ export const selectors = {
       nodes = nodes.filter((n) => n.eventType === props.eventType);
     }
 
-    const nodeDefs: NodeDef[] = nodes.map((node) => {
+    const nodeDefs: NodeDefAny[] = nodes.map((node) => {
       const fn = store.fns[node.fnId];
       assert(fn, `Unknown fn ${node.fnId}`);
 
@@ -293,7 +294,7 @@ export const selectors = {
       if (props?.fnType) {
         allFnDefs = allFnDefs.filter((n) => n.type === props.fnType);
       }
-      return allFnDefs as unknown as FnDef<T extends FnType ? T : FnType>[];
+      return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
 
