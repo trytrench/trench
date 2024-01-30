@@ -44,7 +44,7 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 interface EditorState {
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDefAny>;
-  errors: Record<string, boolean>;
+  errorNodes: Set<string>;
   initialized: boolean;
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
@@ -98,12 +98,12 @@ const useEditorStoreBase = create<EditorState>()(
     (set, get) => ({
       nodes: {},
       fns: {},
-      errors: {},
+      errorNodes: new Set(),
       initialized: false,
 
       checkErrors: () => {
         const state = get();
-        const errors: Record<string, boolean> = {};
+        const errorNodes = new Set<string>();
 
         Object.values(state.nodes).forEach((node) => {
           const fn = state.fns[node.fnId];
@@ -127,12 +127,14 @@ const useEditorStoreBase = create<EditorState>()(
             const expectedSchemaType = createDataType(path.schema);
 
             if (!actualSchema) {
-              errors[node.id] = true;
+              errorNodes.add(node.id);
             } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
-              errors[node.id] = true;
+              errorNodes.add(node.id);
             }
           });
         });
+
+        set({ errorNodes });
       },
 
       initializeFromNodeDefs: (nodeDefs, force) => {

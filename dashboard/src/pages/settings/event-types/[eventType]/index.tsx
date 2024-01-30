@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FnType,
   NodeDef,
+  NodeDefAny,
   TypeName,
   buildNodeDefWithFn,
   dataPathZodSchema,
@@ -253,7 +254,7 @@ const Page: NextPageWithLayout = () => {
 
   const [newEntityDropdownOpen, setNewEntityDropdownOpen] = useState(false);
 
-  const [selectedNode, setSelectedNode] = useState<NodeDef | null>(null);
+  const [selectedNode, setSelectedNode] = useState<NodeDefAny | null>(null);
 
   useEffect(() => {
     if (!selectedNode) setSelectedNode(filteredNodes?.[0] ?? null);
@@ -269,6 +270,7 @@ const Page: NextPageWithLayout = () => {
     }
   }, [engineData, initialize, prevEngineId]);
 
+  console.log(NodeEditor);
   return (
     <div>
       <Link
@@ -601,7 +603,7 @@ const Page: NextPageWithLayout = () => {
         }}
       >
         <SheetContent className="sm:max-w-xl" showClose={false}>
-          {newFnType && <NodeEditor />}
+          {NodeEditor && <NodeEditor />}
         </SheetContent>
       </Sheet>
     </div>
