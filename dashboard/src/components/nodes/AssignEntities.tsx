@@ -8,8 +8,7 @@ import {
   TypeName,
   hasFnType,
 } from "event-processing";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -20,12 +19,12 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
 import { api } from "~/utils/api";
+import { generateNanoId } from "../../../../packages/common/src";
 import { CreateEventFeatureDialog } from "./CreateEventFeatureDialog";
 import { CreateFeatureDialog } from "./CreateFeatureDialog";
 import { CreateRuleDialog } from "./CreateRuleDialog";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
-import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "./editor/useMutationToasts";
 
 const FeatureItem = ({
@@ -33,14 +32,14 @@ const FeatureItem = ({
   rule,
   dataPath,
   onDataPathChange,
+  eventType,
 }: {
   feature: FeatureDef;
   rule?: Rule;
   dataPath: DataPath | null;
   onDataPathChange: (dataPath: DataPath | null) => void;
+  eventType: string;
 }) => {
-  const router = useRouter();
-
   return (
     <div key={feature.id} className="flex items-center space-x-2 h-8">
       {rule && <div className={`rounded-full ${rule.color} w-2 h-2`} />}
@@ -53,7 +52,7 @@ const FeatureItem = ({
       <SelectDataPathOrEntityFeature
         value={dataPath}
         onChange={onDataPathChange}
-        eventType={router.query.eventType as string}
+        eventType={eventType}
         desiredSchema={feature.schema}
       />
     </div>
@@ -62,11 +61,11 @@ const FeatureItem = ({
 
 const EVENT = "event";
 
-export default function AssignEntities() {
-  const router = useRouter();
+interface Props {
+  eventType: string;
+}
 
-  const eventType = router.query.eventType as string;
-
+export default function AssignEntities({ eventType }: Props) {
   const { data: features } = api.features.list.useQuery();
   const { data: rules } = api.rules.list.useQuery();
 
@@ -112,6 +111,16 @@ export default function AssignEntities() {
 
   const setNodeDef = useEditorStore.use.setNodeDefWithFn();
   const toasts = useMutationToasts();
+
+  const filteredFeatures = useMemo(
+    () =>
+      features?.filter((feature) =>
+        selectedNodeId === EVENT
+          ? feature.eventTypeId === eventType
+          : feature.entityTypeId === selectedNode?.fn.returnSchema.entityType
+      ),
+    [features, selectedNodeId, selectedNode, eventType]
+  );
 
   return (
     <div>
@@ -169,7 +178,10 @@ export default function AssignEntities() {
                     </DropdownMenuItem>
                   </CreateRuleDialog>
                   {selectedNodeId === EVENT ? (
-                    <CreateEventFeatureDialog title="Create event property">
+                    <CreateEventFeatureDialog
+                      title="Create event property"
+                      eventType={eventType}
+                    >
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                         Create property
                       </DropdownMenuItem>
@@ -187,15 +199,11 @@ export default function AssignEntities() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="px-6 pt-2 pb-4">
-              {features
-                ?.filter((feature) =>
-                  selectedNodeId === EVENT
-                    ? !feature.entityTypeId
-                    : feature.entityTypeId ===
-                      selectedNode?.fn.returnSchema.entityType
-                )
-                .map((feature) => (
+            <div className="flex flex-col px-6 pt-2 pb-4">
+              {!filteredFeatures?.length ? (
+                <div className="text-sm self-center py-8">No properties</div>
+              ) : (
+                filteredFeatures.map((feature) => (
                   <FeatureItem
                     feature={feature}
                     rule={featureToRuleMap[feature.id]}
@@ -203,6 +211,7 @@ export default function AssignEntities() {
                       featureToNodeMap[feature.id]?.inputs.dataPath ?? null
                     }
                     key={feature.id}
+                    eventType={eventType}
                     onDataPathChange={(dataPath) => {
                       if (!dataPath) return;
 
@@ -233,7 +242,8 @@ export default function AssignEntities() {
                         .catch(toasts.createNode.onError);
                     }}
                   />
-                ))}
+                ))
+              )}
             </div>
           </div>
         )}

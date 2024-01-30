@@ -43,7 +43,7 @@ const NavItem = ({ href, children, ...props }: Props) => {
 const TABS = [
   { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
-  { name: "Settings", path: "settings" },
+  { name: "Data Model", path: "settings" },
 ];
 
 export const Navbar = () => {

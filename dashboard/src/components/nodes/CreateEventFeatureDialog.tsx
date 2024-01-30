@@ -33,9 +33,14 @@ const formSchema = z.object({
 interface Props {
   title: string;
   children: React.ReactNode;
+  eventType: string;
 }
 
-export const CreateEventFeatureDialog = ({ title, children }: Props) => {
+export const CreateEventFeatureDialog = ({
+  title,
+  children,
+  eventType,
+}: Props) => {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,6 +74,7 @@ export const CreateEventFeatureDialog = ({ title, children }: Props) => {
               createEventFeature({
                 name: values.name,
                 schema: values.schema,
+                eventTypeId: eventType,
               })
                 .then(toasts.createEventFeature.onSuccess)
                 .then(() => refetchFeatures())
