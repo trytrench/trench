@@ -32,6 +32,7 @@ import { AssignFeature } from "../AssignFeatureDialog";
 import { editNodeSheetAtom } from "./state/jotai";
 import { selectors, useEditorStore } from "./state/zustand";
 import { useMutationToasts } from "./useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,

@@ -252,7 +252,7 @@ export default function AssignEntities({ eventType }: Props) {
                 />
               )}
 
-              {!filteredFeatures?.length ? (
+              {!selectedNode || !filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No features</div>
               ) : (
                 filteredFeatures.map((feature) => (
@@ -292,7 +292,11 @@ export default function AssignEntities({ eventType }: Props) {
                         },
                         inputs: {
                           dataPath,
-                          entityDataPath: selectedNode?.inputs.dataPath,
+                          entityDataPath: {
+                            nodeId: selectedNode.id,
+                            path: [],
+                            schema: selectedNode.fn.returnSchema,
+                          },
                         },
                       })
                         // .then(toasts.createNode.onSuccess)
