@@ -2,7 +2,7 @@ import { type NodeDef, nodeDefSchema } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaNodeSnapshotToNodeDef } from "../../lib/prismaConverters";
-import { Prisma } from "@prisma/client";
+import { GlobalStateKey, Prisma } from "@prisma/client";
 import { prune } from "../../lib/nodes/publish";
 import { prisma } from "databases";
 import { uniqBy } from "lodash";
@@ -128,6 +128,15 @@ export const editorRouter = createTRPCRouter({
             nodeSnapshotId: snapshotId,
           } satisfies Prisma.ExecutionEngineToNodeSnapshotCreateManyInput;
         }),
+      });
+
+      await prisma.globalState.update({
+        where: {
+          key: GlobalStateKey.ActiveEngineId,
+        },
+        data: {
+          value: engine.id,
+        },
       });
 
       return {

@@ -22,13 +22,15 @@ const config = {
     config,
     { isServer, webpack }
   ) => {
-    if (!isServer) {
+    if (!isServer && config.resolve) {
       config.resolve.fallback = {
         fs: false,
         dns: false,
         net: false,
         tls: false,
       };
+
+      config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
 
     // Handling WebAssembly files
