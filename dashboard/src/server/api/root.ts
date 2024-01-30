@@ -32,6 +32,7 @@ export const appRouter = createTRPCRouter({
   entityViews: entityViewsRouter,
   decisions: decisionsRouter,
   editor: editorRouter,
+  nodeDefs: nodeDefsRouter,
 });
 
 // export type definition of API

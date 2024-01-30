@@ -143,6 +143,23 @@ export function useMutationToasts() {
     });
   };
 
+  const handleCreateEntityAppearanceSuccess = (nodeDef: NodeDef) => {
+    toast({
+      title: "Entity appearance created",
+      description: `Entity appearance "${nodeDef.name}" created successfully`,
+      duration: 5000,
+    });
+  };
+
+  const handleCreateEntityAppearanceError = (err: Error) => {
+    toast({
+      title: "Error creating entity appearance",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
   return {
     createNode: {
       onSuccess: handleCreateNodeSuccess,
@@ -175,6 +192,10 @@ export function useMutationToasts() {
     createEventFeature: {
       onError: handleCreateEventFeatureError,
       onSuccess: handleCreateEventFeatureSuccess,
+    },
+    createEntityAppearance: {
+      onError: handleCreateEntityAppearanceError,
+      onSuccess: handleCreateEntityAppearanceSuccess,
     },
   };
 }

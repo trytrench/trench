@@ -91,6 +91,7 @@ import {
 import { generateNanoId } from "../../../../../../packages/common/src";
 import { usePrevious } from "@dnd-kit/utilities";
 import { CreateEntityTypeDialog } from "~/components/nodes/CreateEntityTypeDialog";
+import { Navbar } from "~/components/Navbar";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -608,6 +609,14 @@ const Page: NextPageWithLayout = () => {
   );
 };
 
-Page.getLayout = (page) => <SettingsLayout>{page}</SettingsLayout>;
+Page.getLayout = (page) => (
+  <div>
+    <Navbar />
+    <div>
+      <div className="text-lg">Data Model</div>
+    </div>
+    {page}
+  </div>
+);
 
 export default Page;
