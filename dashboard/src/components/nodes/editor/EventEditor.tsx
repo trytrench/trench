@@ -32,13 +32,11 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { Sheet, SheetContent } from "~/components/ui/sheet";
-import AssignEntities from "../../../../components/nodes/AssignEntities";
-import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog";
-import {
-  selectors,
-  useEditorStore,
-} from "../../../../components/nodes/editor/state/zustand";
+import AssignEntities from "../AssignEntities";
+import { AssignFeature } from "../AssignFeatureDialog";
+import { selectors, useEditorStore } from "./state/zustand";
+import { useAtom } from "jotai";
+import { editNodeSheetAtom } from "./state/jotai";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,
@@ -48,7 +46,7 @@ const HIDDEN_NODE_TYPES = [
   FnType.EntityAppearance,
 ];
 
-const MAP_FN_TYPE_TO_EDITOR: Partial<
+export const MAP_FN_TYPE_TO_EDITOR: Partial<
   Record<FnType, React.FC<NodeEditorProps>>
 > = {
   [FnType.Computed]: EditComputed,
@@ -73,13 +71,7 @@ export function EventEditor({ eventType }: Props) {
     [nodes]
   );
 
-  const [newFnType, setNewFnType] = useState<FnType | null>(null);
-  const NewNodeEditor = newFnType ? MAP_FN_TYPE_TO_EDITOR[newFnType] : null;
-
-  const [editingNode, setEditingNode] = useState<NodeDef | null>(null);
-  const EditNodeEditor = editingNode
-    ? MAP_FN_TYPE_TO_EDITOR[editingNode.fn.type]
-    : null;
+  const [, setSheetState] = useAtom(editNodeSheetAtom);
 
   const [selectedNode, setSelectedNode] = useState<NodeDef | null>(null);
 
@@ -124,7 +116,11 @@ export function EventEditor({ eventType }: Props) {
                       //     router.query.eventType as string
                       //   }/node?type=${node.type}`
                       // )
-                      setNewFnType(node.type)
+                      setSheetState({
+                        isOpen: true,
+                        isEditing: false,
+                        fnType: node.type,
+                      })
                     }
                   >
                     {node.name}
@@ -164,7 +160,15 @@ export function EventEditor({ eventType }: Props) {
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => setEditingNode(node)}>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setSheetState({
+                        isOpen: true,
+                        isEditing: true,
+                        nodeId: node.id,
+                      });
+                    }}
+                  >
                     Edit
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -274,33 +278,6 @@ export function EventEditor({ eventType }: Props) {
           {node && <OtherNodeEditor initialNodeId={node.id} />}
         </SheetContent>
       </Sheet> */}
-
-      <Sheet
-        open={!!newFnType}
-        onOpenChange={(open) => {
-          if (!open) setNewFnType(null);
-        }}
-      >
-        <SheetContent className="sm:max-w-xl" showClose={false}>
-          {NewNodeEditor && <NewNodeEditor eventType={eventType} />}
-        </SheetContent>
-      </Sheet>
-
-      <Sheet
-        open={!!editingNode}
-        onOpenChange={(open) => {
-          if (!open) setEditingNode(null);
-        }}
-      >
-        <SheetContent className="sm:max-w-xl" showClose={false}>
-          {EditNodeEditor && (
-            <EditNodeEditor
-              initialNodeId={editingNode?.id}
-              eventType={eventType}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

@@ -50,9 +50,7 @@ const DynamicCodeEditor = dynamic(
 
 const DynamicCompileStatusMessage = dynamic(
   () =>
-    import("../../features/CodeEditor").then(
-      (mod) => mod.CompileStatusMessage
-    ) as any,
+    import("../../features/CodeEditor").then((mod) => mod.CompileStatusMessage),
   {
     ssr: false,
   }
