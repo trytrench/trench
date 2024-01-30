@@ -20,6 +20,9 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
       dataPath: dataPathZodSchema,
     })
   )
+  .setGetDataPaths((input) => {
+    return [input.dataPath];
+  })
   .setGetDependencies((input) => {
     const result = new Set<string>();
     result.add(input.dataPath.nodeId);

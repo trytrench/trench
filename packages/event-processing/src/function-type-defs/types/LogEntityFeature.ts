@@ -27,6 +27,11 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
       dataPath: dataPathZodSchema,
     })
   )
+  .setGetDataPaths((input) => {
+    const paths = [input.dataPath];
+    if (input.entityDataPath) paths.push(input.entityDataPath);
+    return paths;
+  })
   .setGetDependencies((config) => {
     const set = new Set<string>();
     if (config.entityDataPath) set.add(config.entityDataPath.nodeId);

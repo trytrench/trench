@@ -2,6 +2,7 @@ import { AnyZodObject, ZodNull, ZodObject, ZodUndefined, z } from "zod";
 import { FnDef, FnTypeDef, Resolver } from "./functionTypeDef";
 import { FnType } from "./types/_enum";
 import { TSchema, TypeName } from "../data-types";
+import { DataPath } from "../data-path";
 
 // FnTypeDefBuilder interface
 export interface FnTypeDefBuilder<
@@ -40,6 +41,27 @@ export interface FnTypeDefBuilder<
   >;
   setGetDependencies(
     getDependencies: (input: z.infer<TInputSchema>) => Set<string>
+  ): FnTypeDefBuilder<
+    TFnType,
+    TReturnSchema,
+    TConfigSchema,
+    TInputSchema,
+    TContext
+  >;
+  setGetDataPaths(
+    getDataPaths: (input: z.infer<TInputSchema>) => Array<DataPath>
+  ): FnTypeDefBuilder<
+    TFnType,
+    TReturnSchema,
+    TConfigSchema,
+    TInputSchema,
+    TContext
+  >;
+  setValidateInputs(
+    validateInputs: (options: {
+      inputs: z.infer<TInputSchema>;
+      config: z.infer<TConfigSchema>;
+    }) => boolean
   ): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
@@ -98,6 +120,8 @@ export function createFnTypeDefBuilder<
     configSchema: z.object({}),
     inputSchema: z.object({}),
     getDependencies: () => new Set(),
+    getDataPaths: () => [],
+    validateInputs: () => true,
     ...def,
   } satisfies Partial<FnTypeDef>;
 
@@ -111,6 +135,12 @@ export function createFnTypeDefBuilder<
     },
     setGetDependencies(getDependencies) {
       return createNewFnTypeDefBuilder(partialDef, { getDependencies });
+    },
+    setGetDataPaths(getDataPaths) {
+      return createNewFnTypeDefBuilder(partialDef, { getDataPaths });
+    },
+    setValidateInputs(validateInputs) {
+      return createNewFnTypeDefBuilder(partialDef, { validateInputs });
     },
     setInputSchema(inputSchema) {
       return createNewFnTypeDefBuilder(partialDef, { inputSchema });
@@ -134,7 +164,8 @@ export function createFnTypeDefBuilder<
       if (
         !partialDef.fnType ||
         !partialDef.configSchema ||
-        !partialDef.createResolver
+        !partialDef.createResolver ||
+        !partialDef.inputSchema
       ) {
         throw new Error("Missing required properties to build FnTypeDef");
       }

@@ -5,6 +5,9 @@ import {
   type FnType,
   type NodeDef,
   hasType,
+  TSchema,
+  TypeName,
+  createDataType,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert, generateNanoId } from "../../../../../../packages/common/src";
@@ -39,9 +42,12 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 interface EditorState {
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDef>;
+  errors: Record<string, boolean>;
   initialized: boolean;
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
+
+  checkErrors: () => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -90,7 +96,42 @@ const useEditorStoreBase = create<EditorState>()(
     (set, get) => ({
       nodes: {},
       fns: {},
+      errors: {},
       initialized: false,
+
+      checkErrors: () => {
+        const state = get();
+        const errors: Record<string, boolean> = {};
+
+        Object.values(state.nodes).forEach((node) => {
+          const fn = state.fns[node.fnId];
+          assert(fn, `Unknown fn ${node.fnId}`);
+
+          const { getDataPaths } = FN_TYPE_REGISTRY[fn.type];
+          const dataPaths = getDataPaths(node.inputs);
+
+          dataPaths.forEach((path) => {
+            const pathNode = state.nodes[path.nodeId];
+            assert(pathNode, `Node ${path.nodeId} not found`);
+            const pathNodeFn = state.fns[pathNode.fnId];
+            assert(pathNodeFn, `Unknown fn ${pathNode.fnId}`);
+
+            const pathNodeReturnSchema = pathNodeFn.returnSchema;
+            const actualSchema = getSchemaAtPath(
+              pathNodeReturnSchema,
+              path.path
+            );
+
+            const expectedSchemaType = createDataType(path.schema);
+
+            if (!actualSchema) {
+              errors[node.id] = true;
+            } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
+              errors[node.id] = true;
+            }
+          });
+        });
+      },
 
       initializeFromNodeDefs: (nodeDefs, force) => {
         if (get().initialized && !force) return;
@@ -108,6 +149,8 @@ const useEditorStoreBase = create<EditorState>()(
         });
 
         set({ nodes, fns, initialized: true });
+
+        get().checkErrors();
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -133,6 +176,8 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
+        get().checkErrors();
+
         return {
           ...nodeDef,
           dependsOn,
@@ -148,6 +193,8 @@ const useEditorStoreBase = create<EditorState>()(
             [fnId]: fnDef,
           },
         }));
+
+        get().checkErrors();
 
         return fnDef;
       },
@@ -171,6 +218,8 @@ const useEditorStoreBase = create<EditorState>()(
             },
           },
         }));
+
+        get().checkErrors();
 
         return {
           ...nodeDef,
@@ -247,3 +296,14 @@ export const selectors = {
       return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
+
+function getSchemaAtPath(schema: TSchema, path: string[]): TSchema | null {
+  let currentSchema = schema;
+  for (const key of path) {
+    if (currentSchema.type !== TypeName.Object) return null;
+    const nextSchema = currentSchema.properties[key];
+    if (!nextSchema) return null;
+    currentSchema = nextSchema;
+  }
+  return currentSchema;
+}

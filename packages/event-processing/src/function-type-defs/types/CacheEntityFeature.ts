@@ -32,6 +32,11 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
   .setContextType<{
     redis: RedisInterface;
   }>()
+  .setGetDataPaths((input) => {
+    const paths = [input.dataPath];
+    if (input.entityDataPath) paths.push(input.entityDataPath);
+    return paths;
+  })
   .setGetDependencies((input) => {
     const set = new Set<string>();
     if (input.entityDataPath) set.add(input.entityDataPath.nodeId);

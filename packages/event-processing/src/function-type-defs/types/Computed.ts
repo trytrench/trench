@@ -18,6 +18,9 @@ export const computedFnDef = createFnTypeDefBuilder()
       depsMap: z.record(z.string(), dataPathZodSchema),
     })
   )
+  .setGetDataPaths((input) => {
+    return Object.values(input.depsMap);
+  })
   .setGetDependencies((input) => {
     return new Set(Object.values(input.depsMap).map((path) => path.nodeId));
   })

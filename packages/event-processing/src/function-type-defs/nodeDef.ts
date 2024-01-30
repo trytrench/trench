@@ -40,8 +40,8 @@ export function buildNodeDefWithFn<T extends FnType>(
 
 export function hasFnType<T extends FnType>(
   nodeDef: NodeDef,
-  fnType?: T
-): nodeDef is NodeDef<T extends FnType ? T : FnType> {
+  fnType: T
+): nodeDef is NodeDef<T> {
   if (!fnType) return true;
   return nodeDef.fn.type === fnType;
 }

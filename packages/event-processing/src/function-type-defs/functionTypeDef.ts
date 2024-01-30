@@ -63,4 +63,9 @@ export type FnTypeDef<
     context: TContext;
   }) => Resolver<TReturn>;
   getDependencies: (inputs: z.infer<TInputSchema>) => Set<string>;
+  getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
+  validateInputs: (options: {
+    inputs: z.infer<TInputSchema>;
+    config: z.infer<TConfigSchema>;
+  }) => boolean;
 };
