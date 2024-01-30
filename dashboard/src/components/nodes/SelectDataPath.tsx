@@ -5,6 +5,7 @@ import {
   TSchema,
   TypeName,
   createDataType,
+  NodeDefAny,
 } from "event-processing";
 import { api } from "../../utils/api";
 import { useMemo } from "react";
@@ -23,7 +24,7 @@ const HIDDEN_NODE_TYPES = [
 
 function useFlattenedDataPaths(props: {
   eventType: string;
-  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+  filterNodeOptions?: (nodeDef: NodeDefAny) => boolean;
 }) {
   const {
     eventType,
@@ -91,7 +92,7 @@ interface SelectDataPathProps {
   value: DataPath | null;
   disablePathSelection?: boolean;
 
-  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+  filterNodeOptions?: (nodeDef: NodeDefAny) => boolean;
 
   onChange: (value: DataPath | null) => void;
   onIsValidChange?: (isValid: boolean) => void;

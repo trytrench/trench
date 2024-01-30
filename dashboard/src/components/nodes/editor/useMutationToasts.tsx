@@ -1,12 +1,12 @@
 import { useToast } from "../../ui/use-toast";
 import { api } from "../../../utils/api";
-import { FnDef, NodeDef } from "event-processing";
+import { FnDefAny, NodeDefAny } from "event-processing";
 import { EntityType, Feature, Rule } from "@prisma/client";
 
 export function useMutationToasts() {
   const { toast } = useToast();
 
-  const handleCreateNodeSuccess = (newDef: NodeDef) => {
+  const handleCreateNodeSuccess = (newDef: NodeDefAny) => {
     toast({
       title: "Node created",
       description: `Node "${newDef.name}" created successfully`,
@@ -24,7 +24,7 @@ export function useMutationToasts() {
     throw err;
   };
 
-  const handleUpdateNodeSuccess = (updatedDef: NodeDef) => {
+  const handleUpdateNodeSuccess = (updatedDef: NodeDefAny) => {
     toast({
       title: "Node updated",
       description: `Node "${updatedDef.name}" updated successfully`,
@@ -51,7 +51,7 @@ export function useMutationToasts() {
     throw err;
   };
 
-  const handleCreateFunctionSuccess = (newDef: FnDef) => {
+  const handleCreateFunctionSuccess = (newDef: FnDefAny) => {
     toast({
       title: "Function created",
       description: `Function "${newDef.name}" created successfully`,
@@ -60,7 +60,7 @@ export function useMutationToasts() {
     return newDef;
   };
 
-  const handleUpdateFunctionSuccess = (updatedDef: FnDef) => {
+  const handleUpdateFunctionSuccess = (updatedDef: FnDefAny) => {
     toast({
       title: "Function updated",
       description: `Function "${updatedDef.name}" updated successfully`,

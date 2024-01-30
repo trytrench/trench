@@ -141,10 +141,11 @@ export function EventEditor({ eventType }: Props) {
           {filteredNodes?.map((node) => (
             <div
               className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center hover:bg-muted",
+                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center",
                 {
                   "bg-accent text-accent-foreground":
                     selectedNode?.id === node.id,
+                  "hover:bg-muted cursor-pointer": selectedNode?.id !== node.id,
                 }
               )}
               onClick={() => setSelectedNode(node)}

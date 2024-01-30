@@ -32,32 +32,35 @@ export const editorRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       // Upsert new nodes
       const nodeDefs = prune(input.nodeDefs as NodeDef[]);
+
+      const nowStr = new Date();
       await prisma.$executeRaw`
-        INSERT INTO "Node" ("id", "name", "eventType")
-        VALUES ${Prisma.join(
-          nodeDefs.map((nodeDef) => {
-            return `(${nodeDef.id}, ${nodeDef.name}, ${nodeDef.eventType})`;
-          }),
-          ","
-        )}
-        ON CONFLICT ("id") UPDATE SET
-          "name" = EXCLUDED."name",
-          "eventType" = EXCLUDED."eventType"
-      `;
+      INSERT INTO "Node" ("id", "name", "updatedAt", "eventType")
+      VALUES ${Prisma.join(
+        nodeDefs.map((nodeDef) => {
+          return Prisma.sql`(${nodeDef.id}, ${nodeDef.name}, ${nowStr}, ${nodeDef.eventType})`;
+        }),
+        ","
+      )}
+      ON CONFLICT ("id") DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "updatedAt" = EXCLUDED."updatedAt",
+        "eventType" = EXCLUDED."eventType"`;
 
       // Upsert new fns
       const fnDefs = nodeDefs.flatMap((nodeDef) => nodeDef.fn);
       const uniqueFnDefs = uniqBy(fnDefs, (fnDef) => fnDef.id);
       await prisma.$executeRaw`
-        INSERT INTO "Fn" ("id", "name", "type")
+        INSERT INTO "Fn" ("id", "name", "updatedAt", "type")
         VALUES ${Prisma.join(
           uniqueFnDefs.map((fnDef) => {
-            return `(${fnDef.id}, ${fnDef.name}, ${fnDef.type})`;
+            return Prisma.sql`(${fnDef.id}, ${fnDef.name}, ${nowStr}, ${fnDef.type})`;
           }),
           ","
         )}
-        ON CONFLICT ("id") UPDATE SET
-          "name" = EXCLUDED."name"
+        ON CONFLICT ("id") DO UPDATE SET
+          "name" = EXCLUDED."name",
+          "updatedAt" = EXCLUDED."updatedAt"
       `;
 
       const mapFnIdToSnapshotId = new Map<string, string>();

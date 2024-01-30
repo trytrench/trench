@@ -107,8 +107,6 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
     }
   };
 
-  console.log(args);
-
   return (
     <div>
       {args.map((arg, index) => (

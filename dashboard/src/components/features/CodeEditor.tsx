@@ -118,7 +118,7 @@ function CodeEditor({
       theme={theme}
       defaultLanguage="typescript"
       defaultValue={initialCode}
-      onChange={(value) => setCode(value)}
+      onChange={(value) => setCode(value ?? "")}
     />
   );
 }

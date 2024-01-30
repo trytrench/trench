@@ -8,8 +8,7 @@ import {
   type DataPath,
   FnType,
   buildFnDef,
-  getInputSchema,
-  getConfigSchema,
+  getFnTypeDef,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,11 +26,8 @@ import {
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { SchemaBuilder } from "../../SchemaBuilder";
-import {
-  CodeEditor,
-  type CompileStatus,
-  CompileStatusMessage,
-} from "../../features/CodeEditor";
+import { type CompileStatus } from "../../features/CodeEditor";
+import dynamic from "next/dynamic";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -45,19 +41,36 @@ import { useMutationToasts } from "./useMutationToasts";
 import { selectors, useEditorStore } from "./state/zustand";
 import { generateNanoId } from "../../../../../packages/common/src";
 
+const DynamicCodeEditor = dynamic(
+  () => import("../../features/CodeEditor").then((mod) => mod.CodeEditor),
+  {
+    ssr: false,
+  }
+);
+
+const DynamicCompileStatusMessage = dynamic(
+  () =>
+    import("../../features/CodeEditor").then(
+      (mod) => mod.CompileStatusMessage
+    ) as any,
+  {
+    ssr: false,
+  }
+);
+
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
+
+const fnTypeDef = getFnTypeDef(FnType.Computed);
 
 const formSchema = z.object({
   returnSchema: tSchemaZod,
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(FnType.Computed),
-  inputs: getInputSchema(FnType.Computed)
-    .omit({ depsMap: true })
-    .merge(
-      z.object({
-        depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
-      })
-    ),
+  config: fnTypeDef.configSchema,
+  inputs: fnTypeDef.inputSchema.omit({ depsMap: true }).merge(
+    z.object({
+      depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
+    })
+  ),
 });
 
 type FormType = z.infer<typeof formSchema>;
@@ -177,8 +190,15 @@ export function EditComputed({ initialNodeId, eventType }: NodeEditorProps) {
 
   const toasts = useMutationToasts();
 
+  const depsMap = form.watch("inputs.depsMap");
+  const typeDefs = useMemo(() => {
+    return [libSource, getInputTsTypeFromDepsMap(depsMap), functionType].join(
+      "\n\n"
+    );
+  }, [depsMap, functionType]);
+
   return (
-    <div>
+    <div className="w-full">
       <div className="flex justify-between items-center">
         <h1 className="text-emphasis-foreground text-2xl mt-1 mb-4">
           {isEditing ? "Edit Node" : "Create Node"}
@@ -302,16 +322,12 @@ export function EditComputed({ initialNodeId, eventType }: NodeEditorProps) {
         <div className="text-emphasis-foreground text-md">Code</div>
 
         <div className="ml-auto" />
-        <CompileStatusMessage compileStatus={compileStatus} />
+        <DynamicCompileStatusMessage compileStatus={compileStatus} />
       </div>
 
       <div className="h-96">
-        <CodeEditor
-          typeDefs={[
-            libSource,
-            getInputTsTypeFromDepsMap(form.watch("inputs.depsMap")),
-            functionType,
-          ].join("\n\n")}
+        <DynamicCodeEditor
+          typeDefs={typeDefs}
           initialCode={
             isEditing ? form.getValues("config.tsCode") : FUNCTION_TEMPLATE
           }

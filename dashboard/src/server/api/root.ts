@@ -1,17 +1,12 @@
 import { createTRPCRouter } from "~/server/api/trpc";
-import { dashboardRouter } from "./routers/dashboard";
 import { entityTypesRouter } from "./routers/entityTypes";
 import { eventTypesRouter } from "./routers/eventTypes";
-import { eventsRouter } from "./routers/events";
-import { nodeDefsRouter } from "./routers/nodeDefs";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
-import { lists2Router } from "./routers/lists2";
 import { featuresRouter } from "./routers/features";
 import { rulesRouter } from "./routers/rules";
 import { entityViewsRouter } from "./routers/entityViews";
 import { decisionsRouter } from "./routers/decisions";
-import { fnDefsRouter } from "./routers/fnDefs";
 import { editorRouter } from "./routers/editor";
 
 /**
@@ -20,19 +15,15 @@ import { editorRouter } from "./routers/editor";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  events: eventsRouter,
   lists: listsRouter,
-  dashboard: dashboardRouter,
   links: linksRouter,
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,
-  lists2: lists2Router,
   features: featuresRouter,
   rules: rulesRouter,
   entityViews: entityViewsRouter,
   decisions: decisionsRouter,
   editor: editorRouter,
-  nodeDefs: nodeDefsRouter,
 });
 
 // export type definition of API

@@ -7,7 +7,7 @@ import { createFnTypeDefBuilder } from "../builder";
 import { assert } from "common";
 import { type RedisInterface } from "databases";
 import { TypeName } from "../../data-types";
-import { dataPathZodSchema } from "../../data-path";
+import { DataPath, dataPathZodSchema } from "../../data-path";
 import { getTimeWindowMs, timeWindowSchema } from "../lib/timeWindow";
 import { countArgsSchema } from "../lib/args";
 
@@ -29,6 +29,15 @@ export const uniqueCounterFnDef = createFnTypeDefBuilder()
       conditionDataPath: dataPathZodSchema.optional(),
     })
   )
+  .setGetDataPaths((config) => {
+    const arr: DataPath[] = [];
+    arr.push(...config.countByDataPaths);
+    arr.push(...config.countDataPaths);
+    if (config.conditionDataPath) {
+      arr.push(config.conditionDataPath);
+    }
+    return arr;
+  })
   .setGetDependencies((config) => {
     const set = new Set<string>();
     for (const path of config.countByDataPaths) {

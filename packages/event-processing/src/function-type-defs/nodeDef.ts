@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FnDef, FnTypeDef, fnDefSchema } from "./functionTypeDef";
+import { FnDef, FnDefAny, FnTypeDef, fnDefSchema } from "./functionTypeDef";
 import { TSchema, tSchemaZod } from "../data-types";
 import { FnType } from "./types/_enum";
 import { FnTypeDefsMap } from ".";
@@ -27,7 +27,9 @@ export interface NodeDef<T extends FnType = FnType> {
   fn: FnDef<T>;
 }
 
-export type NodeDefAny = NodeDef<FnType>;
+export type NodeDefAny = Omit<NodeDef<FnType>, "fn"> & {
+  fn: FnDefAny;
+};
 
 // // Build node def
 

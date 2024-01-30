@@ -1,15 +1,20 @@
 import {
-  FN_TYPE_REGISTRY,
   hasFnType,
   type FnDef,
   type FnType,
   type NodeDef,
   hasType,
-  FnDefAny,
+  type TSchema,
+  TypeName,
+  createDataType,
+  type FnDefAny,
+  type NodeDefAny,
+  getFnTypeDef,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
-import { assert, generateNanoId } from "../../../../../../packages/common/src";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { assert } from "../../../../../../packages/common/src";
+import { persist, createJSONStorage, PersistStorage } from "zustand/middleware";
+import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
 
 type WithSelectors<S> = S extends { getState: () => infer T }
   ? S & { use: { [K in keyof T]: () => T[K] } }
@@ -39,10 +44,13 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 
 interface EditorState {
   nodes: Record<string, RawNode>;
-  fns: Record<string, FnDef>;
+  fns: Record<string, FnDefAny>;
+  errorNodes: Set<string>;
   initialized: boolean;
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
+
+  checkErrors: () => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -60,7 +68,7 @@ interface EditorState {
 }
 
 function fnDefIsValid(fnDef: FnDefAny): fnDef is FnDef {
-  const fnType = FN_TYPE_REGISTRY[fnDef.type];
+  const fnType = getFnTypeDef(fnDef.type);
   assert(fnType, `Unknown fn type ${fnDef.type}`);
   const { configSchema } = fnType;
 
@@ -75,7 +83,7 @@ function validateFnInput(
 ): {
   dependsOn: Set<string>;
 } {
-  const type = FN_TYPE_REGISTRY[fnType];
+  const type = getFnTypeDef(fnType);
   const { inputSchema, getDependencies } = type;
 
   // Validate inputs
@@ -86,12 +94,61 @@ function validateFnInput(
   };
 }
 
+const storage: PersistStorage<EditorState> = {
+  getItem: (name) => {
+    const str = localStorage.getItem(name);
+    if (!str) return null;
+    return superjson.parse(str);
+  },
+  setItem: (name, value) => {
+    localStorage.setItem(name, superjson.stringify(value));
+  },
+  removeItem: (name) => localStorage.removeItem(name),
+};
+
 const useEditorStoreBase = create<EditorState>()(
   persist<EditorState>(
     (set, get) => ({
       nodes: {},
       fns: {},
+      errorNodes: new Set(),
       initialized: false,
+
+      checkErrors: () => {
+        const state = get();
+        const errorNodes = new Set<string>();
+
+        Object.values(state.nodes).forEach((node) => {
+          const fn = state.fns[node.fnId];
+          assert(fn, `Unknown fn ${node.fnId}`);
+
+          const { getDataPaths } = getFnTypeDef(fn.type);
+          const dataPaths = getDataPaths(node.inputs);
+
+          dataPaths.forEach((path) => {
+            const pathNode = state.nodes[path.nodeId];
+            assert(pathNode, `Node ${path.nodeId} not found`);
+            const pathNodeFn = state.fns[pathNode.fnId];
+            assert(pathNodeFn, `Unknown fn ${pathNode.fnId}`);
+
+            const pathNodeReturnSchema = pathNodeFn.returnSchema;
+            const actualSchema = getSchemaAtPath(
+              pathNodeReturnSchema,
+              path.path
+            );
+
+            const expectedSchemaType = createDataType(path.schema);
+
+            if (!actualSchema) {
+              errorNodes.add(node.id);
+            } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
+              errorNodes.add(node.id);
+            }
+          });
+        });
+
+        set({ errorNodes });
+      },
 
       initializeFromNodeDefs: (nodeDefs, force) => {
         if (get().initialized && !force) return;
@@ -109,6 +166,8 @@ const useEditorStoreBase = create<EditorState>()(
         });
 
         set({ nodes, fns, initialized: true });
+
+        get().checkErrors();
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -134,6 +193,8 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
+        get().checkErrors();
+
         return {
           ...nodeDef,
           dependsOn,
@@ -149,6 +210,8 @@ const useEditorStoreBase = create<EditorState>()(
             [fnId]: fnDef,
           },
         }));
+
+        get().checkErrors();
 
         return fnDef;
       },
@@ -173,6 +236,8 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
+        get().checkErrors();
+
         return {
           ...nodeDef,
           dependsOn,
@@ -182,7 +247,7 @@ const useEditorStoreBase = create<EditorState>()(
     }),
     {
       name: "trench-editor",
-      storage: createJSONStorage(() => localStorage),
+      storage: storage,
     }
   )
 );
@@ -202,22 +267,28 @@ export const selectors = {
       assert(hasFnType(nodeDef, fnType), `Unknown fn type ${fnType}`);
       return nodeDef as NodeDef<T>;
     },
-  getNodeDefs: (props?: { eventType?: string }) => (store: EditorState) => {
-    let nodes = Object.values(store.nodes);
+  getNodeDefs:
+    <T extends FnType>(props?: { eventType?: string; fnType?: T }) =>
+    (store: EditorState) => {
+      let nodes = Object.values(store.nodes);
 
-    if (props?.eventType) {
-      nodes = nodes.filter((n) => n.eventType === props.eventType);
-    }
+      if (props?.eventType) {
+        nodes = nodes.filter((n) => n.eventType === props.eventType);
+      }
 
-    const nodeDefs: NodeDef[] = nodes.map((node) => {
-      const fn = store.fns[node.fnId];
-      assert(fn, `Unknown fn ${node.fnId}`);
+      let nodeDefs: NodeDefAny[] = nodes.map((node) => {
+        const fn = store.fns[node.fnId];
+        assert(fn, `Unknown fn ${node.fnId}`);
 
-      return { ...node, fn };
-    });
+        return { ...node, fn };
+      });
 
-    return nodeDefs;
-  },
+      if (props?.fnType) {
+        nodeDefs = nodeDefs.filter((n) => hasFnType(n, props.fnType));
+      }
+
+      return nodeDefs as T extends FnType ? NodeDef<T>[] : NodeDefAny[];
+    },
   getNode: (nodeId: string) => (store: EditorState) => {
     return store.nodes[nodeId];
   },
@@ -244,6 +315,17 @@ export const selectors = {
       if (props?.fnType) {
         allFnDefs = allFnDefs.filter((n) => n.type === props.fnType);
       }
-      return allFnDefs as unknown as FnDef<T extends FnType ? T : FnType>[];
+      return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
+
+function getSchemaAtPath(schema: TSchema, path: string[]): TSchema | null {
+  let currentSchema = schema;
+  for (const key of path) {
+    if (currentSchema.type !== TypeName.Object) return null;
+    const nextSchema = currentSchema.properties[key];
+    if (!nextSchema) return null;
+    currentSchema = nextSchema;
+  }
+  return currentSchema;
+}
