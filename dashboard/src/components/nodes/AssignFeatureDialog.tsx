@@ -191,7 +191,7 @@ export function AssignFeature({
                 name="featureId"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>To property:</FormLabel>
+                    <FormLabel>To feature:</FormLabel>
                     <ComboboxSelector
                       value={field.value}
                       onSelect={field.onChange}

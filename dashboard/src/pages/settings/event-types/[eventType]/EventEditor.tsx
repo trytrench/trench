@@ -202,7 +202,7 @@ export function EventEditor({ eventType }: Props) {
 
                   <DropdownMenuContent>
                     <AssignFeature
-                      title="Assign Event Property"
+                      title="Assign Event Feature"
                       defaults={{
                         dataPath: {
                           nodeId: selectedNode.id,
@@ -219,7 +219,7 @@ export function EventEditor({ eventType }: Props) {
                     </AssignFeature>
 
                     <AssignFeature
-                      title="Assign Entity Property"
+                      title="Assign Entity Feature"
                       defaults={{
                         dataPath: {
                           nodeId: selectedNode.id,
@@ -264,7 +264,7 @@ export function EventEditor({ eventType }: Props) {
       /> */}
 
       <div className="h-9" />
-      <div className="text-lg font-medium">Properties</div>
+      <div className="text-lg font-medium">Features</div>
       <div className="flex my-2 justify-between items-center">
         <Input className="w-[200px]" placeholder="Filter entities..." />
 

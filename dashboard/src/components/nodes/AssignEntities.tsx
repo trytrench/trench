@@ -186,7 +186,7 @@ export default function AssignEntities({ eventType }: Props) {
               <Input className="w-[200px]" placeholder="Filter features..." />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="xs">New property</Button>
+                  <Button size="xs">New feature</Button>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent>
@@ -207,20 +207,20 @@ export default function AssignEntities({ eventType }: Props) {
                   </CreateRuleDialog>
                   {selectedNodeId === EVENT ? (
                     <CreateEventFeatureDialog
-                      title="Create event property"
+                      title="Create event feature"
                       eventType={eventType}
                     >
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        Create property
+                        Create feature
                       </DropdownMenuItem>
                     </CreateEventFeatureDialog>
                   ) : (
                     <CreateFeatureDialog
-                      title="Create entity property"
+                      title="Create entity feature"
                       entityTypeId={selectedNode?.fn.returnSchema.entityType}
                     >
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        Create property
+                        Create feature
                       </DropdownMenuItem>
                     </CreateFeatureDialog>
                   )}
@@ -253,7 +253,7 @@ export default function AssignEntities({ eventType }: Props) {
               )}
 
               {!filteredFeatures?.length ? (
-                <div className="text-sm self-center py-8">No properties</div>
+                <div className="text-sm self-center py-8">No features</div>
               ) : (
                 filteredFeatures.map((feature) => (
                   <FeatureItem
