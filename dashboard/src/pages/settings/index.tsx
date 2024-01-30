@@ -49,7 +49,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <div>
       <Navbar />
-      <div className="border-b h-32">
+      <div className="border-b h-32 px-8">
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="text-3xl text-emphasis-foreground">Data Model</div>
           <div className="flex space-x-2">
@@ -68,31 +68,33 @@ const Page: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
-      <div className="flex max-w-6xl mx-auto pt-6">
-        <div className="w-64 pr-8">
-          {eventTypes?.map((eventType) => (
-            <div
-              className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center hover:bg-muted",
-                {
-                  "bg-accent text-accent-foreground":
-                    selectedEventType === eventType.id,
-                }
-              )}
-              onClick={() => setSelectedEventType(eventType.id)}
-              key={eventType.id}
-            >
-              {eventType.id}
-            </div>
-          ))}
-        </div>
-        <div className="flex-1">
-          {selectedEventType && (
-            <EventEditor
-              key={selectedEventType}
-              eventType={selectedEventType}
-            />
-          )}
+      <div className="px-8">
+        <div className="flex max-w-6xl mx-auto pt-6">
+          <div className="w-64 pr-8">
+            {eventTypes?.map((eventType) => (
+              <div
+                className={clsx(
+                  "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center hover:bg-muted",
+                  {
+                    "bg-accent text-accent-foreground":
+                      selectedEventType === eventType.id,
+                  }
+                )}
+                onClick={() => setSelectedEventType(eventType.id)}
+                key={eventType.id}
+              >
+                {eventType.id}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1">
+            {selectedEventType && (
+              <EventEditor
+                key={selectedEventType}
+                eventType={selectedEventType}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
