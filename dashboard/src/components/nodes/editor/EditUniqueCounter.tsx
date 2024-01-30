@@ -42,6 +42,7 @@ type FormType = z.infer<typeof formSchema>;
 export function EditUniqueCounter({
   initialNodeId,
   eventType,
+  onSaveSuccess,
 }: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
@@ -113,7 +114,10 @@ export function EditUniqueCounter({
               })
                 .then(toasts.createNode.onSuccess)
                 .catch(toasts.createNode.onError)
-                // .then(() => router.push(`/events/${eventType}`))
+                .then((res) => {
+                  onSaveSuccess();
+                  return res;
+                })
                 .catch(handleError);
             }}
           >

@@ -23,7 +23,11 @@ import { api } from "../../../utils/api";
 import { NodeEditorProps } from "./types";
 import { generateNanoId } from "../../../../../packages/common/src";
 
-export const EditDecision = ({ initialNodeId, eventType }: NodeEditorProps) => {
+export const EditDecision = ({
+  initialNodeId,
+  eventType,
+  onSaveSuccess,
+}: NodeEditorProps) => {
   const initialNodeDef = useEditorStore(
     selectors.getNodeDef(initialNodeId ?? "", FnType.Decision)
   );
@@ -78,6 +82,10 @@ export const EditDecision = ({ initialNodeId, eventType }: NodeEditorProps) => {
                 },
               })
                 .then(toasts.createNode.onSuccess)
+                .then((res) => {
+                  onSaveSuccess();
+                  return res;
+                })
                 .catch(toasts.createNode.onError)
                 .catch(handleError);
             }}

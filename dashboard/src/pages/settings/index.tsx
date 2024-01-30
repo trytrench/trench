@@ -9,11 +9,12 @@ import {
 import { Button } from "~/components/ui/button";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import { EventEditor } from "./event-types/[eventType]/EventEditor";
+import { EventEditor } from "../../components/nodes/editor/EventEditor";
 import { FnType, TSchema } from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
+import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -146,6 +147,7 @@ const Page: NextPageWithLayout = () => {
             />
           )}
         </div>
+        {selectedEventType && <EditNodeSheet eventType={selectedEventType} />}
       </div>
     </div>
   );

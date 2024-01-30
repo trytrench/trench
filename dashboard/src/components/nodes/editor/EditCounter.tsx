@@ -33,7 +33,11 @@ const formSchema = z.object({
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditCounter({ initialNodeId, eventType }: NodeEditorProps) {
+export function EditCounter({
+  initialNodeId,
+  eventType,
+  onSaveSuccess,
+}: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -101,8 +105,8 @@ export function EditCounter({ initialNodeId, eventType }: NodeEditorProps) {
                 },
               })
                 .then(toasts.createNode.onSuccess)
-                .then(async (res) => {
-                  // await router.push(`/events/${eventType}`);
+                .then((res) => {
+                  onSaveSuccess();
                   return res;
                 })
                 .catch(toasts.createNode.onError)

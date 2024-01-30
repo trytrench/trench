@@ -61,10 +61,7 @@ interface EditorState {
     nodeDef: NodeDefSetArgs<T>
   ) => Promise<NodeDef<T>>;
 
-  setFnDef: <T extends FnType>(
-    fnId: string,
-    fnDef: FnDefSetArgs<T>
-  ) => Promise<FnDef<T>>;
+  setFnDef: <T extends FnType>(fnDef: FnDefSetArgs<T>) => Promise<FnDef<T>>;
 
   deleteNodeDef: (nodeId: string) => Promise<void>;
 }
@@ -203,13 +200,13 @@ const useEditorStoreBase = create<EditorState>()(
         };
       },
       // eslint-disable-next-line @typescript-eslint/require-await
-      setFnDef: async (fnId, fnDef) => {
+      setFnDef: async (fnDef) => {
         assert(fnDefIsValid(fnDef), `Invalid fn def`);
 
         set((s) => ({
           fns: {
             ...s.fns,
-            [fnId]: fnDef,
+            [fnDef.id]: fnDef,
           },
         }));
 
