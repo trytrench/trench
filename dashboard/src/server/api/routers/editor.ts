@@ -2,8 +2,8 @@ import { type NodeDef, nodeDefSchema } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaNodeSnapshotToNodeDef } from "../../lib/prismaConverters";
+import { checkErrors, prune } from "../../../shared/publish";
 import { GlobalStateKey, Prisma } from "@prisma/client";
-import { prune } from "../../lib/nodes/publish";
 import { prisma } from "databases";
 import { uniqBy } from "lodash";
 import { assert, generateNanoId } from "../../../../../packages/common/src";
@@ -30,6 +30,16 @@ export const editorRouter = createTRPCRouter({
   saveNewEngine: protectedProcedure
     .input(z.object({ nodeDefs: z.array(nodeDefSchema) }))
     .mutation(async ({ input }) => {
+      const errors = checkErrors(input.nodeDefs);
+      Object.entries(errors).forEach(([nodeId, error]) => {
+        const node = input.nodeDefs.find((def) => def.id === nodeId);
+        throw new Error(
+          `Cannoy publish: Node "${
+            node?.name ?? "<Unnamed>"
+          }" has error: "${error}"`
+        );
+      });
+
       // Upsert new nodes
       const nodeDefs = prune(input.nodeDefs as NodeDef[]);
 

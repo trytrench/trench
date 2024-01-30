@@ -15,6 +15,7 @@ import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
 import { persist, createJSONStorage, PersistStorage } from "zustand/middleware";
 import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
+import { checkErrors } from "../../../../shared/publish";
 
 type WithSelectors<S> = S extends { getState: () => infer T }
   ? S & { use: { [K in keyof T]: () => T[K] } }
@@ -45,12 +46,12 @@ type FnDefSetArgs<T extends FnType> = FnDef<T>;
 interface EditorState {
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDefAny>;
-  errorNodes: Set<string>;
+  errors: Record<string, string>; // Map nodeIds to error messages
   initialized: boolean;
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
 
-  checkErrors: () => void;
+  updateErrors: () => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -110,43 +111,17 @@ const useEditorStoreBase = create<EditorState>()(
     (set, get) => ({
       nodes: {},
       fns: {},
-      errorNodes: new Set(),
+      errors: {},
       initialized: false,
 
-      checkErrors: () => {
+      updateErrors: () => {
         const state = get();
-        const errorNodes = new Set<string>();
 
-        Object.values(state.nodes).forEach((node) => {
-          const fn = state.fns[node.fnId];
-          assert(fn, `Unknown fn ${node.fnId}`);
+        const allNodeDefs = selectors.getNodeDefs()(state);
 
-          const { getDataPaths } = getFnTypeDef(fn.type);
-          const dataPaths = getDataPaths(node.inputs);
+        const errors = checkErrors(allNodeDefs);
 
-          dataPaths.forEach((path) => {
-            const pathNode = state.nodes[path.nodeId];
-            assert(pathNode, `Node ${path.nodeId} not found`);
-            const pathNodeFn = state.fns[pathNode.fnId];
-            assert(pathNodeFn, `Unknown fn ${pathNode.fnId}`);
-
-            const pathNodeReturnSchema = pathNodeFn.returnSchema;
-            const actualSchema = getSchemaAtPath(
-              pathNodeReturnSchema,
-              path.path
-            );
-
-            const expectedSchemaType = createDataType(path.schema);
-
-            if (!actualSchema) {
-              errorNodes.add(node.id);
-            } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
-              errorNodes.add(node.id);
-            }
-          });
-        });
-
-        set({ errorNodes });
+        set({ errors });
       },
 
       initializeFromNodeDefs: (nodeDefs, force) => {
@@ -166,7 +141,7 @@ const useEditorStoreBase = create<EditorState>()(
 
         set({ nodes, fns, initialized: true });
 
-        get().checkErrors();
+        get().updateErrors();
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -192,7 +167,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return {
           ...nodeDef,
@@ -210,7 +185,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return fnDef;
       },
@@ -235,7 +210,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return {
           ...nodeDef,
@@ -326,14 +301,3 @@ export const selectors = {
       return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
-
-function getSchemaAtPath(schema: TSchema, path: string[]): TSchema | null {
-  let currentSchema = schema;
-  for (const key of path) {
-    if (currentSchema.type !== TypeName.Object) return null;
-    const nextSchema = currentSchema.properties[key];
-    if (!nextSchema) return null;
-    currentSchema = nextSchema;
-  }
-  return currentSchema;
-}

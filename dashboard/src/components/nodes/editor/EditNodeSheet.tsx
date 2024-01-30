@@ -1,5 +1,10 @@
 import React, { useMemo } from "react";
-import { Sheet, SheetContent } from "~/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetOverlay,
+  SheetPortal,
+} from "~/components/ui/sheet";
 import { selectors, useEditorStore } from "./state/zustand";
 import { editNodeSheetAtom } from "./state/jotai";
 import { useAtom } from "jotai";
@@ -52,17 +57,20 @@ export function EditNodeSheet({ eventType }: { eventType: string }) {
         if (!open) setState({ isOpen: false });
       }}
     >
-      <SheetContent className="sm:max-w-xl overflow-y-auto" showClose={false}>
-        {EditNodeEditor && (
-          <EditNodeEditor
-            initialNodeId={node?.id}
-            eventType={eventType}
-            onSaveSuccess={() => {
-              setState({ isOpen: false });
-            }}
-          />
-        )}
-      </SheetContent>
+      <SheetPortal>
+        <SheetOverlay />
+        <SheetContent className="overflow-y-auto" showClose={false}>
+          {EditNodeEditor && (
+            <EditNodeEditor
+              initialNodeId={node?.id}
+              eventType={eventType}
+              onSaveSuccess={() => {
+                setState({ isOpen: false });
+              }}
+            />
+          )}
+        </SheetContent>
+      </SheetPortal>
     </Sheet>
   );
 }
