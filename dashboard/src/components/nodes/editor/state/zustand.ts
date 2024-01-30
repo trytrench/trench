@@ -13,7 +13,8 @@ import {
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist, createJSONStorage, PersistStorage } from "zustand/middleware";
+import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
 
 type WithSelectors<S> = S extends { getState: () => infer T }
   ? S & { use: { [K in keyof T]: () => T[K] } }
@@ -92,6 +93,18 @@ function validateFnInput(
     dependsOn: getDependencies(inputs),
   };
 }
+
+const storage: PersistStorage<EditorState> = {
+  getItem: (name) => {
+    const str = localStorage.getItem(name);
+    if (!str) return null;
+    return superjson.parse(str);
+  },
+  setItem: (name, value) => {
+    localStorage.setItem(name, superjson.stringify(value));
+  },
+  removeItem: (name) => localStorage.removeItem(name),
+};
 
 const useEditorStoreBase = create<EditorState>()(
   persist<EditorState>(
@@ -234,7 +247,7 @@ const useEditorStoreBase = create<EditorState>()(
     }),
     {
       name: "trench-editor",
-      storage: createJSONStorage(() => localStorage),
+      storage: storage,
     }
   )
 );
