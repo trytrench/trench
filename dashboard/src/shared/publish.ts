@@ -66,9 +66,9 @@ export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
       const expectedSchemaType = createDataType(path.schema);
 
       if (!actualSchema) {
-        errors[nodeDef.id] = `Node ${nodeDef.id} uses invalid data path`;
+        errors[nodeDef.id] = `Invalid data path`;
       } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
-        errors[nodeDef.id] = `Node ${nodeDef.id} uses invalid data path`;
+        errors[nodeDef.id] = `Invalid data path`;
       }
     });
   });

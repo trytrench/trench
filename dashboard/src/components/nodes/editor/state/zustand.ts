@@ -51,7 +51,7 @@ interface EditorState {
 
   initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
 
-  checkErrors: () => void;
+  updateErrors: () => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -114,7 +114,7 @@ const useEditorStoreBase = create<EditorState>()(
       errors: {},
       initialized: false,
 
-      checkErrors: () => {
+      updateErrors: () => {
         const state = get();
 
         const allNodeDefs = selectors.getNodeDefs()(state);
@@ -141,7 +141,7 @@ const useEditorStoreBase = create<EditorState>()(
 
         set({ nodes, fns, initialized: true });
 
-        get().checkErrors();
+        get().updateErrors();
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -167,7 +167,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return {
           ...nodeDef,
@@ -185,7 +185,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return fnDef;
       },
@@ -210,7 +210,7 @@ const useEditorStoreBase = create<EditorState>()(
           },
         }));
 
-        get().checkErrors();
+        get().updateErrors();
 
         return {
           ...nodeDef,
