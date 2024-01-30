@@ -5,7 +5,6 @@ import {
   buildNodeDefWithFn,
 } from "event-processing";
 import { Plus, Save, X } from "lucide-react";
-import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Panel } from "~/components/ui/custom/panel";
@@ -24,9 +23,7 @@ import { api } from "../../../utils/api";
 import { NodeEditorProps } from "./types";
 import { generateNanoId } from "../../../../../packages/common/src";
 
-export const EditDecision = ({ initialNodeId }: NodeEditorProps) => {
-  const router = useRouter();
-
+export const EditDecision = ({ initialNodeId, eventType }: NodeEditorProps) => {
   const initialNodeDef = useEditorStore(
     selectors.getNodeDef(initialNodeId ?? "", FnType.Decision)
   );
@@ -65,7 +62,7 @@ export const EditDecision = ({ initialNodeId }: NodeEditorProps) => {
               createNodeDefWithFn(FnType.Decision, {
                 id: initialNodeDef?.id ?? generateNanoId(),
                 name: "Decision",
-                eventType: router.query.eventType as string,
+                eventType,
                 inputs: {
                   conditions: conditions.filter((d) => !!d.decisionId),
                   elseDecisionId: elseDecisionId,
@@ -135,7 +132,7 @@ export const EditDecision = ({ initialNodeId }: NodeEditorProps) => {
                     }
                   }}
                   desiredSchema={{ type: TypeName.Rule }}
-                  eventType={router.query.eventType as string}
+                  eventType={eventType}
                 />
               ))}
 
@@ -154,7 +151,7 @@ export const EditDecision = ({ initialNodeId }: NodeEditorProps) => {
                   );
                 }}
                 desiredSchema={{ type: TypeName.Rule }}
-                eventType={router.query.eventType as string}
+                eventType={eventType}
               />
 
               <Select

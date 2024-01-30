@@ -37,7 +37,7 @@ const formSchema = z.object({
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditCounter({ initialNodeId }: NodeEditorProps) {
+export function EditCounter({ initialNodeId, eventType }: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -57,9 +57,6 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
       },
     },
   });
-
-  const router = useRouter();
-  const eventType = router.query.eventType as string;
 
   const initialNode = useEditorStore(selectors.getNodeDef(initialNodeId ?? ""));
 
@@ -109,7 +106,7 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
               })
                 .then(toasts.createNode.onSuccess)
                 .then(async (res) => {
-                  await router.push(`/events/${eventType}`);
+                  // await router.push(`/events/${eventType}`);
                   return res;
                 })
                 .catch(toasts.createNode.onError)
@@ -122,76 +119,74 @@ export function EditCounter({ initialNodeId }: NodeEditorProps) {
         </div>
       </div>
 
-      {!isEditing && (
-        <>
-          <Form {...form}>
-            <form>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="w-[16rem]">
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
+      <>
+        <Form {...form}>
+          <form>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="w-[16rem]">
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
 
-          <div className="text-md font-bold mt-4 mb-2">Count</div>
+        <div className="text-md font-bold mt-4 mb-2">Count</div>
 
-          <div className="text-md font-bold mt-4 mb-2">By</div>
-          <SelectDataPathList
-            args={form.watch("config.countByArgs")}
-            onArgsChange={(countByArgs) =>
-              form.setValue("config.countByArgs", countByArgs)
+        <div className="text-md font-bold mt-4 mb-2">By</div>
+        <SelectDataPathList
+          args={form.watch("config.countByArgs")}
+          onArgsChange={(countByArgs) =>
+            form.setValue("config.countByArgs", countByArgs)
+          }
+          eventType={eventType}
+          value={form.watch("inputs.countByDataPaths")}
+          onChange={(countByDataPaths) =>
+            form.setValue("inputs.countByDataPaths", countByDataPaths)
+          }
+        />
+        <div className="text-md font-bold mt-4 mb-2">Where</div>
+
+        <SelectDataPath
+          eventType={eventType}
+          desiredSchema={{
+            type: TypeName.Boolean,
+          }}
+          value={form.watch("inputs.conditionDataPath") ?? null}
+          onChange={(conditionDataPath) => {
+            if (conditionDataPath) {
+              form.setValue("inputs.conditionDataPath", conditionDataPath);
+            } else {
+              form.setValue("inputs.conditionDataPath", undefined);
             }
-            eventType={eventType}
-            value={form.watch("inputs.countByDataPaths")}
-            onChange={(countByDataPaths) =>
-              form.setValue("inputs.countByDataPaths", countByDataPaths)
-            }
-          />
-          <div className="text-md font-bold mt-4 mb-2">Where</div>
+          }}
+        />
 
-          <SelectDataPath
-            eventType={eventType}
-            desiredSchema={{
-              type: TypeName.Boolean,
-            }}
-            value={form.watch("inputs.conditionDataPath") ?? null}
-            onChange={(conditionDataPath) => {
-              if (conditionDataPath) {
-                form.setValue("inputs.conditionDataPath", conditionDataPath);
-              } else {
-                form.setValue("inputs.conditionDataPath", undefined);
-              }
-            }}
-          />
+        <div className="text-md">is true</div>
 
-          <div className="text-md">is true</div>
+        <div className="text-md font-bold mt-4 mb-2">In the last</div>
 
-          <div className="text-md font-bold mt-4 mb-2">In the last</div>
-
-          <TimeWindowDialog
-            value={form.watch("config.timeWindow")}
-            onSubmit={(timeWindow) =>
-              form.setValue("config.timeWindow", timeWindow)
-            }
-          >
-            <div className="flex items-center">
-              <RenderTimeWindow value={form.watch("config.timeWindow")} />
-              <Button variant="outline" size="xs">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </TimeWindowDialog>
-        </>
-      )}
+        <TimeWindowDialog
+          value={form.watch("config.timeWindow")}
+          onSubmit={(timeWindow) =>
+            form.setValue("config.timeWindow", timeWindow)
+          }
+        >
+          <div className="flex items-center">
+            <RenderTimeWindow value={form.watch("config.timeWindow")} />
+            <Button variant="outline" size="xs">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </TimeWindowDialog>
+      </>
     </div>
   );
 }

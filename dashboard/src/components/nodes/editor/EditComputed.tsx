@@ -12,7 +12,6 @@ import {
   getConfigSchema,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
-import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -63,7 +62,7 @@ const formSchema = z.object({
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditComputed({ initialNodeId }: NodeEditorProps) {
+export function EditComputed({ initialNodeId, eventType }: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -82,9 +81,6 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
       },
     },
   });
-
-  const router = useRouter();
-  const eventType = router.query.eventType as string;
 
   const nodes = useEditorStore(selectors.getNodeDefs());
   const initialNode = useEditorStore(
@@ -222,9 +218,9 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
               })
                 .then(toasts.createNode.onSuccess)
                 .catch(toasts.createNode.onError)
-                .then(() => {
-                  void router.push(`/settings/event-types/${eventType}`);
-                })
+                // .then(() => {
+                //   void router.push(`/settings/event-types/${eventType}`);
+                // })
                 .catch(handleError);
             }}
           >
@@ -234,74 +230,71 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
         </div>
       </div>
 
-      {!isEditing && (
-        <Form {...form}>
-          <form>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="w-[16rem]">
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <Form {...form}>
+        <form>
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="w-[16rem]">
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="returnSchema"
-              render={({ field }) => (
-                <FormItem className="w-[16rem] mt-4">
-                  <FormLabel>Type</FormLabel>
-                  <div>
-                    <SchemaBuilder
-                      value={field.value as TSchema}
-                      onChange={(newSchema) => {
-                        field.onChange(newSchema);
-                      }}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="returnSchema"
+            render={({ field }) => (
+              <FormItem className="w-[16rem] mt-4">
+                <FormLabel>Type</FormLabel>
+                <div>
+                  <SchemaBuilder
+                    value={field.value as TSchema}
+                    onChange={(newSchema) => {
+                      field.onChange(newSchema);
+                    }}
+                  />
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="inputs.depsMap"
-              render={({ field }) => (
-                <FormItem className="w-[16rem] mt-4">
-                  <FormLabel>Type</FormLabel>
-                  <div>
-                    <EditDepsMap
-                      eventType={router.query.eventType as string}
-                      value={field.value}
-                      onChange={(depsMap) => {
-                        field.onChange(depsMap);
+          <FormField
+            control={form.control}
+            name="inputs.depsMap"
+            render={({ field }) => (
+              <FormItem className="w-[16rem] mt-4">
+                <div>
+                  <EditDepsMap
+                    eventType={eventType}
+                    value={field.value}
+                    onChange={(depsMap) => {
+                      field.onChange(depsMap);
 
-                        // const depsSchema = Object.entries(depsMap).reduce(
-                        //   (acc, [key, value]) => {
-                        //     if (!value) return acc;
-                        //     acc[key] = value.schema;
-                        //     return acc;
-                        //   },
-                        //   {} as Record<string, TSchema>
-                        // );
-                        // form.setValue("config.depsSchema", depsSchema);
-                      }}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-      )}
+                      // const depsSchema = Object.entries(depsMap).reduce(
+                      //   (acc, [key, value]) => {
+                      //     if (!value) return acc;
+                      //     acc[key] = value.schema;
+                      //     return acc;
+                      //   },
+                      //   {} as Record<string, TSchema>
+                      // );
+                      // form.setValue("config.depsSchema", depsSchema);
+                    }}
+                  />
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </form>
+      </Form>
 
       <Separator className="my-8" />
 
@@ -319,7 +312,9 @@ export function EditComputed({ initialNodeId }: NodeEditorProps) {
             getInputTsTypeFromDepsMap(form.watch("inputs.depsMap")),
             functionType,
           ].join("\n\n")}
-          initialCode={FUNCTION_TEMPLATE}
+          initialCode={
+            isEditing ? form.getValues("config.tsCode") : FUNCTION_TEMPLATE
+          }
           onCompileStatusChange={onCompileStatusChange}
         />
       </div>
@@ -414,13 +409,6 @@ function EditDepsMap(props: {
       })}
     </div>
   );
-}
-
-function stringToPropertyKey(str: string): string {
-  return str
-    .replace(/[^a-zA-Z0-9]/g, "_")
-    .toLowerCase()
-    .replace(/^_+/g, "_");
 }
 
 function getNewPropertyName(existingProperties: string[]): string {

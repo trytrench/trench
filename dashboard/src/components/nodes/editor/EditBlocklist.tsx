@@ -42,7 +42,7 @@ const formSchema = z.object({
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
+export function EditBlocklist({ initialNodeId, eventType }: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -57,8 +57,6 @@ export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
   });
 
   const { toast } = useToast();
-  const router = useRouter();
-  const eventType = router.query.eventType as string;
 
   const initialNode = useEditorStore(
     selectors.getNodeDef(initialNodeId ?? "", FnType.Blocklist)
@@ -107,7 +105,7 @@ export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
               })
                 .then(toasts.createNode.onSuccess)
                 .then((res) => {
-                  void router.push(`/settings/event-types/${eventType}`);
+                  // void router.push(`/settings/event-types/${eventType}`);
                   return res;
                 })
                 .catch(toasts.createNode.onError)

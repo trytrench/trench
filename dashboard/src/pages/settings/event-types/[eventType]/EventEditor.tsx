@@ -74,7 +74,12 @@ export function EventEditor({ eventType }: Props) {
   );
 
   const [newFnType, setNewFnType] = useState<FnType | null>(null);
-  const NodeEditor = newFnType ? MAP_FN_TYPE_TO_EDITOR[newFnType] : null;
+  const NewNodeEditor = newFnType ? MAP_FN_TYPE_TO_EDITOR[newFnType] : null;
+
+  const [editingNode, setEditingNode] = useState<NodeDef | null>(null);
+  const EditNodeEditor = editingNode
+    ? MAP_FN_TYPE_TO_EDITOR[editingNode.fn.type]
+    : null;
 
   const [selectedNode, setSelectedNode] = useState<NodeDef | null>(null);
 
@@ -131,7 +136,7 @@ export function EventEditor({ eventType }: Props) {
         </Popover>
       </div>
 
-      <Card className="flex max-h-96">
+      <Card className="flex h-96">
         <div className="p-4 w-80 border-r">
           {filteredNodes?.map((node) => (
             <div
@@ -150,9 +155,19 @@ export function EventEditor({ eventType }: Props) {
               <div className="text-blue-300 text-xs font-bold">
                 {node.fn.returnSchema.type}
               </div>
-              <Button size="iconXs" variant="link" className="h-3 ml-auto">
-                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="iconXs" variant="link" className="h-3 ml-auto">
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setEditingNode(node)}>
+                    Edit
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ))}
         </div>
@@ -266,7 +281,23 @@ export function EventEditor({ eventType }: Props) {
         }}
       >
         <SheetContent className="sm:max-w-xl" showClose={false}>
-          {newFnType && <NodeEditor />}
+          {NewNodeEditor && <NewNodeEditor eventType={eventType} />}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={!!editingNode}
+        onOpenChange={(open) => {
+          if (!open) setEditingNode(null);
+        }}
+      >
+        <SheetContent className="sm:max-w-xl" showClose={false}>
+          {EditNodeEditor && (
+            <EditNodeEditor
+              initialNodeId={editingNode?.id}
+              eventType={eventType}
+            />
+          )}
         </SheetContent>
       </Sheet>
     </div>
