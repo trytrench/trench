@@ -46,17 +46,6 @@ const HIDDEN_NODE_TYPES = [
   FnType.EntityAppearance,
 ];
 
-export const MAP_FN_TYPE_TO_EDITOR: Partial<
-  Record<FnType, React.FC<NodeEditorProps>>
-> = {
-  [FnType.Computed]: EditComputed,
-  [FnType.Counter]: EditCounter,
-  [FnType.UniqueCounter]: EditUniqueCounter,
-  [FnType.Decision]: EditDecision,
-  [FnType.Blocklist]: EditBlocklist,
-  [FnType.Event]: () => null,
-};
-
 interface Props {
   eventType: string;
 }
