@@ -33,6 +33,9 @@ export const rulesRouter = createTRPCRouter({
             },
           },
         },
+        include: {
+          feature: true,
+        },
       });
 
       return feature;

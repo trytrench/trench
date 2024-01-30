@@ -90,6 +90,7 @@ import {
 } from "../../../../components/nodes/editor/state/zustand";
 import { generateNanoId } from "../../../../../../packages/common/src";
 import { usePrevious } from "@dnd-kit/utilities";
+import { CreateEntityTypeDialog } from "~/components/nodes/CreateEntityTypeDialog";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -153,26 +154,33 @@ function EntityDialog(props: {
                   render={({ field }) => (
                     <FormItem className="col-span-3">
                       <FormLabel>Entity</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an entity" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {entityTypes?.map((entityType) => (
-                            <SelectItem
-                              key={entityType.id}
-                              value={entityType.id}
-                            >
-                              {entityType.type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex space-x-2">
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an entity" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {entityTypes?.map((entityType) => (
+                              <SelectItem
+                                key={entityType.id}
+                                value={entityType.id}
+                              >
+                                {entityType.type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <CreateEntityTypeDialog>
+                          <Button variant="outline" size="sm">
+                            Create
+                          </Button>
+                        </CreateEntityTypeDialog>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -413,7 +421,11 @@ const Page: NextPageWithLayout = () => {
                     <AssignFeature
                       title="Assign Event Property"
                       defaults={{
-                        dataPath: dataPath,
+                        dataPath: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
+                        },
                         entityDataPath: undefined,
                         featureId: "",
                       }}
@@ -426,7 +438,11 @@ const Page: NextPageWithLayout = () => {
                     <AssignFeature
                       title="Assign Entity Property"
                       defaults={{
-                        dataPath: dataPath,
+                        dataPath: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
+                        },
                         entityDataPath: undefined,
                         featureId: "",
                       }}
@@ -438,7 +454,13 @@ const Page: NextPageWithLayout = () => {
 
                     <EntityDialog
                       eventType={eventType}
-                      defaults={{ path: dataPath }}
+                      defaults={{
+                        path: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
+                        },
+                      }}
                       title="New Entity"
                       onSubmit={(values) => {
                         // Create entity appearance
@@ -506,36 +528,58 @@ const Page: NextPageWithLayout = () => {
       <div className="text-lg font-medium">Properties</div>
       <div className="flex my-2 justify-between items-center">
         <Input className="w-[200px]" placeholder="Filter entities..." />
-        <Popover
-          open={newEntityDropdownOpen}
-          onOpenChange={setNewEntityDropdownOpen}
+
+        <EntityDialog
+          eventType={eventType}
+          defaults={{}}
+          title="New Entity"
+          onSubmit={(values) => {
+            // Create entity appearance
+            const entityType = entityTypes?.find(
+              (entityType) => entityType.id === values.entityTypeId
+            );
+            if (!entityType) {
+              toast({
+                title: "Failed to create entity",
+                description: "Entity type not found",
+              });
+              return;
+            }
+            if (!eventType) {
+              toast({
+                title: "Failed to create entity",
+                description: "Event type not found",
+              });
+              return;
+            }
+
+            setNodeDefWithFn(FnType.EntityAppearance, {
+              id: generateNanoId(),
+              name: entityType.type,
+              eventType,
+              inputs: {
+                dataPath: values.path,
+              },
+              fn: {
+                id: generateNanoId(),
+                type: FnType.EntityAppearance,
+                returnSchema: {
+                  type: TypeName.Entity,
+                  entityType: values.entityTypeId,
+                },
+                config: {
+                  entityType: values.entityTypeId,
+                },
+                name: entityType.type,
+              },
+            })
+              .then(toasts.createNode.onSuccess)
+              .catch(toasts.createNode.onError)
+              .catch(handleError);
+          }}
         >
-          <PopoverTrigger asChild>
-            <Button role="combobox" aria-expanded={open} size="sm">
-              New entity
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[200px] p-0">
-            <Command>
-              <CommandInput placeholder="Search entities..." />
-              <CommandEmpty>No entities found.</CommandEmpty>
-              <CommandGroup>
-                {entityTypes?.map((type) => (
-                  <CommandItem
-                    key={type.id}
-                    value={type.type}
-                    onSelect={() => {
-                      setNewEntityDropdownOpen(false);
-                    }}
-                  >
-                    {type.type}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+          <Button size="sm">New entity</Button>
+        </EntityDialog>
       </div>
       <AssignEntities />
 

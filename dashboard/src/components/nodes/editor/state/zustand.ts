@@ -5,6 +5,7 @@ import {
   type FnType,
   type NodeDef,
   hasType,
+  FnDefAny,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert, generateNanoId } from "../../../../../../packages/common/src";
@@ -58,7 +59,7 @@ interface EditorState {
   ) => Promise<FnDef<T>>;
 }
 
-function fnDefIsValid(fnDef: FnDef): fnDef is FnDef {
+function fnDefIsValid(fnDef: FnDefAny): fnDef is FnDef {
   const fnType = FN_TYPE_REGISTRY[fnDef.type];
   assert(fnType, `Unknown fn type ${fnDef.type}`);
   const { configSchema } = fnType;
@@ -204,12 +205,11 @@ export const selectors = {
   getNodeDefs: (props?: { eventType?: string }) => (store: EditorState) => {
     let nodes = Object.values(store.nodes);
 
-    console.log(store);
     if (props?.eventType) {
       nodes = nodes.filter((n) => n.eventType === props.eventType);
     }
 
-    const nodeDefs = nodes.map((node) => {
+    const nodeDefs: NodeDef[] = nodes.map((node) => {
       const fn = store.fns[node.fnId];
       assert(fn, `Unknown fn ${node.fnId}`);
 
@@ -238,12 +238,12 @@ export const selectors = {
       return fn;
     },
   getFnDefs:
-    <T extends FnType = FnType>(props?: { fnType?: T }) =>
+    <T extends FnType>(props?: { fnType?: T }) =>
     (store: EditorState) => {
       let allFnDefs = Object.values(store.fns);
       if (props?.fnType) {
         allFnDefs = allFnDefs.filter((n) => n.type === props.fnType);
       }
-      return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
+      return allFnDefs as unknown as FnDef<T extends FnType ? T : FnType>[];
     },
 };
