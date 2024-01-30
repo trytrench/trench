@@ -267,22 +267,28 @@ export const selectors = {
       assert(hasFnType(nodeDef, fnType), `Unknown fn type ${fnType}`);
       return nodeDef as NodeDef<T>;
     },
-  getNodeDefs: (props?: { eventType?: string }) => (store: EditorState) => {
-    let nodes = Object.values(store.nodes);
+  getNodeDefs:
+    <T extends FnType>(props?: { eventType?: string; fnType?: T }) =>
+    (store: EditorState) => {
+      let nodes = Object.values(store.nodes);
 
-    if (props?.eventType) {
-      nodes = nodes.filter((n) => n.eventType === props.eventType);
-    }
+      if (props?.eventType) {
+        nodes = nodes.filter((n) => n.eventType === props.eventType);
+      }
 
-    const nodeDefs: NodeDefAny[] = nodes.map((node) => {
-      const fn = store.fns[node.fnId];
-      assert(fn, `Unknown fn ${node.fnId}`);
+      let nodeDefs: NodeDefAny[] = nodes.map((node) => {
+        const fn = store.fns[node.fnId];
+        assert(fn, `Unknown fn ${node.fnId}`);
 
-      return { ...node, fn };
-    });
+        return { ...node, fn };
+      });
 
-    return nodeDefs;
-  },
+      if (props?.fnType) {
+        nodeDefs = nodeDefs.filter((n) => hasFnType(n, props.fnType));
+      }
+
+      return nodeDefs as T extends FnType ? NodeDef<T>[] : NodeDefAny[];
+    },
   getNode: (nodeId: string) => (store: EditorState) => {
     return store.nodes[nodeId];
   },

@@ -217,6 +217,9 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  exampleEvent Json?
+  exampleSchema Json?
+
   features Feature[]
   nodes    Node[]
 }
