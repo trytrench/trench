@@ -57,11 +57,11 @@ export function EventEditor({ eventType }: Props) {
 
   const [, setSheetState] = useAtom(editNodeSheetAtom);
 
-  const [selectedNode, setSelectedNode] = useState<NodeDef | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selectedNode) setSelectedNode(filteredNodes?.[0] ?? null);
-  }, [selectedNode, filteredNodes]);
+  const selectedNode = useMemo(() => {
+    return nodes?.find((node) => node.id === selectedNodeId);
+  }, [nodes, selectedNodeId]);
 
   const deleteNodeDef = useEditorStore.use.deleteNodeDef();
   const toasts = useMutationToasts();
@@ -131,7 +131,7 @@ export function EventEditor({ eventType }: Props) {
                   "hover:bg-muted cursor-pointer": selectedNode?.id !== node.id,
                 }
               )}
-              onClick={() => setSelectedNode(node)}
+              onClick={() => setSelectedNodeId(node.id)}
               key={node.id}
             >
               <div>{node.name}</div>

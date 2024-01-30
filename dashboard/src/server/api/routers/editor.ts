@@ -14,17 +14,22 @@ export const editorRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     });
     return {
-      engineId: latestEngineId.id,
+      id: latestEngineId.id,
+      createdAt: latestEngineId.createdAt,
       nodeDefs: await getEngineNodeDefs(latestEngineId.id),
     };
   }),
   getEngine: protectedProcedure
     .input(z.object({ engineId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const engineId = input.engineId;
+      const engine = await ctx.prisma.executionEngine.findUniqueOrThrow({
+        where: { id: engineId },
+      });
       return {
-        engineId: engineId,
-        nodeDefs: await getEngineNodeDefs(engineId),
+        id: engine.id,
+        createdAt: engine.createdAt,
+        nodeDefs: await getEngineNodeDefs(engine.id),
       };
     }),
   saveNewEngine: protectedProcedure

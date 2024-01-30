@@ -43,13 +43,23 @@ type NodeDefWithFnSetArgs<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
 
 type FnDefSetArgs<T extends FnType> = FnDef<T>;
 
+type Engine = {
+  id: string;
+  createdAt: Date;
+};
 interface EditorState {
+  engine: Engine | null;
+  hasChanged: boolean;
+
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDefAny>;
   errors: Record<string, string>; // Map nodeIds to error messages
-  initialized: boolean;
 
-  initializeFromNodeDefs: (nodeDefs: NodeDef[], force?: boolean) => void;
+  initializeFromNodeDefs: (
+    engine: Engine,
+    nodeDefs: NodeDef[],
+    force?: boolean
+  ) => void;
 
   updateErrors: () => void;
 
@@ -109,10 +119,12 @@ const storage: PersistStorage<EditorState> = {
 const useEditorStoreBase = create<EditorState>()(
   persist<EditorState>(
     (set, get) => ({
+      hasChanged: false,
+      engine: null,
+
       nodes: {},
       fns: {},
       errors: {},
-      initialized: false,
 
       updateErrors: () => {
         const state = get();
@@ -124,8 +136,8 @@ const useEditorStoreBase = create<EditorState>()(
         set({ errors });
       },
 
-      initializeFromNodeDefs: (nodeDefs, force) => {
-        if (get().initialized && !force) return;
+      initializeFromNodeDefs: (engine, nodeDefs, force) => {
+        if (get().engine && !force) return;
 
         const fns: Record<string, FnDef> = {};
         const nodes: Record<string, RawNode> = {};
@@ -139,7 +151,12 @@ const useEditorStoreBase = create<EditorState>()(
           };
         });
 
-        set({ nodes, fns, initialized: true });
+        set({
+          nodes,
+          fns,
+          engine,
+          hasChanged: false,
+        });
 
         get().updateErrors();
       },
@@ -165,6 +182,7 @@ const useEditorStoreBase = create<EditorState>()(
             ...s.fns,
             [fn.id]: fn,
           },
+          hasChanged: true,
         }));
 
         get().updateErrors();
@@ -183,6 +201,7 @@ const useEditorStoreBase = create<EditorState>()(
             ...s.fns,
             [fnDef.id]: fnDef,
           },
+          hasChanged: true,
         }));
 
         get().updateErrors();
@@ -208,6 +227,7 @@ const useEditorStoreBase = create<EditorState>()(
               dependsOn,
             },
           },
+          hasChanged: true,
         }));
 
         get().updateErrors();
@@ -224,7 +244,7 @@ const useEditorStoreBase = create<EditorState>()(
         set((s) => {
           const nodes = { ...s.nodes };
           delete nodes[nodeId];
-          return { nodes };
+          return { nodes, hasChanged: true };
         });
       },
     }),
