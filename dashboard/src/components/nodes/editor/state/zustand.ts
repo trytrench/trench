@@ -1,5 +1,4 @@
 import {
-  FN_TYPE_REGISTRY,
   hasFnType,
   type FnDef,
   type FnType,
@@ -10,6 +9,7 @@ import {
   createDataType,
   type FnDefAny,
   type NodeDefAny,
+  getFnTypeDef,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
@@ -67,7 +67,7 @@ interface EditorState {
 }
 
 function fnDefIsValid(fnDef: FnDefAny): fnDef is FnDef {
-  const fnType = FN_TYPE_REGISTRY[fnDef.type];
+  const fnType = getFnTypeDef(fnDef.type);
   assert(fnType, `Unknown fn type ${fnDef.type}`);
   const { configSchema } = fnType;
 
@@ -82,7 +82,7 @@ function validateFnInput(
 ): {
   dependsOn: Set<string>;
 } {
-  const type = FN_TYPE_REGISTRY[fnType];
+  const type = getFnTypeDef(fnType);
   const { inputSchema, getDependencies } = type;
 
   // Validate inputs
@@ -109,7 +109,7 @@ const useEditorStoreBase = create<EditorState>()(
           const fn = state.fns[node.fnId];
           assert(fn, `Unknown fn ${node.fnId}`);
 
-          const { getDataPaths } = FN_TYPE_REGISTRY[fn.type];
+          const { getDataPaths } = getFnTypeDef(fn.type);
           const dataPaths = getDataPaths(node.inputs);
 
           dataPaths.forEach((path) => {

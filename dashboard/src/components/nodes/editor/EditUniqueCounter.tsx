@@ -1,10 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   TypeName,
-  getConfigSchema,
   FnType,
-  getInputSchema,
   buildNodeDefWithFn,
+  getFnTypeDef,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -31,10 +30,12 @@ import { handleError } from "../../../lib/handleError";
 import { useEditorStore, selectors } from "./state/zustand";
 import { generateNanoId } from "../../../../../packages/common/src";
 
+const fnTypeDef = getFnTypeDef(FnType.UniqueCounter);
+
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(FnType.UniqueCounter),
-  inputs: getInputSchema(FnType.UniqueCounter),
+  config: fnTypeDef.configSchema,
+  inputs: fnTypeDef.inputSchema,
 });
 
 type FormType = z.infer<typeof formSchema>;

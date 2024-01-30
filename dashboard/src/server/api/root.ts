@@ -1,9 +1,7 @@
 import { createTRPCRouter } from "~/server/api/trpc";
-import { dashboardRouter } from "./routers/dashboard";
 import { entityTypesRouter } from "./routers/entityTypes";
 import { eventTypesRouter } from "./routers/eventTypes";
 import { eventsRouter } from "./routers/events";
-import { nodeDefsRouter } from "./routers/nodeDefs";
 import { linksRouter } from "./routers/links";
 import { listsRouter } from "./routers/lists";
 import { lists2Router } from "./routers/lists2";
@@ -11,7 +9,6 @@ import { featuresRouter } from "./routers/features";
 import { rulesRouter } from "./routers/rules";
 import { entityViewsRouter } from "./routers/entityViews";
 import { decisionsRouter } from "./routers/decisions";
-import { fnDefsRouter } from "./routers/fnDefs";
 import { editorRouter } from "./routers/editor";
 
 /**
@@ -22,7 +19,6 @@ import { editorRouter } from "./routers/editor";
 export const appRouter = createTRPCRouter({
   events: eventsRouter,
   lists: listsRouter,
-  dashboard: dashboardRouter,
   links: linksRouter,
   eventTypes: eventTypesRouter,
   entityTypes: entityTypesRouter,

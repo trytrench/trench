@@ -1,7 +1,6 @@
 import { createRedisService } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
-  FN_TYPE_REGISTRY,
   FnType,
   FnTypeContextMap,
   FnTypeDef,
@@ -9,6 +8,7 @@ import {
   Resolver,
   StateUpdater,
   TrenchEvent,
+  getFnTypeDef,
 } from "./function-type-defs";
 import { printNodeDef, truncId } from "./function-type-defs/lib/print";
 import { db } from "databases";
@@ -105,7 +105,7 @@ export class ExecutionEngine {
 
     const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {
       const fnType = nodeDef.fn.type;
-      const nodeTypeDef = FN_TYPE_REGISTRY[fnType] as FnTypeDef;
+      const nodeTypeDef = getFnTypeDef(fnType);
 
       if (!this.context) {
         throw new Error("No engine context");

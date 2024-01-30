@@ -8,8 +8,7 @@ import {
   type DataPath,
   FnType,
   buildFnDef,
-  getInputSchema,
-  getConfigSchema,
+  getFnTypeDef,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
 import { useRouter } from "next/router";
@@ -48,17 +47,17 @@ import { generateNanoId } from "../../../../../packages/common/src";
 
 const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
+const fnTypeDef = getFnTypeDef(FnType.Computed);
+
 const formSchema = z.object({
   returnSchema: tSchemaZod,
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(FnType.Computed),
-  inputs: getInputSchema(FnType.Computed)
-    .omit({ depsMap: true })
-    .merge(
-      z.object({
-        depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
-      })
-    ),
+  config: fnTypeDef.configSchema,
+  inputs: fnTypeDef.inputSchema.omit({ depsMap: true }).merge(
+    z.object({
+      depsMap: z.record(z.string(), dataPathZodSchema.nullable()),
+    })
+  ),
 });
 
 type FormType = z.infer<typeof formSchema>;
