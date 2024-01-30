@@ -2,12 +2,17 @@ import { usePrevious } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { Navbar } from "~/components/Navbar";
-import { useEditorStore } from "~/components/nodes/editor/state/zustand";
+import {
+  selectors,
+  useEditorStore,
+} from "~/components/nodes/editor/state/zustand";
 import { Button } from "~/components/ui/button";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { EventEditor } from "./event-types/[eventType]/EventEditor";
 import { FnType, hasFnType } from "event-processing";
+import { useMutationToasts } from "~/components/nodes/editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const Page: NextPageWithLayout = () => {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
@@ -15,6 +20,9 @@ const Page: NextPageWithLayout = () => {
   const [selectedEventType, setSelectedEventType] = useState<string | null>();
 
   const { data: nodeDefs } = api.nodeDefs.list.useQuery();
+
+  const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
+  const nodes = useEditorStore(selectors.getNodeDefs());
 
   const { data: engineData } = api.editor.getLatestEngine.useQuery();
   const prevEngineId = usePrevious(engineData?.engineId);
@@ -36,6 +44,8 @@ const Page: NextPageWithLayout = () => {
     }
   }, [eventTypes]);
 
+  const toasts = useMutationToasts();
+
   return (
     <div>
       <Navbar />
@@ -43,7 +53,18 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="text-3xl text-emphasis-foreground">Data Model</div>
           <div className="flex space-x-2">
-            <Button>Publish</Button>
+            <Button
+              onClick={() => {
+                publish({
+                  nodeDefs: nodes,
+                })
+                  .then(toasts.publish.onSuccess)
+                  .catch(toasts.publish.onError)
+                  .catch(handleError);
+              }}
+            >
+              Publish
+            </Button>
           </div>
         </div>
       </div>

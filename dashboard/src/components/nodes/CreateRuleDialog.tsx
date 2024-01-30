@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/popover";
 import { api } from "~/utils/api";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const formSchema = z.object({
   name: z.string(),
@@ -87,7 +88,8 @@ export const CreateRuleDialog = ({
                   void refetchFeatures();
                   return refetchRules();
                 })
-                .catch(toasts.createRule.onError);
+                .catch(toasts.createRule.onError)
+                .catch(handleError);
 
               setOpen(false);
               form.reset();
