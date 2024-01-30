@@ -26,6 +26,7 @@ import { CreateRuleDialog } from "./CreateRuleDialog";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const FeatureItem = ({
   feature,
@@ -238,8 +239,9 @@ export default function AssignEntities({ eventType }: Props) {
                           entityDataPath: selectedNode?.inputs.dataPath,
                         },
                       })
-                        // .then(toasts.createNode.onSuccess)
-                        .catch(toasts.createNode.onError);
+                        .then(toasts.createNode.onSuccess)
+                        .catch(toasts.createNode.onError)
+                        .catch(handleError);
                     }}
                   />
                 ))

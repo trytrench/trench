@@ -24,6 +24,7 @@ import { Input } from "~/components/ui/input";
 import { SchemaBuilder } from "../SchemaBuilder";
 import { api } from "~/utils/api";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const formSchema = z.object({
   name: z.string(),
@@ -78,7 +79,8 @@ export const CreateEventFeatureDialog = ({
               })
                 .then(toasts.createEventFeature.onSuccess)
                 .then(() => refetchFeatures())
-                .catch(toasts.createEventFeature.onError);
+                .catch(toasts.createEventFeature.onError)
+                .catch(handleError);
 
               setOpen(false);
               form.reset();

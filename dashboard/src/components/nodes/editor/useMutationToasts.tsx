@@ -160,6 +160,22 @@ export function useMutationToasts() {
     throw err;
   };
 
+  const handlePublishSuccess = () => {
+    toast({
+      title: "Published",
+      duration: 5000,
+    });
+  };
+
+  const handlePublishError = (err: Error) => {
+    toast({
+      title: "Error publishing",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
   return {
     createNode: {
       onSuccess: handleCreateNodeSuccess,
@@ -196,6 +212,10 @@ export function useMutationToasts() {
     createEntityAppearance: {
       onError: handleCreateEntityAppearanceError,
       onSuccess: handleCreateEntityAppearanceSuccess,
+    },
+    publish: {
+      onError: handlePublishError,
+      onSuccess: handlePublishSuccess,
     },
   };
 }

@@ -22,6 +22,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { api } from "~/utils/api";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -75,7 +76,8 @@ export const CreateEntityTypeDialog = ({ children }: Props) => {
                     form.reset();
                     return refetchEntityTypes();
                   })
-                  .catch(toasts.createEntityType.onError);
+                  .catch(toasts.createEntityType.onError)
+                  .catch(handleError);
               })(event);
             }}
           >

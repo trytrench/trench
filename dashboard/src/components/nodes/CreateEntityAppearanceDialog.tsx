@@ -33,6 +33,7 @@ import { CreateEntityTypeDialog } from "./CreateEntityTypeDialog";
 import { SelectDataPath } from "./SelectDataPath";
 import { useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -114,7 +115,8 @@ export const CreateEntityAppearanceDialog = ({
                 },
               })
                 .then(toasts.createNode.onSuccess)
-                .catch(toasts.createNode.onError);
+                .catch(toasts.createNode.onError)
+                .catch(handleError);
 
               setOpen(false);
               form.reset();

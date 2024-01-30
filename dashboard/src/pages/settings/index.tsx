@@ -13,7 +13,7 @@ import { EventEditor } from "./event-types/[eventType]/EventEditor";
 import { FnType, TSchema } from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
-import { handleError } from "../../lib/handleError";
+import { handleError } from "~/lib/handleError";
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -24,6 +24,9 @@ const Page: NextPageWithLayout = () => {
   const [selectedEventType, setSelectedEventType] = useState<string | null>();
 
   const { data: eventTypes } = api.eventTypes.list.useQuery();
+
+  const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
+  const nodes = useEditorStore(selectors.getNodeDefs());
 
   const { data: engineData } = api.editor.getLatestEngine.useQuery();
   const prevEngineId = usePrevious(engineData?.engineId);
@@ -61,7 +64,18 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="text-3xl text-emphasis-foreground">Data Model</div>
           <div className="flex space-x-2">
-            <Button>Publish</Button>
+            <Button
+              onClick={() => {
+                publish({
+                  nodeDefs: nodes,
+                })
+                  .then(toasts.publish.onSuccess)
+                  .catch(toasts.publish.onError)
+                  .catch(handleError);
+              }}
+            >
+              Publish
+            </Button>
           </div>
         </div>
       </div>
