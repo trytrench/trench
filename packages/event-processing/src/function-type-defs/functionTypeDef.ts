@@ -7,7 +7,14 @@ import { FnTypeDefsMap } from ".";
 
 export type FnDef<
   TFnType extends FnType = FnType,
-  TReturnSchema extends TSchema = TSchema,
+  TReturnSchema extends TSchema = FnTypeDefsMap[TFnType] extends FnTypeDef<
+    any,
+    infer ReturnSchema,
+    any,
+    any
+  >
+    ? ReturnSchema
+    : TSchema,
   TConfig = FnTypeDefsMap[TFnType]["configSchema"]["_input"],
 > = {
   id: string;
@@ -16,6 +23,8 @@ export type FnDef<
   returnSchema: TReturnSchema;
   config: TConfig;
 };
+
+export type FnDefAny = FnDef<FnType, TSchema, any>;
 
 export const fnDefSchema = z.object({
   id: z.string(),

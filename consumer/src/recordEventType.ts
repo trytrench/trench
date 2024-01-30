@@ -50,7 +50,6 @@ export async function recordEventType(
         create: [
           {
             name: `Event: ${eventType}`,
-            fnId: fnSnapshot.fnId,
             snapshots: {
               create: {
                 inputs: {},

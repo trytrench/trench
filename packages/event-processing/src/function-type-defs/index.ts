@@ -1,6 +1,6 @@
 import { AnyZodObject, ZodObject, ZodType } from "zod";
 import { TypeName } from "../data-types";
-import { FnDef, FnTypeDef } from "./functionTypeDef";
+import { FnDef, FnDefAny, FnTypeDef } from "./functionTypeDef";
 import { cacheEntityFeatureFnDef } from "./types/CacheEntityFeature";
 import { computedFnDef } from "./types/Computed";
 import { counterFnDef } from "./types/Counter";
@@ -66,7 +66,7 @@ export function buildFnDef<T extends FnType>(type: T, args: Args<T>): Args<T> {
 }
 
 export function hasType<T extends FnType>(
-  fnDef: FnDef,
+  fnDef: FnDefAny,
   fnType?: T
 ): fnDef is FnDef<T extends FnType ? T : FnType> {
   if (!fnType) return true;

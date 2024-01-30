@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FnDef, fnDefSchema } from "./functionTypeDef";
+import { FnDef, FnTypeDef, fnDefSchema } from "./functionTypeDef";
 import { TSchema, tSchemaZod } from "../data-types";
 import { FnType } from "./types/_enum";
 import { FnTypeDefsMap } from ".";
@@ -27,6 +27,8 @@ export interface NodeDef<T extends FnType = FnType> {
   fn: FnDef<T>;
 }
 
+export type NodeDefAny = NodeDef<FnType>;
+
 // // Build node def
 
 type Arg<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
@@ -39,9 +41,10 @@ export function buildNodeDefWithFn<T extends FnType>(
 }
 
 export function hasFnType<T extends FnType>(
-  nodeDef: NodeDef,
-  fnType: T
-): nodeDef is NodeDef<T> {
+  nodeDef: NodeDefAny,
+  fnType?: T
+): nodeDef is NodeDef<T extends FnType ? T : FnType> {
   if (!fnType) return true;
+
   return nodeDef.fn.type === fnType;
 }

@@ -1,6 +1,7 @@
 import { useToast } from "../../ui/use-toast";
 import { api } from "../../../utils/api";
 import { FnDef, NodeDef } from "event-processing";
+import { EntityType, Feature, Rule } from "@prisma/client";
 
 export function useMutationToasts() {
   const { toast } = useToast();
@@ -77,6 +78,71 @@ export function useMutationToasts() {
     throw err;
   };
 
+  const handleCreateEntityTypeSuccess = (entityType: EntityType) => {
+    toast({
+      title: "Entity type created",
+      description: `Entity type "${entityType.type}" created successfully`,
+      duration: 5000,
+    });
+  };
+
+  const handleCreateEntityTypeError = (err: Error) => {
+    toast({
+      title: "Error creating entity type",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleCreateFeatureSuccess = (feature: Feature) => {
+    toast({
+      title: "Property created",
+      description: `Property "${feature.name}" created successfully`,
+      duration: 5000,
+    });
+  };
+
+  const handleCreateFeatureError = (err: Error) => {
+    toast({
+      title: "Error creating property",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleCreateRuleSuccess = (rule: Rule & { feature: Feature }) => {
+    toast({
+      title: "Rule created",
+      description: `Rule "${rule.feature.name}" created successfully`,
+      duration: 5000,
+    });
+  };
+
+  const handleCreateRuleError = (err: Error) => {
+    toast({
+      title: "Error creating rule",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleCreateEventFeatureSuccess = (feature: Feature) => {
+    toast({
+      title: "Event property created",
+      description: `${feature.name}`,
+    });
+  };
+
+  const handleCreateEventFeatureError = (err: Error) => {
+    toast({
+      variant: "destructive",
+      title: "Failed to create event property",
+    });
+  };
+
   return {
     createNode: {
       onSuccess: handleCreateNodeSuccess,
@@ -93,6 +159,22 @@ export function useMutationToasts() {
     updateFunction: {
       onError: handleUpdateFunctionError,
       onSuccess: handleUpdateFunctionSuccess,
+    },
+    createEntityType: {
+      onError: handleCreateEntityTypeError,
+      onSuccess: handleCreateEntityTypeSuccess,
+    },
+    createFeature: {
+      onError: handleCreateFeatureError,
+      onSuccess: handleCreateFeatureSuccess,
+    },
+    createRule: {
+      onError: handleCreateRuleError,
+      onSuccess: handleCreateRuleSuccess,
+    },
+    createEventFeature: {
+      onError: handleCreateEventFeatureError,
+      onSuccess: handleCreateEventFeatureSuccess,
     },
   };
 }
