@@ -176,6 +176,22 @@ export function useMutationToasts() {
     throw err;
   };
 
+  const handleDeleteNodeSuccess = () => {
+    toast({
+      title: "Node deleted",
+      duration: 5000,
+    });
+  };
+
+  const handleDeleteNodeError = (err: Error) => {
+    toast({
+      title: "Error deleting node",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
   return {
     createNode: {
       onSuccess: handleCreateNodeSuccess,
@@ -216,6 +232,10 @@ export function useMutationToasts() {
     publish: {
       onError: handlePublishError,
       onSuccess: handlePublishSuccess,
+    },
+    deleteNode: {
+      onError: handleDeleteNodeError,
+      onSuccess: handleDeleteNodeSuccess,
     },
   };
 }

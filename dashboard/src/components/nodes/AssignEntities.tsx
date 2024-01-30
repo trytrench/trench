@@ -27,6 +27,7 @@ import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
+import { MoreHorizontal } from "lucide-react";
 
 const FeatureItem = ({
   feature,
@@ -42,7 +43,7 @@ const FeatureItem = ({
   eventType: string;
 }) => {
   return (
-    <div key={feature.id} className="flex items-center space-x-2 h-8">
+    <div className="flex items-center space-x-2 h-8">
       {rule && <div className={`rounded-full ${rule.color} w-2 h-2`} />}
       <div className="font-medium text-sm">{feature.name}</div>
 
@@ -111,6 +112,8 @@ export default function AssignEntities({ eventType }: Props) {
   }, [selectedNodeId, nodes]);
 
   const setNodeDef = useEditorStore.use.setNodeDefWithFn();
+  const deleteNodeDef = useEditorStore.use.deleteNodeDef();
+
   const toasts = useMutationToasts();
 
   const filteredFeatures = useMemo(
@@ -138,18 +141,42 @@ export default function AssignEntities({ eventType }: Props) {
           </div>
           {nodes
             ?.filter((node) => hasFnType(node, FnType.EntityAppearance))
-            .map((n) => (
+            .map((node) => (
               <div
                 className={clsx(
                   "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
                   {
-                    "bg-accent text-accent-foreground": selectedNodeId === n.id,
+                    "bg-accent text-accent-foreground":
+                      selectedNodeId === node.id,
                   }
                 )}
-                onClick={() => setSelectedNodeId(n.id)}
-                key={n.id}
+                onClick={() => setSelectedNodeId(node.id)}
+                key={node.id}
               >
-                {n.name}
+                <div>{node.name}</div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="iconXs"
+                      variant="link"
+                      className="h-3 ml-auto"
+                    >
+                      <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        deleteNodeDef(node.id)
+                          .catch(toasts.deleteNode.onError)
+                          .catch(handleError);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
         </div>
@@ -201,6 +228,30 @@ export default function AssignEntities({ eventType }: Props) {
               </DropdownMenu>
             </div>
             <div className="flex flex-col px-6 pt-2 pb-4">
+              {selectedNode && (
+                <FeatureItem
+                  feature={{
+                    id: "id",
+                    name: "ID",
+                    schema: {
+                      type: TypeName.String,
+                    },
+                  }}
+                  dataPath={selectedNode.inputs.dataPath}
+                  eventType={eventType}
+                  onDataPathChange={(dataPath) => {
+                    if (!dataPath) return;
+
+                    setNodeDef(FnType.EntityAppearance, {
+                      ...selectedNode,
+                      inputs: { dataPath },
+                    })
+                      .catch(toasts.createNode.onError)
+                      .catch(handleError);
+                  }}
+                />
+              )}
+
               {!filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No properties</div>
               ) : (
@@ -214,9 +265,14 @@ export default function AssignEntities({ eventType }: Props) {
                     key={feature.id}
                     eventType={eventType}
                     onDataPathChange={(dataPath) => {
-                      if (!dataPath) return;
-
                       const initialNode = featureToNodeMap[feature.id];
+
+                      if (!dataPath && initialNode) {
+                        deleteNodeDef(initialNode.id)
+                          .catch(toasts.deleteNode.onError)
+                          .catch(handleError);
+                        return;
+                      }
 
                       setNodeDef(FnType.LogEntityFeature, {
                         id: initialNode?.id ?? generateNanoId(),
@@ -239,7 +295,7 @@ export default function AssignEntities({ eventType }: Props) {
                           entityDataPath: selectedNode?.inputs.dataPath,
                         },
                       })
-                        .then(toasts.createNode.onSuccess)
+                        // .then(toasts.createNode.onSuccess)
                         .catch(toasts.createNode.onError)
                         .catch(handleError);
                     }}

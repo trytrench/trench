@@ -39,6 +39,8 @@ import {
   selectors,
   useEditorStore,
 } from "../../../../components/nodes/editor/state/zustand";
+import { useMutationToasts } from "~/components/nodes/editor/useMutationToasts";
+import { handleError } from "~/lib/handleError";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,
@@ -86,6 +88,9 @@ export function EventEditor({ eventType }: Props) {
   useEffect(() => {
     if (!selectedNode) setSelectedNode(filteredNodes?.[0] ?? null);
   }, [selectedNode, filteredNodes]);
+
+  const deleteNodeDef = useEditorStore.use.deleteNodeDef();
+  const toasts = useMutationToasts();
 
   return (
     <div>
@@ -166,6 +171,15 @@ export function EventEditor({ eventType }: Props) {
                 <DropdownMenuContent>
                   <DropdownMenuItem onSelect={() => setEditingNode(node)}>
                     Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      deleteNodeDef(node.id)
+                        .catch(toasts.deleteNode.onError)
+                        .catch(handleError);
+                    }}
+                  >
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

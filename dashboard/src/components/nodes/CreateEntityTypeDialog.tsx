@@ -49,6 +49,10 @@ export const CreateEntityTypeDialog = ({ children }: Props) => {
     { enabled: false }
   );
 
+  const { refetch: refetchFeatures } = api.features.list.useQuery(undefined, {
+    enabled: false,
+  });
+
   const { mutateAsync: createEntityType } =
     api.entityTypes.create.useMutation();
 
@@ -74,6 +78,7 @@ export const CreateEntityTypeDialog = ({ children }: Props) => {
                   .then(() => {
                     setOpen(false);
                     form.reset();
+                    void refetchFeatures();
                     return refetchEntityTypes();
                   })
                   .catch(toasts.createEntityType.onError)
