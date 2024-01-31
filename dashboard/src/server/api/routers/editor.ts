@@ -155,7 +155,11 @@ export const editorRouter = createTRPCRouter({
       });
 
       return {
-        engineId: engine.id,
+        engine: {
+          id: engine.id,
+          createdAt: engine.createdAt,
+          nodeDefs: nodeDefs,
+        },
       };
     }),
 });

@@ -135,6 +135,17 @@ const Page: NextPageWithLayout = () => {
                 publish({
                   nodeDefs: nodes,
                 })
+                  .then((res) => {
+                    initializeEditor({
+                      engine: {
+                        id: res.engine.id,
+                        createdAt: res.engine.createdAt,
+                      },
+                      nodeDefs: res.engine.nodeDefs,
+                      force: true,
+                    });
+                    return res;
+                  })
                   .then(toasts.publish.onSuccess)
                   .catch(toasts.publish.onError)
                   .catch(handleError);
