@@ -14,6 +14,7 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^1.0.4",
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/modifiers": "^6.0.1",
     "@dnd-kit/sortable": "^7.0.2",
@@ -95,6 +96,7 @@
     "react-hook-form": "^7.48.2",
     "react-map-gl": "^7.1.7",
     "react-select": "^5.7.7",
+    "reactflow": "^11.10.3",
     "recharts": "^2.8.0",
     "superjson": "^1.13.1",
     "tailwind-merge": "^1.14.0",

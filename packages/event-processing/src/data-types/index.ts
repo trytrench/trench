@@ -110,7 +110,7 @@ export type InferSchemaType<T extends TSchema> = T extends TArraySchema<infer U>
   : never;
 
 function throwParseError(type: TypeName, input: any): never {
-  throw new Error(`Invalid input for ${type} type: ${JSON.stringify(input)}`);
+  throw new Error(`Invalid input for type ${type}: ${JSON.stringify(input)}`);
 }
 
 // Base class for data types

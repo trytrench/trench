@@ -26,7 +26,6 @@ import {
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { SchemaBuilder } from "../../SchemaBuilder";
-import { type CompileStatus } from "../../features/CodeEditor";
 import dynamic from "next/dynamic";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -40,9 +39,15 @@ import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature"
 import { useMutationToasts } from "./useMutationToasts";
 import { selectors, useEditorStore } from "./state/zustand";
 import { generateNanoId } from "../../../../../packages/common/src";
+import { useAtom } from "jotai";
+import {
+  FUNCTION_TEMPLATE,
+  compileStatueAtom,
+  tsCodeAtom,
+} from "../code-editor/state";
 
 const DynamicCodeEditor = dynamic(
-  () => import("../../features/CodeEditor").then((mod) => mod.CodeEditor),
+  () => import("../code-editor/CodeEditor").then((mod) => mod.CodeEditor),
   {
     ssr: false,
   }
@@ -50,13 +55,9 @@ const DynamicCodeEditor = dynamic(
 
 const DynamicCompileStatusMessage = dynamic(
   () =>
-    import("../../features/CodeEditor").then((mod) => mod.CompileStatusMessage),
-  {
-    ssr: false,
-  }
+    import("../code-editor/CodeEditor").then((mod) => mod.CompileStatusMessage),
+  { ssr: false }
 );
-
-const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
 
 const fnTypeDef = getFnTypeDef(FnType.Computed);
 
@@ -105,15 +106,25 @@ export function EditComputed({
 
   // Initialize form values with initial node
   const [initializedForm, setInitializedForm] = useState(false);
+  const [code, setCode] = useAtom(tsCodeAtom);
   useEffect(() => {
-    if (!initializedForm && initialNode) {
-      form.setValue("name", initialNode.name);
-      form.setValue("returnSchema", initialNode.fn.returnSchema);
-      form.setValue("inputs", initialNode.inputs as FormType["inputs"]);
-      form.setValue("config", initialNode.fn.config);
+    if (!initializedForm) {
+      if (initialNode) {
+        form.reset({
+          name: initialNode.name,
+          returnSchema: initialNode.fn.returnSchema,
+          inputs: {
+            depsMap: initialNode.inputs.depsMap,
+          },
+          config: initialNode.fn.config,
+        });
+        setCode(initialNode.fn.config.tsCode);
+      } else {
+        setCode(FUNCTION_TEMPLATE);
+      }
       setInitializedForm(true);
     }
-  }, [initialNode, initializedForm, setInitializedForm, form]);
+  }, [initialNode, initializedForm, setInitializedForm, form, setCode]);
 
   // Initialize Deps Map with event node
   const [initializedEventDep, setInitializedEventNode] = useState(false);
@@ -143,31 +154,24 @@ export function EditComputed({
   ]);
 
   // Code validity
-  const [compileStatus, setCompileStatus] = useState<CompileStatus>({
-    status: "empty",
-    code: "",
-  });
-  const onCompileStatusChange = useCallback(
-    (compileStatus: CompileStatus) => {
-      setCompileStatus(compileStatus);
+  const [compileStatus, setCompileStatus] = useAtom(compileStatueAtom);
 
-      if (compileStatus.status === "success") {
-        form.setValue("config.tsCode", compileStatus.code);
+  useEffect(() => {
+    if (compileStatus.status === "success") {
+      form.setValue("config.tsCode", compileStatus.code);
 
-        // Remove const so that we can eval it as a function
-        form.setValue(
-          "config.compiledJs",
-          compileStatus.compiled
-            .slice(compileStatus.compiled.indexOf("async"))
-            .replace(/[;\n]+$/, "")
-        );
-      } else {
-        form.setValue("config.tsCode", "");
-        form.setValue("config.compiledJs", "");
-      }
-    },
-    [form]
-  );
+      // Remove const so that we can eval it as a function
+      form.setValue(
+        "config.compiledJs",
+        compileStatus.compiled
+          .slice(compileStatus.compiled.indexOf("async"))
+          .replace(/[;\n]+$/, "")
+      );
+    } else {
+      form.setValue("config.tsCode", "");
+      form.setValue("config.compiledJs", "");
+    }
+  }, [compileStatus, form]);
 
   // Node def validity
   const isNodeDefValid = useMemo(
@@ -336,13 +340,7 @@ export function EditComputed({
       </div>
 
       <div className="h-96">
-        <DynamicCodeEditor
-          typeDefs={typeDefs}
-          initialCode={
-            isEditing ? form.getValues("config.tsCode") : FUNCTION_TEMPLATE
-          }
-          onCompileStatusChange={onCompileStatusChange}
-        />
+        <DynamicCodeEditor typeDefs={typeDefs} />
       </div>
     </div>
   );
