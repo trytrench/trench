@@ -4,8 +4,6 @@ import { IDisposable, Position } from "monaco-editor/esm/vs/editor/editor.api";
 import { useMonacoEditor } from "./useMonacoEditor";
 import { COMPILER_OPTIONS } from "./compilerOptions";
 
-// @ts-ignore
-import libSource from "!!raw-loader?esModule=false!./editorLib.ts";
 import { useTheme } from "next-themes";
 
 export type ChangeHandler = (
@@ -167,7 +165,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       model.dispose();
       onChangeModelContentSubscription.dispose();
     };
-  }, [monacoEditorObj.state, containerRef.current, eventTypes]);
+  }, [monacoEditorObj.state, containerRef.current]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {

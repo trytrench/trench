@@ -4,50 +4,24 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
 import { Diagnostic, Project, ts } from "ts-morph";
 import { COMPILER_OPTIONS } from "~/components/ts-editor/compilerOptions";
-import { useDebounce } from "~/hooks/useDebounce";
-
-export type CompileStatus =
-  | {
-      status: "empty";
-      code: string;
-    }
-  | {
-      status: "compiling";
-      message: string;
-      code: string;
-    }
-  | {
-      status: "success";
-      message: string;
-      code: string;
-      compiled: string;
-    }
-  | {
-      status: "error";
-      message: string;
-      diagnostics: Diagnostic<ts.Diagnostic>[];
-      code: string;
-    };
+import { useThrottle } from "../../../hooks/useThrottle";
+import { type CompileStatus, compileStatueAtom, tsCodeAtom } from "./state";
+import { useAtom } from "jotai";
 
 interface CodeEditorProps {
-  initialCode?: string;
   typeDefs: string;
-  onCompileStatusChange: (Status: CompileStatus) => void;
 }
 
-function CodeEditor({
-  initialCode,
-  onCompileStatusChange,
-  typeDefs,
-}: CodeEditorProps) {
+function CodeEditor({ typeDefs }: CodeEditorProps) {
   // note:
   // - The monaco editor is not used as a controlled component
-  const [code, setCode] = useState(initialCode ?? "");
-  const debouncedCode = useDebounce(code, 1000);
+  const [code, setCode] = useAtom(tsCodeAtom);
+  const debouncedCode = useThrottle(code, 1000);
 
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
 
+  const [, setCompileStatus] = useAtom(compileStatueAtom);
   const monaco = useMonaco();
 
   useEffect(() => {
@@ -56,10 +30,10 @@ function CodeEditor({
 
   const compile = useCallback(
     (code: string) => {
-      onCompileStatusChange({
+      console.log("Compiling.");
+      setCompileStatus({
         status: "compiling",
         message: "Compiling...",
-        code,
       });
 
       // Assemble and compile the code
@@ -84,7 +58,7 @@ function CodeEditor({
           },
         });
 
-        onCompileStatusChange({
+        setCompileStatus({
           status: "success" as const,
           message: "Compiled successfully",
           code,
@@ -98,15 +72,14 @@ function CodeEditor({
         //   description: allDiagnostics[0]?.getMessageText().toString(),
         // });
 
-        onCompileStatusChange({
+        setCompileStatus({
           status: "error" as const,
           message: "There was an error compiling your code",
           diagnostics: allDiagnostics,
-          code,
         });
       }
     },
-    [onCompileStatusChange, typeDefs]
+    [setCompileStatus, typeDefs]
   );
 
   useEffect(() => {
@@ -116,8 +89,8 @@ function CodeEditor({
   return (
     <Editor
       theme={theme}
+      value={code}
       defaultLanguage="typescript"
-      defaultValue={initialCode}
       onChange={(value) => setCode(value ?? "")}
     />
   );
@@ -131,10 +104,12 @@ export function CompileStatusMessage(props: CompileStatusMessageProps) {
   const { compileStatus } = props;
 
   if (compileStatus.status === "empty") {
+    //   return null;
+    // } else if (compileStatus.status === "compiling") {
     return (
       <div className="flex items-center gap-1 text-xs">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span>{compileStatus.message}</span>
+        <span>Loading...</span>
       </div>
     );
   } else if (compileStatus.status === "error") {

@@ -144,10 +144,11 @@ export default function AssignEntities({ eventType }: Props) {
             .map((node) => (
               <div
                 className={clsx(
-                  "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
+                  "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center",
                   {
                     "bg-accent text-accent-foreground":
                       selectedNodeId === node.id,
+                    "hover:bg-muted cursor-pointer": selectedNodeId !== node.id,
                   }
                 )}
                 onClick={() => setSelectedNodeId(node.id)}
