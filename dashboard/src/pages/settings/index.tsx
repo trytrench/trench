@@ -1,6 +1,6 @@
 import { usePrevious } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
   selectors,
@@ -15,6 +15,7 @@ import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
 import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
+import { isAfter } from "date-fns";
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -29,15 +30,52 @@ const Page: NextPageWithLayout = () => {
   const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
   const nodes = useEditorStore(selectors.getNodeDefs());
 
-  const { data: engineData } = api.editor.getLatestEngine.useQuery();
-  const prevEngineId = usePrevious(engineData?.engineId);
-  const initialize = useEditorStore.use.initializeFromNodeDefs();
+  const editorEngineId = useEditorStore((state) => state.engineId);
+  const editorHasChanged = useEditorStore((state) => state.hasChanged);
 
-  useEffect(() => {
-    if (engineData && engineData?.engineId !== prevEngineId) {
-      initialize(engineData.nodeDefs);
+  const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
+
+  const { data: engineData } = api.editor.getLatestEngine.useQuery();
+
+  const { data: editorEngineData } = api.editor.getEngine.useQuery(
+    { engineId: editorEngineId ?? "" },
+    {
+      enabled: !!editorEngineId,
     }
-  }, [engineData, initialize, prevEngineId]);
+  );
+
+  // Initialize if editor hasn't been initialized yet, and we have data
+  useEffect(() => {
+    if (engineData) {
+      if (!editorEngineId) {
+        initializeEditor(
+          { id: engineData.id, createdAt: engineData.createdAt },
+          engineData.nodeDefs
+        );
+      }
+    }
+  }, [editorEngineId, engineData, initializeEditor]);
+
+  const resetEditor = useCallback(() => {
+    if (editorEngineData) {
+      initializeEditor(
+        { id: editorEngineData.id, createdAt: editorEngineData.createdAt },
+        engineData?.nodeDefs ?? [],
+        true
+      );
+    }
+  }, [editorEngineData, engineData?.nodeDefs, initializeEditor]);
+
+  const editorIsUpgradable = useMemo(() => {
+    if (!editorEngineData || !engineData) return false;
+    return isAfter(editorEngineData.createdAt, engineData.createdAt);
+  }, [editorEngineData, engineData]);
+
+  /**
+   * Logic:
+   *
+   * If there's a newer Engine ID,
+   */
 
   useEffect(() => {
     if (eventNodes?.[0] && !selectedEventType) {
@@ -63,7 +101,18 @@ const Page: NextPageWithLayout = () => {
       <Navbar />
       <div className="border-b h-32 px-8">
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
-          <div className="text-3xl text-emphasis-foreground">Data Model</div>
+          <div className="flex items-center gap-4">
+            <div className="text-3xl text-emphasis-foreground">Data Model</div>
+            {editorHasChanged && (
+              <Button
+                onClick={() => {
+                  resetEditor();
+                }}
+              >
+                Reset Changes
+              </Button>
+            )}
+          </div>
           <div className="flex space-x-2">
             <Button
               onClick={() => {
