@@ -6,7 +6,8 @@ export const featureDefSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   schema: tSchemaZod,
-  entityTypeId: z.string(),
+  entityTypeId: z.string().optional(),
+  eventTypeId: z.string().optional(),
 });
 
 export type FeatureDef = z.infer<typeof featureDefSchema>;

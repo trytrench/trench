@@ -3,19 +3,28 @@ import { FnType } from "./types/_enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
 import { DataPath } from "../data-path";
+import { FnTypeDefsMap } from ".";
 
 export type FnDef<
   TFnType extends FnType = FnType,
-  TReturnSchema extends TSchema = TSchema,
-  TConfig = any,
+  TReturnSchema extends TSchema = FnTypeDefsMap[TFnType] extends FnTypeDef<
+    any,
+    infer ReturnSchema,
+    any,
+    any
+  >
+    ? ReturnSchema
+    : TSchema,
+  TConfig = FnTypeDefsMap[TFnType]["configSchema"]["_input"],
 > = {
   id: string;
-  snapshotId: string;
   type: TFnType;
   name: string;
   returnSchema: TReturnSchema;
   config: TConfig;
 };
+
+export type FnDefAny = FnDef<FnType, TSchema, any>;
 
 export const fnDefSchema = z.object({
   id: z.string(),
@@ -62,5 +71,10 @@ export type FnTypeDef<
     input: z.infer<TInputSchema>;
     context: TContext;
   }) => Resolver<TReturn>;
-  getDependencies: (config: z.infer<TInputSchema>) => Set<string>;
+  getDependencies: (inputs: z.infer<TInputSchema>) => Set<string>;
+  getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
+  validateInputs: (options: {
+    inputs: z.infer<TInputSchema>;
+    config: z.infer<TConfigSchema>;
+  }) => boolean;
 };

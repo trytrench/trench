@@ -20,15 +20,17 @@ const config = {
   webpack: (
     /** @type {import('webpack').Configuration} */
     config,
-    { isServer }
+    { isServer, webpack }
   ) => {
-    if (!isServer) {
+    if (!isServer && config.resolve) {
       config.resolve.fallback = {
         fs: false,
         dns: false,
         net: false,
         tls: false,
       };
+
+      config.module.noParse = /@ts-morph\/common\/dist\/typescript.js/;
     }
 
     // Handling WebAssembly files
@@ -40,6 +42,10 @@ const config = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+
+    // Remove annoying warning message that doesn't affect anything
+    // https://github.com/jaredwray/keyv/issues/45
+    config.plugins.push(new webpack.ContextReplacementPlugin(/keyv/));
 
     return config;
   },

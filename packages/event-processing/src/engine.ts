@@ -1,17 +1,14 @@
 import { createRedisService } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
-  FN_TYPE_REGISTRY,
-  FnDef,
-  FnDefsMap,
   FnType,
   FnTypeContextMap,
   FnTypeDef,
   NodeDef,
-  NodeDefsMap,
   Resolver,
   StateUpdater,
   TrenchEvent,
+  getFnTypeDef,
 } from "./function-type-defs";
 import { printNodeDef, truncId } from "./function-type-defs/lib/print";
 import { db } from "databases";
@@ -63,7 +60,7 @@ type ExecutionState = {
 
 type NodeInstance = {
   [TFnType in FnType]: {
-    nodeDef: NodeDefsMap[TFnType];
+    nodeDef: NodeDef<FnType>;
     resolver: Resolver;
   };
 };
@@ -108,7 +105,7 @@ export class ExecutionEngine {
 
     const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {
       const fnType = nodeDef.fn.type;
-      const nodeTypeDef = FN_TYPE_REGISTRY[fnType] as FnTypeDef;
+      const nodeTypeDef = getFnTypeDef(fnType);
 
       if (!this.context) {
         throw new Error("No engine context");
@@ -293,16 +290,16 @@ function validateFnInstanceMap(map: Record<string, NodeInstance[FnType]>) {
   for (const node of Object.values(map)) {
     const def = node.nodeDef;
 
-    console.log("---");
-    console.log("id:\t", truncId(def.id));
-    console.log("name:\t", def.name);
-    console.log("fn_type:\t", def.fn.type);
-    console.log("fn_name:\t", def.fn.name);
-    console.log(
-      "deps_on:\t",
-      Array.from(def.dependsOn).map(truncId).join(", ")
-    );
-    console.log("---");
+    // console.log("---");
+    // console.log("id:\t", truncId(def.id));
+    // console.log("name:\t", def.name);
+    // console.log("fn_type:\t", def.fn.type);
+    // console.log("fn_name:\t", def.fn.name);
+    // console.log(
+    //   "deps_on:\t",
+    //   Array.from(def.dependsOn).map(truncId).join(", ")
+    // );
+    // console.log("---");
 
     for (const depFnId of def.dependsOn) {
       const depFn = map[depFnId];

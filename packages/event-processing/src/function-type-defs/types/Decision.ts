@@ -18,6 +18,9 @@ export const decisionFnDef = createFnTypeDefBuilder()
     })
   )
   .setReturnSchema(TypeName.String)
+  .setGetDataPaths((input) => {
+    return input.conditions.flatMap((condition) => condition.rules);
+  })
   .setGetDependencies((input) => {
     return new Set(
       input.conditions.flatMap((condition) =>

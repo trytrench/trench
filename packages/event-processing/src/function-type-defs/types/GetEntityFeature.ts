@@ -22,6 +22,11 @@ export const getEntityFeatureFnDef = createFnTypeDefBuilder()
   .setContextType<{
     redis: RedisInterface;
   }>()
+  .setGetDataPaths((config) => {
+    const paths = [];
+    if (config.entityDataPath) paths.push(config.entityDataPath);
+    return paths;
+  })
   .setGetDependencies((config) => {
     const set = new Set<string>();
     if (config.entityDataPath) set.add(config.entityDataPath.nodeId);

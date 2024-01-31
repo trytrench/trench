@@ -3,7 +3,7 @@ import {
   TimeWindow,
   timeWindowSchema,
 } from "event-processing/src/function-type-defs/lib/timeWindow";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -45,21 +45,27 @@ export function TimeWindowDialog({ children, onSubmit, value }: Props) {
       value: 1,
     },
   });
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     form.reset(value);
   }, [form, value]);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Select time window</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            onSubmit={form.handleSubmit((values) => {
+              onSubmit(values);
+              form.reset();
+              setOpen(false);
+            })}
+          >
             <div className="flex gap-2">
               <FormField
                 control={form.control}

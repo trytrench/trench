@@ -1,22 +1,13 @@
-import { FeatureRow } from "./../../../../../packages/event-processing/src/node-type-defs/lib/store";
 import { db } from "databases";
-import { FeatureDef, TSchema, tSchemaZod } from "event-processing";
+import {
+  FeatureDef,
+  TSchema,
+  featureDefSchema,
+  tSchemaZod,
+} from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
-
-export const featureDefSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  schema: tSchemaZod,
-  entityTypeId: z.string(),
-});
-
-export const eventFeatureDefSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  schema: tSchemaZod,
-});
 
 export const featuresRouter = createTRPCRouter({
   list: protectedProcedure
@@ -40,7 +31,8 @@ export const featuresRouter = createTRPCRouter({
           name: f.name,
           description: f.description ?? undefined,
           schema: f.schema as unknown as TSchema,
-          entityTypeId: f.entityTypeId,
+          entityTypeId: f.entityTypeId ?? undefined,
+          eventTypeId: f.eventTypeId ?? undefined,
         };
       });
 
@@ -61,12 +53,13 @@ export const featuresRouter = createTRPCRouter({
     }),
 
   createEventFeature: protectedProcedure
-    .input(eventFeatureDefSchema.omit({ id: true }))
+    .input(featureDefSchema.omit({ id: true }))
     .mutation(async ({ ctx, input }) => {
       const feature = await ctx.prisma.feature.create({
         data: {
           name: input.name,
-          schema: input.schema,
+          schema: input.schema as any,
+          eventTypeId: input.eventTypeId,
         },
       });
 

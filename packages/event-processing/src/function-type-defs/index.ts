@@ -1,6 +1,6 @@
 import { AnyZodObject, ZodObject, ZodType } from "zod";
 import { TypeName } from "../data-types";
-import { FnDef, FnTypeDef } from "./functionTypeDef";
+import { FnDef, FnDefAny, FnTypeDef } from "./functionTypeDef";
 import { cacheEntityFeatureFnDef } from "./types/CacheEntityFeature";
 import { computedFnDef } from "./types/Computed";
 import { counterFnDef } from "./types/Counter";
@@ -28,30 +28,13 @@ const FN_TYPE_DEFS = {
   [TFnType in FnType]: FnTypeDef<TFnType, any, any, any>;
 };
 
-export const FN_TYPE_REGISTRY: Record<
-  FnType,
-  FnTypeDef<FnType, any>
-> = FN_TYPE_DEFS as any;
-
-export function getConfigSchema<T extends FnType>(fnType: T) {
-  return FN_TYPE_DEFS[fnType].configSchema as FnTypeDefsMap[T]["configSchema"];
-}
-
-export function getInputSchema<T extends FnType>(fnType: T) {
-  return FN_TYPE_DEFS[fnType].inputSchema as FnTypeDefsMap[T]["inputSchema"];
+export function getFnTypeDef<T extends FnType>(fnType: T) {
+  return FN_TYPE_DEFS[fnType] as FnType extends T
+    ? FnTypeDef<T, any>
+    : FnTypeDefsMap[T];
 }
 
 export type FnTypeDefsMap = typeof FN_TYPE_DEFS;
-
-export type FnDefsMap = {
-  [TFnType in keyof FnTypeDefsMap]: FnDef<
-    TFnType,
-    FnTypeDefsMap[TFnType] extends FnTypeDef<any, infer TReturnSchema, any, any>
-      ? TReturnSchema
-      : never,
-    FnTypeDefsMap[TFnType]["configSchema"]["_input"]
-  >;
-};
 
 export type ExtractFnTypeDefContext<T> = T extends FnTypeDef<
   any,
@@ -69,10 +52,18 @@ export type FnTypeContextMap = {
 
 // Build fn def
 
-type Args<T extends FnType> = Omit<FnDefsMap[T], "id" | "snapshotId">;
+type Args<T extends FnType> = Omit<FnDef<T>, "id" | "snapshotId">;
 
 export function buildFnDef<T extends FnType>(type: T, args: Args<T>): Args<T> {
   return args;
+}
+
+export function hasType<T extends FnType>(
+  fnDef: FnDefAny,
+  fnType?: T
+): fnDef is FnDef<T extends FnType ? T : FnType> {
+  if (!fnType) return true;
+  return fnDef.type === fnType;
 }
 
 export * from "./functionTypeDef";

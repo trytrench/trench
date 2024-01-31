@@ -5,6 +5,7 @@ import {
   TSchema,
   TypeName,
   createDataType,
+  NodeDefAny,
 } from "event-processing";
 import { api } from "../../utils/api";
 import { useMemo } from "react";
@@ -13,6 +14,7 @@ import { uniqBy } from "lodash";
 import { ComboboxSelector } from "../ComboboxSelector";
 import { Badge } from "../ui/badge";
 import { ChevronDown } from "lucide-react";
+import { useEditorStore, selectors } from "./editor/state/zustand";
 
 const HIDDEN_NODE_TYPES = [
   FnType.GetEntityFeature,
@@ -22,7 +24,7 @@ const HIDDEN_NODE_TYPES = [
 
 function useFlattenedDataPaths(props: {
   eventType: string;
-  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+  filterNodeOptions?: (nodeDef: NodeDefAny) => boolean;
 }) {
   const {
     eventType,
@@ -31,7 +33,7 @@ function useFlattenedDataPaths(props: {
     },
   } = props;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const flattenedDataPaths = useMemo(() => {
     const dataPaths: DataPath[] = [];
@@ -90,7 +92,7 @@ interface SelectDataPathProps {
   value: DataPath | null;
   disablePathSelection?: boolean;
 
-  filterNodeOptions?: (nodeDef: NodeDef) => boolean;
+  filterNodeOptions?: (nodeDef: NodeDefAny) => boolean;
 
   onChange: (value: DataPath | null) => void;
   onIsValidChange?: (isValid: boolean) => void;
@@ -108,7 +110,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
     disablePathSelection = false,
   } = props;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const { flattenedDataPaths } = useFlattenedDataPaths({
     eventType,

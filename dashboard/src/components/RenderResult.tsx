@@ -1,22 +1,16 @@
-import { EntityChip } from "./EntityChip";
+import { TypeName, TypedData } from "event-processing";
 import { AlertCircle } from "lucide-react";
+import { EntityChip } from "./EntityChip";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
-import { TypeName, TypedData } from "event-processing";
 
 type Result =
-  | {
-      type: "error";
-      message: string;
-    }
-  | {
-      type: "success";
-      data: TypedData;
-    };
+  | { type: "error"; message: string }
+  | { type: "success"; data: TypedData };
 
 export function RenderResult({ result }: { result: Result }) {
   switch (result.type) {

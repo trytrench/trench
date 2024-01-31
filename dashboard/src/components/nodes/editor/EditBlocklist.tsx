@@ -1,20 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  type TSchema,
-  TypeName,
-  createDataType,
-  tSchemaZod,
-  dataPathZodSchema,
-  type DataPath,
-  FnType,
-  buildFnDef,
-  getInputSchema,
-  getConfigSchema,
-  FnDef,
-} from "event-processing";
-import { Plus, Save } from "lucide-react";
+import { TypeName, FnType, getFnTypeDef } from "event-processing";
+import { Save } from "lucide-react";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -27,25 +15,12 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { Separator } from "~/components/ui/separator";
-import { SchemaBuilder } from "../../SchemaBuilder";
-import {
-  CodeEditor,
-  type CompileStatus,
-  CompileStatusMessage,
-} from "../../features/shared/CodeEditor";
-import { api } from "~/utils/api";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import libSource from "!!raw-loader?esModule=false!event-processing/src/function-type-defs/lib/computedNodeLib.ts";
-import { EditableProperty } from "../../EditableProperty";
 import { useToast } from "../../ui/use-toast";
 import { handleError } from "../../../lib/handleError";
 import { type NodeEditorProps } from "./types";
 import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature";
 import { useMutationToasts } from "./useMutationToasts";
-import { SelectDataPath } from "../SelectDataPath";
 import { ComboboxSelector } from "../../ComboboxSelector";
 import {
   Dialog,
@@ -54,22 +29,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../ui/dialog";
-import { title } from "process";
-import { AutoResizeInput } from "../../AutoResizeInput";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { cn } from "../../../lib/utils";
+import { selectors, useEditorStore } from "./state/zustand";
+import { generateNanoId } from "../../../../../packages/common/src";
 
-const FUNCTION_TEMPLATE = `const getValue: ValueGetter = async (input) => {\n\n}`;
-
+const fnTypeDef = getFnTypeDef(FnType.Blocklist);
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  inputs: getInputSchema(FnType.Blocklist).partial(),
+  inputs: fnTypeDef.inputSchema.partial(),
   listFnId: z.string().optional(),
 });
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
+export function EditBlocklist({
+  initialNodeId,
+  eventType,
+  onSaveSuccess,
+}: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -84,13 +62,9 @@ export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
   });
 
   const { toast } = useToast();
-  const router = useRouter();
-  const eventType = router.query.eventType as string;
 
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
-  const { data: initialNode } = api.nodeDefs.get.useQuery(
-    { id: initialNodeId ?? "" },
-    { enabled: !!initialNodeId }
+  const initialNode = useEditorStore(
+    selectors.getNodeDef(initialNodeId ?? "", FnType.Blocklist)
   );
 
   // Initialize form values with initial node
@@ -104,8 +78,7 @@ export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
   }, [initialNode, initializedForm, setInitializedForm, form]);
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeDef } = api.nodeDefs.create.useMutation();
-  const { mutateAsync: createFnDef } = api.fnDefs.create.useMutation();
+  const setNodeDef = useEditorStore.use.setNodeDef();
 
   return (
     <div>
@@ -128,15 +101,16 @@ export function EditBlocklist({ initialNodeId }: NodeEditorProps) {
                 return;
               }
 
-              createNodeDef({
+              setNodeDef({
+                id: initialNode?.id ?? generateNanoId(),
                 name: form.getValues("name"),
-                eventType: router.query.eventType as string,
+                eventType,
                 inputs: form.getValues("inputs"),
                 fnId: fnId,
               })
                 .then(toasts.createNode.onSuccess)
                 .then((res) => {
-                  void router.push(`/settings/event-types/${eventType}`);
+                  onSaveSuccess();
                   return res;
                 })
                 .catch(toasts.createNode.onError)
@@ -218,7 +192,7 @@ function SelectBlocklist({
   value: string | null;
   onChange: (newValue: string | null) => void;
 }) {
-  const { data: fns } = api.fnDefs.list.useQuery({ type: FnType.Blocklist });
+  const fns = useEditorStore(selectors.getFnDefs({ fnType: FnType.Blocklist }));
 
   return (
     <div className="flex items-center">
@@ -241,16 +215,13 @@ function UpdateBlocklist(props: { blocklistFnId: string | null }) {
   const { blocklistFnId } = props;
   const [open, setOpen] = useState(false);
 
-  const { data: fnDef } = api.fnDefs.get.useQuery(
-    { id: blocklistFnId ?? "" },
-    { enabled: !!blocklistFnId }
+  const fnDef = useEditorStore(
+    selectors.getFnDef(blocklistFnId ?? "", FnType.Blocklist)
   );
-
   const [listName, setListName] = useState<string>("");
   const [listStr, setListStr] = useState<string>("");
 
   const reset = useCallback(() => {
-    console.log(fnDef);
     if (fnDef) {
       if (fnDef.type === FnType.Blocklist) {
         setListStr(fnDef.config.list.join("\n"));
@@ -266,8 +237,7 @@ function UpdateBlocklist(props: { blocklistFnId: string | null }) {
     if (open) reset();
   }, [reset, open]);
 
-  const { mutateAsync: createFn } = api.fnDefs.create.useMutation();
-  const { mutateAsync: updateFn } = api.fnDefs.update.useMutation();
+  const setFnDef = useEditorStore.use.setFnDef();
   const toasts = useMutationToasts();
 
   return (
@@ -290,7 +260,8 @@ function UpdateBlocklist(props: { blocklistFnId: string | null }) {
             <Button
               size="sm"
               onClick={() => {
-                const fn = buildFnDef(FnType.Blocklist, {
+                setFnDef(FnType.Blocklist, {
+                  id: blocklistFnId ?? generateNanoId(),
                   name: listName,
                   type: FnType.Blocklist,
                   config: {
@@ -299,34 +270,14 @@ function UpdateBlocklist(props: { blocklistFnId: string | null }) {
                   returnSchema: {
                     type: TypeName.Boolean,
                   },
-                });
-
-                if (blocklistFnId) {
-                  // Update existing list
-
-                  updateFn({
-                    id: blocklistFnId,
-                    ...fn,
+                })
+                  .then(toasts.createFunction.onSuccess)
+                  .then((res) => {
+                    setOpen(false);
+                    return res;
                   })
-                    .then(toasts.createFunction.onSuccess)
-                    .then((res) => {
-                      setOpen(false);
-                      return res;
-                    })
-                    .catch(toasts.createFunction.onError)
-                    .catch(handleError);
-                } else {
-                  // Create new list
-
-                  createFn(fn)
-                    .then(toasts.createFunction.onSuccess)
-                    .then((res) => {
-                      setOpen(false);
-                      return res;
-                    })
-                    .catch(toasts.createFunction.onError)
-                    .catch(handleError);
-                }
+                  .catch(toasts.createFunction.onError)
+                  .catch(handleError);
               }}
             >
               {blocklistFnId ? "Update list" : "Create list"}

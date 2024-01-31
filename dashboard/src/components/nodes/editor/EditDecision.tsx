@@ -5,8 +5,7 @@ import {
   buildNodeDefWithFn,
 } from "event-processing";
 import { Plus, Save, X } from "lucide-react";
-import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Panel } from "~/components/ui/custom/panel";
 import {
@@ -16,17 +15,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { api } from "~/utils/api";
 import { SelectDataPath } from "../SelectDataPath";
 import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
+import { selectors, useEditorStore } from "./state/zustand";
+import { api } from "../../../utils/api";
+import { NodeEditorProps } from "./types";
+import { generateNanoId } from "../../../../../packages/common/src";
 
-export const EditDecision = () => {
-  const router = useRouter();
+export const EditDecision = ({
+  initialNodeId,
+  eventType,
+  onSaveSuccess,
+}: NodeEditorProps) => {
+  const initialNodeDef = useEditorStore(
+    selectors.getNodeDef(initialNodeId ?? "", FnType.Decision)
+  );
+
+  useEffect(() => {
+    if (initialNodeDef) {
+      setConditions(initialNodeDef.inputs.conditions);
+      setElseDecisionId(initialNodeDef.inputs.elseDecisionId);
+    }
+  }, [initialNodeDef]);
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeDefWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const createNodeDefWithFn = useEditorStore.use.setNodeDefWithFn();
 
   const [conditions, setConditions] = useState<
     { rules: DataPath[]; decisionId: string }[]
@@ -49,14 +63,16 @@ export const EditDecision = () => {
             onClick={(event) => {
               event.preventDefault();
 
-              const newDef = buildNodeDefWithFn(FnType.Decision, {
+              createNodeDefWithFn(FnType.Decision, {
+                id: initialNodeDef?.id ?? generateNanoId(),
                 name: "Decision",
-                eventType: router.query.eventType as string,
+                eventType,
                 inputs: {
                   conditions: conditions.filter((d) => !!d.decisionId),
                   elseDecisionId: elseDecisionId,
                 },
                 fn: {
+                  id: initialNodeDef?.fn.id ?? generateNanoId(),
                   name: "decision",
                   type: FnType.Decision,
                   returnSchema: {
@@ -64,9 +80,12 @@ export const EditDecision = () => {
                   },
                   config: {},
                 },
-              });
-              createNodeDefWithFn(newDef)
+              })
                 .then(toasts.createNode.onSuccess)
+                .then((res) => {
+                  onSaveSuccess();
+                  return res;
+                })
                 .catch(toasts.createNode.onError)
                 .catch(handleError);
             }}
@@ -121,7 +140,7 @@ export const EditDecision = () => {
                     }
                   }}
                   desiredSchema={{ type: TypeName.Rule }}
-                  eventType={router.query.eventType as string}
+                  eventType={eventType}
                 />
               ))}
 
@@ -140,7 +159,7 @@ export const EditDecision = () => {
                   );
                 }}
                 desiredSchema={{ type: TypeName.Rule }}
-                eventType={router.query.eventType as string}
+                eventType={eventType}
               />
 
               <Select

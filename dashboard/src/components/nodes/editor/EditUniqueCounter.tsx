@@ -1,13 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   TypeName,
-  getConfigSchema,
   FnType,
-  getInputSchema,
   buildNodeDefWithFn,
+  getFnTypeDef,
 } from "event-processing";
 import { Plus, Save } from "lucide-react";
-import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,16 +26,24 @@ import { SelectDataPathList } from "../SelectDataPathList";
 import { TimeWindowDialog, RenderTimeWindow } from "./TimeWindowDialog";
 import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
+import { useEditorStore, selectors } from "./state/zustand";
+import { generateNanoId } from "../../../../../packages/common/src";
+
+const fnTypeDef = getFnTypeDef(FnType.UniqueCounter);
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long."),
-  config: getConfigSchema(FnType.UniqueCounter),
-  inputs: getInputSchema(FnType.UniqueCounter),
+  config: fnTypeDef.configSchema,
+  inputs: fnTypeDef.inputSchema,
 });
 
 type FormType = z.infer<typeof formSchema>;
 
-export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
+export function EditUniqueCounter({
+  initialNodeId,
+  eventType,
+  onSaveSuccess,
+}: NodeEditorProps) {
   const isEditing = !!initialNodeId;
 
   const form = useForm<FormType>({
@@ -60,31 +66,24 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
     },
   });
 
-  const router = useRouter();
-  const eventType = router.query.eventType as string;
-
-  const { data: nodes } = api.nodeDefs.list.useQuery({ eventType });
-  const { data: thisNode } = api.nodeDefs.get.useQuery(
-    { id: initialNodeId ?? "" },
-    { enabled: !!initialNodeId }
-  );
+  const initialNode = useEditorStore(selectors.getNodeDef(initialNodeId ?? ""));
 
   // Initialize form values with initial node
   const [initializedForm, setInitializedForm] = useState(false);
   useEffect(() => {
-    if (!initializedForm && thisNode) {
-      form.setValue("name", thisNode.name);
-      form.setValue("config", thisNode.fn.config as FormType["config"]);
+    if (!initializedForm && initialNode) {
+      form.setValue("name", initialNode.name);
+      form.setValue("config", initialNode.fn.config as FormType["config"]);
+      form.setValue("inputs", initialNode.inputs as FormType["inputs"]);
 
       setInitializedForm(true);
     }
-  }, [thisNode, initializedForm, setInitializedForm, form]);
+  }, [initialNode, initializedForm, setInitializedForm, form]);
 
   const isFormValid = form.formState.isValid;
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const createNodeWithFn = useEditorStore.use.setNodeDefWithFn();
 
   return (
     <div>
@@ -99,24 +98,27 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
             onClick={(event) => {
               event.preventDefault();
 
-              const nodeDef = buildNodeDefWithFn(FnType.UniqueCounter, {
-                name: "Unique Counter",
+              createNodeWithFn(FnType.UniqueCounter, {
+                id: initialNode?.id ?? generateNanoId(),
+                name: form.getValues("name"),
                 eventType: eventType,
                 inputs: form.getValues("inputs"),
                 fn: {
-                  name: "Unique Counter",
+                  id: initialNode?.fn.id ?? generateNanoId(),
+                  name: form.getValues("name"),
                   type: FnType.UniqueCounter,
                   config: form.getValues("config"),
                   returnSchema: {
                     type: TypeName.Int64,
                   },
                 },
-              });
-
-              createNodeWithFn(nodeDef)
+              })
                 .then(toasts.createNode.onSuccess)
                 .catch(toasts.createNode.onError)
-                .then(() => router.push(`/events/${eventType}`))
+                .then((res) => {
+                  onSaveSuccess();
+                  return res;
+                })
                 .catch(handleError);
             }}
           >
@@ -126,88 +128,86 @@ export function EditUniqueCounter({ initialNodeId }: NodeEditorProps) {
         </div>
       </div>
 
-      {!isEditing && (
-        <>
-          <Form {...form}>
-            <form>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="w-[16rem]">
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
+      <>
+        <Form {...form}>
+          <form>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="w-[16rem]">
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
 
-          <div className="text-md font-bold mt-4 mb-2">Count</div>
+        <div className="text-md font-bold mt-4 mb-2">Count</div>
 
-          <SelectDataPathList
-            args={form.watch("config.countArgs")}
-            onArgsChange={(countArgs) =>
-              form.setValue("config.countArgs", countArgs)
+        <SelectDataPathList
+          args={form.watch("config.countArgs")}
+          onArgsChange={(countArgs) =>
+            form.setValue("config.countArgs", countArgs)
+          }
+          eventType={eventType}
+          value={form.watch("inputs.countDataPaths")}
+          onChange={(countDataPaths) =>
+            form.setValue("inputs.countDataPaths", countDataPaths)
+          }
+        />
+
+        <div className="text-md font-bold mt-4 mb-2">By</div>
+        <SelectDataPathList
+          args={form.watch("config.countByArgs")}
+          onArgsChange={(countByArgs) =>
+            form.setValue("config.countByArgs", countByArgs)
+          }
+          eventType={eventType}
+          value={form.watch("inputs.countByDataPaths")}
+          onChange={(countByDataPaths) =>
+            form.setValue("inputs.countByDataPaths", countByDataPaths)
+          }
+        />
+        <div className="text-md font-bold mt-4 mb-2">Where</div>
+
+        <SelectDataPath
+          eventType={eventType}
+          desiredSchema={{
+            type: TypeName.Boolean,
+          }}
+          value={form.watch("inputs.conditionDataPath") ?? null}
+          onChange={(conditionDataPath) => {
+            if (conditionDataPath) {
+              form.setValue("inputs.conditionDataPath", conditionDataPath);
+            } else {
+              form.setValue("inputs.conditionDataPath", undefined);
             }
-            eventType={eventType}
-            value={form.watch("inputs.countDataPaths")}
-            onChange={(countDataPaths) =>
-              form.setValue("inputs.countDataPaths", countDataPaths)
-            }
-          />
+          }}
+        />
 
-          <div className="text-md font-bold mt-4 mb-2">By</div>
-          <SelectDataPathList
-            args={form.watch("config.countByArgs")}
-            onArgsChange={(countByArgs) =>
-              form.setValue("config.countByArgs", countByArgs)
-            }
-            eventType={eventType}
-            value={form.watch("inputs.countByDataPaths")}
-            onChange={(countByDataPaths) =>
-              form.setValue("inputs.countByDataPaths", countByDataPaths)
-            }
-          />
-          <div className="text-md font-bold mt-4 mb-2">Where</div>
+        <div className="text-md">is true</div>
 
-          <SelectDataPath
-            eventType={eventType}
-            desiredSchema={{
-              type: TypeName.Boolean,
-            }}
-            value={form.watch("inputs.conditionDataPath") ?? null}
-            onChange={(conditionDataPath) => {
-              if (conditionDataPath) {
-                form.setValue("inputs.conditionDataPath", conditionDataPath);
-              } else {
-                form.setValue("inputs.conditionDataPath", undefined);
-              }
-            }}
-          />
+        <div className="text-md font-bold mt-4 mb-2">In the last</div>
 
-          <div className="text-md">is true</div>
-
-          <div className="text-md font-bold mt-4 mb-2">In the last</div>
-
-          <TimeWindowDialog
-            value={form.watch("config.timeWindow")}
-            onSubmit={(timeWindow) =>
-              form.setValue("config.timeWindow", timeWindow)
-            }
-          >
-            <div className="flex items-center">
-              <RenderTimeWindow value={form.watch("config.timeWindow")} />
-              <Button variant="outline" size="xs">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </TimeWindowDialog>
-        </>
-      )}
+        <TimeWindowDialog
+          value={form.watch("config.timeWindow")}
+          onSubmit={(timeWindow) =>
+            form.setValue("config.timeWindow", timeWindow)
+          }
+        >
+          <div className="flex items-center">
+            <RenderTimeWindow value={form.watch("config.timeWindow")} />
+            <Button variant="outline" size="xs">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </TimeWindowDialog>
+      </>
     </div>
   );
 }

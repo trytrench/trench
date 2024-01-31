@@ -68,9 +68,6 @@ function ShowSchema({ schema }: { schema: TSchema }) {
 
 export default function Page() {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
-  const { data: bleh } = api.nodeDefs.get.useQuery({
-    id: "anz9RTaxbDPTPIJd8ve7H",
-  });
 
   const [schema, setSchema] = useState<TSchema>({
     type: TypeName.Any,
@@ -86,9 +83,7 @@ export default function Page() {
       <ShowSchema schema={schema} />
 
       <div className="h-8"></div>
-      <div className="text-white">
-        <ShowSchema schema={bleh?.returnSchema ?? { type: TypeName.Any }} />
-      </div>
+      <div className="text-white"></div>
       {/* <SelectDataPath
         eventType="C87WLwulYjPBV3eNPvykj"
         value={dataPath}

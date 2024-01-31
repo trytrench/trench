@@ -1,25 +1,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  FnDefsMap,
   FnType,
+  NodeDef,
+  NodeDefAny,
   TypeName,
-  buildFnDef,
   buildNodeDefWithFn,
   dataPathZodSchema,
 } from "event-processing";
-import {
-  Check,
-  ChevronLeft,
-  ChevronsUpDown,
-  MoreHorizontal,
-} from "lucide-react";
+import { ChevronLeft, ChevronsUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import SettingsLayout from "~/components/SettingsLayout";
-import { EventTypeNodesSchemaDisplay } from "~/components/features/SchemaDisplay";
+import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -44,7 +39,6 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { Input } from "~/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -54,9 +48,16 @@ import {
 } from "~/components/ui/select";
 import { useToast } from "~/components/ui/use-toast";
 import { type NextPageWithLayout } from "~/pages/_app";
-import { RouterOutputs, api } from "~/utils/api";
+import { api } from "~/utils/api";
 import AssignEntities from "../../../../components/nodes/AssignEntities";
 
+import clsx from "clsx";
+import { EditBlocklist } from "~/components/nodes/editor/EditBlocklist";
+import { EditComputed } from "~/components/nodes/editor/EditComputed";
+import { EditCounter } from "~/components/nodes/editor/EditCounter";
+import { EditDecision } from "~/components/nodes/editor/EditDecision";
+import { EditUniqueCounter } from "~/components/nodes/editor/EditUniqueCounter";
+import { NodeEditorProps } from "~/components/nodes/editor/types";
 import {
   Command,
   CommandEmpty,
@@ -64,18 +65,34 @@ import {
   CommandInput,
   CommandItem,
 } from "~/components/ui/command";
+import { Input } from "~/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { cn } from "~/lib/utils";
-import { DataTable } from "~/components/ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Sheet, SheetContent } from "~/components/ui/sheet";
 import { AssignFeature } from "../../../../components/nodes/AssignFeatureDialog";
 import { SelectDataPath } from "../../../../components/nodes/SelectDataPath";
-import { handleError } from "../../../../lib/handleError";
 import { useMutationToasts } from "../../../../components/nodes/editor/useMutationToasts";
+import { handleError } from "../../../../lib/handleError";
+
+const HIDDEN_NODE_TYPES = [
+  FnType.CacheEntityFeature,
+  FnType.GetEntityFeature,
+  FnType.LogEntityFeature,
+  // FnType.Event,
+  FnType.EntityAppearance,
+];
+import {
+  selectors,
+  useEditorStore,
+} from "../../../../components/nodes/editor/state/zustand";
+import { generateNanoId } from "../../../../../../packages/common/src";
+import { usePrevious } from "@dnd-kit/utilities";
+import { CreateEntityTypeDialog } from "~/components/nodes/CreateEntityTypeDialog";
+import { Navbar } from "~/components/Navbar";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -139,26 +156,33 @@ function EntityDialog(props: {
                   render={({ field }) => (
                     <FormItem className="col-span-3">
                       <FormLabel>Entity</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an entity" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {entityTypes?.map((entityType) => (
-                            <SelectItem
-                              key={entityType.id}
-                              value={entityType.id}
-                            >
-                              {entityType.type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex space-x-2">
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an entity" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {entityTypes?.map((entityType) => (
+                              <SelectItem
+                                key={entityType.id}
+                                value={entityType.id}
+                              >
+                                {entityType.type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <CreateEntityTypeDialog>
+                          <Button variant="outline" size="sm">
+                            Create
+                          </Button>
+                        </CreateEntityTypeDialog>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -194,25 +218,60 @@ function EntityDialog(props: {
   );
 }
 
+const MAP_FN_TYPE_TO_EDITOR: Partial<
+  Record<FnType, React.FC<NodeEditorProps>>
+> = {
+  [FnType.Computed]: EditComputed,
+  [FnType.Counter]: EditCounter,
+  [FnType.UniqueCounter]: EditUniqueCounter,
+  [FnType.Decision]: EditDecision,
+  [FnType.Blocklist]: EditBlocklist,
+  [FnType.Event]: () => null,
+};
+
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
   const { toast } = useToast();
 
   const eventType = router.query.eventType as string;
 
-  const { data: nodes, refetch: refetchFns } = api.nodeDefs.list.useQuery({
-    eventType: eventType,
-  });
+  const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   const toasts = useMutationToasts();
-  const { mutateAsync: createNodeWithFn } =
-    api.nodeDefs.createWithFn.useMutation();
+  const setNodeDefWithFn = useEditorStore.use.setNodeDefWithFn();
 
   const [open, setOpen] = useState(false);
   const [nodeSelectOpen, setFnSelectOpen] = useState(false);
 
+  const filteredNodes = useMemo(
+    () => nodes?.filter((node) => !HIDDEN_NODE_TYPES.includes(node.fn.type)),
+    [nodes]
+  );
+
+  const [newFnType, setNewFnType] = useState<FnType | null>(null);
+  const NodeEditor = newFnType ? MAP_FN_TYPE_TO_EDITOR[newFnType] : null;
+
+  const [newEntityDropdownOpen, setNewEntityDropdownOpen] = useState(false);
+
+  const [selectedNode, setSelectedNode] = useState<NodeDefAny | null>(null);
+
+  useEffect(() => {
+    if (!selectedNode) setSelectedNode(filteredNodes?.[0] ?? null);
+  }, [selectedNode, filteredNodes]);
+
+  const { data: engineData } = api.editor.getLatestEngine.useQuery();
+  const prevEngineId = usePrevious(engineData?.engineId);
+  const initialize = useEditorStore.use.initializeFromNodeDefs();
+
+  useEffect(() => {
+    if (engineData && engineData?.engineId !== prevEngineId) {
+      initialize(engineData.nodeDefs);
+    }
+  }, [engineData, initialize, prevEngineId]);
+
+  console.log(NodeEditor);
   return (
     <div>
       <Link
@@ -270,7 +329,14 @@ const Page: NextPageWithLayout = () => {
             </Command>
           </PopoverContent>
         </Popover>
+        <Button className="ml-auto">Publish</Button>
+      </div>
 
+      <div className="text-lg font-medium">Event Data</div>
+      <div className="flex items-center my-2">
+        {/* <div className="text-lg">Event Data</div> */}
+
+        <Input className="w-[200px]" placeholder="Filter data..." />
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -298,11 +364,12 @@ const Page: NextPageWithLayout = () => {
                   <CommandItem
                     key={node.type}
                     onSelect={() =>
-                      void router.push(
-                        `/settings/event-types/${
-                          router.query.eventType as string
-                        }/node?type=${node.type}`
-                      )
+                      // void router.push(
+                      //   `/settings/event-types/${
+                      //     router.query.eventType as string
+                      //   }/node?type=${node.type}`
+                      // )
+                      setNewFnType(node.type)
                     }
                   >
                     {node.name}
@@ -313,117 +380,146 @@ const Page: NextPageWithLayout = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <Card className="h-96 overflow-auto p-6">
-        <EventTypeNodesSchemaDisplay
-          eventType={eventType}
-          renderRightComponent={(dataPath) => (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="iconXs" variant="link" className="h-3">
-                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
 
-              <DropdownMenuContent>
-                <AssignFeature
-                  title="Assign Event Property"
-                  defaults={{
-                    dataPath: dataPath,
-                    entityDataPath: undefined,
-                    featureId: "",
-                  }}
-                >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Assign to event
-                  </DropdownMenuItem>
-                </AssignFeature>
+      <Card className="flex max-h-96">
+        <div className="p-4 w-80 border-r">
+          {filteredNodes?.map((node) => (
+            <div
+              className={clsx(
+                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center hover:bg-muted",
+                {
+                  "bg-accent text-accent-foreground":
+                    selectedNode?.id === node.id,
+                }
+              )}
+              onClick={() => setSelectedNode(node)}
+              key={node.id}
+            >
+              <div>{node.name}</div>
 
-                <AssignFeature
-                  title="Assign Entity Property"
-                  defaults={{
-                    dataPath: dataPath,
-                    entityDataPath: undefined,
-                    featureId: "",
-                  }}
-                >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Assign to entity
-                  </DropdownMenuItem>
-                </AssignFeature>
+              <div className="text-blue-300 text-xs font-bold">
+                {node.fn.returnSchema.type}
+              </div>
+              <Button size="iconXs" variant="link" className="h-3 ml-auto">
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <ScrollArea className="py-4 px-8 flex-1 text-sm">
+          {selectedNode && (
+            <SchemaDisplay
+              name={selectedNode.name}
+              schema={selectedNode.fn.returnSchema}
+              path={[]}
+              renderRightComponent={(dataPath) => (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="iconXs" variant="link" className="h-3">
+                      <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-                <EntityDialog
-                  eventType={eventType}
-                  defaults={{ path: dataPath }}
-                  title="New Entity"
-                  onSubmit={(values) => {
-                    // Create entity appearance
-                    const entityType = entityTypes?.find(
-                      (entityType) => entityType.id === values.entityTypeId
-                    );
-                    if (!entityType) {
-                      toast({
-                        title: "Failed to create entity",
-                        description: "Entity type not found",
-                      });
-                      return;
-                    }
-                    if (!eventType) {
-                      toast({
-                        title: "Failed to create entity",
-                        description: "Event type not found",
-                      });
-                      return;
-                    }
-
-                    const nodeDefWithFn = buildNodeDefWithFn(
-                      FnType.EntityAppearance,
-                      {
-                        name: entityType.type,
-                        eventType,
-                        inputs: {
-                          dataPath: values.path,
+                  <DropdownMenuContent>
+                    <AssignFeature
+                      title="Assign Event Property"
+                      defaults={{
+                        dataPath: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
                         },
-                        fn: {
-                          type: FnType.EntityAppearance,
-                          returnSchema: {
-                            type: TypeName.Entity,
-                            entityType: values.entityTypeId,
-                          },
-                          config: {
-                            entityType: values.entityTypeId,
-                          },
+                        entityDataPath: undefined,
+                        featureId: "",
+                      }}
+                    >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Assign to event
+                      </DropdownMenuItem>
+                    </AssignFeature>
+
+                    <AssignFeature
+                      title="Assign Entity Property"
+                      defaults={{
+                        dataPath: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
+                        },
+                        entityDataPath: undefined,
+                        featureId: "",
+                      }}
+                    >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Assign to entity
+                      </DropdownMenuItem>
+                    </AssignFeature>
+
+                    <EntityDialog
+                      eventType={eventType}
+                      defaults={{
+                        path: {
+                          nodeId: selectedNode.id,
+                          path: dataPath.path,
+                          schema: dataPath.schema,
+                        },
+                      }}
+                      title="New Entity"
+                      onSubmit={(values) => {
+                        // Create entity appearance
+                        const entityType = entityTypes?.find(
+                          (entityType) => entityType.id === values.entityTypeId
+                        );
+                        if (!entityType) {
+                          toast({
+                            title: "Failed to create entity",
+                            description: "Entity type not found",
+                          });
+                          return;
+                        }
+                        if (!eventType) {
+                          toast({
+                            title: "Failed to create entity",
+                            description: "Event type not found",
+                          });
+                          return;
+                        }
+
+                        setNodeDefWithFn(FnType.EntityAppearance, {
+                          id: generateNanoId(),
                           name: entityType.type,
-                        },
-                      }
-                    );
-
-                    createNodeWithFn(nodeDefWithFn)
-                      .then(async (res) => {
-                        await refetchFns();
-                        return res;
-                      })
-                      .then(toasts.createNode.onSuccess)
-                      .catch(toasts.createNode.onError)
-                      .catch(handleError);
-                  }}
-                >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    New entity
-                  </DropdownMenuItem>
-                </EntityDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                          eventType,
+                          inputs: {
+                            dataPath: values.path,
+                          },
+                          fn: {
+                            id: generateNanoId(),
+                            type: FnType.EntityAppearance,
+                            returnSchema: {
+                              type: TypeName.Entity,
+                              entityType: values.entityTypeId,
+                            },
+                            config: {
+                              entityType: values.entityTypeId,
+                            },
+                            name: entityType.type,
+                          },
+                        })
+                          .then(toasts.createNode.onSuccess)
+                          .catch(toasts.createNode.onError)
+                          .catch(handleError);
+                      }}
+                    >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        New entity
+                      </DropdownMenuItem>
+                    </EntityDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            />
           )}
-
-          // onItemClick={(path: string, name: string) => {
-          //   //  copy path to clipboard
-          //   navigator.clipboard.writeText(path);
-          //   toast({
-          //     title: "Copied to clipboard!",
-          //     description: path,
-          //   });
-          // }}
-        />
+        </ScrollArea>
       </Card>
 
       {/* <DataTable
@@ -432,11 +528,97 @@ const Page: NextPageWithLayout = () => {
       /> */}
 
       <div className="h-9" />
+      <div className="text-lg font-medium">Properties</div>
+      <div className="flex my-2 justify-between items-center">
+        <Input className="w-[200px]" placeholder="Filter entities..." />
+
+        <EntityDialog
+          eventType={eventType}
+          defaults={{}}
+          title="New Entity"
+          onSubmit={(values) => {
+            // Create entity appearance
+            const entityType = entityTypes?.find(
+              (entityType) => entityType.id === values.entityTypeId
+            );
+            if (!entityType) {
+              toast({
+                title: "Failed to create entity",
+                description: "Entity type not found",
+              });
+              return;
+            }
+            if (!eventType) {
+              toast({
+                title: "Failed to create entity",
+                description: "Event type not found",
+              });
+              return;
+            }
+
+            setNodeDefWithFn(FnType.EntityAppearance, {
+              id: generateNanoId(),
+              name: entityType.type,
+              eventType,
+              inputs: {
+                dataPath: values.path,
+              },
+              fn: {
+                id: generateNanoId(),
+                type: FnType.EntityAppearance,
+                returnSchema: {
+                  type: TypeName.Entity,
+                  entityType: values.entityTypeId,
+                },
+                config: {
+                  entityType: values.entityTypeId,
+                },
+                name: entityType.type,
+              },
+            })
+              .then(toasts.createNode.onSuccess)
+              .catch(toasts.createNode.onError)
+              .catch(handleError);
+          }}
+        >
+          <Button size="sm">New entity</Button>
+        </EntityDialog>
+      </div>
       <AssignEntities />
+
+      {/* <Sheet
+        open={!!node}
+        onOpenChange={(open) => {
+          if (!open) setNode(null);
+        }}
+      >
+        <SheetContent className="sm:max-w-xl" showClose={false}>
+          {node && <OtherNodeEditor initialNodeId={node.id} />}
+        </SheetContent>
+      </Sheet> */}
+
+      <Sheet
+        open={!!newFnType}
+        onOpenChange={(open) => {
+          if (!open) setNewFnType(null);
+        }}
+      >
+        <SheetContent className="sm:max-w-xl" showClose={false}>
+          {NodeEditor && <NodeEditor />}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
 
-Page.getLayout = (page) => <SettingsLayout>{page}</SettingsLayout>;
+Page.getLayout = (page) => (
+  <div>
+    <Navbar />
+    <div>
+      <div className="text-lg">Data Model</div>
+    </div>
+    {page}
+  </div>
+);
 
 export default Page;

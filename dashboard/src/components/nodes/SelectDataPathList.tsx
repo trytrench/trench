@@ -107,13 +107,11 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
     }
   };
 
-  console.log(args);
-
   return (
     <div>
       {args.map((arg, index) => (
         <div key={index} className="flex items-center space-x-2 mb-2">
-          {isEditingArgs && (
+          {/* {isEditingArgs && (
             <input
               type="text"
               value={arg.argName}
@@ -121,7 +119,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
               className="border p-1"
               placeholder="Arg Name"
             />
-          )}
+          )} */}
           <SelectDataPath
             eventType={eventType}
             value={dataPaths[index] ?? null}

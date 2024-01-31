@@ -42,7 +42,16 @@ export interface VerticalListConfig {
   items: string[];
 }
 
-const SortableItem = ({ id }: { id: string }) => {
+const SortableItem = ({
+  id,
+  entity,
+}: {
+  id: string;
+  entity: {
+    id: string;
+    type: string;
+  };
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
 
@@ -53,8 +62,6 @@ const SortableItem = ({ id }: { id: string }) => {
     transition,
   };
 
-  const [config, setConfig] = useComponentConfig(id);
-  const Component = COMPONENT_REGISTRY[config.type];
   return (
     <div
       className="p-2 border relative"
@@ -63,7 +70,7 @@ const SortableItem = ({ id }: { id: string }) => {
       {...attributes}
     >
       {/* Render your item based on id */}
-      <RenderComponent id={id} />
+      <RenderComponent id={id} entity={entity} />
       {isEditMode && (
         <div
           {...listeners}
@@ -76,6 +83,7 @@ const SortableItem = ({ id }: { id: string }) => {
 
 export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
   id,
+  entity,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -115,7 +123,7 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
           strategy={verticalListSortingStrategy}
         >
           {config.items.map((id) => (
-            <SortableItem key={id} id={id} />
+            <SortableItem key={id} id={id} entity={entity} />
           ))}
         </SortableContext>
       </DndContext>
@@ -135,6 +143,8 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
                     onSelect={() => {
                       const value = registryConfig;
                       setState((prev) => {
+                        if (!prev) return prev;
+
                         const prevComponent = prev?.components[id] as
                           | ComponentConfigMap[ComponentType.VerticalList]
                           | undefined;
@@ -143,22 +153,6 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
                           return prev;
                         }
                         const newId = nanoid();
-                        console.log({
-                          ...prev,
-                          components: {
-                            ...prev?.components,
-                            [id]: {
-                              ...prevComponent,
-                              config: {
-                                items: [...prevComponent.config.items, newId],
-                              },
-                            },
-                            [newId]: {
-                              type: value.type,
-                              config: value.defaultConfig,
-                            } as any,
-                          },
-                        });
                         return {
                           ...prev,
                           components: {

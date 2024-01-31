@@ -179,11 +179,9 @@ const Page: NextPageWithLayout = () => {
           <>
             <Input
               placeholder="Filter event types..."
-              value={
-                (table.getColumn("name")?.getFilterValue() as string) ?? ""
-              }
+              value={(table.getColumn("id")?.getFilterValue() as string) ?? ""}
               onChange={(event) =>
-                table.getColumn("name")?.setFilterValue(event.target.value)
+                table.getColumn("id")?.setFilterValue(event.target.value)
               }
               className="max-w-sm"
             />

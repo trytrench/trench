@@ -23,48 +23,19 @@ export async function recordEventType(
     data: exampleEvent.data,
   });
 
-  const fnSnapshot = await prisma.fnSnapshot.upsert({
-    where: {
-      id: `event-source-${eventType}`,
-    },
-    create: {
-      config: {},
-      returnSchema: schema as any,
-      fn: {
-        create: {
-          name: `Event Grabber`,
-          type: FnType.Event,
-        },
-      },
-    },
-    update: {},
-  });
-
   await prisma.eventType.upsert({
     where: {
       id: eventType,
     },
     create: {
       id: eventType,
-      nodes: {
-        create: [
-          {
-            name: `Event: ${eventType}`,
-            fnId: fnSnapshot.fnId,
-            snapshots: {
-              create: {
-                inputs: {},
-                fnSnapshot: {
-                  connect: {
-                    id: fnSnapshot.id,
-                  },
-                },
-              },
-            },
-          },
-        ],
-      },
+      exampleEvent: exampleEvent as any,
+      exampleSchema: schema as any,
     },
-    update: {},
+    update: {
+      // Uncomment for testing purposes
+      // exampleEvent: exampleEvent as any,
+      // exampleSchema: schema as any,
+    },
   });
 }
