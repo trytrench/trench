@@ -1,22 +1,20 @@
-import { usePrevious } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { isAfter } from "date-fns";
+import { FnType, TSchema } from "event-processing";
+import { useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
-  Engine,
   selectors,
   useEditorStore,
 } from "~/components/nodes/editor/state/zustand";
 import { Button } from "~/components/ui/button";
+import { handleError } from "~/lib/handleError";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import { EventEditor } from "../../components/nodes/editor/EventEditor";
-import { FnType, NodeDef, NodeDefAny, TSchema } from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
-import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
-import { handleError } from "~/lib/handleError";
 import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
-import { isAfter } from "date-fns";
+import { EventEditor } from "../../components/nodes/editor/EventEditor";
+import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -92,24 +90,7 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="flex items-center gap-4">
             <div className="text-3xl text-emphasis-foreground">Data Model</div>
-            {editorHasChanged && (
-              <Button
-                onClick={() => {
-                  if (editorEngineRemote) {
-                    initializeEditor({
-                      engine: {
-                        id: editorEngineRemote.id,
-                        createdAt: editorEngineRemote.createdAt,
-                      },
-                      nodeDefs: editorEngineRemote.nodeDefs,
-                      force: true,
-                    });
-                  }
-                }}
-              >
-                Reset Changes
-              </Button>
-            )}
+
             {editorIsUpgradable && (
               <Button
                 onClick={() => {
@@ -130,6 +111,25 @@ const Page: NextPageWithLayout = () => {
             )}
           </div>
           <div className="flex space-x-2">
+            {editorHasChanged && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (editorEngineRemote) {
+                    initializeEditor({
+                      engine: {
+                        id: editorEngineRemote.id,
+                        createdAt: editorEngineRemote.createdAt,
+                      },
+                      nodeDefs: editorEngineRemote.nodeDefs,
+                      force: true,
+                    });
+                  }
+                }}
+              >
+                Discard
+              </Button>
+            )}
             <Button
               onClick={() => {
                 publish({

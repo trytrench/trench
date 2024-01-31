@@ -1,26 +1,20 @@
-import { GlobalStateKey, prisma } from "databases";
 import {
-  NODE_INCLUDE_ARGS,
-  prismaNodeToNodeDef,
-} from "../server/lib/prismaConverters";
-import {
-  type NodeDef,
+  FnDef,
   FnType,
-  hasFnType,
-  getFnTypeDef,
+  NodeDefAny,
   TSchema,
   TypeName,
+  buildNodeDefWithFn,
   createDataType,
-  NodeDefAny,
+  getFnTypeDef,
+  hasFnType,
+  type NodeDef,
 } from "event-processing";
-import { assert } from "../../../packages/common/src";
+import { assert, generateNanoId } from "../../../packages/common/src";
 
 export function prune(nodeDefs: NodeDef[]): NodeDef[] {
-  const map = new Map<string, NodeDef>();
   const allDependsOn = new Set<string>();
   for (const nodeDef of nodeDefs) {
-    map.set(nodeDef.id, nodeDef);
-
     for (const dep of nodeDef.dependsOn) {
       allDependsOn.add(dep);
     }
@@ -28,22 +22,53 @@ export function prune(nodeDefs: NodeDef[]): NodeDef[] {
 
   const featureIdsToCache = new Set<string>();
 
-  const nodeDefs2 = nodeDefs.filter((def) => {
-    if (hasFnType(def, FnType.CacheEntityFeature)) {
-      featureIdsToCache.add(def.fn.config.featureId);
-      return allDependsOn.has(def.id);
-    } else {
-      return true;
+  // Remove unused get feature nodes
+  // Remove existing cache nodes
+  const newNodes = nodeDefs.filter((def) => {
+    if (hasFnType(def, FnType.GetEntityFeature)) {
+      const isDependedOn = allDependsOn.has(def.id);
+
+      // Cache features that are depended on
+      if (isDependedOn) {
+        featureIdsToCache.add(def.fn.config.featureId);
+        return true;
+      } else {
+        return false;
+      }
     }
+
+    if (hasFnType(def, FnType.CacheEntityFeature)) return false;
+
+    return true;
   });
 
-  return nodeDefs2.filter((def) => {
-    if (hasFnType(def, FnType.CacheEntityFeature)) {
-      return featureIdsToCache.has(def.fn.config.featureId);
-    } else {
-      return true;
+  // Cache the feature every time we log it
+  for (const nodeDef of nodeDefs) {
+    if (hasFnType(nodeDef, FnType.LogEntityFeature)) {
+      const { featureId } = nodeDef.fn.config;
+
+      if (featureIdsToCache.has(featureId)) {
+        const cacheNode = buildNodeDefWithFn(FnType.CacheEntityFeature, {
+          ...nodeDef,
+          id: generateNanoId(),
+          name: `Cache ${featureId}`,
+          fn: {
+            ...nodeDef.fn,
+            id: generateNanoId(),
+            type: FnType.CacheEntityFeature,
+          },
+        });
+
+        newNodes.push({
+          ...cacheNode,
+          fn: cacheNode.fn as FnDef<FnType>,
+          dependsOn: nodeDef.dependsOn,
+        });
+      }
     }
-  });
+  }
+
+  return newNodes;
 }
 
 // Returns list of node Ids with errors
