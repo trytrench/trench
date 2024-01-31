@@ -12,7 +12,6 @@ import { useAtom } from "jotai";
 import { isEditModeAtom } from "../state";
 import { FeatureSelector } from "../FeatureSelector";
 import { TypeName, parseTypedData } from "event-processing";
-import { useEntity } from "../context/EntityContext";
 import { api } from "../../../utils/api";
 import { EditModeOverlay } from "../EditModeOverlay";
 
@@ -20,25 +19,21 @@ export interface MapConfig {
   locationFeaturePath: FeaturePathItem[];
 }
 
-export const MapComponent: EntityPageComponent<MapConfig> = ({ id }) => {
-  const { entityId, entityType } = useEntity();
+export const MapComponent: EntityPageComponent<MapConfig> = ({
+  id,
+  entity,
+}) => {
   const [config, setConfig] = useComponentConfig<ComponentType.Map>(id);
   // Component implementation
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
   const { data: location } = api.features.getValue.useQuery(
     {
-      entity: {
-        id: entityId,
-        type: entityType,
-      },
+      entity,
       featurePath: config.config.locationFeaturePath,
     },
     {
-      enabled:
-        !!entityId &&
-        !!entityType &&
-        !!config.config.locationFeaturePath.length,
+      enabled: !!config.config.locationFeaturePath.length,
     }
   );
 
@@ -72,7 +67,7 @@ export const MapComponent: EntityPageComponent<MapConfig> = ({ id }) => {
           <div>
             <FeatureSelector
               desiredSchema={{ type: TypeName.Location }}
-              baseEntityTypeId={entityType}
+              baseEntityTypeId={entity.type}
               value={config.config.locationFeaturePath}
               onChange={(path) => {
                 setConfig((config) => ({

@@ -10,7 +10,6 @@ import {
 import { Button } from "../ui/button";
 import { RenderComponent } from "./RenderComponent";
 import { useRouter } from "next/router";
-import { EntityProvider } from "./context/EntityContext";
 import { api } from "../../utils/api";
 import { handleError } from "../../lib/handleError";
 import { usePrevious } from "@dnd-kit/utilities";
@@ -70,9 +69,15 @@ export const EntityPageEditor: React.FC = () => {
         {isEditMode && <Button onClick={clearEntityPageState}>reset</Button>}
       </div>
 
-      <EntityProvider entityId={entityId} entityType={entityType}>
-        {pageConfig && <RenderComponent id={pageConfig.root} />}
-      </EntityProvider>
+      {pageConfig && (
+        <RenderComponent
+          id={pageConfig.root}
+          entity={{
+            id: entityId,
+            type: entityType,
+          }}
+        />
+      )}
     </div>
   );
 };

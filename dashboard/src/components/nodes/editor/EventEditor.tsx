@@ -32,7 +32,7 @@ import { AssignFeature } from "../AssignFeatureDialog";
 import { editNodeSheetAtom } from "./state/jotai";
 import { selectors, useEditorStore } from "./state/zustand";
 import { useMutationToasts } from "./useMutationToasts";
-import { handleError } from "../../../lib/handleError";
+import { handleError } from "~/lib/handleError";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,
@@ -264,17 +264,6 @@ export function EventEditor({ eventType }: Props) {
         </CreateEntityAppearanceDialog>
       </div>
       <AssignEntities eventType={eventType} />
-
-      {/* <Sheet
-        open={!!node}
-        onOpenChange={(open) => {
-          if (!open) setNode(null);
-        }}
-      >
-        <SheetContent className="sm:max-w-xl" showClose={false}>
-          {node && <OtherNodeEditor initialNodeId={node.id} />}
-        </SheetContent>
-      </Sheet> */}
     </div>
   );
 }

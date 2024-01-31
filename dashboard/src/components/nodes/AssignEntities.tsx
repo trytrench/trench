@@ -253,7 +253,7 @@ export default function AssignEntities({ eventType }: Props) {
                 />
               )}
 
-              {!filteredFeatures?.length ? (
+              {!selectedNode || !filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No features</div>
               ) : (
                 filteredFeatures.map((feature) => (
@@ -268,10 +268,11 @@ export default function AssignEntities({ eventType }: Props) {
                     onDataPathChange={(dataPath) => {
                       const initialNode = featureToNodeMap[feature.id];
 
-                      if (!dataPath && initialNode) {
-                        deleteNodeDef(initialNode.id)
-                          .catch(toasts.deleteNode.onError)
-                          .catch(handleError);
+                      if (!dataPath) {
+                        if (initialNode)
+                          deleteNodeDef(initialNode.id)
+                            .catch(toasts.deleteNode.onError)
+                            .catch(handleError);
                         return;
                       }
 
@@ -293,7 +294,11 @@ export default function AssignEntities({ eventType }: Props) {
                         },
                         inputs: {
                           dataPath,
-                          entityDataPath: selectedNode?.inputs.dataPath,
+                          entityDataPath: {
+                            nodeId: selectedNode.id,
+                            path: [],
+                            schema: selectedNode.fn.returnSchema,
+                          },
                         },
                       })
                         // .then(toasts.createNode.onSuccess)

@@ -306,7 +306,8 @@ export function EditComputed({
                 <div>
                   <EditDepsMap
                     eventType={eventType}
-                    value={field.value}
+                    // Don't know why but field.value doesn't work here
+                    value={form.watch("inputs.depsMap")}
                     onChange={(depsMap) => {
                       field.onChange(depsMap);
 
