@@ -91,12 +91,12 @@ export function EditCounter({
 
               createNodeWithFn(FnType.Counter, {
                 id: initialNode?.id ?? generateNanoId(),
-                name: "Counter",
+                name: form.getValues("name"),
                 eventType: eventType,
                 inputs: form.getValues("inputs"),
                 fn: {
                   id: initialNode?.fn.id ?? generateNanoId(),
-                  name: "Counter",
+                  name: form.getValues("name"),
                   type: FnType.Counter,
                   config: form.getValues("config"),
                   returnSchema: {

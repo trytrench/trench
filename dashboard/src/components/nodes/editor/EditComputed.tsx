@@ -119,7 +119,9 @@ export function EditComputed({
   const [initializedEventDep, setInitializedEventNode] = useState(false);
   useEffect(() => {
     if (!initializedEventDep && nodes && !initialNodeId) {
-      const eventNode = nodes.find((n) => n.fn.type === FnType.Event);
+      const eventNode = nodes.find(
+        (n) => n.fn.type === FnType.Event && n.eventType === eventType
+      );
       if (eventNode) {
         form.setValue("inputs.depsMap", {
           event: {
@@ -137,6 +139,7 @@ export function EditComputed({
     setInitializedEventNode,
     form,
     initialNodeId,
+    eventType,
   ]);
 
   // Code validity
@@ -299,7 +302,8 @@ export function EditComputed({
                 <div>
                   <EditDepsMap
                     eventType={eventType}
-                    value={field.value}
+                    // Don't know why but field.value doesn't work here
+                    value={form.watch("inputs.depsMap")}
                     onChange={(depsMap) => {
                       field.onChange(depsMap);
 

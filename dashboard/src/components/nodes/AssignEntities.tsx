@@ -267,10 +267,11 @@ export default function AssignEntities({ eventType }: Props) {
                     onDataPathChange={(dataPath) => {
                       const initialNode = featureToNodeMap[feature.id];
 
-                      if (!dataPath && initialNode) {
-                        deleteNodeDef(initialNode.id)
-                          .catch(toasts.deleteNode.onError)
-                          .catch(handleError);
+                      if (!dataPath) {
+                        if (initialNode)
+                          deleteNodeDef(initialNode.id)
+                            .catch(toasts.deleteNode.onError)
+                            .catch(handleError);
                         return;
                       }
 

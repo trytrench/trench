@@ -264,17 +264,6 @@ export function EventEditor({ eventType }: Props) {
         </CreateEntityAppearanceDialog>
       </div>
       <AssignEntities eventType={eventType} />
-
-      {/* <Sheet
-        open={!!node}
-        onOpenChange={(open) => {
-          if (!open) setNode(null);
-        }}
-      >
-        <SheetContent className="sm:max-w-xl" showClose={false}>
-          {node && <OtherNodeEditor initialNodeId={node.id} />}
-        </SheetContent>
-      </Sheet> */}
     </div>
   );
 }

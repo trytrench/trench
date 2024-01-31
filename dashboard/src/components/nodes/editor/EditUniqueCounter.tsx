@@ -74,6 +74,7 @@ export function EditUniqueCounter({
     if (!initializedForm && initialNode) {
       form.setValue("name", initialNode.name);
       form.setValue("config", initialNode.fn.config as FormType["config"]);
+      form.setValue("inputs", initialNode.inputs as FormType["inputs"]);
 
       setInitializedForm(true);
     }
@@ -98,13 +99,13 @@ export function EditUniqueCounter({
               event.preventDefault();
 
               createNodeWithFn(FnType.UniqueCounter, {
-                id: generateNanoId(),
-                name: "Unique Counter",
+                id: initialNode?.id ?? generateNanoId(),
+                name: form.getValues("name"),
                 eventType: eventType,
                 inputs: form.getValues("inputs"),
                 fn: {
-                  id: generateNanoId(),
-                  name: "Unique Counter",
+                  id: initialNode?.fn.id ?? generateNanoId(),
+                  name: form.getValues("name"),
                   type: FnType.UniqueCounter,
                   config: form.getValues("config"),
                   returnSchema: {

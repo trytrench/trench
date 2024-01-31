@@ -59,7 +59,7 @@ export function EditNodeSheet({ eventType }: { eventType: string }) {
     >
       <SheetPortal>
         <SheetOverlay />
-        <SheetContent className="overflow-y-auto" showClose={false}>
+        <SheetContent className="sm:max-w-xl" showClose={false}>
           {EditNodeEditor && (
             <EditNodeEditor
               initialNodeId={node?.id}
