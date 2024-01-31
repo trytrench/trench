@@ -1,7 +1,6 @@
 import { TypeName, parseTypedData } from "event-processing";
 import { FeaturePathItem } from "../../../shared/types";
 import { api } from "../../../utils/api";
-import { useEntity } from "../context/EntityContext";
 import { useComponentConfig } from "../useComponentConfig";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
@@ -14,24 +13,22 @@ export type EntityConfig = {
   entityFeaturePath: FeaturePathItem[];
 };
 
-export const EntityComponent: EntityPageComponent<EntityConfig> = ({ id }) => {
+export const EntityComponent: EntityPageComponent<EntityConfig> = ({
+  id,
+  entity,
+}) => {
   // Component implementation
-  const { entityType, entityId } = useEntity();
   const [isEditMode] = useAtom(isEditModeAtom);
 
   const [config, setConfig] = useComponentConfig<ComponentType.Entity>(id);
 
   const { data: entFeature } = api.features.getValue.useQuery(
     {
-      entity: {
-        id: entityId,
-        type: entityType,
-      },
+      entity,
       featurePath: config.config.entityFeaturePath,
     },
     {
-      enabled:
-        !!entityId && !!entityType && !!config.config.entityFeaturePath.length,
+      enabled: !!config.config.entityFeaturePath.length,
     }
   );
 
@@ -45,10 +42,9 @@ export const EntityComponent: EntityPageComponent<EntityConfig> = ({ id }) => {
         )
       : null;
 
-  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
-    { entityFilters: { entityId, entityType } },
-    { enabled: !!entityId && !!entityType }
-  );
+  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery({
+    entityFilters: { entityId: entity.id, entityType: entity.type },
+  });
 
   return (
     <div>
@@ -56,7 +52,7 @@ export const EntityComponent: EntityPageComponent<EntityConfig> = ({ id }) => {
         <div>
           <FeatureSelector
             desiredSchema={{ type: TypeName.Entity }}
-            baseEntityTypeId={entityType}
+            baseEntityTypeId={entity.type}
             value={config.config.entityFeaturePath}
             onChange={(value) => {
               setConfig({
