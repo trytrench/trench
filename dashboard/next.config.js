@@ -6,6 +6,15 @@ await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
 const config = {
+  redirects: () => {
+    return [
+      {
+        source: "/",
+        destination: "/events",
+        permanent: true,
+      },
+    ];
+  },
   reactStrictMode: true,
   output: "standalone",
   /**
