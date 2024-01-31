@@ -1,8 +1,8 @@
 import clsx from "clsx";
-import { FnType, NodeDef } from "event-processing";
+import { FnType } from "event-processing";
 import { useAtom } from "jotai";
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { CreateEntityAppearanceDialog } from "~/components/nodes/CreateEntityAppearanceDialog";
 import { Button } from "~/components/ui/button";

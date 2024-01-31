@@ -43,7 +43,7 @@ type NodeDefWithFnSetArgs<T extends FnType> = Omit<NodeDef<T>, "dependsOn">;
 
 type FnDefSetArgs<T extends FnType> = FnDef<T>;
 
-type Engine = {
+export type Engine = {
   id: string;
   createdAt: Date;
 };
@@ -55,11 +55,11 @@ interface EditorState {
   fns: Record<string, FnDefAny>;
   errors: Record<string, string>; // Map nodeIds to error messages
 
-  initializeFromNodeDefs: (
-    engine: Engine,
-    nodeDefs: NodeDef[],
-    force?: boolean
-  ) => void;
+  initializeFromNodeDefs: (props: {
+    engine: Engine;
+    nodeDefs: NodeDef[];
+    force?: boolean;
+  }) => void;
 
   updateErrors: () => void;
 
@@ -136,7 +136,7 @@ const useEditorStoreBase = create<EditorState>()(
         set({ errors });
       },
 
-      initializeFromNodeDefs: (engine, nodeDefs, force) => {
+      initializeFromNodeDefs: ({ engine, nodeDefs, force }) => {
         if (get().engine && !force) return;
 
         const fns: Record<string, FnDef> = {};
