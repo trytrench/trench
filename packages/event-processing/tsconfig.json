@@ -11,7 +11,8 @@
     "noUncheckedIndexedAccess": true,
     "target": "ES2017",
     "lib": ["ES2015"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": ["vitest/globals"]
   },
   "exclude": ["node_modules"]
 }
