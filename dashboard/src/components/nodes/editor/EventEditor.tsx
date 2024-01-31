@@ -1,8 +1,8 @@
 import clsx from "clsx";
-import { FnType, NodeDef } from "event-processing";
+import { FnType } from "event-processing";
 import { useAtom } from "jotai";
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { CreateEntityAppearanceDialog } from "~/components/nodes/CreateEntityAppearanceDialog";
 import { Button } from "~/components/ui/button";
@@ -32,6 +32,7 @@ import { AssignFeature } from "../AssignFeatureDialog";
 import { editNodeSheetAtom } from "./state/jotai";
 import { selectors, useEditorStore } from "./state/zustand";
 import { useMutationToasts } from "./useMutationToasts";
+import { handleError } from "../../../lib/handleError";
 
 const HIDDEN_NODE_TYPES = [
   FnType.CacheEntityFeature,

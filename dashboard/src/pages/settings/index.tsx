@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
+  Engine,
   selectors,
   useEditorStore,
 } from "~/components/nodes/editor/state/zustand";
@@ -10,7 +11,7 @@ import { Button } from "~/components/ui/button";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
-import { FnType, TSchema } from "event-processing";
+import { FnType, NodeDef, NodeDefAny, TSchema } from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
@@ -30,46 +31,34 @@ const Page: NextPageWithLayout = () => {
   const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
   const nodes = useEditorStore(selectors.getNodeDefs());
 
-  const editorEngineId = useEditorStore((state) => state.engineId);
+  const editorEngine = useEditorStore((state) => state.engine);
   const editorHasChanged = useEditorStore((state) => state.hasChanged);
 
   const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
 
-  const { data: engineData } = api.editor.getLatestEngine.useQuery();
+  const { data: latestEngine } = api.editor.getLatestEngine.useQuery();
 
-  const { data: editorEngineData } = api.editor.getEngine.useQuery(
-    { engineId: editorEngineId ?? "" },
-    {
-      enabled: !!editorEngineId,
-    }
+  const { data: editorEngineRemote } = api.editor.getEngine.useQuery(
+    { engineId: editorEngine?.id ?? "" },
+    { enabled: !!editorEngine }
   );
 
   // Initialize if editor hasn't been initialized yet, and we have data
   useEffect(() => {
-    if (engineData) {
-      if (!editorEngineId) {
-        initializeEditor(
-          { id: engineData.id, createdAt: engineData.createdAt },
-          engineData.nodeDefs
-        );
+    if (latestEngine) {
+      if (!editorEngine) {
+        initializeEditor({
+          engine: { id: latestEngine.id, createdAt: latestEngine.createdAt },
+          nodeDefs: latestEngine.nodeDefs,
+        });
       }
     }
-  }, [editorEngineId, engineData, initializeEditor]);
-
-  const resetEditor = useCallback(() => {
-    if (editorEngineData) {
-      initializeEditor(
-        { id: editorEngineData.id, createdAt: editorEngineData.createdAt },
-        engineData?.nodeDefs ?? [],
-        true
-      );
-    }
-  }, [editorEngineData, engineData?.nodeDefs, initializeEditor]);
+  }, [editorEngine, latestEngine, initializeEditor]);
 
   const editorIsUpgradable = useMemo(() => {
-    if (!editorEngineData || !engineData) return false;
-    return isAfter(editorEngineData.createdAt, engineData.createdAt);
-  }, [editorEngineData, engineData]);
+    if (!latestEngine || !editorEngine) return false;
+    return isAfter(latestEngine.createdAt, editorEngine.createdAt);
+  }, [latestEngine, editorEngine]);
 
   /**
    * Logic:
@@ -106,10 +95,37 @@ const Page: NextPageWithLayout = () => {
             {editorHasChanged && (
               <Button
                 onClick={() => {
-                  resetEditor();
+                  if (editorEngineRemote) {
+                    initializeEditor({
+                      engine: {
+                        id: editorEngineRemote.id,
+                        createdAt: editorEngineRemote.createdAt,
+                      },
+                      nodeDefs: editorEngineRemote.nodeDefs,
+                      force: true,
+                    });
+                  }
                 }}
               >
                 Reset Changes
+              </Button>
+            )}
+            {editorIsUpgradable && (
+              <Button
+                onClick={() => {
+                  if (latestEngine) {
+                    initializeEditor({
+                      engine: {
+                        id: latestEngine.id,
+                        createdAt: latestEngine.createdAt,
+                      },
+                      nodeDefs: latestEngine.nodeDefs,
+                      force: true,
+                    });
+                  }
+                }}
+              >
+                Upgrade
               </Button>
             )}
           </div>
