@@ -148,15 +148,22 @@ export const featuresRouter = createTRPCRouter({
 
       // Build JOIN clauses for featurePath
       for (let i = 1; i < featurePath.length; i++) {
-        query += ` LEFT JOIN features AS f${i + 1} ON f${i}.entity_id = f${
+        query += ` LEFT JOIN features AS f${
           i + 1
-        }.entity_id AND f${i}.feature_id = '${featurePath[i - 1].featureId}'\n`;
+        } ON f${i}.data_type = 'Entity' AND [simpleJSONExtractString(f${i}.value, 'id')] = f${
+          i + 1
+        }.entity_id AND [simpleJSONExtractString(f${i}.value, 'type')] = f${
+          i + 1
+        }.entity_type AND f${i + 1}.feature_id = '${
+          featurePath[i].featureId
+        }'\n`;
       }
 
       // Add WHERE, ORDER BY, and LIMIT clauses
       query += ` WHERE f1.entity_id = ['${entity.id}'] AND f1.entity_type = ['${entity.type}'] AND f1.feature_id = '${featurePath[0].featureId}'\n`;
       query += ` ORDER BY f${featurePath.length}.event_id DESC LIMIT 1\n`;
 
+      console.log(query);
       // Execute the query
       const result = await db.query({
         query,

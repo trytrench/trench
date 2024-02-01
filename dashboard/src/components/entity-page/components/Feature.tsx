@@ -57,7 +57,7 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
       {isEditMode ? (
         <div>
           <FeatureSelector
-            desiredSchema={{ type: TypeName.String }}
+            desiredSchema={{ type: TypeName.Any }}
             baseEntityTypeId={entity.type}
             value={config.featurePath}
             onChange={(val) => {
@@ -71,7 +71,7 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
       ) : (
         <div className="flex items-baseline gap-2 border">
           <div className="text-gray-400">{featureMetadata?.name}</div>
-          {desiredFeature && <RenderResult result={desiredFeature.result} />}
+          {data && <RenderResult result={data.result} />}
         </div>
       )}
     </div>

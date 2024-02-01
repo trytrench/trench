@@ -51,6 +51,8 @@ export const FeatureGridComponent: EntityPageComponent<FeatureGridConfig> = ({
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
+  const deleteComponent = useEditorStore.use.deleteComponent();
+
   const setState = useEditorStore.use.setPageState();
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -82,7 +84,20 @@ export const FeatureGridComponent: EntityPageComponent<FeatureGridConfig> = ({
         >
           <div className="grid grid-cols-3">
             {config.featureDraggableIds.map((id) => (
-              <DraggableItem key={id} id={id}>
+              <DraggableItem
+                key={id}
+                id={id}
+                onDelete={() => {
+                  setConfig((config) => {
+                    const { featureDraggableIds: currentItems } = config;
+                    return {
+                      ...config,
+                      featureDraggableIds: currentItems.filter((i) => i !== id),
+                    };
+                  });
+                  deleteComponent(id);
+                }}
+              >
                 <RenderComponent key={id} id={id} entity={entity} />
               </DraggableItem>
             ))}

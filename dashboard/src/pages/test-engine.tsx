@@ -23,7 +23,7 @@ const getLayoutedElements = (
 } => {
   g.setGraph({
     rankdir: "RL",
-    nodesep: 200, // Horizontal spacing between nodes
+    nodesep: 100, // Horizontal spacing between nodes
     ranksep: 400, // Vertical spacing between ranks (layers of nodes)
   });
 
