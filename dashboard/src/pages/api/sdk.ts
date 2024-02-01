@@ -18,7 +18,7 @@ const eventSchema = z.object({
   type: z.literal("pageview"),
   data: z.object({
     sessionId: z.string(),
-    deviceToken: z.string().optional(),
+    deviceToken: z.string().nullable(),
     fingerprintComponents: z.object({
       ...mapValues(sources, () => componentSchema),
     }),
