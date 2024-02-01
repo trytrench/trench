@@ -17,9 +17,6 @@ export const blocklistFnDef = createFnTypeDefBuilder()
     })
   )
   .setReturnSchema(TypeName.Boolean)
-  .setGetDependencies((input) => {
-    return new Set([input.stringDataPath.nodeId]);
-  })
   .setGetDataPaths((input) => {
     return [input.stringDataPath];
   })

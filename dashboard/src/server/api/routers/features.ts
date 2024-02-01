@@ -159,7 +159,6 @@ export const featuresRouter = createTRPCRouter({
         }'\n`;
       }
 
-      // Add WHERE, ORDER BY, and LIMIT clauses
       query += ` WHERE f1.entity_id = ['${entity.id}'] AND f1.entity_type = ['${entity.type}'] AND f1.feature_id = '${featurePath[0].featureId}'\n`;
       query += ` ORDER BY f${featurePath.length}.event_id DESC LIMIT 1\n`;
 

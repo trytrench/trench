@@ -38,19 +38,6 @@ export const uniqueCounterFnDef = createFnTypeDefBuilder()
     }
     return arr;
   })
-  .setGetDependencies((config) => {
-    const set = new Set<string>();
-    for (const path of config.countByDataPaths) {
-      set.add(path.nodeId);
-    }
-    for (const path of config.countDataPaths) {
-      set.add(path.nodeId);
-    }
-    if (config.conditionDataPath) {
-      set.add(config.conditionDataPath.nodeId);
-    }
-    return set;
-  })
   .setReturnSchema(TypeName.Int64)
   .setContextType<{
     redis: RedisInterface;

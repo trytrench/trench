@@ -10,6 +10,7 @@ import {
   type FnDefAny,
   type NodeDefAny,
   getFnTypeDef,
+  nodeIdsFromDataPaths,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
@@ -79,13 +80,13 @@ function validateFnInput(
   dependsOn: Set<string>;
 } {
   const type = getFnTypeDef(fnType);
-  const { inputSchema, getDependencies } = type;
+  const { inputSchema, getDataPaths } = type;
 
   // Validate inputs
   inputSchema.parse(inputs);
 
   return {
-    dependsOn: getDependencies(inputs),
+    dependsOn: nodeIdsFromDataPaths(getDataPaths(inputs)),
   };
 }
 

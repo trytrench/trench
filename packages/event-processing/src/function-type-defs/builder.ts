@@ -39,15 +39,6 @@ export interface FnTypeDefBuilder<
     TInputSchema,
     TContext
   >;
-  setGetDependencies(
-    getDependencies: (input: z.infer<TInputSchema>) => Set<string>
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TConfigSchema,
-    TInputSchema,
-    TContext
-  >;
   setGetDataPaths(
     getDataPaths: (input: z.infer<TInputSchema>) => Array<DataPath>
   ): FnTypeDefBuilder<
@@ -119,7 +110,6 @@ export function createFnTypeDefBuilder<
   const partialDef = {
     configSchema: z.object({}),
     inputSchema: z.object({}),
-    getDependencies: () => new Set(),
     getDataPaths: () => [],
     validateInputs: () => true,
     ...def,
@@ -132,9 +122,6 @@ export function createFnTypeDefBuilder<
     },
     setConfigSchema(configSchema) {
       return createNewFnTypeDefBuilder(partialDef, { configSchema });
-    },
-    setGetDependencies(getDependencies) {
-      return createNewFnTypeDefBuilder(partialDef, { getDependencies });
     },
     setGetDataPaths(getDataPaths) {
       return createNewFnTypeDefBuilder(partialDef, { getDataPaths });

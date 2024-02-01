@@ -37,12 +37,6 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
     if (input.entityDataPath) paths.push(input.entityDataPath);
     return paths;
   })
-  .setGetDependencies((input) => {
-    const set = new Set<string>();
-    if (input.entityDataPath) set.add(input.entityDataPath.nodeId);
-    set.add(input.dataPath.nodeId);
-    return set;
-  })
   .setCreateResolver(({ fnDef, context, input }) => {
     return async ({ event, getDependency, engineId }) => {
       const { featureId, featureSchema } = fnDef.config;

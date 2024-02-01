@@ -23,11 +23,6 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
   .setGetDataPaths((input) => {
     return [input.dataPath];
   })
-  .setGetDependencies((input) => {
-    const result = new Set<string>();
-    result.add(input.dataPath.nodeId);
-    return result;
-  })
   .setReturnSchema(TypeName.Entity)
   .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency, engineId }) => {

@@ -32,12 +32,6 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
     if (input.entityDataPath) paths.push(input.entityDataPath);
     return paths;
   })
-  .setGetDependencies((config) => {
-    const set = new Set<string>();
-    if (config.entityDataPath) set.add(config.entityDataPath.nodeId);
-    set.add(config.dataPath.nodeId);
-    return set;
-  })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency, engineId }) => {
       const { featureId, featureSchema } = fnDef.config;

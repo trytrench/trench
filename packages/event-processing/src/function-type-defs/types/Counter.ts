@@ -35,16 +35,6 @@ export const counterFnDef = createFnTypeDefBuilder()
     }
     return arr;
   })
-  .setGetDependencies((config) => {
-    const set = new Set<string>();
-    for (const path of config.countByDataPaths) {
-      set.add(path.nodeId);
-    }
-    if (config.conditionDataPath?.nodeId) {
-      set.add(config.conditionDataPath.nodeId);
-    }
-    return set;
-  })
   .setContextType<{
     redis: RedisInterface;
   }>()

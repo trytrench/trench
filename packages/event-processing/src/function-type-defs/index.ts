@@ -12,6 +12,7 @@ import { logEntityFeatureFnDef } from "./types/LogEntityFeature";
 import { uniqueCounterFnDef } from "./types/UniqueCounter";
 import { FnType } from "./types/_enum";
 import { blocklistFnDef } from "./types/BlockList";
+import { DataPath } from "../data-path";
 
 const FN_TYPE_DEFS = {
   [FnType.Computed]: computedFnDef,
@@ -64,6 +65,10 @@ export function hasType<T extends FnType>(
 ): fnDef is FnDef<T extends FnType ? T : FnType> {
   if (!fnType) return true;
   return fnDef.type === fnType;
+}
+
+export function nodeIdsFromDataPaths(dataPaths: DataPath[]): Set<string> {
+  return new Set(dataPaths.map((dp) => dp.nodeId));
 }
 
 export * from "./functionTypeDef";

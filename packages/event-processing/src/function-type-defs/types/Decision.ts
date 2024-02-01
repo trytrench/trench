@@ -21,13 +21,6 @@ export const decisionFnDef = createFnTypeDefBuilder()
   .setGetDataPaths((input) => {
     return input.conditions.flatMap((condition) => condition.rules);
   })
-  .setGetDependencies((input) => {
-    return new Set(
-      input.conditions.flatMap((condition) =>
-        condition.rules.map((rule) => rule.nodeId)
-      )
-    );
-  })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {
       const { conditions, elseDecisionId } = input;

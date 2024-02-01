@@ -21,9 +21,6 @@ export const computedFnDef = createFnTypeDefBuilder()
   .setGetDataPaths((input) => {
     return Object.values(input.depsMap);
   })
-  .setGetDependencies((input) => {
-    return new Set(Object.values(input.depsMap).map((path) => path.nodeId));
-  })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {
       const { depsMap } = input;
