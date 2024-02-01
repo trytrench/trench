@@ -11,24 +11,21 @@ import {
   arrayMove,
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { EntityPageComponent } from "./types";
 import { Button } from "../../ui/button";
-import { entityPageStateAtom, isEditModeAtom } from "../state";
+import { isEditModeAtom, useEditorStore } from "../state";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
-import { COMPONENT_REGISTRY, ComponentConfig, ComponentConfigMap } from ".";
+import { COMPONENT_REGISTRY, ComponentConfig } from ".";
 import { useAtom } from "jotai";
 import { ComponentType } from "./_enum";
 import { nanoid } from "nanoid";
 import { RenderComponent } from "../RenderComponent";
-import { useComponentConfig } from "../useComponentConfig";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import {
   Command,
@@ -37,75 +34,35 @@ import {
   CommandInput,
   CommandItem,
 } from "../../ui/command";
+import { DraggableItem } from "../DraggableItem";
 
 export interface VerticalListConfig {
   items: string[];
 }
 
-const SortableItem = ({
-  id,
-  entity,
-}: {
-  id: string;
-  entity: {
-    id: string;
-    type: string;
-  };
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
-
-  const [isEditMode] = useAtom(isEditModeAtom);
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      className="p-2 border relative"
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-    >
-      {/* Render your item based on id */}
-      <RenderComponent id={id} entity={entity} />
-      {isEditMode && (
-        <div
-          {...listeners}
-          className="absolute bottom-0 right-0 h-4 w-4 bg-gray-200"
-        ></div>
-      )}
-    </div>
-  );
-};
-
 export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
   id,
   entity,
+  config,
+  setConfig,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor));
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
-  const [{ config }, setConfig] =
-    useComponentConfig<ComponentType.VerticalList>(id);
 
-  const [state, setState] = useAtom(entityPageStateAtom);
+  const setState = useEditorStore.use.setPageState();
+  const deleteComponent = useEditorStore.use.deleteComponent();
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
       setConfig((config) => {
-        const { items: currentItems } = config.config;
+        const { items: currentItems } = config;
         const oldIndex = currentItems.indexOf(active.id.toString());
         const newIndex = currentItems.indexOf(over.id.toString());
         return {
-          ...config,
-          config: {
-            items: arrayMove(currentItems, oldIndex, newIndex),
-          },
+          items: arrayMove(currentItems, oldIndex, newIndex),
         };
       });
     }
@@ -122,9 +79,26 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
           items={config.items}
           strategy={verticalListSortingStrategy}
         >
-          {config.items.map((id) => (
-            <SortableItem key={id} id={id} entity={entity} />
-          ))}
+          {config.items.map((id) => {
+            return (
+              <DraggableItem
+                key={id}
+                id={id}
+                onDelete={() => {
+                  setConfig((config) => {
+                    const { items: currentItems } = config;
+                    const newItems = currentItems.filter((item) => item !== id);
+                    return {
+                      items: newItems,
+                    };
+                  });
+                  deleteComponent(id);
+                }}
+              >
+                <RenderComponent id={id} entity={entity} />
+              </DraggableItem>
+            );
+          })}
         </SortableContext>
       </DndContext>
       {isEditMode && (
@@ -145,28 +119,33 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
                       setState((prev) => {
                         if (!prev) return prev;
 
-                        const prevComponent = prev?.components[id] as
-                          | ComponentConfigMap[ComponentType.VerticalList]
+                        const prevVertList = prev?.components[id] as
+                          | ComponentConfig<ComponentType.VerticalList>
                           | undefined;
-                        if (!prevComponent) {
-                          console.log("no prev component");
+                        if (!prevVertList) {
                           return prev;
                         }
-                        const newId = nanoid();
+
+                        const componentId = nanoid();
+
                         return {
                           ...prev,
                           components: {
                             ...prev.components,
+                            // Add item to vertical list items
                             [id]: {
-                              ...prevComponent,
+                              ...prevVertList,
                               config: {
-                                items: [...prevComponent.config.items, newId],
+                                items: [
+                                  ...prevVertList.config.items,
+                                  componentId,
+                                ],
                               },
                             },
-                            [newId]: {
+                            [componentId]: {
                               type: value.type,
                               config: value.defaultConfig,
-                            } as any,
+                            },
                           },
                         };
                       });

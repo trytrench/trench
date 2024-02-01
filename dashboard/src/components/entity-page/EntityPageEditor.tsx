@@ -2,10 +2,11 @@ import React, { useEffect } from "react";
 import { useAtom } from "jotai";
 
 import {
-  EntityPageState,
+  EntityPageEditorState,
+  type EntityPageState,
   defaultEntityPageState,
-  entityPageStateAtom,
   isEditModeAtom,
+  useEditorStore,
 } from "./state";
 import { Button } from "../ui/button";
 import { RenderComponent } from "./RenderComponent";
@@ -21,21 +22,21 @@ export const EntityPageEditor: React.FC = () => {
 
   const { data: entityPage, isLoading } = api.entityTypes.getPage.useQuery(
     { entityTypeId: entityType },
-    { enabled: !!entityType }
+    { enabled: !!entityType, refetchOnWindowFocus: false }
   );
 
   const { mutateAsync: upsertPage } = api.entityTypes.upsertPage.useMutation();
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
-  const [pageConfig, setEntityPageState] = useAtom(entityPageStateAtom);
+  const pageState = useEditorStore.use.pageState();
+  const setEntityPageState = useEditorStore.use.setPageState();
 
   // Sync state
   useEffect(() => {
     if (isLoading) {
       return;
     }
-    console.log("page", entityPage);
     if (entityPage) {
       setEntityPageState(entityPage.config as unknown as EntityPageState);
     } else {
@@ -46,13 +47,13 @@ export const EntityPageEditor: React.FC = () => {
   // Autosave when exiting edit mode
   const prevEditMode = usePrevious(isEditMode);
   useEffect(() => {
-    if (!isEditMode && prevEditMode && pageConfig) {
+    if (!isEditMode && prevEditMode && pageState) {
       upsertPage({
         entityTypeId: entityType,
-        config: pageConfig,
+        config: pageState,
       }).catch(handleError);
     }
-  }, [entityType, isEditMode, pageConfig, prevEditMode, upsertPage]);
+  }, [entityType, isEditMode, pageState, prevEditMode, upsertPage]);
 
   const clearEntityPageState = () => {
     setEntityPageState(defaultEntityPageState);
@@ -69,9 +70,9 @@ export const EntityPageEditor: React.FC = () => {
         {isEditMode && <Button onClick={clearEntityPageState}>reset</Button>}
       </div>
 
-      {pageConfig && (
+      {pageState && (
         <RenderComponent
-          id={pageConfig.root}
+          id={pageState.root}
           entity={{
             id: entityId,
             type: entityType,

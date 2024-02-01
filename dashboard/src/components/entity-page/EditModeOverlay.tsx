@@ -1,4 +1,6 @@
+import { useAtom } from "jotai";
 import { cn } from "../../lib/utils";
+import { isEditModeAtom } from "./state";
 
 export function EditModeOverlay(props: {
   children: React.ReactNode;
@@ -22,14 +24,33 @@ export function EditModeOverlay(props: {
 export function EditModeFrame(props: {
   children: React.ReactNode;
   className?: string;
-  isEditMode: boolean;
   renderEditModeControls?: () => React.ReactNode;
+  childrenVisibleInEditMode?: boolean;
 }) {
-  const { children, isEditMode, renderEditModeControls, className } = props;
+  const {
+    children,
+    renderEditModeControls,
+    className,
+    childrenVisibleInEditMode = false,
+  } = props;
+
+  const [isEditMode] = useAtom(isEditModeAtom);
+
   return (
     <div className={cn("relative", className)}>
-      {isEditMode && <div>{renderEditModeControls?.()}</div>}
-      {children}
+      {isEditMode && (
+        <div className="absolute h-full w-full">
+          {renderEditModeControls?.()}
+        </div>
+      )}
+      <div
+        className={cn({
+          "pointer-events-none": isEditMode,
+          "opacity-0": isEditMode && !childrenVisibleInEditMode,
+        })}
+      >
+        {children}
+      </div>
     </div>
   );
 }

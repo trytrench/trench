@@ -6,22 +6,34 @@ import { VerticalListComponent } from "./VerticalList";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
 import { FeatureComponent } from "./Feature";
+import { ColorComponent } from "./Color";
+import { FeatureGridComponent } from "./FeatureGrid";
 
-// Utility type to extract the 'config' type from a component's props
 type InferConfig<TComponent> = TComponent extends EntityPageComponent<
   infer TConfig
 >
   ? TConfig
   : never;
 
-type RegistryConfig<TType, T> = {
+type RegistryConfig<
+  TType extends ComponentType = ComponentType,
+  T extends EntityPageComponent<any> = EntityPageComponent<object>,
+> = {
   type: TType;
   component: T;
   defaultConfig: InferConfig<T>;
+  getChildrenIds: (config: InferConfig<T>) => string[];
 };
 
-function config<TT, TC>(defaultConfig: RegistryConfig<TT, TC>) {
-  return defaultConfig;
+type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+function config<TT extends ComponentType, TC extends EntityPageComponent<any>>(
+  defaultConfig: PartialBy<RegistryConfig<TT, TC>, "getChildrenIds">
+): RegistryConfig<TT, TC> {
+  return {
+    getChildrenIds: () => [],
+    ...defaultConfig,
+  };
 }
 
 export const COMPONENT_REGISTRY = {
@@ -52,13 +64,30 @@ export const COMPONENT_REGISTRY = {
     defaultConfig: {
       items: [],
     },
+    getChildrenIds: (config) => config.items,
   }),
   [ComponentType.Feature]: config({
     type: ComponentType.Feature,
     component: FeatureComponent,
     defaultConfig: {
-      featureId: null,
+      featurePath: [],
     },
+  }),
+  [ComponentType.Color]: config({
+    type: ComponentType.Color,
+    component: ColorComponent,
+    defaultConfig: {
+      color: "white",
+    },
+  }),
+  [ComponentType.FeatureGrid]: config({
+    type: ComponentType.FeatureGrid,
+    component: FeatureGridComponent,
+    defaultConfig: {
+      featureDraggableIds: [],
+      title: "Feature Grid",
+    },
+    getChildrenIds: (config) => config.featureDraggableIds,
   }),
 } satisfies {
   [K in ComponentType]: RegistryConfig<K, any>;
@@ -66,16 +95,18 @@ export const COMPONENT_REGISTRY = {
 
 type Registry = typeof COMPONENT_REGISTRY;
 
+export function getComponent<T extends ComponentType>(type: T) {
+  return COMPONENT_REGISTRY[type] as unknown as ComponentType extends T
+    ? RegistryConfig
+    : Registry[T]["component"];
+}
+
 // infer the type of the component config from the registry
 export type ComponentConfigSchemaMap = {
   [K in keyof Registry]: InferConfig<Registry[K]["component"]>;
 };
 
-export type ComponentConfigMap = {
-  [K in ComponentType]: {
-    type: K;
-    config: ComponentConfigSchemaMap[K];
-  };
+export type ComponentConfig<T extends ComponentType = ComponentType> = {
+  type: T;
+  config: ComponentConfigSchemaMap[T];
 };
-
-export type ComponentConfig = ComponentConfigMap[keyof ComponentConfigMap];
