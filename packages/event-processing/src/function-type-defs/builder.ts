@@ -4,7 +4,6 @@ import { FnType } from "./types/_enum";
 import { TSchema, TypeName } from "../data-types";
 import { DataPath } from "../data-path";
 
-// FnTypeDefBuilder interface
 export interface FnTypeDefBuilder<
   TFnType extends FnType = any,
   TReturnSchema extends TSchema = TSchema,
@@ -30,15 +29,9 @@ export interface FnTypeDefBuilder<
   setInputSchema<TIS extends AnyZodObject>(
     inputSchema: TIS
   ): FnTypeDefBuilder<TFnType, TReturnSchema, TConfigSchema, TIS, TContext>;
-  setReturnSchema<T extends TypeName>(
-    returnType: T
-  ): FnTypeDefBuilder<
-    TFnType,
-    Extract<TSchema, { type: T }>,
-    TConfigSchema,
-    TInputSchema,
-    TContext
-  >;
+  setReturnSchema<T extends TSchema>(
+    returnSchema: T
+  ): FnTypeDefBuilder<TFnType, T, TConfigSchema, TInputSchema, TContext>;
   setGetDataPaths(
     getDataPaths: (input: z.infer<TInputSchema>) => Array<DataPath>
   ): FnTypeDefBuilder<

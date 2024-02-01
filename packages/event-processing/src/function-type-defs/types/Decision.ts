@@ -17,7 +17,7 @@ export const decisionFnDef = createFnTypeDefBuilder()
       elseDecisionId: z.string(),
     })
   )
-  .setReturnSchema(TypeName.String)
+  .setReturnSchema({ type: TypeName.String })
   .setGetDataPaths((input) => {
     return input.conditions.flatMap((condition) => condition.rules);
   })

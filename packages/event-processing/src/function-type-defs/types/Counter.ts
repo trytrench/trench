@@ -26,7 +26,7 @@ export const counterFnDef = createFnTypeDefBuilder()
       conditionDataPath: dataPathZodSchema.optional(),
     })
   )
-  .setReturnSchema(TypeName.Int64)
+  .setReturnSchema({ type: TypeName.Int64 })
   .setGetDataPaths((config) => {
     const arr: DataPath[] = [];
     arr.push(...config.countByDataPaths);
