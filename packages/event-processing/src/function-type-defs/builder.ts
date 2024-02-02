@@ -2,7 +2,7 @@ import { AnyZodObject, ZodNull, ZodObject, ZodUndefined, z } from "zod";
 import { FnDef, FnTypeDef, Resolver } from "./functionTypeDef";
 import { FnType } from "./types/_enum";
 import { TSchema, TypeName } from "../data-types";
-import { DataPath } from "../data-path";
+import { DataPath, DataPathInfoGetter } from "../data-path";
 
 export interface FnTypeDefBuilder<
   TFnType extends FnType = any,
@@ -29,9 +29,13 @@ export interface FnTypeDefBuilder<
   setInputSchema<TIS extends AnyZodObject>(
     inputSchema: TIS
   ): FnTypeDefBuilder<TFnType, TReturnSchema, TConfigSchema, TIS, TContext>;
-  setReturnSchema<T extends TSchema>(
-    returnSchema: T
-  ): FnTypeDefBuilder<TFnType, T, TConfigSchema, TInputSchema, TContext>;
+  setReturnSchema<T extends TSchema>(): FnTypeDefBuilder<
+    TFnType,
+    T,
+    TConfigSchema,
+    TInputSchema,
+    TContext
+  >;
   setGetDataPaths(
     getDataPaths: (input: z.infer<TInputSchema>) => Array<DataPath>
   ): FnTypeDefBuilder<
@@ -45,6 +49,7 @@ export interface FnTypeDefBuilder<
     validateInputs: (options: {
       inputs: z.infer<TInputSchema>;
       config: z.infer<TConfigSchema>;
+      getDataPathInfo: DataPathInfoGetter;
     }) => boolean
   ): FnTypeDefBuilder<
     TFnType,
@@ -125,7 +130,7 @@ export function createFnTypeDefBuilder<
     setInputSchema(inputSchema) {
       return createNewFnTypeDefBuilder(partialDef, { inputSchema });
     },
-    setReturnSchema(returnSchema) {
+    setReturnSchema() {
       return createNewFnTypeDefBuilder(partialDef, {});
     },
     setContextType<TC>() {

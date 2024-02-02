@@ -48,13 +48,13 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
             dataPath: entityDataPath,
             expectedSchema: {
               type: TypeName.Entity,
+              entityType: undefined,
             },
           })
         : null;
 
       const value = await getDependency({
         dataPath: dataPath,
-        expectedSchema: dataPath.schema,
       });
 
       const redisKey = hashObject({

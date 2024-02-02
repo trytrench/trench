@@ -38,7 +38,7 @@ export const uniqueCounterFnDef = createFnTypeDefBuilder()
     }
     return arr;
   })
-  .setReturnSchema({ type: TypeName.Int64 })
+  .setReturnSchema<{ type: TypeName.Int64 }>()
   .setContextType<{
     redis: RedisInterface;
   }>()

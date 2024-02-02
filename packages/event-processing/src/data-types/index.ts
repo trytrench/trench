@@ -338,7 +338,7 @@ export const DATA_TYPES_REGISTRY = {
   },
   [TypeName.Entity]: {
     type: EntityDataType,
-    defaultSchema: { type: TypeName.Entity },
+    defaultSchema: { type: TypeName.Entity, entityType: undefined },
   },
   [TypeName.Array]: {
     type: ArrayDataType,

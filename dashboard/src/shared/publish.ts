@@ -52,6 +52,11 @@ export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
 
   const allNodeDefs = nodeDefs;
 
+  const nodeDefMap = new Map<string, NodeDefAny>();
+  allNodeDefs.forEach((def) => {
+    nodeDefMap.set(def.id, def);
+  });
+
   allNodeDefs.forEach((nodeDef) => {
     const { getDataPaths } = getFnTypeDef(nodeDef.fn.type);
     const dataPaths = getDataPaths(nodeDef.inputs);
@@ -63,11 +68,7 @@ export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
       const pathNodeReturnSchema = pathNode.fn.returnSchema;
       const actualSchema = getSchemaAtPath(pathNodeReturnSchema, path.path);
 
-      const expectedSchemaType = createDataType(path.schema);
-
       if (!actualSchema) {
-        errors[nodeDef.id] = `Invalid data path`;
-      } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
         errors[nodeDef.id] = `Invalid data path`;
       }
     });
@@ -76,7 +77,10 @@ export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
   return errors;
 }
 
-function getSchemaAtPath(schema: TSchema, path: string[]): TSchema | null {
+export function getSchemaAtPath(
+  schema: TSchema,
+  path: string[]
+): TSchema | null {
   let currentSchema = schema;
   for (const key of path) {
     if (currentSchema.type !== TypeName.Object) return null;

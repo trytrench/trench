@@ -37,6 +37,7 @@ export const getEntityFeatureFnDef = createFnTypeDefBuilder()
             dataPath: entityDataPath,
             expectedSchema: {
               type: TypeName.Entity,
+              entityType: undefined,
             },
           })
         : null;

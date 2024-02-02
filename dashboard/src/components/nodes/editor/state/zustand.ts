@@ -6,17 +6,22 @@ import {
   hasType,
   type TSchema,
   TypeName,
-  createDataType,
   type FnDefAny,
   type NodeDefAny,
   getFnTypeDef,
   nodeIdsFromDataPaths,
+  DataPath,
+  type DataPathInfoGetter,
 } from "event-processing";
 import { type StoreApi, type UseBoundStore, create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
-import { persist, createJSONStorage, PersistStorage } from "zustand/middleware";
+import {
+  persist,
+  createJSONStorage,
+  type PersistStorage,
+} from "zustand/middleware";
 import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
-import { checkErrors } from "../../../../shared/publish";
+import { checkErrors, getSchemaAtPath } from "../../../../shared/publish";
 import { createSelectors } from "../../../../lib/zustand";
 
 type RawNode<T extends FnType = FnType> = Omit<NodeDef<T>, "fn"> & {
@@ -61,6 +66,8 @@ interface EditorState {
   setFnDef: <T extends FnType>(fnDef: FnDefSetArgs<T>) => Promise<FnDef<T>>;
 
   deleteNodeDef: (nodeId: string) => Promise<void>;
+
+  getDataPathInfo: DataPathInfoGetter;
 }
 
 function fnDefIsValid(fnDef: FnDefAny): fnDef is FnDef {
@@ -232,6 +239,19 @@ const useEditorStoreBase = create<EditorState>()(
           delete nodes[nodeId];
           return { nodes, hasChanged: true };
         });
+      },
+
+      getDataPathInfo: (dataPath) => {
+        const state = get();
+        const nodeDef = selectors.getNodeDef(dataPath.nodeId)(state);
+
+        let schema: TSchema | null = null;
+        if (nodeDef) {
+          schema = getSchemaAtPath(nodeDef.fn.returnSchema, dataPath.path);
+        }
+        return {
+          schema,
+        };
       },
     }),
     {

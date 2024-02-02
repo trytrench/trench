@@ -6,6 +6,7 @@ import {
   FnType,
   NodeDef,
   TypeName,
+  createDataType,
   hasFnType,
 } from "event-processing";
 import { useMemo, useState } from "react";
@@ -28,6 +29,7 @@ import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
 import { MoreHorizontal } from "lucide-react";
+import { has } from "lodash";
 
 const FeatureItem = ({
   feature,
@@ -118,11 +120,14 @@ export default function AssignEntities({ eventType }: Props) {
 
   const filteredFeatures = useMemo(
     () =>
-      features?.filter((feature) =>
-        selectedNodeId === EVENT
+      features?.filter((feature) => {
+        const selectedNodeSchema = selectedNode?.fn.returnSchema;
+        return selectedNodeId === EVENT
           ? feature.eventTypeId === eventType
-          : feature.entityTypeId === selectedNode?.fn.returnSchema.entityType
-      ),
+          : selectedNodeSchema &&
+              selectedNodeSchema.type === TypeName.Entity &&
+              selectedNodeSchema.entityType === feature.entityTypeId;
+      }),
     [features, selectedNodeId, selectedNode, eventType]
   );
 
@@ -297,7 +302,6 @@ export default function AssignEntities({ eventType }: Props) {
                           entityDataPath: {
                             nodeId: selectedNode.id,
                             path: [],
-                            schema: selectedNode.fn.returnSchema,
                           },
                         },
                       })

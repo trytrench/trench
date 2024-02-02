@@ -74,7 +74,6 @@ function useFlattenedDataPaths(props: {
         dataPaths.push({
           nodeId: node.id,
           path: path.path,
-          schema: path.schema,
         });
       }
     }
@@ -111,6 +110,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
   } = props;
 
   const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
+  const getDataPathInfo = useEditorStore.use.getDataPathInfo();
 
   const { flattenedDataPaths } = useFlattenedDataPaths({
     eventType,
@@ -120,7 +120,9 @@ export function SelectDataPath(props: SelectDataPathProps) {
   const filteredPaths = flattenedDataPaths.filter((path) => {
     const desiredType = createDataType(desiredSchema ?? { type: TypeName.Any });
 
-    return desiredType.isSuperTypeOf(path.schema);
+    const { schema } = getDataPathInfo(path);
+    if (!schema) return false;
+    return desiredType.isSuperTypeOf(schema);
   });
 
   const filteredOptions = filteredPaths
@@ -150,8 +152,6 @@ export function SelectDataPath(props: SelectDataPathProps) {
           onChange({
             path: [],
             nodeId: newValue,
-            schema: nodes?.find((node) => node.id === newValue)?.fn
-              .returnSchema ?? { type: TypeName.Any },
           });
         }}
         options={validNodes}
@@ -188,13 +188,13 @@ export function SelectDataPath(props: SelectDataPathProps) {
             onChange({
               nodeId: value?.nodeId ?? "",
               path: newDataPath?.path ?? [],
-              schema: newDataPath?.schema ?? { type: TypeName.Any },
             });
           }}
           renderOption={({ option }) => {
-            const schema = flattenedDataPaths.find(
+            const path = flattenedDataPaths.find(
               (path) => path.path.join(".") === option.value
-            )?.schema;
+            );
+            const schema = path ? getDataPathInfo(path).schema : null;
             if (!schema) {
               return null;
             }
@@ -217,9 +217,10 @@ export function SelectDataPath(props: SelectDataPathProps) {
                 </button>
               );
             }
-            const schema = flattenedDataPaths.find(
+            const path = flattenedDataPaths.find(
               (path) => path.path.join(".") === value
-            )?.schema;
+            );
+            const schema = path ? getDataPathInfo(path).schema : null;
             if (!schema) {
               return null;
             }

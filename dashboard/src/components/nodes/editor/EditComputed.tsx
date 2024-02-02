@@ -99,6 +99,7 @@ export function EditComputed({
   });
 
   const nodes = useEditorStore(selectors.getNodeDefs());
+  const getDataPathInfo = useEditorStore.use.getDataPathInfo();
   const initialNode = useEditorStore(
     selectors.getNodeDef(initialNodeId ?? "", FnType.Computed)
   );
@@ -138,7 +139,6 @@ export function EditComputed({
           event: {
             nodeId: eventNode.id,
             path: [],
-            schema: eventNode.fn.returnSchema,
           },
         });
         setInitializedEventNode(true);
@@ -179,20 +179,25 @@ export function EditComputed({
     [form.formState.isValid, compileStatus]
   );
   // Code editor types
-  const getInputTsTypeFromDepsMap = (deps: DepsMap) => {
-    return `
+  const getInputTsTypeFromDepsMap = useCallback(
+    (deps: DepsMap) => {
+      return `
       type Input = {
         ${Object.entries(deps)
           .map(([key, value]) => {
-            const schemaTs = value
-              ? createDataType(value.schema).toTypescript()
+            const schema = value ? getDataPathInfo(value)?.schema : null;
+            const schemaTs = schema
+              ? createDataType(schema).toTypescript()
               : "unknown";
             return `${key}: ${schemaTs};`;
           })
           .join("\n")}
       }
     `;
-  };
+    },
+    [getDataPathInfo]
+  );
+
   const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
     form.watch("returnSchema")
   ).toTypescript()}>;`;
@@ -204,7 +209,7 @@ export function EditComputed({
     return [libSource, getInputTsTypeFromDepsMap(depsMap), functionType].join(
       "\n\n"
     );
-  }, [depsMap, functionType]);
+  }, [depsMap, functionType, getInputTsTypeFromDepsMap]);
 
   return (
     <div className="w-full">

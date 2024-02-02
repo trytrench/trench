@@ -2,7 +2,7 @@ import { AnyZodObject, ZodObject, z } from "zod";
 import { FnType } from "./types/_enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
-import { DataPath } from "../data-path";
+import { DataPath, DataPathInfoGetter } from "../data-path";
 import { FnTypeDefsMap } from ".";
 
 export type FnDef<
@@ -75,5 +75,6 @@ export type FnTypeDef<
   validateInputs: (options: {
     inputs: z.infer<TInputSchema>;
     config: z.infer<TConfigSchema>;
+    getDataPathInfo: DataPathInfoGetter;
   }) => boolean;
 };

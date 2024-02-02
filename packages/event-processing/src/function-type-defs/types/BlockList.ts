@@ -16,7 +16,7 @@ export const blocklistFnDef = createFnTypeDefBuilder()
       stringDataPath: dataPathZodSchema,
     })
   )
-  .setReturnSchema({ type: TypeName.Boolean })
+  .setReturnSchema<{ type: TypeName.Boolean }>()
   .setGetDataPaths((input) => {
     return [input.stringDataPath];
   })

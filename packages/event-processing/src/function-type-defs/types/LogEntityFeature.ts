@@ -59,6 +59,7 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
             dataPath: entityDataPath,
             expectedSchema: {
               type: TypeName.Entity,
+              entityType: undefined,
             },
           });
           baseData.entity_type.push(assignToEntity.type);

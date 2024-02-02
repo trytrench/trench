@@ -21,6 +21,14 @@ export const computedFnDef = createFnTypeDefBuilder()
   .setGetDataPaths((input) => {
     return Object.values(input.depsMap);
   })
+  .setValidateInputs(({ inputs, config, getDataPathInfo }) => {
+    const { depsMap } = inputs;
+    const dataPaths = Object.values(depsMap);
+    if (dataPaths.length === 0) {
+      throw new Error("No dependencies provided");
+    }
+    return true;
+  })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {
       const { depsMap } = input;
