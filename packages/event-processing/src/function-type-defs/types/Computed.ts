@@ -112,13 +112,34 @@ export const computedFnDef = createFnTypeDefBuilder()
   .setGetDataPaths((input) => {
     return Object.values(input.depsMap);
   })
-  .setValidateInputs(({ inputs, config, getDataPathInfo }) => {
+  .setValidateInputs(({ inputs, fnDef, getDataPathInfo }) => {
     const { depsMap } = inputs;
-    const dataPaths = Object.values(depsMap);
-    if (dataPaths.length === 0) {
-      throw new Error("No dependencies provided");
+    const typeDefs = getTypeDefs({
+      deps: depsMap,
+      getDataPathInfo,
+      returnSchema: fnDef.returnSchema,
+    });
+
+    const compileResult = compileTs({
+      code: fnDef.config.tsCode,
+      typeDefs,
+    });
+
+    if (compileResult.success) {
+      return {
+        success: true,
+      };
+    } else {
+      let msg = compileResult.diagnostics[0]?.getMessageText();
+      if (typeof msg === "object") {
+        msg = msg.getMessageText();
+      }
+
+      return {
+        success: false,
+        error: `Error compiling TS: ${msg}`,
+      };
     }
-    return true;
   })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency }) => {

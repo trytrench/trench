@@ -56,9 +56,29 @@ export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   data: InferSchemaType<TReturn>;
 }>;
 
-export type FnTypeDef<
+export type InputValidatorResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+export type InputValidator<
   TFnType extends FnType = any,
   TReturn extends TSchema = any,
+  TConfigSchema extends AnyZodObject = ZodObject<{}>,
+  TInputSchema extends AnyZodObject = ZodObject<{}>,
+> = (options: {
+  inputs: z.infer<TInputSchema>;
+  fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
+  getDataPathInfo: DataPathInfoGetter;
+}) => InputValidatorResult;
+
+export type FnTypeDef<
+  TFnType extends FnType = FnType,
+  TReturn extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
   TContext = any,
@@ -72,9 +92,5 @@ export type FnTypeDef<
     context: TContext;
   }) => Resolver<TReturn>;
   getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
-  validateInputs: (options: {
-    inputs: z.infer<TInputSchema>;
-    config: z.infer<TConfigSchema>;
-    getDataPathInfo: DataPathInfoGetter;
-  }) => boolean;
+  validateInputs: InputValidator<TFnType, TReturn, TConfigSchema, TInputSchema>;
 };

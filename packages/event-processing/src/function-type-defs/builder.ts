@@ -1,5 +1,5 @@
 import { AnyZodObject, ZodNull, ZodObject, ZodUndefined, z } from "zod";
-import { FnDef, FnTypeDef, Resolver } from "./functionTypeDef";
+import { FnDef, FnTypeDef, InputValidator, Resolver } from "./functionTypeDef";
 import { FnType } from "./types/_enum";
 import { TSchema, TypeName } from "../data-types";
 import { DataPath, DataPathInfoGetter } from "../data-path";
@@ -46,11 +46,12 @@ export interface FnTypeDefBuilder<
     TContext
   >;
   setValidateInputs(
-    validateInputs: (options: {
-      inputs: z.infer<TInputSchema>;
-      config: z.infer<TConfigSchema>;
-      getDataPathInfo: DataPathInfoGetter;
-    }) => boolean
+    validateInputs: InputValidator<
+      TFnType,
+      TReturnSchema,
+      TConfigSchema,
+      TInputSchema
+    >
   ): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
@@ -109,7 +110,7 @@ export function createFnTypeDefBuilder<
     configSchema: z.object({}),
     inputSchema: z.object({}),
     getDataPaths: () => [],
-    validateInputs: () => true,
+    validateInputs: () => ({ success: true }),
     ...def,
   } satisfies Partial<FnTypeDef>;
 
@@ -147,14 +148,14 @@ export function createFnTypeDefBuilder<
     },
     build() {
       if (
+        // These fields have to be set via the builder
         !partialDef.fnType ||
-        !partialDef.configSchema ||
-        !partialDef.createResolver ||
-        !partialDef.inputSchema
+        !partialDef.createResolver
       ) {
         throw new Error("Missing required properties to build FnTypeDef");
       }
-      return partialDef as FnTypeDef<
+
+      return partialDef as unknown as FnTypeDef<
         TFnType,
         TReturnSchema,
         TConfigSchema,

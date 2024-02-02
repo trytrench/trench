@@ -120,6 +120,8 @@ const useEditorStoreBase = create<EditorState>()(
 
         const errors = checkErrors(allNodeDefs);
 
+        console.log(errors);
+
         set({ errors });
       },
 
