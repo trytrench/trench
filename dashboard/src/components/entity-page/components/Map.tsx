@@ -6,7 +6,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import WebMercatorViewport from "@math.gl/web-mercator";
 import { CreditCard, PersonStanding, Phone } from "lucide-react";
 import { env } from "../../../env";
-import { FeaturePathItem } from "../../../shared/types";
 import { useAtom } from "jotai";
 import { isEditModeAtom } from "../state";
 import { FeatureSelector } from "../FeatureSelector";
@@ -15,7 +14,7 @@ import { api } from "../../../utils/api";
 import { EditModeOverlay } from "../EditModeOverlay";
 
 export interface MapConfig {
-  locationFeaturePath: FeaturePathItem[];
+  locationFeaturePath: string[];
 }
 
 export const MapComponent: EntityPageComponent<MapConfig> = ({

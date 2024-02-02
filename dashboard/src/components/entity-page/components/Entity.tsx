@@ -1,5 +1,4 @@
 import { TypeName, parseTypedData } from "event-processing";
-import { FeaturePathItem } from "../../../shared/types";
 import { api } from "../../../utils/api";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
@@ -9,7 +8,7 @@ import { RenderResult, RenderTypedData } from "../../RenderResult";
 import { FeatureSelector } from "../FeatureSelector";
 
 export type EntityConfig = {
-  entityFeaturePath: FeaturePathItem[];
+  entityFeaturePath: string[];
 };
 
 export const EntityComponent: EntityPageComponent<EntityConfig> = ({

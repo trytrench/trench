@@ -5,22 +5,16 @@ import {
   type NodeDef,
   hasType,
   type TSchema,
-  TypeName,
   type FnDefAny,
   type NodeDefAny,
   getFnTypeDef,
   nodeIdsFromDataPaths,
-  DataPath,
   type DataPathInfoGetter,
 } from "event-processing";
-import { type StoreApi, type UseBoundStore, create } from "zustand";
+import { create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
-import {
-  persist,
-  createJSONStorage,
-  type PersistStorage,
-} from "zustand/middleware";
-import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
+import { persist, type PersistStorage } from "zustand/middleware";
+import superjson from "superjson";
 import { checkErrors, getSchemaAtPath } from "../../../../shared/publish";
 import { createSelectors } from "../../../../lib/zustand";
 

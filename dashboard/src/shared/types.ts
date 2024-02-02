@@ -1,10 +1,5 @@
-import { Rule } from "@prisma/client";
-import { TSchema, TypedData } from "event-processing";
-
-export type FeaturePathItem = {
-  featureId: string;
-  schema: TSchema;
-};
+import { type Rule } from "@prisma/client";
+import { type TypedData } from "event-processing";
 
 export type AnnotatedFeature = {
   featureId: string;

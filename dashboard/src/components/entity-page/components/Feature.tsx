@@ -1,22 +1,13 @@
 import { useAtom } from "jotai";
 import { api } from "../../../utils/api";
-import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
 import { isEditModeAtom } from "../state";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "../../ui/select";
-import { RenderResult, RenderTypedData } from "../../RenderResult";
+import { RenderResult } from "../../RenderResult";
 import { FeatureSelector } from "../FeatureSelector";
-import { useState } from "react";
 import { TypeName } from "event-processing";
-import { FeaturePathItem } from "../../../shared/types";
 
 export interface FeatureConfig {
-  featurePath: FeaturePathItem[];
+  featurePath: string[];
 }
 
 export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
@@ -33,7 +24,7 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
   const features = entitiesData?.rows[0]?.features ?? [];
 
   const targetFeatureId =
-    config.featurePath[config.featurePath.length - 1]?.featureId ?? null;
+    config.featurePath[config.featurePath.length - 1] ?? null;
 
   const desiredFeature = features.find(
     (feature) => feature.featureId === targetFeatureId
