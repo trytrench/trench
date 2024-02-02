@@ -137,8 +137,11 @@ export default function AssignEntities({ eventType }: Props) {
         <div className="p-4 w-48 border-r">
           <div
             className={clsx(
-              "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
-              { "bg-accent text-accent-foreground": selectedNodeId === EVENT }
+              "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center",
+              {
+                "bg-accent text-accent-foreground": selectedNodeId === EVENT,
+                "hover:bg-muted cursor-pointer": selectedNodeId !== EVENT,
+              }
             )}
             onClick={() => setSelectedNodeId(EVENT)}
           >

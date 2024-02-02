@@ -32,13 +32,21 @@ export type Engine = {
   id: string;
   createdAt: Date;
 };
+
+export type EngineCompileStatus =
+  | { status: "idle" }
+  | { status: "compiling" }
+  | { status: "success" }
+  | { status: "error"; errors: Record<string, string> };
+
 interface EditorState {
   engine: Engine | null;
   hasChanged: boolean;
 
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDefAny>;
-  errors: Record<string, string>; // Map nodeIds to error messages
+
+  status: EngineCompileStatus;
 
   initializeFromNodeDefs: (props: {
     engine: Engine;
@@ -46,7 +54,9 @@ interface EditorState {
     force?: boolean;
   }) => void;
 
+  // Update status
   updateErrors: () => void;
+  setStatus: (status: EngineCompileStatus) => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -112,17 +122,21 @@ const useEditorStoreBase = create<EditorState>()(
       nodes: {},
       fns: {},
       errors: {},
+      status: { status: "idle" },
 
       updateErrors: () => {
-        const state = get();
-
-        const allNodeDefs = selectors.getNodeDefs()(state);
-
+        get().setStatus({ status: "compiling" });
+        const allNodeDefs = selectors.getNodeDefs()(get());
         const errors = checkErrors(allNodeDefs);
+        if (Object.keys(errors).length === 0) {
+          get().setStatus({ status: "success" });
+        } else {
+          get().setStatus({ status: "error", errors });
+        }
+      },
 
-        console.log(errors);
-
-        set({ errors });
+      setStatus: (status) => {
+        set({ status });
       },
 
       initializeFromNodeDefs: ({ engine, nodeDefs, force }) => {
@@ -147,7 +161,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: false,
         });
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -174,7 +188,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return {
           ...nodeDef,
@@ -193,7 +207,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return fnDef;
       },
@@ -219,7 +233,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return {
           ...nodeDef,

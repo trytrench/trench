@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
   Engine,
+  EngineCompileStatus,
   selectors,
   useEditorStore,
 } from "~/components/nodes/editor/state/zustand";
@@ -17,6 +18,37 @@ import { useMutationToasts } from "../../components/nodes/editor/useMutationToas
 import { handleError } from "~/lib/handleError";
 import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
 import { isAfter } from "date-fns";
+import { LoadingPlaceholder } from "../../components/LoadingPlaceholder";
+import { Badge } from "../../components/ui/badge";
+import { CheckIcon, XIcon } from "lucide-react";
+
+function StatusIndicator(props: { status: EngineCompileStatus }) {
+  const { status } = props;
+  switch (status.status) {
+    case "idle":
+    case "compiling":
+      return (
+        <div className="flex items-center gap-1 text-xs text-gray-400 px-3 p-1 rounded-sm bg-gray-50">
+          Compiling...
+        </div>
+      );
+    case "error":
+      const errors = status.errors;
+      return (
+        <div className="flex items-center gap-1 text-xs text-red-600 px-3 p-1 rounded-sm bg-red-50">
+          <XIcon className="h-4 w-4 " />
+          <span>{`Errors (${Object.keys(errors).length})`}</span>
+        </div>
+      );
+    case "success":
+      return (
+        <div className="flex items-center gap-1 text-xs text-green-600 px-3 p-1 rounded-sm bg-green-50">
+          <CheckIcon className="h-4 w-4" />
+          <span>Success</span>
+        </div>
+      );
+  }
+}
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -30,9 +62,10 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
   const nodes = useEditorStore(selectors.getNodeDefs());
-
+  const status = useEditorStore.use.status();
   const editorEngine = useEditorStore((state) => state.engine);
   const editorHasChanged = useEditorStore((state) => state.hasChanged);
+  const updateErrors = useEditorStore.use.updateErrors();
 
   const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
 
@@ -42,6 +75,16 @@ const Page: NextPageWithLayout = () => {
     { engineId: editorEngine?.id ?? "" },
     { enabled: !!editorEngine }
   );
+
+  // Compile every second if there are changes
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (status.status === "idle") {
+        updateErrors();
+      }
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [status, editorHasChanged, updateErrors]);
 
   // Initialize if editor hasn't been initialized yet, and we have data
   useEffect(() => {
@@ -129,8 +172,10 @@ const Page: NextPageWithLayout = () => {
               </Button>
             )}
           </div>
-          <div className="flex space-x-2">
+          <div className="flex gap-4 items-center">
+            <StatusIndicator status={status} />
             <Button
+              disabled={status.status !== "success"}
               onClick={() => {
                 publish({
                   nodeDefs: nodes,
