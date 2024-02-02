@@ -45,6 +45,7 @@ import {
   compileStatueAtom,
   tsCodeAtom,
 } from "../code-editor/state";
+import { getTypeDefs } from "event-processing/src/function-type-defs/types/Computed";
 
 const DynamicCodeEditor = dynamic(
   () => import("../code-editor/CodeEditor").then((mod) => mod.CodeEditor),
@@ -178,38 +179,20 @@ export function EditComputed({
     () => form.formState.isValid && compileStatus.status === "success",
     [form.formState.isValid, compileStatus]
   );
-  // Code editor types
-  const getInputTsTypeFromDepsMap = useCallback(
-    (deps: DepsMap) => {
-      return `
-      type Input = {
-        ${Object.entries(deps)
-          .map(([key, value]) => {
-            const schema = value ? getDataPathInfo(value)?.schema : null;
-            const schemaTs = schema
-              ? createDataType(schema).toTypescript()
-              : "unknown";
-            return `${key}: ${schemaTs};`;
-          })
-          .join("\n")}
-      }
-    `;
-    },
-    [getDataPathInfo]
-  );
-
-  const functionType = `type ValueGetter = (input: Input) => Promise<${createDataType(
-    form.watch("returnSchema")
-  ).toTypescript()}>;`;
 
   const toasts = useMutationToasts();
 
   const depsMap = form.watch("inputs.depsMap");
+  const returnSchema = form.watch("returnSchema");
   const typeDefs = useMemo(() => {
-    return [libSource, getInputTsTypeFromDepsMap(depsMap), functionType].join(
-      "\n\n"
-    );
-  }, [depsMap, functionType, getInputTsTypeFromDepsMap]);
+    return getTypeDefs({
+      deps: depsMap,
+      returnSchema: returnSchema,
+      getDataPathInfo,
+    });
+  }, [depsMap, getDataPathInfo, returnSchema]);
+
+  console.log(typeDefs);
 
   return (
     <div className="w-full">

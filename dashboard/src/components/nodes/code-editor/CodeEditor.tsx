@@ -3,10 +3,13 @@ import { CheckIcon, Loader2, XIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
 import { Diagnostic, Project, ts } from "ts-morph";
-import { COMPILER_OPTIONS } from "~/components/ts-editor/compilerOptions";
 import { useThrottle } from "../../../hooks/useThrottle";
 import { type CompileStatus, compileStatueAtom, tsCodeAtom } from "./state";
 import { useAtom } from "jotai";
+import {
+  TS_COMPILER_OPTIONS,
+  compileTs,
+} from "event-processing/src/function-type-defs/types/Computed";
 
 interface CodeEditorProps {
   typeDefs: string;
@@ -38,39 +41,19 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
 
       // Assemble and compile the code
 
-      const finalCode = [code, typeDefs].join("\n");
-
-      const project = new Project({
-        useInMemoryFileSystem: true,
-        compilerOptions: COMPILER_OPTIONS,
-      });
-
-      project.createSourceFile("main.ts", finalCode);
-
-      const allDiagnostics = project.getPreEmitDiagnostics();
+      const result = compileTs({ code, typeDefs });
 
       // Set compile status based on results
 
-      if (!allDiagnostics.length) {
-        const transpiledOutput = ts.transpileModule(finalCode, {
-          compilerOptions: {
-            ...COMPILER_OPTIONS,
-          },
-        });
-
+      if (result.success === true) {
         setCompileStatus({
           status: "success" as const,
           message: "Compiled successfully",
           code,
-          compiled: transpiledOutput.outputText,
+          compiled: result.compiledJs,
         });
       } else {
-        // const lineNum = allDiagnostics[0]?.getLineNumber();
-        // toast({
-        //   variant: "destructive",
-        //   title: lineNum ? `Error in line ${lineNum}` : "Compile error",
-        //   description: allDiagnostics[0]?.getMessageText().toString(),
-        // });
+        const allDiagnostics = result.diagnostics;
 
         setCompileStatus({
           status: "error" as const,
