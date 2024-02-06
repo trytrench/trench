@@ -1,4 +1,10 @@
-import { type NodeDef, nodeDefSchema } from "event-processing";
+import {
+  type NodeDef,
+  nodeDefSchema,
+  FnTypeCompileContextMap,
+  BASE_CONTEXT_MAP,
+  FnType,
+} from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaNodeSnapshotToNodeDef } from "../../lib/prismaConverters";
@@ -7,6 +13,8 @@ import { GlobalStateKey, Prisma } from "@prisma/client";
 import { prisma } from "databases";
 import { uniqBy } from "lodash";
 import { assert, generateNanoId } from "../../../../../packages/common/src";
+import { getLatestFeatureDefs } from "../../lib/features";
+import { FeatureService } from "event-processing/src/function-type-defs/services/features";
 
 export const editorRouter = createTRPCRouter({
   getLatestEngine: protectedProcedure.query(async ({ ctx }) => {
@@ -34,8 +42,20 @@ export const editorRouter = createTRPCRouter({
     }),
   saveNewEngine: protectedProcedure
     .input(z.object({ nodeDefs: z.array(nodeDefSchema) }))
-    .mutation(async ({ input }) => {
-      const errors = checkErrors(input.nodeDefs);
+    .mutation(async ({ input, ctx }) => {
+      const featureDefs = await getLatestFeatureDefs();
+      const featureService: FeatureService = {
+        getFeatureById: (id) => {
+          return featureDefs.find((def) => def.id === id);
+        },
+      };
+      const compileContextMap: FnTypeCompileContextMap = {
+        ...BASE_CONTEXT_MAP,
+        [FnType.LogEntityFeature]: { featureService },
+      };
+
+      const errors = checkErrors(input.nodeDefs, compileContextMap);
+
       Object.entries(errors).forEach(([nodeId, error]) => {
         const node = input.nodeDefs.find((def) => def.id === nodeId);
         throw new Error(

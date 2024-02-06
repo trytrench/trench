@@ -1,17 +1,12 @@
 import { z } from "zod";
 import { FnType } from "./_enum";
 import { createFnTypeDefBuilder } from "../builder";
-import {
-  Entity,
-  TSchema,
-  TypeName,
-  createDataType,
-  tSchemaZod,
-} from "../../data-types";
+import { Entity, TypeName, createDataType, tSchemaZod } from "../../data-types";
 import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
+import { FeatureService } from "../services/features";
 
 export const logEntityFeatureFnDef = createFnTypeDefBuilder()
   .setFnType(FnType.LogEntityFeature)
@@ -27,6 +22,51 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
       dataPath: dataPathZodSchema,
     })
   )
+  .setCompileContextType<{
+    featureService: FeatureService;
+  }>()
+  .setValidateInputs(({ inputs, fnDef, ctx, getDataPathInfo }) => {
+    const feature = ctx.featureService.getFeatureById(fnDef.config.featureId);
+    if (!feature) {
+      return {
+        success: false,
+        error: `Feature with id ${fnDef.config.featureId} not found`,
+      };
+    }
+
+    // Check data path
+    const { schema: dataPathSchema } = getDataPathInfo(inputs.dataPath);
+    if (!dataPathSchema) {
+      return {
+        success: false,
+        error: `Data path ${inputs.dataPath} not found`,
+      };
+    }
+
+    const featureType = createDataType(feature.schema);
+    if (!featureType.canBeAssigned(dataPathSchema)) {
+      return {
+        success: false,
+        error: `Data path ${inputs.dataPath} does not match feature schema`,
+      };
+    }
+
+    // Check entity data path
+    if (inputs.entityDataPath) {
+      const { schema: entitySchema } = getDataPathInfo(inputs.entityDataPath);
+
+      if (entitySchema?.type !== TypeName.Entity) {
+        return {
+          success: false,
+          error: `Data path ${inputs.dataPath} is not an entity`,
+        };
+      }
+    }
+
+    return {
+      success: true,
+    };
+  })
   .setGetDataPaths((input) => {
     const paths = [input.dataPath];
     if (input.entityDataPath) paths.push(input.entityDataPath);
@@ -34,7 +74,7 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
   })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId, featureSchema } = fnDef.config;
+      const { featureId } = fnDef.config;
       const { entityDataPath, dataPath } = input;
 
       let assignToEntity: Entity | null = null;
@@ -47,7 +87,7 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
         event_timestamp: getUnixTime(event.timestamp),
         feature_type: fnDef.type,
         feature_id: featureId,
-        data_type: featureSchema.type,
+        data_type: fnDef.returnSchema.type,
         is_deleted: 0,
         entity_type: [] as string[],
         entity_id: [] as string[],
@@ -73,8 +113,8 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
           },
         });
 
-        const topLevelType = featureSchema.type;
-        const dataType = createDataType(featureSchema);
+        const topLevelType = fnDef.returnSchema.type;
+        const dataType = createDataType(fnDef.returnSchema);
         const parsedValue = dataType.parse(value);
 
         const rowToSave = {
@@ -82,7 +122,10 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
           value: JSON.stringify(parsedValue),
           value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
           value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
-          value_String: topLevelType === TypeName.String ? parsedValue : null,
+          value_String:
+            topLevelType === TypeName.String || topLevelType === TypeName.Name
+              ? parsedValue
+              : null,
           value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
           error: null,
         };

@@ -10,6 +10,7 @@ import {
   getFnTypeDef,
   nodeIdsFromDataPaths,
   type DataPathInfoGetter,
+  FnTypeCompileContextMap,
 } from "event-processing";
 import { create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
@@ -55,7 +56,7 @@ interface EditorState {
   }) => void;
 
   // Update status
-  updateErrors: () => void;
+  updateErrors: (context: FnTypeCompileContextMap) => void;
   setStatus: (status: EngineCompileStatus) => void;
 
   setNodeDefWithFn: <T extends FnType>(
@@ -124,10 +125,11 @@ const useEditorStoreBase = create<EditorState>()(
       errors: {},
       status: { status: "idle" },
 
-      updateErrors: () => {
+      updateErrors: (ctx) => {
         get().setStatus({ status: "compiling" });
         const allNodeDefs = selectors.getNodeDefs()(get());
-        const errors = checkErrors(allNodeDefs);
+        const errors = checkErrors(allNodeDefs, ctx);
+        console.log(errors);
         if (Object.keys(errors).length === 0) {
           get().setStatus({ status: "success" });
         } else {

@@ -70,10 +70,12 @@ export type InputValidator<
   TReturn extends TSchema = any,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
+  TCompileContext = any,
 > = (options: {
   inputs: z.infer<TInputSchema>;
   fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
   getDataPathInfo: DataPathInfoGetter;
+  ctx: TCompileContext;
 }) => InputValidatorResult;
 
 export type FnTypeDef<
@@ -82,6 +84,7 @@ export type FnTypeDef<
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
   TContext = any,
+  TCompileContext = any,
 > = {
   fnType: TFnType;
   configSchema: TConfigSchema;
@@ -92,5 +95,11 @@ export type FnTypeDef<
     context: TContext;
   }) => Resolver<TReturn>;
   getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
-  validateInputs: InputValidator<TFnType, TReturn, TConfigSchema, TInputSchema>;
+  validateInputs: InputValidator<
+    TFnType,
+    TReturn,
+    TConfigSchema,
+    TInputSchema,
+    TCompileContext
+  >;
 };
