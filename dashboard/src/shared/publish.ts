@@ -13,7 +13,6 @@ import {
   createDataType,
   type NodeDefAny,
   type DataPathInfoGetter,
-  FnTypeCompileContextMap,
 } from "event-processing";
 import { assert } from "../../../packages/common/src";
 
@@ -49,10 +48,7 @@ export function prune(nodeDefs: NodeDef[]): NodeDef[] {
 }
 
 // Returns list of node Ids with errors
-export function checkErrors(
-  nodeDefs: NodeDefAny[],
-  compileContextMap: FnTypeCompileContextMap
-): Record<string, string> {
+export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
   const errors: Record<string, string> = {};
 
   const allNodeDefs = nodeDefs;
@@ -99,7 +95,6 @@ export function checkErrors(
       inputs: nodeDef.inputs,
       fnDef: nodeDef.fn,
       getDataPathInfo,
-      ctx: compileContextMap[nodeDef.fn.type],
     });
     if (!fnValidateResult.success) {
       errors[nodeDef.id] = `Fn validation failed: ${fnValidateResult.error}`;

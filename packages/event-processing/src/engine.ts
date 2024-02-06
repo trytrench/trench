@@ -1,7 +1,6 @@
 import { createRedisService } from "./../../databases/src/redis";
 import { assert } from "common";
 import {
-  BASE_CONTEXT_MAP,
   FnType,
   FnTypeContextMap,
   FnTypeDef,
@@ -92,11 +91,16 @@ export class ExecutionEngine {
     const redis = createRedisService();
 
     this.context = {
-      ...BASE_CONTEXT_MAP,
+      [FnType.Computed]: {},
       [FnType.Counter]: { redis },
       [FnType.UniqueCounter]: { redis },
       [FnType.GetEntityFeature]: { redis },
+      [FnType.EntityAppearance]: {},
+      [FnType.LogEntityFeature]: {},
       [FnType.CacheEntityFeature]: { redis },
+      [FnType.Event]: {},
+      [FnType.Decision]: {},
+      [FnType.Blocklist]: {},
     };
 
     const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {

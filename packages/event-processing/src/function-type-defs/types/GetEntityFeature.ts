@@ -1,13 +1,7 @@
 import { z } from "zod";
 import { FnType } from "./_enum";
 import { createFnTypeDefBuilder } from "../builder";
-import {
-  Entity,
-  TSchema,
-  TypeName,
-  createDataType,
-  tSchemaZod,
-} from "../../data-types";
+import { Entity, TSchema, TypeName, createDataType } from "../../data-types";
 import { hashObject } from "../lib/counts";
 import { RedisInterface } from "databases";
 import { dataPathZodSchema } from "../../data-path";
@@ -17,7 +11,7 @@ export const getEntityFeatureFnDef = createFnTypeDefBuilder()
   .setConfigSchema(
     z.object({
       featureId: z.string(),
-      featureSchema: tSchemaZod,
+      featureSchema: z.record(z.any()),
     })
   )
   .setInputSchema(

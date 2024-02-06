@@ -51,31 +51,6 @@ export type FnTypeContextMap = {
   [TFnType in FnType]: ExtractFnTypeDefContext<FnTypeDefsMap[TFnType]>;
 };
 
-export type ExtractFnTypeDefCompileContext<T> = T extends FnTypeDef<
-  any,
-  any,
-  any,
-  any,
-  any,
-  infer TCompileContext
->
-  ? TCompileContext
-  : never;
-
-export type FnTypeCompileContextMap = {
-  [TFnType in FnType]: ExtractFnTypeDefCompileContext<FnTypeDefsMap[TFnType]>;
-};
-
-export const BASE_CONTEXT_MAP: Record<FnType, undefined> = Object.keys(
-  FnType
-).reduce(
-  (acc, fnType) => {
-    acc[fnType as FnType] = undefined;
-    return acc;
-  },
-  {} as Record<FnType, undefined>
-);
-
 // Build fn def
 
 type Args<T extends FnType> = Omit<FnDef<T>, "id" | "snapshotId">;

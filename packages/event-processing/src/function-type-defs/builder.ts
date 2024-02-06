@@ -10,7 +10,6 @@ export interface FnTypeDefBuilder<
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
   TContext = unknown,
-  TCompileContext = unknown,
 > {
   _partialDef: Partial<
     FnTypeDef<TFnType, TReturnSchema, TConfigSchema, TInputSchema, TContext>
@@ -22,36 +21,20 @@ export interface FnTypeDefBuilder<
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
   setConfigSchema<TCS extends AnyZodObject>(
     configSchema: TCS
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TCS,
-    TInputSchema,
-    TContext,
-    TCompileContext
-  >;
+  ): FnTypeDefBuilder<TFnType, TReturnSchema, TCS, TInputSchema, TContext>;
   setInputSchema<TIS extends AnyZodObject>(
     inputSchema: TIS
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TConfigSchema,
-    TIS,
-    TContext,
-    TCompileContext
-  >;
+  ): FnTypeDefBuilder<TFnType, TReturnSchema, TConfigSchema, TIS, TContext>;
   setReturnSchema<T extends TSchema>(): FnTypeDefBuilder<
     TFnType,
     T,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
   setGetDataPaths(
     getDataPaths: (input: z.infer<TInputSchema>) => Array<DataPath>
@@ -60,24 +43,21 @@ export interface FnTypeDefBuilder<
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
   setValidateInputs(
     validateInputs: InputValidator<
       TFnType,
       TReturnSchema,
       TConfigSchema,
-      TInputSchema,
-      TCompileContext
+      TInputSchema
     >
   ): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
   setCreateResolver<
     TCR extends (options: {
@@ -92,32 +72,21 @@ export interface FnTypeDefBuilder<
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
   setContextType<TCtx>(): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TCtx,
-    TCompileContext
-  >;
-  setCompileContextType<TCC>(): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TConfigSchema,
-    TInputSchema,
-    TContext,
-    TCC
+    TCtx
   >;
   build(): FnTypeDef<
     TFnType,
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >;
 }
 
@@ -127,8 +96,7 @@ export function createFnTypeDefBuilder<
   TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
-  TContext = undefined,
-  TCompileContext = undefined,
+  TContext = unknown,
 >(
   def?: Partial<FnTypeDef>
 ): FnTypeDefBuilder<
@@ -136,8 +104,7 @@ export function createFnTypeDefBuilder<
   TReturnSchema,
   TConfigSchema,
   TInputSchema,
-  TContext,
-  TCompileContext
+  TContext
 > {
   const partialDef = {
     configSchema: z.object({}),
@@ -173,18 +140,7 @@ export function createFnTypeDefBuilder<
         TReturnSchema,
         TConfigSchema,
         TInputSchema,
-        TC,
-        TCompileContext
-      >(partialDef, {});
-    },
-    setCompileContextType<TCC>() {
-      return createNewFnTypeDefBuilder<
-        TFnType,
-        TReturnSchema,
-        TConfigSchema,
-        TInputSchema,
-        TContext,
-        TCC
+        TC
       >(partialDef, {});
     },
     setCreateResolver(createResolver) {
@@ -217,34 +173,24 @@ function createNewFnTypeDefBuilder<
   TConfigSchema extends AnyZodObject,
   TInputSchema extends AnyZodObject,
   TContext = unknown,
-  TCompileContext = unknown,
 >(
   prevDef: Partial<FnTypeDef>,
   newDef: Partial<
-    FnTypeDef<
-      TFnType,
-      TReturnSchema,
-      TConfigSchema,
-      TInputSchema,
-      TContext,
-      TCompileContext
-    >
+    FnTypeDef<TFnType, TReturnSchema, TConfigSchema, TInputSchema, TContext>
   >
 ): FnTypeDefBuilder<
   TFnType,
   TReturnSchema,
   TConfigSchema,
   TInputSchema,
-  TContext,
-  TCompileContext
+  TContext
 > {
   return createFnTypeDefBuilder<
     TFnType,
     TReturnSchema,
     TConfigSchema,
     TInputSchema,
-    TContext,
-    TCompileContext
+    TContext
   >({
     ...prevDef,
     ...newDef,

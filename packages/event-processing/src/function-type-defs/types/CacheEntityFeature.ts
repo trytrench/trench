@@ -20,6 +20,7 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
   .setConfigSchema(
     z.object({
       featureId: z.string(),
+      featureSchema: tSchemaZod,
     })
   )
   .setInputSchema(
@@ -38,7 +39,7 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
   })
   .setCreateResolver(({ fnDef, context, input }) => {
     return async ({ event, getDependency, engineId }) => {
-      const { featureId } = fnDef.config;
+      const { featureId, featureSchema } = fnDef.config;
 
       const { entityDataPath, dataPath } = input;
 

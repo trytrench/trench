@@ -12,14 +12,7 @@ import { Button } from "~/components/ui/button";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
-import {
-  BASE_CONTEXT_MAP,
-  FnType,
-  FnTypeCompileContextMap,
-  NodeDef,
-  NodeDefAny,
-  TSchema,
-} from "event-processing";
+import { FnType, NodeDef, NodeDefAny, TSchema } from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
@@ -28,7 +21,6 @@ import { isAfter } from "date-fns";
 import { LoadingPlaceholder } from "../../components/LoadingPlaceholder";
 import { Badge } from "../../components/ui/badge";
 import { CheckIcon, XIcon } from "lucide-react";
-import { FeatureService } from "event-processing/src/function-type-defs/services/features";
 
 function StatusIndicator(props: { status: EngineCompileStatus }) {
   const { status } = props;
@@ -84,31 +76,15 @@ const Page: NextPageWithLayout = () => {
     { enabled: !!editorEngine }
   );
 
-  const { data: features } = api.features.list.useQuery();
-  const compileContextMap: FnTypeCompileContextMap = useMemo(() => {
-    const featureService: FeatureService = {
-      getFeatureById(id) {
-        return features?.find((feature) => feature.id === id);
-      },
-    };
-
-    return {
-      ...BASE_CONTEXT_MAP,
-      [FnType.LogEntityFeature]: {
-        featureService,
-      },
-    };
-  }, [features]);
-
   // Compile every second if there are changes
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (status.status === "idle") {
-        updateErrors(compileContextMap);
+        updateErrors();
       }
     }, 0);
     return () => clearTimeout(timeout);
-  }, [status, editorHasChanged, updateErrors, compileContextMap]);
+  }, [status, editorHasChanged, updateErrors]);
 
   // Initialize if editor hasn't been initialized yet, and we have data
   useEffect(() => {
