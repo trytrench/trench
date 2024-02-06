@@ -121,7 +121,7 @@ export function EventEditor({ eventType }: Props) {
       </div>
 
       <Card className="flex h-96">
-        <div className="p-4 w-80 border-r">
+        <ScrollArea className="p-4 w-80 border-r">
           {filteredNodes?.map((node) => (
             <div
               className={clsx(
@@ -174,7 +174,7 @@ export function EventEditor({ eventType }: Props) {
               </DropdownMenu>
             </div>
           ))}
-        </div>
+        </ScrollArea>
         <ScrollArea className="py-4 px-8 flex-1 text-sm">
           {selectedNode && (
             <SchemaDisplay
