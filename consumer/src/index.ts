@@ -36,7 +36,7 @@ async function initEventHandler() {
     }
 
     const lastEventProcessedId = await fetchLastEventProcessedId();
-    const events = await getEventsSince({ lastEventProcessedId, limit: 3000 });
+    const events = await getEventsSince({ lastEventProcessedId, limit: 30 });
     if (events.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;
