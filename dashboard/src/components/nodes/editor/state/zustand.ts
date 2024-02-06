@@ -128,6 +128,8 @@ const useEditorStoreBase = create<EditorState>()(
         get().setStatus({ status: "compiling" });
         const allNodeDefs = selectors.getNodeDefs()(get());
         const errors = checkErrors(allNodeDefs);
+
+        console.log(errors);
         if (Object.keys(errors).length === 0) {
           get().setStatus({ status: "success" });
         } else {

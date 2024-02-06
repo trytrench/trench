@@ -12,7 +12,13 @@ import { Button } from "~/components/ui/button";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
-import { FnType, NodeDef, NodeDefAny, TSchema } from "event-processing";
+import {
+  FnType,
+  NodeDef,
+  NodeDefAny,
+  TSchema,
+  TypeName,
+} from "event-processing";
 import { generateNanoId } from "../../../../packages/common/src";
 import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
@@ -68,6 +74,8 @@ const Page: NextPageWithLayout = () => {
   const updateErrors = useEditorStore.use.updateErrors();
 
   const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
+  const fnDefs = useEditorStore(selectors.getFnDefs());
+  const setFnDef = useEditorStore.use.setFnDef();
 
   const { data: latestEngine } = api.editor.getLatestEngine.useQuery();
 
@@ -126,6 +134,8 @@ const Page: NextPageWithLayout = () => {
     );
   }, [eventNodes, eventTypes]);
 
+  const { data: features } = api.features.list.useQuery();
+
   const toasts = useMutationToasts();
 
   return (
@@ -135,6 +145,29 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="flex items-center gap-4">
             <div className="text-3xl text-emphasis-foreground">Data Model</div>
+            <Button
+              onClick={() => {
+                for (const fnDef of fnDefs) {
+                  if (fnDef.type === FnType.LogEntityFeature) {
+                    const config: any = fnDef.config;
+                    const feature = features?.find(
+                      (f) => f.id === config.featureId
+                    );
+                    if (feature && feature.name === "Name") {
+                      setFnDef({
+                        ...fnDef,
+                        config: {
+                          ...fnDef.config,
+                          featureSchema: { type: TypeName.Name },
+                        },
+                      }).catch(handleError);
+                    }
+                  }
+                }
+              }}
+            >
+              Fix name loggers
+            </Button>
             {editorHasChanged && (
               <Button
                 onClick={() => {

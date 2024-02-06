@@ -12,6 +12,7 @@ import { getUnixTime } from "date-fns";
 import { StoreTable } from "../lib/store";
 import { get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
+import { printDataPath } from "../lib/print";
 
 export const logEntityFeatureFnDef = createFnTypeDefBuilder()
   .setFnType(FnType.LogEntityFeature)
@@ -31,6 +32,42 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
     const paths = [input.dataPath];
     if (input.entityDataPath) paths.push(input.entityDataPath);
     return paths;
+  })
+  .setValidateInputs(({ inputs, fnDef, getDataPathInfo }) => {
+    const { featureSchema } = fnDef.config;
+
+    // Check data path
+    const { schema: dataPathSchema } = getDataPathInfo(inputs.dataPath);
+    if (!dataPathSchema) {
+      return {
+        success: false,
+        error: `Data path ${inputs.dataPath} not found`,
+      };
+    }
+
+    const featureType = createDataType(featureSchema);
+    if (!featureType.canBeAssigned(dataPathSchema)) {
+      return {
+        success: false,
+        error: `Data path of type ${dataPathSchema.type} can't be assigned to feature of type ${featureSchema.type}`,
+      };
+    }
+
+    // Check entity data path
+    if (inputs.entityDataPath) {
+      const { schema: entitySchema } = getDataPathInfo(inputs.entityDataPath);
+
+      if (entitySchema?.type !== TypeName.Entity) {
+        return {
+          success: false,
+          error: `Data path ${printDataPath(inputs.dataPath)} is not an entity`,
+        };
+      }
+    }
+
+    return {
+      success: true,
+    };
   })
   .setCreateResolver(({ fnDef, input }) => {
     return async ({ event, getDependency, engineId }) => {
