@@ -31,14 +31,22 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
       const { dataPath } = input;
       const value = await getDependency({
         dataPath,
-        expectedSchema: {
-          type: TypeName.String,
-        },
       });
+
+      let id: string;
+      if (typeof value === "string") {
+        id = value;
+      } else if (typeof value === "number") {
+        id = value.toString();
+      } else {
+        throw new Error(
+          `Expected id to be a string or number, but got ${typeof value}`
+        );
+      }
 
       const entity = {
         type: entityType,
-        id: value,
+        id,
       };
 
       const rowToSave = {

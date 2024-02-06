@@ -115,7 +115,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
 
   return (
     <div>
-      {args.map((arg, index) => (
+      {dataPaths.map((dataPath, index) => (
         <div key={index} className="flex items-center space-x-2 mb-2">
           {/* {isEditingArgs && (
             <input
@@ -132,7 +132,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
             onChange={(newValue) => {
               if (newValue) updateDataPath(index, newValue);
             }}
-            desiredSchema={isEditingArgs ? undefined : arg.schema}
+            // desiredSchema={isEditingArgs ? undefined : arg.schema}
           />
           <button
             onClick={() => removeDataPath(index)}

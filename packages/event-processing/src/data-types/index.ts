@@ -178,6 +178,10 @@ class Float64DataType extends IDataType<TFloat64Schema> {
     if (schema.type === TypeName.Int64) return true;
     return false;
   }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.Int64) return true;
+    return super.canBeAssigned(schema);
+  }
 }
 
 class Int64DataType extends IDataType<TInt64Schema> {
