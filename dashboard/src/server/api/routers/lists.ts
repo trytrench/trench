@@ -57,17 +57,29 @@ export const listsRouter = createTRPCRouter({
         rows: entities.map((entity) => {
           const entityType = entity.entity_type[0];
           const entityId = entity.entity_id[0];
+          const features = getAnnotatedFeatures(
+            featureDefs,
+            entityTypes,
+            entity.features_array,
+            rules
+          );
+          const nameFeature = features.find(
+            (f) =>
+              f.result.type === "success" &&
+              f.result.data.schema.type === TypeName.Name
+          );
+          const entityName: string =
+            nameFeature?.result.type === "success"
+              ? nameFeature.result.data.value
+              : entityId;
+
           return {
             entityType,
             entityId,
+            entityName,
             firstSeenAt: new Date(entity.first_seen),
             lastSeenAt: new Date(entity.last_seen),
-            features: getAnnotatedFeatures(
-              featureDefs,
-              entityTypes,
-              entity.features_array,
-              rules
-            ),
+            features: features,
           };
         }),
       };

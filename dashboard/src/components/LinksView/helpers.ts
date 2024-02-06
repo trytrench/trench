@@ -1,5 +1,12 @@
 import { countBy, groupBy, uniq } from "lodash";
-import { LeftItem, LinkItem, RawLeft, RawLinks, RightItem } from "./types";
+import {
+  EntityWithName,
+  LeftItem,
+  LinkItem,
+  RawLeft,
+  RawLinks,
+  RightItem,
+} from "./types";
 import { Entity } from "event-processing";
 import { prisma } from "databases";
 
@@ -9,10 +16,10 @@ export const HIDE_LINKS_THRESHOLD = 30;
 export const MAX_ENTITIES_PER_GROUP = 10;
 
 type ProcessInput = {
-  rawLeft: Entity[];
+  rawLeft: EntityWithName[];
   rawLinks: {
-    from: Entity;
-    to: Entity;
+    from: EntityWithName;
+    to: EntityWithName;
   }[];
   shouldGroup: boolean;
 };
@@ -23,11 +30,11 @@ type ProcessOutput = {
   links: LinkItem[];
 };
 
-export const processQueryOutput = async ({
+export const processQueryOutput = ({
   rawLeft,
   rawLinks,
   shouldGroup,
-}: ProcessInput): Promise<ProcessOutput> => {
+}: ProcessInput): ProcessOutput => {
   // split this up into two parts:
   // - entities that are not groups
   // - entities that are groups
@@ -107,7 +114,7 @@ export const processQueryOutput = async ({
         itemType: "entity" as const,
         id: e.id,
         type: e.type,
-        name: e.id,
+        name: e.name,
         linkCount: linkCount,
         isHidden: linkCount > HIDE_LINKS_THRESHOLD,
       };
@@ -126,7 +133,7 @@ export const processQueryOutput = async ({
     return {
       itemType: "entity" as const,
       id: id,
-      name: theEntity.to.id,
+      name: theEntity.to.name,
       type: theEntity.to.type,
       linkCount: 0, // TODO
     };

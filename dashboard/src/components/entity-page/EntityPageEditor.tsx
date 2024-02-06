@@ -14,14 +14,17 @@ import { useRouter } from "next/router";
 import { api } from "../../utils/api";
 import { handleError } from "../../lib/handleError";
 import { usePrevious } from "@dnd-kit/utilities";
+import { customDecodeURIComponent } from "../../lib/uri";
 
 export const EntityPageEditor: React.FC = () => {
   const router = useRouter();
-  const entityType = decodeURIComponent(router.query.entityType as string);
-  const entityId = decodeURIComponent(router.query.entityId as string);
+  const entityType = customDecodeURIComponent(
+    router.query.entityType as string
+  );
+  const entityId = customDecodeURIComponent(router.query.entityId as string);
 
   const { data: entityPage, isLoading } = api.entityTypes.getPage.useQuery(
-    { entityTypeId: entityType },
+    { entityTypeId: entityType ?? "" },
     { enabled: !!entityType, refetchOnWindowFocus: false }
   );
 
@@ -47,7 +50,7 @@ export const EntityPageEditor: React.FC = () => {
   // Autosave when exiting edit mode
   const prevEditMode = usePrevious(isEditMode);
   useEffect(() => {
-    if (!isEditMode && prevEditMode && pageState) {
+    if (!isEditMode && prevEditMode && pageState && entityType) {
       upsertPage({
         entityTypeId: entityType,
         config: pageState,
@@ -70,7 +73,7 @@ export const EntityPageEditor: React.FC = () => {
         {isEditMode && <Button onClick={clearEntityPageState}>reset</Button>}
       </div>
 
-      {pageState && (
+      {pageState && entityId && entityType && (
         <RenderComponent
           id={pageState.root}
           entity={{

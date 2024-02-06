@@ -17,6 +17,7 @@ import { sortedForLeftSvgs } from "./sortedForLeftSvgs";
 import type { LeftItem, RightItem } from "./types";
 import { useEntityName } from "../../hooks/useEntityName";
 import { useEntityNameMap } from "../../hooks/useEntityNameMap";
+import { customEncodeURIComponent } from "../../lib/uri";
 
 interface LinksViewProps {
   entityId: string;
@@ -31,6 +32,7 @@ function LinksView({
   leftTypeFilter,
   onLeftTypeFilterChange,
 }: LinksViewProps) {
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
   const { data, isLoading } = api.links.relatedEntities.useQuery(
     {
       entityId: entityId ?? "",
@@ -145,6 +147,8 @@ function LinksView({
           {left.map((item) => {
             const isSelected = leftSelection === item.id;
             const isActive = !selectionExists || activeIds.has(item.id);
+
+            const entType = entityTypes?.find((et) => et.id === item.type);
             return (
               <LeftSideCard
                 key={item.id}
@@ -160,7 +164,9 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                href={`/entity/${item.id}?tab=links`}
+                href={`/entity/${customEncodeURIComponent(
+                  entType?.type
+                )}/${customEncodeURIComponent(item.id)}?tab=links`}
               />
             );
           })}
@@ -186,6 +192,7 @@ function LinksView({
         {right.map((item) => {
           const isSelected = rightSelection === item.id;
           const isActive = !selectionExists || activeIds.has(item.id); // TODO: active when linked to right selection.
+          const entType = entityTypes?.find((et) => et.id === item.type);
           return (
             <RightSideCard
               key={item.id}
@@ -197,7 +204,9 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              href={`/entity/${item.id}?tab=links`}
+              href={`/entity/${customEncodeURIComponent(
+                entType?.type
+              )}/${customEncodeURIComponent(item.id)}?tab=links`}
             />
           );
         })}

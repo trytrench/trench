@@ -48,9 +48,6 @@ export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
                   name={
                     entityNameMap[result.data.value.id] ?? result.data.value.id
                   }
-                  // href={`/${router.query.project as string}/entity/${
-                  //   result.data.value.id
-                  // }`}
                 />
               ) : (
                 <RenderResult result={result} />

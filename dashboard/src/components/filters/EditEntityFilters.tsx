@@ -28,6 +28,11 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
   const { firstSeen, lastSeen, entityType, features: featureFilters } = value;
 
+  const filteredFeatureDefs = allFeatureDefs?.filter((f) => {
+    if (!entityType) return true;
+    return f.entityTypeId === entityType;
+  });
+
   return (
     <>
       <div>
@@ -105,7 +110,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
             {/* Feature Filter*/}
             <AddFeatureFilterSubItem
-              featureDefs={allFeatureDefs ?? []}
+              featureDefs={filteredFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
                 onChange({

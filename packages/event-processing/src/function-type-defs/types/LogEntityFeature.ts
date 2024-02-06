@@ -114,12 +114,16 @@ export const logEntityFeatureFnDef = createFnTypeDefBuilder()
         const dataType = createDataType(featureSchema);
         const parsedValue = dataType.parse(value);
 
+        const isString = createDataType({
+          type: TypeName.String,
+        }).isSuperTypeOf(featureSchema);
+
         const rowToSave = {
           ...baseData,
           value: JSON.stringify(parsedValue),
           value_Int64: topLevelType === TypeName.Int64 ? parsedValue : null,
           value_Float64: topLevelType === TypeName.Float64 ? parsedValue : null,
-          value_String: topLevelType === TypeName.String ? parsedValue : null,
+          value_String: isString ? parsedValue : null,
           value_Bool: topLevelType === TypeName.Boolean ? parsedValue : null,
           error: null,
         };

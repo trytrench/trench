@@ -65,6 +65,7 @@ const buildWhereClauseForFeatureFilter = (
       if (value.lte !== undefined) conditions.push(`${column} <= ${value.lte}`);
       break;
     }
+    case TypeName.Name:
     case TypeName.String: {
       const column = "value_String";
       checkAtMostOneIsDefined(value);
@@ -197,6 +198,8 @@ export async function getEntitiesList(props: {
     ORDER BY last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
   `;
+
+  console.log(finalQuery);
 
   const result = await db.query({
     query: finalQuery,

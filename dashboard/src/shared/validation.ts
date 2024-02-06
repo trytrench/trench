@@ -25,7 +25,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.literal(TypeName.String),
+    dataType: z.enum([TypeName.String, TypeName.Name]),
     value: z.object({
       eq: z.string().optional(),
       contains: z.string().optional(),
@@ -74,6 +74,12 @@ export const featureFiltersZod = z.union([
     featureId: z.string(),
     featureName: z.string().optional(),
     dataType: z.literal(TypeName.Location),
+    value: z.any(),
+  }),
+  z.object({
+    featureId: z.string(),
+    featureName: z.string().optional(),
+    dataType: z.enum([TypeName.Date, TypeName.Rule, TypeName.Tuple]),
     value: z.any(),
   }),
 ]);

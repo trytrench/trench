@@ -5,7 +5,11 @@ import {
   INTERNAL_LIMIT,
   processQueryOutput,
 } from "~/components/LinksView/helpers";
-import { RawLeft, RawLinks } from "~/components/LinksView/types";
+import {
+  EntityWithName,
+  RawLeft,
+  RawLinks,
+} from "~/components/LinksView/types";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
@@ -30,10 +34,10 @@ export const linksRouter = createTRPCRouter({
       const query = `
         WITH first_degree_connections AS (
             SELECT DISTINCT
-                f1.entity_type[1] as entity_type_1,
-                f1.entity_id[1] as entity_id_1,
-                f2.entity_type[1] as entity_type_2,
-                f2.entity_id[1] as entity_id_2
+              f1.entity_type[1] as entity_type_1,
+              f1.entity_id[1] as entity_id_1,
+              f2.entity_type[1] as entity_type_2,
+              f2.entity_id[1] as entity_id_2
             FROM
                 features f1
             INNER JOIN
@@ -44,32 +48,64 @@ export const linksRouter = createTRPCRouter({
                 f1.feature_type = 'EntityAppearance' AND
                 f2.feature_type = 'EntityAppearance' AND
                 NOT (
-                  f1.entity_type[1] = f2.entity_type[1]
-                  AND f1.entity_id[1] = f2.entity_id[1] 
+                  f1.entity_type = f2.entity_type
+                  AND f1.entity_id = f2.entity_id 
                 )
+        ), 
+        recent_names AS (
+            SELECT
+                entity_type[1] as entity_type,
+                entity_id[1] as entity_id,
+                value_String as entity_name
+            FROM
+                features
+            WHERE
+                data_type = 'Name'
+                AND is_deleted = 0
+            ORDER BY
+                event_id DESC
+            LIMIT 1 BY (entity_type, entity_id)
         )
-        
         SELECT
-            fdc.entity_type_1 as entity_type,
             fdc.entity_id_1 as entity_id,
-            fdc.entity_type_2 as first_degree_type,
+            fdc.entity_type_1 as entity_type,
+            rn1a.entity_name as entity_name,
+
             fdc.entity_id_2 as first_degree_id,
+            fdc.entity_type_2 as first_degree_type,
+            rn1b.entity_name as first_degree_name,
+
+            fdc2.entity_id_2 as second_degree_id,
             fdc2.entity_type_2 as second_degree_type,
-            fdc2.entity_id_2 as second_degree_id
+            rn2.entity_name as second_degree_name
         FROM
             first_degree_connections fdc
-        INNER JOIN first_degree_connections fdc2 
-            ON fdc.entity_type_2 = fdc2.entity_type_1
-            AND fdc2.entity_type_2 = fdc.entity_type_1
-            AND fdc.entity_id_2 = fdc2.entity_id_1 
+        INNER JOIN
+            first_degree_connections fdc2 
+                ON fdc.entity_type_2 = fdc2.entity_type_1
+                AND fdc.entity_id_2 = fdc2.entity_id_1
+        LEFT JOIN
+            recent_names rn1a
+                ON fdc.entity_type_1 = rn1a.entity_type
+                AND fdc.entity_id_1 = rn1a.entity_id
+        LEFT JOIN
+            recent_names rn1b
+                ON fdc.entity_type_2 = rn1b.entity_type
+                AND fdc.entity_id_2 = rn1b.entity_id
+        LEFT JOIN
+            recent_names rn2
+                ON fdc2.entity_type_2 = rn2.entity_type
+                AND fdc2.entity_id_2 = rn2.entity_id
         WHERE
             fdc.entity_type_1 = '${input.entityType}'
             AND fdc.entity_id_1 = '${input.entityId}'
+            AND fdc2.entity_type_2 = fdc.entity_type_1
             ${
               input.leftSideType
                 ? `AND fdc2.entity_type_1 = '${input.leftSideType}'`
                 : ""
             }
+      
       `;
 
       const result = await db.query({
@@ -79,10 +115,15 @@ export const linksRouter = createTRPCRouter({
       type Result = {
         entity_type: string;
         entity_id: string;
+        entity_name: string;
+
         first_degree_type: string;
         first_degree_id: string;
+        first_degree_name: string;
+
         second_degree_type: string;
         second_degree_id: string;
+        second_degree_name: string;
       }[];
 
       const parsed = await result.json<{
@@ -90,19 +131,20 @@ export const linksRouter = createTRPCRouter({
         statistics: any;
       }>();
 
-      const firstDegreeEntities: Entity[] = uniqBy(
+      const firstDegreeEntities: EntityWithName[] = uniqBy(
         parsed.data.map((item) => {
           return {
             id: item.first_degree_id,
             type: item.first_degree_type,
+            name: item.first_degree_name ?? item.first_degree_id,
           };
         }),
         (item) => `${item.type}-${item.id}`
       );
 
       type Link = {
-        from: Entity;
-        to: Entity;
+        from: EntityWithName;
+        to: EntityWithName;
       };
       const secondDegreeLinks: Link[] = parsed.data
         .map((item) => {
@@ -113,10 +155,12 @@ export const linksRouter = createTRPCRouter({
             from: {
               id: item.first_degree_id,
               type: item.first_degree_type,
+              name: item.first_degree_name ?? item.first_degree_id,
             },
             to: {
               id: item.second_degree_id,
               type: item.second_degree_type,
+              name: item.second_degree_name ?? item.second_degree_id,
             },
           };
         })

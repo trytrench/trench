@@ -1,5 +1,11 @@
 // Query output
 
+import { Entity } from "event-processing";
+
+export type EntityWithName = Entity & {
+  name: string;
+};
+
 export type RawLeft = {
   id: string;
   type: string;

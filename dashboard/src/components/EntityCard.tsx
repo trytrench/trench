@@ -3,9 +3,10 @@ import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import { useDecision } from "~/hooks/useDecision";
 import { useEntityName } from "~/hooks/useEntityName";
-import { type RouterOutputs } from "~/utils/api";
+import { api, type RouterOutputs } from "~/utils/api";
 import { FeatureGrid } from "./FeatureGrid";
 import { RenderDecision } from "./RenderDecision";
+import { customEncodeURIComponent } from "../lib/uri";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -14,25 +15,27 @@ interface Props {
 }
 
 export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
-  const { entityName, entityTypeName } = useEntityName(entity);
   const decision = useDecision(entity.features);
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const entityTypeName = entityTypes?.find((et) => et.id === entity.entityType)
+    ?.type;
 
   return (
     <a
       className="flex flex-col text-left border rounded-lg shadow-sm p-8 bg-card"
-      href={`/entity/${encodeURIComponent(
-        entity.entityType
-      )}/${encodeURIComponent(entity.entityId)}`}
+      href={`/entity/${customEncodeURIComponent(
+        entityTypeName
+      )}/${customEncodeURIComponent(entity.entityId)}`}
     >
       <div className="">
         <Link
-          href={`/entity/${encodeURIComponent(
-            entity.entityType
-          )}/${encodeURIComponent(entity.entityId)}`}
+          href={`/entity/${customEncodeURIComponent(
+            entityTypeName
+          )}/${customEncodeURIComponent(entity.entityId)}`}
         >
           <div className="flex items-center">
             <h1 className="text-lg text-emphasis-foreground">
-              {entityTypeName}: {entityName ?? entity.entityId}
+              {entityTypeName}: {entity.entityName ?? entity.entityId}
             </h1>
             {relation && <Badge className="ml-2 self-center">{relation}</Badge>}
 

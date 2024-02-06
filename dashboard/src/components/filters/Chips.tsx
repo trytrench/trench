@@ -330,6 +330,7 @@ export function FeatureFilterChip(props: {
         />
       );
     }
+    case TypeName.Name:
     case TypeName.String: {
       return (
         <StringFilterChip
@@ -462,7 +463,10 @@ function NumberFilterChip(props: {
   );
 }
 
-type StringFilter = Extract<FeatureFilter, { dataType: TypeName.String }>;
+type StringFilter = Extract<
+  FeatureFilter,
+  { dataType: TypeName.String | TypeName.Name }
+>;
 
 const STRING_FILTER_OPS = [
   { key: "eq", label: "=" },

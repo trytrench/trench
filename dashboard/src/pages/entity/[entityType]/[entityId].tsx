@@ -32,6 +32,7 @@ import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { TypeName } from "event-processing";
 import { useDecision } from "~/hooks/useDecision";
 import { RenderDecision } from "~/components/RenderDecision";
+import { customDecodeURIComponent } from "../../../lib/uri";
 
 type Option = {
   label: string;
@@ -88,16 +89,22 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
 
 const Page: NextPageWithLayout = () => {
   const router = useRouter();
-  const entityId = decodeURIComponent(router.query.entityId as string);
-  const entityType = decodeURIComponent(router.query.entityType as string);
+  const entityId = customDecodeURIComponent(router.query.entityId as string);
+  const entityTypeName = customDecodeURIComponent(
+    router.query.entityType as string
+  );
+
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
+  const entTypeObj = entityTypes?.find((et) => et.type === entityTypeName);
+  const entityTypeId = entTypeObj?.id;
 
   const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
-    { entityFilters: { entityId, entityType } },
-    { enabled: !!entityId && !!entityType }
+    { entityFilters: { entityId, entityType: entityTypeId } },
+    { enabled: !!entityId && !!entityTypeId }
   );
 
   const entity = useMemo(() => entityDataRows?.rows[0], [entityDataRows]);
-  const { entityName, entityTypeName } = useEntityName(entity);
 
   const entityNameMap = useEntityNameMap(
     entity?.features
@@ -130,7 +137,7 @@ const Page: NextPageWithLayout = () => {
   return (
     <main className="h-full flex flex-col">
       <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
-        <h1 className="text-2xl">{entityName ?? entity?.entityId}</h1>
+        <h1 className="text-2xl">{entity?.entityName}</h1>
         <Badge className="-translate-y-0.5">{entityTypeName}</Badge>
         {decision && <RenderDecision decision={decision} />}
       </div>
@@ -193,15 +200,22 @@ const Page: NextPageWithLayout = () => {
               <EventsDashboard entityId={entityId} datasetId={datasetId} />
             </TabsContent> */}
             <TabsContent value="history" className="relative grow mt-0">
-              <EventsList
-                entity={{
-                  id: entityId,
-                  type: entityType,
-                }}
-              />
+              {entityId && entityTypeId && (
+                <EventsList
+                  entity={{
+                    id: entityId,
+                    type: entityTypeId,
+                  }}
+                />
+              )}
             </TabsContent>
             <TabsContent value="links" className="relative grow">
-              <RelatedEntities entityId={entityId} entityType={entityType} />
+              {entityId && entityTypeId && (
+                <RelatedEntities
+                  entityId={entityId}
+                  entityType={entityTypeId}
+                />
+              )}
             </TabsContent>
             <TabsContent value="page" className="relative grow">
               <EntityPageEditor />
