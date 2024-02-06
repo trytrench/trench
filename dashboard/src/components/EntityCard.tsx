@@ -44,6 +44,12 @@ export const EntityCard = ({ entity, relation, entityNameMap }: Props) => {
             </div>
           </div>
         </Link>
+        {/* {entity.firstSeenAt && (
+          <div className="text-muted-foreground text-sm">
+            First seen:{" "}
+            {format(new Date(entity.firstSeenAt), "MMM d, yyyy h:mm a")}
+          </div>
+        )} */}
         {entity.lastSeenAt && (
           <div className="text-muted-foreground text-sm">
             Last seen:{" "}
