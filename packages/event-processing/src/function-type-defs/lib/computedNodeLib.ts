@@ -94,5 +94,6 @@ declare let fn: {
       stars: number;
       forks: number;
     }[];
+    isDeleted: boolean;
   }>;
 };

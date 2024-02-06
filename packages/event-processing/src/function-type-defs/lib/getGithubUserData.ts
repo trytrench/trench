@@ -14,9 +14,10 @@ axiosRetry(axios, {
   },
 });
 
+const redis = createRedisService();
+
 export async function getGithubUserData(username: string) {
   let data;
-  const redis = createRedisService();
   try {
     const cachedData = await redis.get(Buffer.from(`github:${username}`));
 
@@ -35,7 +36,32 @@ export async function getGithubUserData(username: string) {
     }
   } catch (error) {
     if (error instanceof AxiosError && error.response?.status === 404) {
-      return null;
+      return {
+        fullName: "",
+        username: "",
+        bio: "",
+        followers: 0,
+        following: 0,
+        company: "",
+        location: "",
+        websiteUrl: "",
+        repositories: 0,
+        stars: 0,
+        projects: 0,
+        packages: 0,
+        sponsoring: 0,
+        socialLinks: [],
+        isPro: false,
+        contributionsPastYear: 0,
+        createdYear: "",
+        readmeContent: "",
+        sponsors: [],
+        sponsorees: [],
+        organizations: [],
+        achievements: [],
+        pinnedRepos: [],
+        isDeleted: true,
+      };
     }
     throw error;
   }
