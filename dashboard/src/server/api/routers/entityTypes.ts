@@ -20,7 +20,7 @@ export const entityTypesRouter = createTRPCRouter({
         data: {
           name: "Name",
           entityTypeId: entityType.id,
-          schema: { type: TypeName.String },
+          schema: { type: TypeName.Name },
         },
       });
 
