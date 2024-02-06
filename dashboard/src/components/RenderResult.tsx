@@ -35,10 +35,12 @@ export function RenderResult({ result }: { result: Result }) {
 export function RenderTypedData({ data }: { data: TypedData }) {
   switch (data.schema.type) {
     case TypeName.Entity:
-      return <EntityChip entity={data.value} />;
+      // return <EntityChip entity={data.value} />;
+      return <div>Lel</div>;
     case TypeName.Boolean:
       return <div>{data.value ? "True" : "False"}</div>;
     case TypeName.String:
+    case TypeName.Name:
       return <div>{data.value}</div>;
     case TypeName.Float64:
     case TypeName.Int64:

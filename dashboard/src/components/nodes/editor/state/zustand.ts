@@ -129,7 +129,6 @@ const useEditorStoreBase = create<EditorState>()(
         const allNodeDefs = selectors.getNodeDefs()(get());
         const errors = checkErrors(allNodeDefs);
 
-        console.log(errors);
         if (Object.keys(errors).length === 0) {
           get().setStatus({ status: "success" });
         } else {

@@ -33,6 +33,8 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
     return f.entityTypeId === entityType;
   });
 
+  const entityTypeObj = allEntityTypes?.find((e) => e.id === entityType);
+
   return (
     <>
       <div>
@@ -125,7 +127,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
       <div className="mr-auto ml-3 flex gap-1 flex-wrap">
         {entityType && (
           <TypeChip
-            type={entityType}
+            type={entityTypeObj?.type ?? ""}
             onDelete={() => {
               onChange({
                 ...value,

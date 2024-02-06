@@ -285,6 +285,9 @@ class AnyDataType extends IDataType<TAnySchema> {
   isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return true;
   }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    return true;
+  }
 }
 
 class DateDataType extends IDataType<TDateSchema> {

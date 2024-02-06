@@ -28,7 +28,10 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
   const monaco = useMonaco();
 
   useEffect(() => {
-    monaco?.languages.typescript.typescriptDefaults.addExtraLib(typeDefs, "");
+    monaco?.languages.typescript.typescriptDefaults.addExtraLib(
+      typeDefs,
+      "types.ts"
+    );
   }, [monaco, typeDefs]);
 
   const compile = useCallback(

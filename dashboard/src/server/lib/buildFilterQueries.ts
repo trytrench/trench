@@ -154,46 +154,44 @@ export async function getEntitiesList(props: {
       : "";
 
   const finalQuery = `
-    WITH results AS (
-      SELECT
-          entity_type,
-          entity_id,
-          groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
-      FROM (
-          SELECT
-              entity_type,
-              entity_id,
-              feature_id,
-              value,
-              event_timestamp,
-              error,
-              row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
-          FROM features
-          FINAL
-          ${finalWhereClause}
-      ) AS latest_features
-      WHERE latest_features.rn = 1
-      GROUP BY entity_type, entity_id
-      ${havingClause}
-    ),
-    seen AS (
-      SELECT
-        entity_type,
-        entity_id,
-        min(event_timestamp) as first_seen,
-        max(event_timestamp) as last_seen
-      FROM features
-      FINAL
-      GROUP BY entity_type, entity_id 
+    WITH timestamped_entities AS (
+        SELECT
+            entity_type,
+            entity_id,
+            min(event_timestamp) AS first_seen,
+            max(event_timestamp) AS last_seen
+        FROM features
+        WHERE length(entity_id) = 1
+        GROUP BY entity_type, entity_id
     )
     SELECT
-      results.entity_type as entity_type,
-      results.entity_id as entity_id,
-      seen.first_seen as first_seen,
-      seen.last_seen as last_seen,
-      results.features_array as features_array
-    FROM results
-    JOIN seen ON results.entity_type = seen.entity_type AND results.entity_id = seen.entity_id
+        results.entity_type AS entity_type,
+        results.entity_id AS entity_id,
+        timestamped_entities.first_seen AS first_seen,
+        timestamped_entities.last_seen AS last_seen,
+        results.features_array AS features_array
+    FROM (
+        SELECT
+            entity_type,
+            entity_id,
+            groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) AS features_array
+        FROM (
+            SELECT
+                entity_type,
+                entity_id,
+                feature_id,
+                value,
+                error,
+                row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) AS rn
+            FROM features
+            FINAL
+            ${finalWhereClause}
+        ) AS latest_features
+        WHERE latest_features.rn = 1
+        GROUP BY entity_type, entity_id
+        ${havingClause}
+    ) AS results
+    JOIN timestamped_entities ON results.entity_type = timestamped_entities.entity_type AND results.entity_id = timestamped_entities.entity_id
     ${seenWhereClause}
     ORDER BY last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
