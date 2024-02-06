@@ -1,5 +1,4 @@
 import {
-  Project,
   Type,
   Symbol,
   SymbolFlags,
@@ -7,6 +6,8 @@ import {
   Node,
   TypeFormatFlags,
 } from "ts-morph";
+
+// From: https://gist.github.com/zaripych/963fa6584524e5b446b70548dbabbf65
 
 function isPrimitive(type: Type) {
   if (type.isString()) {
