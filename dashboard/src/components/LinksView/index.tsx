@@ -12,8 +12,11 @@ import pluralize from "pluralize";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "~/utils/api";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
-import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
+import { FirstLinkSVG, LinkSVG } from "./LinkSvg";
+import { sortedForLeftSvgs } from "./sortedForLeftSvgs";
 import type { LeftItem, RightItem } from "./types";
+import { useEntityName } from "../../hooks/useEntityName";
+import { useEntityNameMap } from "../../hooks/useEntityNameMap";
 
 interface LinksViewProps {
   entityId: string;
@@ -28,8 +31,7 @@ function LinksView({
   leftTypeFilter,
   onLeftTypeFilterChange,
 }: LinksViewProps) {
-  const router = useRouter();
-  const { data } = api.links.relatedEntities.useQuery(
+  const { data, isLoading } = api.links.relatedEntities.useQuery(
     {
       entityId: entityId ?? "",
       entityType: entityType,
@@ -42,7 +44,7 @@ function LinksView({
 
   const left = data?.left ?? [];
   const right = data?.right ?? [];
-  const links = data?.links ?? [];
+  const links = useMemo(() => data?.links ?? [], [data]);
 
   left.sort((a, b) => {
     if (a.linkCount > HIDE_LINKS_THRESHOLD) return 1;
@@ -63,7 +65,7 @@ function LinksView({
     setRSelection(null);
   }, [leftTypeFilter]);
 
-  const selectionExists = leftSelection || rightSelection;
+  const selectionExists = leftSelection ?? rightSelection;
 
   //
 
@@ -102,7 +104,7 @@ function LinksView({
   //
 
   const activeIds = useMemo(() => {
-    let ids = new Set<string>();
+    const ids = new Set<string>();
     if (leftSelection) {
       ids.add(leftSelection);
       for (const link of links) {
@@ -117,6 +119,9 @@ function LinksView({
     return ids;
   }, [links, leftSelection, rightSelection]);
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
   return (
     <div className="flex items-stretch">
       <div id="leftLeft" className="w-[40px] shrink-0 relative">
@@ -234,14 +239,23 @@ function LeftSideCard(props: LeftSideCardProps) {
   const { item, isActive, isSelected, onClick, onFilterClick, divRef, href } =
     props;
 
+  const nameMap = useEntityNameMap([item.id]);
+
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const entityTypesMap = useMemo(() => {
+    return new Map(entityTypes?.map((et) => [et.id, et.type]) ?? []);
+  }, [entityTypes]);
+
   const isGroup = item.itemType === "group";
+
+  const entityTypeName = entityTypesMap.get(item.type) ?? item.type;
 
   let entityCountStr = "";
   if (isGroup) {
     if (item.entityCount >= INTERNAL_LIMIT) {
-      entityCountStr = `${INTERNAL_LIMIT}+ ${pluralize(item.type)}`;
+      entityCountStr = `${INTERNAL_LIMIT}+ ${pluralize(entityTypeName)}`;
     } else {
-      entityCountStr = `${item.entityCount} ${pluralize(item.type)}`;
+      entityCountStr = `${item.entityCount} ${pluralize(entityTypeName)}`;
     }
   }
 
@@ -277,9 +291,9 @@ function LeftSideCard(props: LeftSideCardProps) {
           <BoxIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
             <div className="font-semibold text-emphasis-foreground">
-              {item.type}
+              {entityTypesMap.get(item.type)}
             </div>
-            <div className="">{item.name}</div>
+            <div className="">{nameMap[item.name] ?? item.name}</div>
           </div>
         </div>
       )}

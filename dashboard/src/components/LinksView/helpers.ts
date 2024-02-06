@@ -1,8 +1,9 @@
 import { countBy, groupBy, uniq } from "lodash";
 import { LeftItem, LinkItem, RawLeft, RawLinks, RightItem } from "./types";
 import { Entity } from "event-processing";
+import { prisma } from "databases";
 
-export const INTERNAL_LIMIT = 1000;
+export const INTERNAL_LIMIT = 100;
 export const GROUP_THRESHOLD = 3;
 export const HIDE_LINKS_THRESHOLD = 30;
 export const MAX_ENTITIES_PER_GROUP = 10;
@@ -22,11 +23,11 @@ type ProcessOutput = {
   links: LinkItem[];
 };
 
-export const processQueryOutput = ({
+export const processQueryOutput = async ({
   rawLeft,
   rawLinks,
   shouldGroup,
-}: ProcessInput): ProcessOutput => {
+}: ProcessInput): Promise<ProcessOutput> => {
   // split this up into two parts:
   // - entities that are not groups
   // - entities that are groups
