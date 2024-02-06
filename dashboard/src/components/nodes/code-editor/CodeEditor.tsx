@@ -4,12 +4,9 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useState } from "react";
 import { Diagnostic, Project, ts } from "ts-morph";
 import { useThrottle } from "../../../hooks/useThrottle";
-import { type CompileStatus, compileStatueAtom, tsCodeAtom } from "./state";
+import { type CompileStatus, compileStatusAtom, tsCodeAtom } from "./state";
 import { useAtom } from "jotai";
-import {
-  TS_COMPILER_OPTIONS,
-  compileTs,
-} from "event-processing/src/function-type-defs/types/Computed";
+import { compileTs } from "event-processing/src/function-type-defs/types/Computed";
 
 interface CodeEditorProps {
   typeDefs: string;
@@ -24,7 +21,7 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
 
-  const [, setCompileStatus] = useAtom(compileStatueAtom);
+  const [, setCompileStatus] = useAtom(compileStatusAtom);
   const monaco = useMonaco();
 
   useEffect(() => {
@@ -54,6 +51,7 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
           message: "Compiled successfully",
           code,
           compiled: result.compiledJs,
+          inferredSchema: result.inferredSchema,
         });
       } else {
         const allDiagnostics = result.diagnostics;
@@ -62,6 +60,7 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
           status: "error" as const,
           message: "There was an error compiling your code",
           diagnostics: allDiagnostics,
+          inferredSchema: result.inferredSchema,
         });
       }
     },

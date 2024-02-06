@@ -9,7 +9,7 @@ import {
 import { functions } from "../lib/computedNodeFunctions";
 import { TSchema, createDataType } from "../../data-types";
 import { Diagnostic, Project, SyntaxKind, ts } from "ts-morph";
-import { footprintOfType } from "../lib/typeFootprint";
+import { footprintOfType } from "../lib/schemaFootprint";
 
 let libSource: string | null = null;
 
@@ -66,7 +66,7 @@ export const TS_COMPILER_OPTIONS: ts.CompilerOptions = {
   alwaysStrict: false,
 };
 
-export type CompileTsResult =
+export type CompileTsResult = (
   | {
       success: true;
       compiledJs: string;
@@ -74,7 +74,10 @@ export type CompileTsResult =
   | {
       success: false;
       diagnostics: Diagnostic<ts.Diagnostic>[];
-    };
+    }
+) & {
+  inferredSchema: TSchema | null;
+};
 
 export function compileTs(options: {
   code: string;
@@ -93,6 +96,8 @@ export function compileTs(options: {
   const arrowFunction = sourceFile
     .getVariableDeclaration("getValue")
     ?.getInitializerIfKind(SyntaxKind.ArrowFunction);
+
+  let inferredSchema: TSchema | null = null;
   if (arrowFunction) {
     // Get the inferred return type of the arrow function
     const returnType = arrowFunction.getReturnType();
@@ -105,11 +110,10 @@ export function compileTs(options: {
 
     const node = sourceFile.getTypeAliasOrThrow(typeName);
     const type = node.getType();
-    const shite = footprintOfType({
+    inferredSchema = footprintOfType({
       type: type,
       node: node,
     });
-    console.log(shite);
   }
 
   const allDiagnostics = project.getPreEmitDiagnostics();
@@ -125,11 +129,13 @@ export function compileTs(options: {
     return {
       success: true,
       compiledJs: transpiledOutput.outputText,
+      inferredSchema,
     };
   } else {
     return {
       success: false,
       diagnostics: allDiagnostics,
+      inferredSchema,
     };
   }
 }
