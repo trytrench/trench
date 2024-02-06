@@ -8,7 +8,8 @@ import {
 } from "../../data-path";
 import { functions } from "../lib/computedNodeFunctions";
 import { TSchema, createDataType } from "../../data-types";
-import { Diagnostic, Project, ts } from "ts-morph";
+import { Diagnostic, Project, SyntaxKind, ts } from "ts-morph";
+import { footprintOfType } from "../lib/typeFootprint";
 
 let libSource: string | null = null;
 
@@ -88,7 +89,28 @@ export function compileTs(options: {
     compilerOptions: TS_COMPILER_OPTIONS,
   });
 
-  project.createSourceFile("main.ts", finalCode);
+  const sourceFile = project.createSourceFile("main.ts", finalCode);
+  const arrowFunction = sourceFile
+    .getVariableDeclaration("getValue")
+    ?.getInitializerIfKind(SyntaxKind.ArrowFunction);
+  if (arrowFunction) {
+    // Get the inferred return type of the arrow function
+    const returnType = arrowFunction.getReturnType();
+
+    const typeName = "NonCollidingTypeName_1234";
+    sourceFile.addTypeAlias({
+      name: typeName,
+      type: `Awaited<${returnType.getText()}>`,
+    });
+
+    const node = sourceFile.getTypeAliasOrThrow(typeName);
+    const type = node.getType();
+    const shite = footprintOfType({
+      type: type,
+      node: node,
+    });
+    console.log(shite);
+  }
 
   const allDiagnostics = project.getPreEmitDiagnostics();
 

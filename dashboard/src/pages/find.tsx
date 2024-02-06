@@ -42,7 +42,10 @@ const formSchema = z.object({
 });
 
 const EntityList = () => {
+  const router = useRouter();
+
   const [filters, setFilters] = useState<EntityFilters>({});
+
   const { data: views, refetch: refetchViews } =
     api.entityViews.list.useQuery();
 
@@ -56,8 +59,6 @@ const EntityList = () => {
   });
 
   const limit = 10;
-
-  const router = useRouter();
 
   useEffect(() => {
     const filters = views?.find((view) => view.id === router.query.view)

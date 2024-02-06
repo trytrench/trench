@@ -191,8 +191,6 @@ export function EditComputed({
     });
   }, [depsMap, getDataPathInfo, returnSchema]);
 
-  console.log(typeDefs);
-
   return (
     <div className="w-full">
       <div className="flex justify-between items-center">
