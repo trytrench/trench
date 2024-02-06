@@ -125,7 +125,7 @@ export function EventEditor({ eventType }: Props) {
           {filteredNodes?.map((node) => (
             <div
               className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center",
+                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-baseline",
                 {
                   "bg-accent text-accent-foreground":
                     selectedNode?.id === node.id,
@@ -159,15 +159,17 @@ export function EventEditor({ eventType }: Props) {
                   >
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      deleteNodeDef(node.id)
-                        .catch(toasts.deleteNode.onError)
-                        .catch(handleError);
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
+                  {node.fn.type !== FnType.Event && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        deleteNodeDef(node.id)
+                          .catch(toasts.deleteNode.onError)
+                          .catch(handleError);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -194,7 +196,6 @@ export function EventEditor({ eventType }: Props) {
                         dataPath: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                         entityDataPath: undefined,
                         featureId: "",
@@ -211,7 +212,6 @@ export function EventEditor({ eventType }: Props) {
                         dataPath: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                         entityDataPath: undefined,
                         featureId: "",
@@ -228,7 +228,6 @@ export function EventEditor({ eventType }: Props) {
                         path: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                       }}
                       title="New Entity"

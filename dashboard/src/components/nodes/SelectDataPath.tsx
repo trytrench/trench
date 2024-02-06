@@ -122,7 +122,7 @@ export function SelectDataPath(props: SelectDataPathProps) {
 
     const { schema } = getDataPathInfo(path);
     if (!schema) return false;
-    return desiredType.isSuperTypeOf(schema);
+    return desiredType.canBeAssigned(schema);
   });
 
   const filteredOptions = filteredPaths

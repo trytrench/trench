@@ -30,7 +30,6 @@ import dynamic from "next/dynamic";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import libSource from "!!raw-loader?esModule=false!event-processing/src/function-type-defs/lib/computedNodeLib.ts";
 import { EditableProperty } from "../../EditableProperty";
 import { useToast } from "../../ui/use-toast";
 import { handleError } from "../../../lib/handleError";

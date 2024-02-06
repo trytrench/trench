@@ -10,8 +10,25 @@ import { functions } from "../lib/computedNodeFunctions";
 import { TSchema, createDataType } from "../../data-types";
 import { Diagnostic, Project, ts } from "ts-morph";
 
-// @ts-ignore
-import libSource from "!!raw-loader?esModule=false!../lib/computedNodeLib.ts";
+let libSource: string | null = null;
+
+// Check if 'raw-loader' is available (indicating a webpack environment)
+if (typeof require.resolve === "function") {
+  try {
+    libSource = require("!!raw-loader?esModule=false!../lib/computedNodeLib.ts");
+  } catch (error) {
+    // 'raw-loader' not available, fallback to non-Webpack approach
+  }
+}
+
+// If 'raw-loader' is not available or encountered an error, use a different method
+if (!libSource) {
+  const fs = require("fs");
+  const path = require("path");
+
+  const filePath = path.resolve(__dirname, "../lib/computedNodeLib.ts");
+  libSource = fs.readFileSync(filePath, "utf8");
+}
 
 export function getTypeDefs(options: {
   deps: Record<string, DataPath | null>;
@@ -38,7 +55,7 @@ export function getTypeDefs(options: {
     }
   `;
 
-  return [libSource, inputTypes, functionType].join("\n\n");
+  return [libSource ?? "", inputTypes, functionType].join("\n\n");
 }
 
 export const TS_COMPILER_OPTIONS: ts.CompilerOptions = {

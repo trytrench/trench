@@ -14,6 +14,7 @@ export enum TypeName {
   Date = "Date",
   Rule = "Rule",
   Tuple = "Tuple",
+  Name = "Name",
 }
 
 export type Entity = {
@@ -75,11 +76,16 @@ export interface TRuleSchema extends TSchemaBase {
   type: TypeName.Rule;
 }
 
-interface TTupleSchema<T extends TSchema[] = TSchema[]> extends TSchemaBase {
+export interface TTupleSchema<T extends TSchema[] = TSchema[]>
+  extends TSchemaBase {
   type: TypeName.Tuple;
   items: {
     [K in keyof T]: T[K];
   };
+}
+
+export interface TNameSchema extends TSchemaBase {
+  type: TypeName.Name;
 }
 
 interface SchemaTypeMap {
@@ -95,6 +101,7 @@ interface SchemaTypeMap {
   [TypeName.Date]: Date;
   [TypeName.Rule]: boolean;
   [TypeName.Tuple]: any[]; // Placeholder, will be refined later
+  [TypeName.Name]: string;
 }
 
 type InferTupleItemType<T> = T extends TSchema ? InferSchemaType<T> : never;
@@ -124,6 +131,13 @@ abstract class IDataType<TS extends TSchema> {
   isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return schema.type === this.schema.type;
   }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    return createDataType(schema).isSuperTypeOf(this.schema);
+  }
+  equals<T extends TSchema>(schema: T): boolean {
+    const otherType = createDataType(schema);
+    return this.isSuperTypeOf(schema) && otherType.isSuperTypeOf(this.schema);
+  }
 }
 
 // Implementations for each data type
@@ -135,6 +149,9 @@ class StringDataType extends IDataType<TStringSchema> {
   }
   toTypescript(): string {
     return "string";
+  }
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
+    return schema.type === TypeName.String || schema.type === TypeName.Name;
   }
 }
 
@@ -307,6 +324,20 @@ class TupleDataType<TItems extends TSchema[]> extends IDataType<
   }
 }
 
+class NameDataType extends IDataType<TNameSchema> {
+  parse(input: any): string {
+    if (typeof input !== "string") this.throwParseError(input);
+    return input;
+  }
+  toTypescript(): string {
+    return "string";
+  }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.String) return true;
+    return super.canBeAssigned(schema);
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -364,6 +395,10 @@ export const DATA_TYPES_REGISTRY = {
     type: TupleDataType,
     defaultSchema: { type: TypeName.Tuple, items: [] },
   },
+  [TypeName.Name]: {
+    type: NameDataType,
+    defaultSchema: { type: TypeName.Name },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -383,7 +418,8 @@ export type TSchema =
   | TAnySchema
   | TDateSchema
   | TRuleSchema
-  | TTupleSchema;
+  | TTupleSchema
+  | TNameSchema;
 
 export const tSchemaZod = z.custom<TSchema>((input) => {
   if (!input) return false;

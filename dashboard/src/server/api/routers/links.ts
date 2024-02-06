@@ -37,11 +37,16 @@ export const linksRouter = createTRPCRouter({
             FROM
                 features f1
             INNER JOIN
-                features f2 ON f1.event_id = f2.event_id AND f1.event_type = f2.event_type
+                features f2 
+                    ON f1.event_type = f2.event_type
+                    AND f1.event_id = f2.event_id 
             WHERE
                 f1.feature_type = 'EntityAppearance' AND
                 f2.feature_type = 'EntityAppearance' AND
-                NOT (f1.entity_id[1] = f2.entity_id[1] AND f1.entity_type[1] = f2.entity_type[1])
+                NOT (
+                  f1.entity_type[1] = f2.entity_type[1]
+                  AND f1.entity_id[1] = f2.entity_id[1] 
+                )
         )
         
         SELECT
@@ -53,18 +58,20 @@ export const linksRouter = createTRPCRouter({
             fdc2.entity_id_2 as second_degree_id
         FROM
             first_degree_connections fdc
-        INNER JOIN
-            first_degree_connections fdc2 ON fdc.entity_id_2 = fdc2.entity_id_1 AND fdc.entity_type_2 = fdc2.entity_type_1
+        INNER JOIN first_degree_connections fdc2 
+            ON fdc.entity_type_2 = fdc2.entity_type_1
+            AND fdc2.entity_type_2 = fdc.entity_type_1
+            AND fdc.entity_id_2 = fdc2.entity_id_1 
         WHERE
             fdc.entity_type_1 = '${input.entityType}'
             AND fdc.entity_id_1 = '${input.entityId}'
-            AND fdc2.entity_type_2 = entity_type
             ${
               input.leftSideType
                 ? `AND fdc2.entity_type_1 = '${input.leftSideType}'`
                 : ""
             }
       `;
+
       const result = await db.query({
         query,
       });
