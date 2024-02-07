@@ -160,7 +160,7 @@ abstract class IDataType<TS extends TSchema> {
    *  - `int64` can be assigned to `float64`
    */
   canBeAssigned<T extends TSchema>(schema: T): boolean {
-    return createDataType(schema).isSuperTypeOf(this.schema);
+    return this.isSuperTypeOf(schema);
   }
 
   equals<T extends TSchema>(schema: T): boolean {

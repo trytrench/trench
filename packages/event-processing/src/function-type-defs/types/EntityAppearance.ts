@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { FnType } from "./_enum";
 import { createFnTypeDefBuilder } from "../builder";
-import { TypeName } from "../../data-types";
+import { TypeName, createDataType } from "../../data-types";
 import { ClickhouseClient } from "databases";
 import { StoreTable } from "../lib/store";
 import { getUnixTime } from "date-fns";
@@ -24,6 +24,27 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
     return [input.dataPath];
   })
   .setReturnSchema<{ type: TypeName.Entity; entityType: string }>()
+  .setValidateInputs(({ inputs, fnDef, getDataPathInfo }) => {
+    const { dataPath } = inputs;
+    const { schema } = getDataPathInfo(dataPath);
+    if (!schema) {
+      return {
+        success: false,
+        error: `Data path ${dataPath} not found`,
+      };
+    }
+
+    const desiredType = createDataType({ type: TypeName.String });
+    if (!desiredType.canBeAssigned(schema)) {
+      return {
+        success: false,
+        error: `Data path ${dataPath} is not of type ${TypeName.Entity}`,
+      };
+    }
+    return {
+      success: true,
+    };
+  })
   .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency, engineId }) => {
       // Access node value

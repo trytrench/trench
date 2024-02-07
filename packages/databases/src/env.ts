@@ -14,4 +14,6 @@ export const env = createEnv({
    * `process.env` or `import.meta.env`.
    */
   runtimeEnv: process.env,
+
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });
