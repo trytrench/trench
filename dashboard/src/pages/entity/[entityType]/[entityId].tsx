@@ -33,6 +33,7 @@ import { TypeName } from "event-processing";
 import { useDecision } from "~/hooks/useDecision";
 import { RenderDecision } from "~/components/RenderDecision";
 import { customDecodeURIComponent } from "../../../lib/uri";
+import { EntityList } from "~/components/EntityList";
 
 type Option = {
   label: string;
@@ -187,6 +188,7 @@ const Page: NextPageWithLayout = () => {
             <TabsList className="w-full">
               {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
               <TabsTrigger value="history">Event History</TabsTrigger>
+              <TabsTrigger value="entities">Entities</TabsTrigger>
               <TabsTrigger value="links">Related Entities</TabsTrigger>
               <TabsTrigger value="page">Custom Page</TabsTrigger>
             </TabsList>
@@ -207,6 +209,11 @@ const Page: NextPageWithLayout = () => {
                     type: entityTypeId,
                   }}
                 />
+              )}
+            </TabsContent>
+            <TabsContent value="entities" className="relative grow mt-0">
+              {entityId && entityTypeId && (
+                <EntityList seenWithEntityId={entityId} />
               )}
             </TabsContent>
             <TabsContent value="links" className="relative grow">
