@@ -271,9 +271,7 @@ export function EditComputed({
                 <div>
                   <SchemaBuilder
                     value={field.value as TSchema}
-                    onChange={(newSchema) => {
-                      field.onChange(newSchema);
-                    }}
+                    onChange={field.onChange}
                   />
                   {form.watch("inferredSchema") && (
                     <button
