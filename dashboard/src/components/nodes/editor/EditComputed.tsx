@@ -45,19 +45,8 @@ import {
   tsCodeAtom,
 } from "../code-editor/state";
 import { getTypeDefs } from "event-processing/src/function-type-defs/types/Computed";
-
-const DynamicCodeEditor = dynamic(
-  () => import("../code-editor/CodeEditor").then((mod) => mod.CodeEditor),
-  {
-    ssr: false,
-  }
-);
-
-const DynamicCompileStatusMessage = dynamic(
-  () =>
-    import("../code-editor/CodeEditor").then((mod) => mod.CompileStatusMessage),
-  { ssr: false }
-);
+import { CodeEditor, CompileStatusMessage } from "../code-editor/CodeEditor";
+import { MonacoEditor } from "../../ts-editor/MonacoEditor";
 
 const fnTypeDef = getFnTypeDef(FnType.Computed);
 
@@ -291,7 +280,7 @@ export function EditComputed({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
-                        const inferredSchema = form.getValues("inferredSchema");
+                        const inferredSchema = form.watch("inferredSchema");
                         if (!inferredSchema) return;
                         field.onChange(inferredSchema);
                       }}
@@ -343,11 +332,11 @@ export function EditComputed({
         <div className="text-emphasis-foreground text-md">Code</div>
 
         <div className="ml-auto" />
-        <DynamicCompileStatusMessage compileStatus={compileStatus} />
+        <CompileStatusMessage compileStatus={compileStatus} />
       </div>
 
       <div className="h-96">
-        <DynamicCodeEditor typeDefs={typeDefs} />
+        <CodeEditor typeDefs={typeDefs} />
       </div>
     </div>
   );

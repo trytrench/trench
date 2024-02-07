@@ -94,7 +94,7 @@ export interface TNameSchema extends TSchemaBase {
 export interface TUnionSchema<T extends TSchema[] = TSchema[]>
   extends TSchemaBase {
   type: TypeName.Union;
-  schemas: T;
+  unionTypes: T;
 }
 
 export interface TUndefinedSchema extends TSchemaBase {
@@ -373,7 +373,7 @@ class NameDataType extends IDataType<TNameSchema> {
 
 class UnionDataType extends IDataType<TUnionSchema> {
   parse(input: any): any {
-    for (const schema of this.schema.schemas) {
+    for (const schema of this.schema.unionTypes) {
       try {
         return createDataType(schema).parse(input);
       } catch {}
@@ -381,12 +381,12 @@ class UnionDataType extends IDataType<TUnionSchema> {
     throw new Error(`Invalid input for union type: ${JSON.stringify(input)}`);
   }
   toTypescript(): string {
-    return this.schema.schemas
+    return this.schema.unionTypes
       .map((schema) => createDataType(schema).toTypescript())
       .join(" | ");
   }
   isSuperTypeOf<T extends TSchema>(schema: T): boolean {
-    return this.schema.schemas.some((s) =>
+    return this.schema.unionTypes.some((s) =>
       createDataType(s).isSuperTypeOf(schema)
     );
   }
@@ -475,7 +475,7 @@ export const DATA_TYPES_REGISTRY = {
   },
   [TypeName.Union]: {
     type: UnionDataType,
-    defaultSchema: { type: TypeName.Union, schemas: [] },
+    defaultSchema: { type: TypeName.Union, unionTypes: [] },
   },
   [TypeName.Undefined]: {
     type: UndefinedDataType,

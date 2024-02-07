@@ -227,7 +227,7 @@ export function footprintOfType(params: {
             ? prop.hasFlags(SymbolFlags.Optional)
               ? {
                   type: TypeName.Union,
-                  schemas: [propertySchema, { type: TypeName.Undefined }],
+                  unionTypes: [propertySchema, { type: TypeName.Undefined }],
                 }
               : propertySchema
             : null;
@@ -266,7 +266,7 @@ export function footprintOfType(params: {
 
     return {
       type: TypeName.Union,
-      schemas: typeStrs.map((typeStr) => typeStr ?? { type: TypeName.Any }),
+      unionTypes: typeStrs.map((typeStr) => typeStr ?? { type: TypeName.Any }),
     };
   }
 

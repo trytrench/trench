@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Fragment } from "react";
 import { DATA_TYPES_REGISTRY, type TSchema, TypeName } from "event-processing";
 import * as Select from "@radix-ui/react-select";
 import { SelectContent, SelectItem } from "./ui/select";
@@ -179,6 +179,53 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = ({
             )}
           </div>
         </>
+      )}
+
+      {value.type === TypeName.Union && (
+        <span className="">
+          {"<"}
+          {value.unionTypes.map((type, index) => (
+            <Fragment key={index}>
+              {index > 0 && <span className="mx-2 text-gray-400">|</span>}
+              <SchemaBuilder
+                key={index}
+                value={type}
+                onChange={(newType) => {
+                  const newUnionTypes = [...value.unionTypes];
+                  newUnionTypes[index] = newType;
+                  onChange({ ...value, unionTypes: newUnionTypes });
+                }}
+              />
+              <button
+                type="button"
+                className="text-red-300"
+                onClick={() => {
+                  const newUnionTypes = [...value.unionTypes];
+                  newUnionTypes.splice(index, 1);
+                  onChange({ ...value, unionTypes: newUnionTypes });
+                }}
+              >
+                del
+              </button>
+            </Fragment>
+          ))}
+          {">"}
+          <button
+            type="button"
+            className="font-mono inline ml-4 text-blue-300"
+            onClick={() => {
+              onChange({
+                ...value,
+                unionTypes: [
+                  ...value.unionTypes,
+                  DATA_TYPES_REGISTRY[TypeName.String].defaultSchema,
+                ],
+              });
+            }}
+          >
+            add
+          </button>
+        </span>
       )}
 
       {/* Additional form elements can be added here if needed */}
