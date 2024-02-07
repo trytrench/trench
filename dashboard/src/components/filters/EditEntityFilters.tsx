@@ -14,6 +14,7 @@ import {
 import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
+import { AddEventFilterSubItem } from "./EventFilterSubItem";
 
 interface EditEntityFiltersProps {
   value: EntityFilters;
@@ -26,7 +27,13 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
-  const { firstSeen, lastSeen, entityType, features: featureFilters } = value;
+  const {
+    firstSeen,
+    lastSeen,
+    entityType,
+    features: featureFilters,
+    seenInEventType,
+  } = value;
 
   const filteredFeatureDefs = allFeatureDefs?.filter((f) => {
     if (!entityType) return true;
@@ -92,6 +99,15 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
                 />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+
+            <AddEventFilterSubItem
+              onAdd={(eventType) => {
+                onChange({
+                  ...value,
+                  seenInEventType: eventType,
+                });
+              }}
+            />
 
             {/* Type Filter */}
             <TypeSelectorSubItem
@@ -191,6 +207,19 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
             }}
           />
         ))}
+
+        {seenInEventType && (
+          <TypeChip
+            title="Event"
+            type={seenInEventType}
+            onDelete={() => {
+              onChange({
+                ...value,
+                seenInEventType: undefined,
+              });
+            }}
+          />
+        )}
       </div>
     </>
   );
