@@ -15,7 +15,7 @@ import { create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
 import { persist, type PersistStorage } from "zustand/middleware";
 import superjson from "superjson";
-import { checkErrors, getSchemaAtPath } from "../../../../shared/publish";
+import { getSchemaAtPath } from "../../../../shared/publish";
 import { createSelectors } from "../../../../lib/zustand";
 
 type RawNode<T extends FnType = FnType> = Omit<NodeDef<T>, "fn"> & {
@@ -341,7 +341,7 @@ export const selectors = {
 
 // Create a function that encapsulates the communication with the web worker
 function checkErrorsWithWorker(
-  nodeDefs: NodeDef[]
+  nodeDefs: NodeDefAny[]
 ): Promise<Record<string, string>> {
   return new Promise((resolve, reject) => {
     const errorCheckerWorker: Worker = new Worker(

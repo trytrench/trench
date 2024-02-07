@@ -1,4 +1,5 @@
 import { TSchema } from "event-processing";
+import { SerializableTsCompilerError } from "event-processing/src/function-type-defs/types/Computed";
 import { atom } from "jotai";
 import { type Diagnostic, type ts } from "ts-morph";
 
@@ -20,7 +21,7 @@ export type CompileStatus =
   | {
       status: "error";
       message: string;
-      diagnostics: Diagnostic<ts.Diagnostic>[];
+      errors: SerializableTsCompilerError[];
       inferredSchema: TSchema | null;
     };
 

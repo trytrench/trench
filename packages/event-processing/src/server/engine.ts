@@ -1,21 +1,21 @@
-import { createRedisService } from "./../../databases/src/redis";
+import { createRedisService } from "databases/src/redis";
 import { assert } from "common";
 import {
   FnType,
   FnTypeContextMap,
-  FnTypeDef,
   NodeDef,
   Resolver,
   StateUpdater,
   TrenchEvent,
   getFnTypeDef,
-} from "./function-type-defs";
-import { printNodeDef, truncId } from "./function-type-defs/lib/print";
-import { db } from "databases";
-import { TSchema, createDataType } from "./data-types";
-import { StoreRow, StoreTable } from "./function-type-defs/lib/store";
+} from "../function-type-defs";
+import { printNodeDef } from "../function-type-defs/lib/print";
+import { createDataType } from "../data-types";
+import { StoreRow, StoreTable } from "../function-type-defs/lib/store";
 import { getUnixTime } from "date-fns";
 import { get } from "lodash";
+import { getFnTypeResolver } from "../function-type-defs/resolvers";
+
 /**
  * Execution Engine
  *
@@ -111,7 +111,8 @@ export class ExecutionEngine {
         throw new Error("No engine context");
       }
 
-      const resolver = nodeTypeDef.createResolver({
+      const fnTypeResolver = getFnTypeResolver(fnType);
+      const resolver = fnTypeResolver.createResolver({
         fnDef: nodeDef.fn,
         input: nodeDef.inputs,
         context: this.context[fnType],

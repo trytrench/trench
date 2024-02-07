@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FnType } from "./_enum";
+import { FnType } from "../enum";
 import { createFnTypeDefBuilder } from "../builder";
 import {
   DataPath,
@@ -30,6 +30,15 @@ if (!libSource) {
   const filePath = path.resolve(__dirname, "../lib/computedNodeLib.ts");
   libSource = fs.readFileSync(filePath, "utf8");
 }
+
+export type SerializableTsCompilerError = {
+  message: string;
+  code: number;
+  category: ts.DiagnosticCategory;
+  file: string | null;
+  start: number | null;
+  length: number | null;
+};
 
 export function getTypeDefs(options: {
   deps: Record<string, DataPath | null>;
@@ -73,7 +82,7 @@ export type CompileTsResult = (
     }
   | {
       success: false;
-      diagnostics: Diagnostic<ts.Diagnostic>[];
+      errors: SerializableTsCompilerError[];
     }
 ) & {
   inferredSchema: TSchema | null;
@@ -116,11 +125,24 @@ export function compileTs(options: {
     });
   }
 
-  const allDiagnostics = project.getPreEmitDiagnostics();
+  const errors = project.getPreEmitDiagnostics().map((d) => {
+    let msg = d.getMessageText();
+    if (typeof msg === "object") {
+      msg = msg.getMessageText();
+    }
+    return {
+      message: msg,
+      code: d.getCode(),
+      category: d.getCategory(),
+      file: d.getSourceFile()?.getFilePath() ?? null,
+      start: d.getStart() ?? null,
+      length: d.getLength() ?? null,
+    };
+  });
 
   // Set compile status based on results
 
-  if (!allDiagnostics.length) {
+  if (!errors.length) {
     const transpiledOutput = ts.transpileModule(finalCode, {
       compilerOptions: {
         ...TS_COMPILER_OPTIONS,
@@ -134,7 +156,7 @@ export function compileTs(options: {
   } else {
     return {
       success: false,
-      diagnostics: allDiagnostics,
+      errors: errors,
       inferredSchema,
     };
   }
@@ -175,41 +197,12 @@ export const computedFnDef = createFnTypeDefBuilder()
         success: true,
       };
     } else {
-      let msg = compileResult.diagnostics[0]?.getMessageText();
-      if (typeof msg === "object") {
-        msg = msg.getMessageText();
-      }
+      let msg = compileResult.errors[0]?.message ?? "Unknown error";
 
       return {
         success: false,
         error: `Error compiling TS: ${msg}`,
       };
     }
-  })
-  .setCreateResolver(({ fnDef, input }) => {
-    return async ({ event, getDependency }) => {
-      const { depsMap } = input;
-      const { compiledJs } = fnDef.config;
-
-      const depValues: Record<string, any> = {};
-      for (const [key, depPath] of Object.entries(depsMap)) {
-        const featureValue = await getDependency({
-          dataPath: depPath,
-        });
-        depValues[key] = featureValue;
-      }
-
-      const functionCode = `
-      async function __runCode(inputs, fn) {
-        return (${compiledJs})(inputs);
-      }
-      `;
-
-      const value = await eval(`(${functionCode})`)(depValues, functions);
-
-      return {
-        data: value,
-      };
-    };
   })
   .build();
