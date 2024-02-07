@@ -88,7 +88,7 @@ const Page: NextPageWithLayout = () => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (status.status === "idle") {
-        updateErrors();
+        updateErrors().catch(handleError);
       }
     }, 0);
     return () => clearTimeout(timeout);
@@ -208,7 +208,7 @@ const Page: NextPageWithLayout = () => {
           <div className="flex gap-4 items-center">
             <StatusIndicator status={status} />
             <Button
-              disabled={status.status !== "success"}
+              disabled={status.status !== "success" || !editorHasChanged}
               onClick={() => {
                 publish({
                   nodeDefs: nodes,

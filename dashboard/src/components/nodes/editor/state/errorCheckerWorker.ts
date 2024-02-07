@@ -1,5 +1,3 @@
-process.env.SKIP_ENV_VALIDATION = "true";
-
 // Import any necessary dependencies here
 import { type NodeDefAny } from "event-processing";
 import { checkErrors } from "../../../../shared/publish";

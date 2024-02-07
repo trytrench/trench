@@ -1,12 +1,12 @@
 import { Editor, useMonaco } from "@monaco-editor/react";
 import { CheckIcon, Loader2, XIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useState } from "react";
-import { Diagnostic, Project, ts } from "ts-morph";
+import { useCallback, useEffect, useRef } from "react";
 import { useThrottle } from "../../../hooks/useThrottle";
 import { type CompileStatus, compileStatusAtom, tsCodeAtom } from "./state";
 import { useAtom } from "jotai";
-import { compileTs } from "event-processing/src/function-type-defs/types/Computed";
+import { type CompileTsResult } from "event-processing/src/function-type-defs/types/Computed";
+import { handleError } from "../../../lib/handleError";
 
 interface CodeEditorProps {
   typeDefs: string;
@@ -16,7 +16,7 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
   // note:
   // - The monaco editor is not used as a controlled component
   const [code, setCode] = useAtom(tsCodeAtom);
-  const debouncedCode = useThrottle(code, 1000);
+  const debouncedCode = useThrottle(code, 300);
 
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme === "dark" ? "vs-dark" : "vs-light";
@@ -25,50 +25,71 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
   const monaco = useMonaco();
 
   useEffect(() => {
-    console.log(monaco?.languages.typescript.typescriptDefaults.getExtraLibs());
     monaco?.languages.typescript.typescriptDefaults.setExtraLibs([
       { content: typeDefs, filePath: "types.ts" },
     ]);
   }, [monaco, typeDefs]);
 
+  const compileControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    // Cancel any ongoing compilation when the code or typeDefs change
+    if (compileControllerRef.current) {
+      compileControllerRef.current.abort();
+    }
+  }, [code, typeDefs]);
+
   const compile = useCallback(
-    (code: string) => {
-      console.log("Compiling.");
+    async (code: string, cancellationToken: AbortSignal) => {
       setCompileStatus({
         status: "compiling",
         message: "Compiling...",
       });
 
-      // Assemble and compile the code
+      try {
+        // Assemble and compile the code
+        const result = await compileWithWorker(
+          { code, typeDefs },
+          cancellationToken
+        );
 
-      const result = compileTs({ code, typeDefs });
-
-      // Set compile status based on results
-
-      if (result.success === true) {
-        setCompileStatus({
-          status: "success" as const,
-          message: "Compiled successfully",
-          code,
-          compiled: result.compiledJs,
-          inferredSchema: result.inferredSchema,
-        });
-      } else {
-        const allDiagnostics = result.diagnostics;
-
-        setCompileStatus({
-          status: "error" as const,
-          message: "There was an error compiling your code",
-          diagnostics: allDiagnostics,
-          inferredSchema: result.inferredSchema,
-        });
+        // Set compile status based on results
+        if (result.success === true) {
+          setCompileStatus({
+            status: "success" as const,
+            message: "Compiled successfully",
+            code,
+            compiled: result.compiledJs,
+            inferredSchema: result.inferredSchema,
+          });
+        } else {
+          setCompileStatus({
+            status: "error" as const,
+            message: "There was an error compiling your code",
+            errors: result.errors,
+            inferredSchema: result.inferredSchema,
+          });
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          if (error.name !== "AbortError") {
+            // Handle non-abort errors
+            handleError(error);
+          }
+        }
       }
     },
     [setCompileStatus, typeDefs]
   );
 
   useEffect(() => {
-    if (debouncedCode.trim()) compile(debouncedCode);
+    if (debouncedCode.trim()) {
+      // Create a new AbortController for this compilation
+      const controller = new AbortController();
+      compileControllerRef.current = controller;
+
+      compile(debouncedCode, controller.signal).catch(handleError);
+    }
   }, [debouncedCode, compile]);
 
   return (
@@ -88,7 +109,10 @@ interface CompileStatusMessageProps {
 export function CompileStatusMessage(props: CompileStatusMessageProps) {
   const { compileStatus } = props;
 
-  if (compileStatus.status === "empty") {
+  if (
+    compileStatus.status === "empty" ||
+    compileStatus.status === "compiling"
+  ) {
     //   return null;
     // } else if (compileStatus.status === "compiling") {
     return (
@@ -117,3 +141,48 @@ export function CompileStatusMessage(props: CompileStatusMessageProps) {
 }
 
 export { CodeEditor };
+
+// Create a function that encapsulates the communication with the web worker
+function compileWithWorker(
+  inputs: {
+    code: string;
+    typeDefs: string;
+  },
+  cancellationToken: AbortSignal
+): Promise<CompileTsResult> {
+  return new Promise((resolve, reject) => {
+    const errorCheckerWorker: Worker = new Worker(
+      new URL("./compilerWorker", import.meta.url)
+    );
+
+    // Listen for messages from the web worker
+    errorCheckerWorker.onmessage = function (event: MessageEvent) {
+      // Resolve the promise with the errors received from the web worker
+      resolve(event.data as CompileTsResult);
+      // Terminate the web worker
+      errorCheckerWorker.terminate();
+    };
+
+    // Handle any errors or termination of the web worker
+    errorCheckerWorker.onerror = function (error: ErrorEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    errorCheckerWorker.onmessageerror = function (error: MessageEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    // Listen for the abort event on the AbortSignal
+    cancellationToken.onabort = function () {
+      // Terminate the web worker if it's still running
+      errorCheckerWorker.terminate();
+      // Reject the promise with an AbortError
+      reject(new DOMException("The operation was aborted", "AbortError"));
+    };
+
+    // Send the nodeDefs array to the web worker
+    errorCheckerWorker.postMessage(inputs);
+  });
+}
