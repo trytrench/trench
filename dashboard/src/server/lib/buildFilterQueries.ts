@@ -113,6 +113,18 @@ export async function getEntitiesList(props: {
     whereClauses.push(`entity_id = ['${filters.entityId}']`);
   }
 
+  if (filters.seenWithEntityId) {
+    whereClauses.push(
+      `event_id IN (SELECT event_id FROM features WHERE entity_id = ['${filters.seenWithEntityId}'])`
+    );
+  }
+
+  if (filters.seenInEventType) {
+    whereClauses.push(
+      `event_id IN (SELECT event_id FROM features WHERE event_type = '${filters.seenInEventType}')`
+    );
+  }
+
   if (filters.features && filters.features.length > 0) {
     const featureConditions = filters.features
       .map((feature) => buildWhereClauseForFeatureFilter(feature))
@@ -196,8 +208,6 @@ export async function getEntitiesList(props: {
     ORDER BY last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0};
   `;
-
-  console.log(finalQuery);
 
   const result = await db.query({
     query: finalQuery,

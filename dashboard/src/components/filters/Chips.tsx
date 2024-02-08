@@ -30,9 +30,15 @@ import { TypeName } from "event-processing";
 interface TypeChipProps extends React.ComponentPropsWithoutRef<"div"> {
   type: string;
   onDelete?: () => void;
+  title?: string;
 }
 
-const TypeChip = ({ type, onDelete, className, ...props }: TypeChipProps) => {
+const TypeChip = ({
+  type,
+  onDelete,
+  className,
+  title = "Type",
+}: TypeChipProps) => {
   return (
     <Badge
       variant="outline"
@@ -41,7 +47,7 @@ const TypeChip = ({ type, onDelete, className, ...props }: TypeChipProps) => {
         className
       )}
     >
-      Type: {type}
+      {title}: {type}
       <button
         className="ml-1 rounded-full flex items-center"
         onClick={onDelete}
