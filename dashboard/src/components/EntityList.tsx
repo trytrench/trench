@@ -32,7 +32,7 @@ import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { EntityFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
-import { DataTable } from "./ui/data-table";
+import { DataTable, useDataTableState } from "./ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "./ui/checkbox";
 import { format } from "date-fns";
@@ -52,11 +52,21 @@ interface Props {
 
 export const EntityList = ({ seenWithEntityId }: Props) => {
   const router = useRouter();
-  const [view, setView] = useState<"grid" | "list">("list");
+  const [viewType, setViewType] = useState<"grid" | "list">("grid");
+
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   const [filters, setFilters] = useState<EntityFilters>({
     seenWithEntityId,
   });
+
+  useEffect(() => {
+    if (entityTypes && !filters.entityType)
+      setFilters({
+        ...filters,
+        entityType: entityTypes?.[0]?.id,
+      });
+  }, [entityTypes, filters]);
 
   const { data: views, refetch: refetchViews } =
     api.entityViews.list.useQuery();
@@ -75,63 +85,6 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
   const { data: features } = api.features.list.useQuery({
     entityTypeId: filters.entityType,
   });
-
-  useEffect(() => {
-    const filters = views?.find((view) => view.id === router.query.view)
-      ?.filters as EntityFilters;
-    if (filters) setFilters(filters);
-  }, [views, router.query.view]);
-
-  const {
-    data: entities,
-    isLoading: entitiesLoading,
-    fetchNextPage,
-    isFetchingNextPage,
-    hasNextPage,
-  } = api.lists.getEntitiesList.useInfiniteQuery(
-    {
-      entityFilters: filters,
-      // sortBy,
-      // limit,
-    },
-    {
-      getNextPageParam: (lastPage, pages) => {
-        if (lastPage.rows.length < limit) return undefined;
-        return pages.length * limit;
-      },
-    }
-  );
-
-  const allEntities = useMemo(() => {
-    return entities?.pages.flatMap((page) => page.rows) ?? [];
-  }, [entities]);
-
-  const entityIds = useMemo<string[]>(() => {
-    return allEntities.flatMap((entity) => {
-      return (
-        entity.features
-          .filter(
-            (feature) =>
-              feature.result.type === "success" &&
-              feature.result.data.schema.type === TypeName.Entity
-          )
-          .map((feature) => feature.result.data!.value.id) ?? []
-      );
-    });
-  }, [allEntities]);
-  const entityNameMap = useEntityNameMap(entityIds);
-
-  const [open, setOpen] = useState(false);
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    createView({ name: values.name, filters })
-      .then(() => {
-        setOpen(false);
-        return refetchViews();
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }
 
   const columns: ColumnDef<
     RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
@@ -168,12 +121,12 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
       },
       {
         header: "Last Seen",
+        id: "Last Seen",
         accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
       },
       ...((features?.map((feature) => ({
         id: feature.name,
         header: feature.name,
-        accessorFn: (row) => feature.name,
         cell: ({ row }) => {
           const value = row.original.features.find(
             (f) => f.featureId === feature.id
@@ -187,24 +140,123 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
     [features]
   );
 
+  const { columnVisibility, setColumnVisibility, columnOrder, setColumnOrder } =
+    useDataTableState({
+      columnVisibility: {},
+      columnOrder: columns.map((column) => column.id ?? "").filter(Boolean),
+    });
+
+  const currentView = useMemo(
+    () => views?.find((view) => view.id === router.query.view) ?? null,
+    [views, router.query.view]
+  );
+
+  useEffect(() => {
+    if (features && !currentView?.config?.columnVisibility) {
+      setColumnVisibility(
+        features.reduce(
+          (acc, feature) => {
+            acc[feature.name] = false;
+            return acc;
+          },
+          {} as Record<string, boolean>
+        )
+      );
+    }
+  }, [features, setColumnVisibility, currentView]);
+
+  useEffect(() => {
+    if (currentView) {
+      setFilters(currentView.config.filters);
+      setViewType(currentView.config.viewType);
+      setColumnOrder(currentView.config.columnOrder);
+      setColumnVisibility(currentView.config.columnVisibility);
+    }
+  }, [currentView, router.query.view, setColumnOrder, setColumnVisibility]);
+
+  const {
+    data: entities,
+    isLoading: entitiesLoading,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasNextPage,
+  } = api.lists.getEntitiesList.useInfiniteQuery(
+    {
+      entityFilters: filters,
+      // sortBy,
+      // limit,
+    },
+    {
+      getNextPageParam: (lastPage, pages) => {
+        if (lastPage.rows.length < limit) return undefined;
+        return pages.length * limit;
+      },
+      enabled: !!filters.entityType,
+    }
+  );
+
+  const allEntities = useMemo(() => {
+    return entities?.pages.flatMap((page) => page.rows) ?? [];
+  }, [entities]);
+
+  const entityIds = useMemo<string[]>(() => {
+    return allEntities.flatMap((entity) => {
+      return (
+        entity.features
+          .filter(
+            (feature) =>
+              feature.result.type === "success" &&
+              feature.result.data.schema.type === TypeName.Entity
+          )
+          .map((feature) => feature.result.data!.value.id) ?? []
+      );
+    });
+  }, [allEntities]);
+  const entityNameMap = useEntityNameMap(entityIds);
+
+  const [open, setOpen] = useState(false);
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    createView({
+      name: values.name,
+      config: {
+        filters: filters,
+        type: viewType,
+        columnOrder,
+        columnVisibility,
+      },
+    })
+      .then(() => {
+        setOpen(false);
+        return refetchViews();
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  useEffect(() => {
+    if (!views)
+      setColumnOrder(columns.map((column) => column.id ?? "").filter(Boolean));
+  }, [columns, setColumnOrder, views]);
+
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       <div className="flex p-3 px-8 border-b items-center">
         <EditEntityFilters value={filters} onChange={setFilters} />
 
         <div className="flex gap-1">
           <Toggle
             className="h-6 flex items-center"
-            onClick={() => setView("grid")}
-            pressed={view === "grid"}
+            onClick={() => setViewType("grid")}
+            pressed={viewType === "grid"}
           >
             <LayoutGrid className="h-4 w-4 mr-1.5" />
             <span className="text-xs">Grid</span>
           </Toggle>
           <Toggle
             className="h-6 flex items-center"
-            onClick={() => setView("list")}
-            pressed={view === "list"}
+            onClick={() => setViewType("list")}
+            pressed={viewType === "list"}
           >
             <List className="h-4 w-4 mr-1.5" />
             <span className="text-xs">List</span>
@@ -247,7 +299,7 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="flex">
+      <div className="flex h-full">
         <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
           <div className="text-sm font-medium text-emphasis-foreground">
             Views
@@ -269,46 +321,50 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
           ))}
         </div>
 
-        <div className="grow">
-          {view === "grid" ? (
-            <ScrollArea className="h-full">
-              <div className="flex flex-col gap-4 px-8 py-4">
-                {entitiesLoading ? (
-                  <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
-                ) : (
-                  <>
-                    {allEntities.map((entity) => {
-                      return (
-                        <EntityCard
-                          key={`${entity.entityType}:${entity.entityId}`}
-                          entity={entity}
-                          entityNameMap={entityNameMap}
-                        />
-                      );
-                    })}
-                    {hasNextPage && (
-                      <div className="self-center my-4">
-                        <SpinnerButton
-                          variant="outline"
-                          onClick={() => {
-                            fetchNextPage().catch((err) => {
-                              console.error(err);
-                            });
-                          }}
-                          loading={isFetchingNextPage}
-                        >
-                          Fetch more entities
-                        </SpinnerButton>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </ScrollArea>
-          ) : (
+        {viewType === "grid" ? (
+          <ScrollArea className="h-full flex-1">
+            <div className="flex flex-col gap-4 px-8 py-4">
+              {entitiesLoading ? (
+                <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+              ) : (
+                <>
+                  {allEntities.map((entity) => {
+                    return (
+                      <EntityCard
+                        key={`${entity.entityType}:${entity.entityId}`}
+                        entity={entity}
+                        entityNameMap={entityNameMap}
+                      />
+                    );
+                  })}
+                  {hasNextPage && (
+                    <div className="self-center my-4">
+                      <SpinnerButton
+                        variant="outline"
+                        onClick={() => {
+                          fetchNextPage().catch((err) => {
+                            console.error(err);
+                          });
+                        }}
+                        loading={isFetchingNextPage}
+                      >
+                        Fetch more entities
+                      </SpinnerButton>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="px-8 overflow-x-auto flex-1">
             <DataTable
               columns={columns}
               data={allEntities}
+              columnVisibility={columnVisibility}
+              onColumnVisibilityChange={setColumnVisibility}
+              columnOrder={columnOrder}
+              onColumnOrderChange={setColumnOrder}
               renderHeader={(table) => (
                 <>
                   <Input
@@ -328,10 +384,10 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
                 </>
               )}
             />
-          )}
+          </div>
+        )}
 
-          <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
-        </div>
+        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </div>
   );
