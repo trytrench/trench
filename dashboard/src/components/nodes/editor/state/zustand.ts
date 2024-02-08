@@ -15,7 +15,7 @@ import { create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
 import { persist, type PersistStorage } from "zustand/middleware";
 import superjson from "superjson";
-import { checkErrors, getSchemaAtPath } from "../../../../shared/publish";
+import { getSchemaAtPath } from "../../../../shared/publish";
 import { createSelectors } from "../../../../lib/zustand";
 
 type RawNode<T extends FnType = FnType> = Omit<NodeDef<T>, "fn"> & {
@@ -55,7 +55,7 @@ interface EditorState {
   }) => void;
 
   // Update status
-  updateErrors: () => void;
+  updateErrors: () => Promise<void>;
   setStatus: (status: EngineCompileStatus) => void;
 
   setNodeDefWithFn: <T extends FnType>(
@@ -124,10 +124,10 @@ const useEditorStoreBase = create<EditorState>()(
       errors: {},
       status: { status: "idle" },
 
-      updateErrors: () => {
+      updateErrors: async () => {
         get().setStatus({ status: "compiling" });
         const allNodeDefs = selectors.getNodeDefs()(get());
-        const errors = checkErrors(allNodeDefs);
+        const errors = await checkErrorsWithWorker(allNodeDefs);
 
         if (Object.keys(errors).length === 0) {
           get().setStatus({ status: "success" });
@@ -338,3 +338,37 @@ export const selectors = {
       return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
+
+// Create a function that encapsulates the communication with the web worker
+function checkErrorsWithWorker(
+  nodeDefs: NodeDefAny[]
+): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
+    const errorCheckerWorker: Worker = new Worker(
+      new URL("./errorCheckerWorker", import.meta.url)
+    );
+
+    // Listen for messages from the web worker
+    errorCheckerWorker.onmessage = function (event: MessageEvent) {
+      const errors: Record<string, string> = event.data;
+      // Resolve the promise with the errors received from the web worker
+      resolve(errors);
+      // Terminate the web worker
+      errorCheckerWorker.terminate();
+    };
+
+    // Handle any errors or termination of the web worker
+    errorCheckerWorker.onerror = function (error: ErrorEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    errorCheckerWorker.onmessageerror = function (error: MessageEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    // Send the nodeDefs array to the web worker
+    errorCheckerWorker.postMessage(nodeDefs);
+  });
+}

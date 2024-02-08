@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FnType } from "./_enum";
+import { FnType } from "../enum";
 import { createFnTypeDefBuilder } from "../builder";
 import {
   DataPath,
@@ -9,7 +9,7 @@ import {
 import { functions } from "../lib/computedNodeFunctions";
 import { TSchema, createDataType } from "../../data-types";
 import { Diagnostic, Project, SyntaxKind, ts } from "ts-morph";
-import { footprintOfType } from "../lib/typeFootprint";
+import { footprintOfType } from "../lib/schemaFootprint";
 
 let libSource: string | null = null;
 
@@ -30,6 +30,15 @@ if (!libSource) {
   const filePath = path.resolve(__dirname, "../lib/computedNodeLib.ts");
   libSource = fs.readFileSync(filePath, "utf8");
 }
+
+export type SerializableTsCompilerError = {
+  message: string;
+  code: number;
+  category: ts.DiagnosticCategory;
+  file: string | null;
+  start: number | null;
+  length: number | null;
+};
 
 export function getTypeDefs(options: {
   deps: Record<string, DataPath | null>;
@@ -66,15 +75,18 @@ export const TS_COMPILER_OPTIONS: ts.CompilerOptions = {
   alwaysStrict: false,
 };
 
-export type CompileTsResult =
+export type CompileTsResult = (
   | {
       success: true;
       compiledJs: string;
     }
   | {
       success: false;
-      diagnostics: Diagnostic<ts.Diagnostic>[];
-    };
+      errors: SerializableTsCompilerError[];
+    }
+) & {
+  inferredSchema: TSchema | null;
+};
 
 export function compileTs(options: {
   code: string;
@@ -93,6 +105,8 @@ export function compileTs(options: {
   const arrowFunction = sourceFile
     .getVariableDeclaration("getValue")
     ?.getInitializerIfKind(SyntaxKind.ArrowFunction);
+
+  let inferredSchema: TSchema | null = null;
   if (arrowFunction) {
     // Get the inferred return type of the arrow function
     const returnType = arrowFunction.getReturnType();
@@ -105,18 +119,30 @@ export function compileTs(options: {
 
     const node = sourceFile.getTypeAliasOrThrow(typeName);
     const type = node.getType();
-    const shite = footprintOfType({
+    inferredSchema = footprintOfType({
       type: type,
       node: node,
     });
-    console.log(shite);
   }
 
-  const allDiagnostics = project.getPreEmitDiagnostics();
+  const errors = project.getPreEmitDiagnostics().map((d) => {
+    let msg = d.getMessageText();
+    if (typeof msg === "object") {
+      msg = msg.getMessageText();
+    }
+    return {
+      message: msg,
+      code: d.getCode(),
+      category: d.getCategory(),
+      file: d.getSourceFile()?.getFilePath() ?? null,
+      start: d.getStart() ?? null,
+      length: d.getLength() ?? null,
+    };
+  });
 
   // Set compile status based on results
 
-  if (!allDiagnostics.length) {
+  if (!errors.length) {
     const transpiledOutput = ts.transpileModule(finalCode, {
       compilerOptions: {
         ...TS_COMPILER_OPTIONS,
@@ -125,11 +151,13 @@ export function compileTs(options: {
     return {
       success: true,
       compiledJs: transpiledOutput.outputText,
+      inferredSchema,
     };
   } else {
     return {
       success: false,
-      diagnostics: allDiagnostics,
+      errors: errors,
+      inferredSchema,
     };
   }
 }
@@ -169,41 +197,12 @@ export const computedFnDef = createFnTypeDefBuilder()
         success: true,
       };
     } else {
-      let msg = compileResult.diagnostics[0]?.getMessageText();
-      if (typeof msg === "object") {
-        msg = msg.getMessageText();
-      }
+      let msg = compileResult.errors[0]?.message ?? "Unknown error";
 
       return {
         success: false,
         error: `Error compiling TS: ${msg}`,
       };
     }
-  })
-  .setCreateResolver(({ fnDef, input }) => {
-    return async ({ event, getDependency }) => {
-      const { depsMap } = input;
-      const { compiledJs } = fnDef.config;
-
-      const depValues: Record<string, any> = {};
-      for (const [key, depPath] of Object.entries(depsMap)) {
-        const featureValue = await getDependency({
-          dataPath: depPath,
-        });
-        depValues[key] = featureValue;
-      }
-
-      const functionCode = `
-      async function __runCode(inputs, fn) {
-        return (${compiledJs})(inputs);
-      }
-      `;
-
-      const value = await eval(`(${functionCode})`)(depValues, functions);
-
-      return {
-        data: value,
-      };
-    };
   })
   .build();

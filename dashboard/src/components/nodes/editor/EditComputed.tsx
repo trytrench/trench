@@ -41,28 +41,18 @@ import { generateNanoId } from "../../../../../packages/common/src";
 import { useAtom } from "jotai";
 import {
   FUNCTION_TEMPLATE,
-  compileStatueAtom,
+  compileStatusAtom,
   tsCodeAtom,
 } from "../code-editor/state";
 import { getTypeDefs } from "event-processing/src/function-type-defs/types/Computed";
-
-const DynamicCodeEditor = dynamic(
-  () => import("../code-editor/CodeEditor").then((mod) => mod.CodeEditor),
-  {
-    ssr: false,
-  }
-);
-
-const DynamicCompileStatusMessage = dynamic(
-  () =>
-    import("../code-editor/CodeEditor").then((mod) => mod.CompileStatusMessage),
-  { ssr: false }
-);
+import { CodeEditor, CompileStatusMessage } from "../code-editor/CodeEditor";
+import { MonacoEditor } from "../../ts-editor/MonacoEditor";
 
 const fnTypeDef = getFnTypeDef(FnType.Computed);
 
 const formSchema = z.object({
   returnSchema: tSchemaZod,
+  inferredSchema: tSchemaZod.nullable(),
   name: z.string().min(2, "Name must be at least 2 characters long."),
   config: fnTypeDef.configSchema,
   inputs: fnTypeDef.inputSchema.omit({ depsMap: true }).merge(
@@ -91,6 +81,7 @@ export function EditComputed({
       inputs: {
         depsMap: {},
       },
+      inferredSchema: null,
       config: {
         tsCode: "",
         compiledJs: "",
@@ -154,22 +145,29 @@ export function EditComputed({
   ]);
 
   // Code validity
-  const [compileStatus, setCompileStatus] = useAtom(compileStatueAtom);
+  const [compileStatus, setCompileStatus] = useAtom(compileStatusAtom);
 
   useEffect(() => {
     if (compileStatus.status === "success") {
       form.setValue("config.tsCode", compileStatus.code);
 
       // Remove const so that we can eval it as a function
+      // from:  const getValue = async ...
+      // to:    async ...
       form.setValue(
         "config.compiledJs",
         compileStatus.compiled
           .slice(compileStatus.compiled.indexOf("async"))
           .replace(/[;\n]+$/, "")
       );
+
+      form.setValue("inferredSchema", compileStatus.inferredSchema);
     } else {
       form.setValue("config.tsCode", "");
       form.setValue("config.compiledJs", "");
+      if (compileStatus.status === "error") {
+        form.setValue("inferredSchema", compileStatus.inferredSchema);
+      }
     }
   }, [compileStatus, form]);
 
@@ -268,15 +266,26 @@ export function EditComputed({
             control={form.control}
             name="returnSchema"
             render={({ field }) => (
-              <FormItem className="w-[16rem] mt-4">
+              <FormItem className="mt-4">
                 <FormLabel>Type</FormLabel>
                 <div>
                   <SchemaBuilder
                     value={field.value as TSchema}
-                    onChange={(newSchema) => {
-                      field.onChange(newSchema);
-                    }}
+                    onChange={field.onChange}
                   />
+                  {form.watch("inferredSchema") && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const inferredSchema = form.watch("inferredSchema");
+                        if (!inferredSchema) return;
+                        field.onChange(inferredSchema);
+                      }}
+                    >
+                      infer
+                    </button>
+                  )}
                 </div>
                 <FormMessage />
               </FormItem>
@@ -321,11 +330,11 @@ export function EditComputed({
         <div className="text-emphasis-foreground text-md">Code</div>
 
         <div className="ml-auto" />
-        <DynamicCompileStatusMessage compileStatus={compileStatus} />
+        <CompileStatusMessage compileStatus={compileStatus} />
       </div>
 
       <div className="h-96">
-        <DynamicCodeEditor typeDefs={typeDefs} />
+        <CodeEditor typeDefs={typeDefs} />
       </div>
     </div>
   );

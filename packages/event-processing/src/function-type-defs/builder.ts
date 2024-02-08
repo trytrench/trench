@@ -1,11 +1,11 @@
 import { AnyZodObject, ZodNull, ZodObject, ZodUndefined, z } from "zod";
 import { FnDef, FnTypeDef, InputValidator, Resolver } from "./functionTypeDef";
-import { FnType } from "./types/_enum";
+import { FnType } from "./enum";
 import { TSchema, TypeName } from "../data-types";
 import { DataPath, DataPathInfoGetter } from "../data-path";
 
 export interface FnTypeDefBuilder<
-  TFnType extends FnType = any,
+  TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
@@ -59,21 +59,21 @@ export interface FnTypeDefBuilder<
     TInputSchema,
     TContext
   >;
-  setCreateResolver<
-    TCR extends (options: {
-      fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
-      input: z.infer<TInputSchema>;
-      context: TContext;
-    }) => Resolver<TReturnSchema>,
-  >(
-    createResolver: TCR
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TConfigSchema,
-    TInputSchema,
-    TContext
-  >;
+  // setCreateResolver<
+  //   TCR extends (options: {
+  //     fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
+  //     input: z.infer<TInputSchema>;
+  //     context: TContext;
+  //   }) => Resolver<TReturnSchema>,
+  // >(
+  //   createResolver: TCR
+  // ): FnTypeDefBuilder<
+  //   TFnType,
+  //   TReturnSchema,
+  //   TConfigSchema,
+  //   TInputSchema,
+  //   TContext
+  // >;
   setContextType<TCtx>(): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
@@ -92,7 +92,7 @@ export interface FnTypeDefBuilder<
 
 // createFnTypeDefBuilder function
 export function createFnTypeDefBuilder<
-  TFnType extends FnType = any,
+  TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
@@ -143,14 +143,10 @@ export function createFnTypeDefBuilder<
         TC
       >(partialDef, {});
     },
-    setCreateResolver(createResolver) {
-      return createNewFnTypeDefBuilder(partialDef, { createResolver });
-    },
     build() {
       if (
         // These fields have to be set via the builder
-        !partialDef.fnType ||
-        !partialDef.createResolver
+        !partialDef.fnType
       ) {
         throw new Error("Missing required properties to build FnTypeDef");
       }

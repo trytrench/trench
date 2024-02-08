@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { FnDef, FnDefAny, FnTypeDef, fnDefSchema } from "./functionTypeDef";
 import { TSchema, tSchemaZod } from "../data-types";
-import { FnType } from "./types/_enum";
+import { FnType } from "./enum";
 import { FnTypeDefsMap } from ".";
 
 export const bareNodeDefSchema = z.object({
@@ -22,7 +22,7 @@ export interface NodeDef<T extends FnType = FnType> {
   id: string;
   name: string;
   eventType: string;
-  inputs: FnTypeDefsMap[T]["inputSchema"]["_input"];
+  inputs: FnType extends T ? any : FnTypeDefsMap[T]["inputSchema"]["_input"];
   dependsOn: Set<string>;
   fn: FnDef<T>;
 }

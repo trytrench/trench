@@ -6,6 +6,7 @@ import {
   Node,
   TypeFormatFlags,
 } from "ts-morph";
+import { TSchema, TypeName } from "../../data-types";
 
 // From: https://gist.github.com/zaripych/963fa6584524e5b446b70548dbabbf65
 
@@ -89,12 +90,12 @@ export function footprintOfType(params: {
   overrides?: Record<string, string>;
   flags?: FormatFlags[];
   callStackLevel?: number;
-}): string {
+}): TSchema | null {
   const { type, node, overrides, flags = [], callStackLevel = 0 } = params;
 
   if (callStackLevel > 9) {
     // too deep?
-    return "'...'";
+    return null;
   }
 
   const next = (nextType: Type, nextFlags: FormatFlags[] = []) => {
@@ -110,18 +111,50 @@ export function footprintOfType(params: {
   const indent = (text: string, lvl: number = 1) =>
     text.replace(/^/gm, " ".repeat(lvl * 2));
 
-  const defaultFormat = () => {
-    return type.getText(
-      node,
-      TypeFormatFlags.UseSingleQuotesForStringLiteralType
-    );
+  const defaultFormat = (): TSchema | null => {
+    if (type.isString()) {
+      return { type: TypeName.String };
+    }
+    if (type.isStringLiteral()) {
+      return { type: TypeName.String };
+    }
+    if (type.isUndefined()) {
+      return { type: TypeName.Undefined };
+    }
+    if (type.isNull()) {
+      return { type: TypeName.Null };
+    }
+    if (type.isUnknown()) {
+      return null;
+    }
+    if (type.isAny()) {
+      return { type: TypeName.Any };
+    }
+    if (type.isNumber()) {
+      return { type: TypeName.Float64 };
+    }
+    if (type.isNumberLiteral()) {
+      return { type: TypeName.Float64 };
+    }
+    if (type.isBoolean()) {
+      return { type: TypeName.Boolean };
+    }
+    if (type.isBooleanLiteral()) {
+      return { type: TypeName.Boolean };
+    }
+    if (intrinsicNameOf(type) === "void") {
+      // isVoid
+      return null;
+    }
+    return null;
   };
 
   const symbol = type.getAliasSymbol();
   if (overrides && symbol) {
     const result = overrides[symbol.getName()];
     if (result) {
-      return result;
+      // return result;
+      return null;
     }
   }
 
@@ -131,20 +164,20 @@ export function footprintOfType(params: {
 
   if (type.isArray()) {
     const subType = type.getArrayElementTypeOrThrow();
-    if (isPrimitive(subType)) {
-      return `${next(subType)}[]`;
-    } else {
-      return `Array<\n${indent(next(subType))}\n>`;
-    }
+    const itemsSchema = next(subType);
+    return {
+      type: TypeName.Array,
+      items: itemsSchema ?? { type: TypeName.Any },
+    };
   }
 
   if (type.isTuple()) {
     const types = type.getTupleElements();
-    return [
-      "[\n",
-      indent(types.map((type) => next(type)).join(",\n")),
-      "\n]",
-    ].join("");
+
+    return {
+      type: TypeName.Tuple,
+      items: types.map((type) => next(type) ?? { type: TypeName.Any }),
+    };
   }
 
   if (type.isObject() && isPromise(type)) {
@@ -152,15 +185,16 @@ export function footprintOfType(params: {
     if (!first) {
       throw new Error("This should not have happened");
     }
-    if (isPrimitive(first)) {
-      return `Promise<${next(first)}>`;
-    } else {
-      return `Promise<\n${indent(next(first))}\n>`;
-    }
+    return {
+      type: TypeName.Any,
+    };
   }
 
   if (type.isObject() && isSimpleSignature(type)) {
-    return signatures(type.getCallSignatures(), "type", next);
+    // return signatures(type.getCallSignatures(), "type", next);
+    return {
+      type: TypeName.Any,
+    };
   }
 
   if (type.isObject()) {
@@ -169,23 +203,54 @@ export function footprintOfType(params: {
     const numIndex = type.getNumberIndexType();
     const stringIndex = type.getStringIndexType();
     if (props.length === 0 && sigs.length === 0 && !numIndex && !stringIndex) {
-      return "{}";
+      return {
+        type: TypeName.Object,
+        properties: {},
+      };
     }
-    const sigsText = signatures(sigs, "declaration", next);
-    const propsText = properties(props, node, next);
-    const numIndexText = numIndex && `[index: number]: ${next(numIndex)};`;
-    const stringIndexText =
-      stringIndex && `[index: string]: ${next(stringIndex)};`;
-    return [
-      "{\n",
-      numIndexText && indent(numIndexText),
-      stringIndexText && indent(stringIndexText),
-      sigs.length > 0 && indent(sigsText),
-      props.length > 0 && indent(propsText),
-      "\n}",
-    ]
-      .filter(Boolean)
-      .join("");
+
+    return {
+      type: TypeName.Object,
+      properties: Object.fromEntries(
+        props.map((prop) => {
+          const propertyName = prop.getName();
+
+          const propertySchema = footprintOfType({
+            type: prop.getTypeAtLocation(node),
+            node,
+            overrides,
+            flags,
+            callStackLevel: callStackLevel + 1,
+          });
+
+          const finalSchema: TSchema | null = propertySchema
+            ? prop.hasFlags(SymbolFlags.Optional)
+              ? {
+                  type: TypeName.Union,
+                  unionTypes: [propertySchema, { type: TypeName.Undefined }],
+                }
+              : propertySchema
+            : null;
+
+          return [propertyName, finalSchema ?? { type: TypeName.Any }];
+        })
+      ),
+    };
+    // const sigsText = signatures(sigs, "declaration", next);
+    // const propsText = properties(props, node, next);
+    // const numIndexText = numIndex && `[index: number]: ${next(numIndex)};`;
+    // const stringIndexText =
+    //   stringIndex && `[index: string]: ${next(stringIndex)};`;
+    // return [
+    //   "{\n",
+    //   numIndexText && indent(numIndexText),
+    //   stringIndexText && indent(stringIndexText),
+    //   sigs.length > 0 && indent(sigsText),
+    //   props.length > 0 && indent(propsText),
+    //   "\n}",
+    // ]
+    //   .filter(Boolean)
+    //   .join("");
   }
 
   if (type.isUnion()) {
@@ -199,25 +264,26 @@ export function footprintOfType(params: {
       })
       .map((type) => next(type));
 
-    if (typeStrs.includes("true") && typeStrs.includes("false")) {
-      const filtered = typeStrs.filter(
-        (type) => type !== "true" && type !== "false"
-      );
-      return ["boolean", ...filtered].join(" | ");
-    } else {
-      return typeStrs.join(" | ");
-    }
+    return {
+      type: TypeName.Union,
+      unionTypes: typeStrs.map((typeStr) => typeStr ?? { type: TypeName.Any }),
+    };
   }
 
   if (type.isIntersection()) {
-    return type
-      .getIntersectionTypes()
-      .map((type) => next(type))
-      .join(" & ");
+    return {
+      type: TypeName.Any,
+    };
+    // return type
+    //   .getIntersectionTypes()
+    //   .map((type) => next(type))
+    //   .join(" & ");
   }
 
   // when you encounter this, consider changing the function
-  return "TODO";
+  return {
+    type: TypeName.Any,
+  };
 }
 
 function properties(

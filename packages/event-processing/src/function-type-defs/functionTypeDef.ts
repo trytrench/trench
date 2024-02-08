@@ -1,5 +1,5 @@
-import { AnyZodObject, ZodObject, z } from "zod";
-import { FnType } from "./types/_enum";
+import { ZodType, ZodObject, z } from "zod";
+import { FnType } from "./enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
 import { DataPath, DataPathInfoGetter } from "../data-path";
@@ -7,15 +7,19 @@ import { FnTypeDefsMap } from ".";
 
 export type FnDef<
   TFnType extends FnType = FnType,
-  TReturnSchema extends TSchema = FnTypeDefsMap[TFnType] extends FnTypeDef<
-    any,
-    infer ReturnSchema,
-    any,
-    any
-  >
+  TReturnSchema extends TSchema = FnType extends TFnType
+    ? TSchema
+    : FnTypeDefsMap[TFnType] extends FnTypeDef<
+        any,
+        infer ReturnSchema,
+        any,
+        any
+      >
     ? ReturnSchema
     : TSchema,
-  TConfig = FnTypeDefsMap[TFnType]["configSchema"]["_input"],
+  TConfig = FnType extends TFnType
+    ? any
+    : FnTypeDefsMap[TFnType]["configSchema"]["_input"],
 > = {
   id: string;
   type: TFnType;
@@ -68,8 +72,8 @@ export type InputValidatorResult =
 export type InputValidator<
   TFnType extends FnType = any,
   TReturn extends TSchema = any,
-  TConfigSchema extends AnyZodObject = ZodObject<{}>,
-  TInputSchema extends AnyZodObject = ZodObject<{}>,
+  TConfigSchema extends ZodType = ZodType,
+  TInputSchema extends ZodType = ZodType,
 > = (options: {
   inputs: z.infer<TInputSchema>;
   fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
@@ -79,18 +83,15 @@ export type InputValidator<
 export type FnTypeDef<
   TFnType extends FnType = FnType,
   TReturn extends TSchema = TSchema,
-  TConfigSchema extends AnyZodObject = ZodObject<{}>,
-  TInputSchema extends AnyZodObject = ZodObject<{}>,
+  TConfigSchema extends ZodType = ZodType,
+  TInputSchema extends ZodType = ZodType,
   TContext = any,
 > = {
   fnType: TFnType;
   configSchema: TConfigSchema;
   inputSchema: TInputSchema;
-  createResolver: (options: {
-    fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
-    input: z.infer<TInputSchema>;
-    context: TContext;
-  }) => Resolver<TReturn>;
   getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
   validateInputs: InputValidator<TFnType, TReturn, TConfigSchema, TInputSchema>;
 };
+
+export type AnyFnTypeDef = FnTypeDef<any, any, any, any, any>;

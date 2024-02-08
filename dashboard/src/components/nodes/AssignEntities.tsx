@@ -57,7 +57,7 @@ const FeatureItem = ({
         value={dataPath}
         onChange={onDataPathChange}
         eventType={eventType}
-        desiredSchema={feature.schema}
+        // desiredSchema={feature.schema}
       />
     </div>
   );

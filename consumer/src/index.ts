@@ -4,8 +4,8 @@ import {
   fetchLastEventProcessedId,
   getEventsSince,
   setLastEventProcessedId,
-} from "event-processing";
-import { EngineResult, ExecutionEngine } from "event-processing/src/engine";
+  ExecutionEngine,
+} from "event-processing/src/server";
 import { recordEventType } from "./recordEventType";
 import {
   StoreRow,
