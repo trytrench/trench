@@ -4,6 +4,7 @@ import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
 import { DataPath, DataPathInfoGetter } from "../data-path";
 import { FnDef, FnTypeDef } from ".";
+import { QueueOptions, QueueType } from "./lib/queueTypes";
 
 export type TrenchEvent = {
   id: string;
@@ -40,4 +41,7 @@ export type FnTypeResolver<
     input: z.infer<TInputSchema>;
     context: TContext;
   }) => Resolver<TReturn>;
+  getQueueOptions: (props: {
+    fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
+  }) => QueueOptions;
 };
