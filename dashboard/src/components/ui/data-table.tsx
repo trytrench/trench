@@ -42,6 +42,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import { Skeleton } from "./skeleton";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -52,6 +53,7 @@ interface DataTableProps<TData, TValue> {
   onColumnVisibilityChange: OnChangeFn<VisibilityState>;
   columnOrder: ColumnOrderState;
   onColumnOrderChange: OnChangeFn<ColumnOrderState>;
+  loading?: boolean;
 }
 
 export const useDataTableState = ({
@@ -105,6 +107,7 @@ export function DataTable<TData, TValue>({
   onColumnVisibilityChange,
   columnOrder,
   onColumnOrderChange,
+  loading = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -189,7 +192,17 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              Array.from({ length: 10 }).map((_, index) => (
+                <TableRow key={index}>
+                  {columns.map((column) => (
+                    <TableCell key={column.id}>
+                      <Skeleton className="w-[100px] h-[20px]" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
