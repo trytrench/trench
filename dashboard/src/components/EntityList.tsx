@@ -60,6 +60,7 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
     seenWithEntityId,
   });
 
+  // Query must be for an entity type
   useEffect(() => {
     if (entityTypes && !filters.entityType)
       setFilters({
@@ -82,9 +83,14 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
 
   const limit = 10;
 
-  const { data: features } = api.features.list.useQuery({
-    entityTypeId: filters.entityType,
-  });
+  const { data: features } = api.features.list.useQuery();
+  const filteredFeatures = useMemo(
+    () =>
+      features?.filter(
+        (feature) => feature.entityTypeId === filters.entityType
+      ),
+    [features, filters.entityType]
+  );
 
   const columns: ColumnDef<
     RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
@@ -124,20 +130,27 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
         id: "Last Seen",
         accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
       },
-      ...((features?.map((feature) => ({
+      ...((filteredFeatures?.map((feature) => ({
         id: feature.name,
         header: feature.name,
         cell: ({ row }) => {
           const value = row.original.features.find(
             (f) => f.featureId === feature.id
           );
-          return value ? <RenderResult result={value.result} /> : null;
+          if (!value) return null;
+          return value.rule && value.result.type === "success" ? (
+            value.result.data.value && (
+              <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
+            )
+          ) : value.result ? (
+            <RenderResult result={value.result} />
+          ) : null;
         },
       })) ?? []) as ColumnDef<
         RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
       >[]),
     ],
-    [features]
+    [filteredFeatures]
   );
 
   const { columnVisibility, setColumnVisibility, columnOrder, setColumnOrder } =
@@ -150,20 +163,6 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
     () => views?.find((view) => view.id === router.query.view) ?? null,
     [views, router.query.view]
   );
-
-  useEffect(() => {
-    if (features && !currentView?.config?.columnVisibility) {
-      setColumnVisibility(
-        features.reduce(
-          (acc, feature) => {
-            acc[feature.name] = false;
-            return acc;
-          },
-          {} as Record<string, boolean>
-        )
-      );
-    }
-  }, [features, setColumnVisibility, currentView]);
 
   useEffect(() => {
     if (currentView) {
@@ -365,6 +364,14 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
               onColumnVisibilityChange={setColumnVisibility}
               columnOrder={columnOrder}
               onColumnOrderChange={setColumnOrder}
+              loading={entitiesLoading}
+              onRowClick={(entity) =>
+                router.push(
+                  `/entity/${entityTypes?.find(
+                    (et) => et.id === entity.entityType
+                  )?.type}/${entity.entityId}`
+                )
+              }
               renderHeader={(table) => (
                 <>
                   <Input
