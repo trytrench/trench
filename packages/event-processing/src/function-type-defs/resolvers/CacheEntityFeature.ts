@@ -2,9 +2,16 @@ import { TypeName } from "../../data-types";
 import { hashObject } from "../lib/counts";
 import { cacheEntityFeatureFnDef } from "../types/CacheEntityFeature";
 import { createFnTypeResolverBuilder } from "../resolverBuilder";
+import { QueueType } from "../lib/queueTypes";
 
 export const cacheEntityFeatureFnResolver = createFnTypeResolverBuilder()
   .setFnTypeDef(cacheEntityFeatureFnDef)
+  .setGetQueueOptions(({ fnDef }) => {
+    return {
+      uniqueId: fnDef.config.featureId,
+      queueType: QueueType.StatefulFunctionQueue,
+    };
+  })
   .setCreateResolver(({ fnDef, context, input }) => {
     return async ({ event, getDependency, engineId }) => {
       const { featureId, featureSchema } = fnDef.config;

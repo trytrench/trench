@@ -145,7 +145,7 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="flex items-center gap-4">
             <div className="text-3xl text-emphasis-foreground">Data Model</div>
-            <Button
+            {/* <Button
               onClick={() => {
                 for (const fnDef of fnDefs) {
                   if (fnDef.type === FnType.LogEntityFeature) {
@@ -167,7 +167,7 @@ const Page: NextPageWithLayout = () => {
               }}
             >
               Fix name loggers
-            </Button>
+            </Button> */}
             {editorHasChanged && (
               <Button
                 onClick={() => {
