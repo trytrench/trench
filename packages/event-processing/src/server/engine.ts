@@ -1,6 +1,8 @@
+import PQueue from "p-queue";
 import { createRedisService } from "databases/src/redis";
 import { assert } from "common";
 import {
+  BASE_CONTEXT,
   FnType,
   FnTypeContextMap,
   NodeDef,
@@ -9,307 +11,226 @@ import {
   TrenchEvent,
   getFnTypeDef,
 } from "../function-type-defs";
-import { printNodeDef } from "../function-type-defs/lib/print";
-import { createDataType } from "../data-types";
-import { StoreRow, StoreTable } from "../function-type-defs/lib/store";
+import { InferSchemaType, TSchema, createDataType } from "../data-types";
 import { getUnixTime } from "date-fns";
 import { get } from "lodash";
 import { getFnTypeResolver } from "../function-type-defs/resolvers";
-
-/**
- * Execution Engine
- *
- * The execution engine is responsible for computing node values.
- * It is initialized with a set of node instances, which are in-memory objects that define how to compute a
- * node's value.
- */
+import { printNodeDef } from "../function-type-defs/lib/print";
+import {
+  QUEUE_TYPE_OPTIONS,
+  getQueueId,
+} from "../function-type-defs/lib/queueTypes";
+import { StoreRow } from "../function-type-defs/lib/store";
 
 type TrenchError = {
   message: string;
 };
-
-function createError(message: string): NodeResult {
-  return {
-    type: "error",
-    output: {
-      message,
-    },
-  };
-}
-
-function createSuccess(output: ResolverOutput): NodeResult {
-  return {
-    type: "success",
-    output,
-  };
-}
-
-type NodeResult =
-  | { type: "error"; output: TrenchError }
-  | { type: "success"; output: ResolverOutput };
-
 type ResolverPromise = ReturnType<Resolver>;
 type ResolverOutput = Awaited<ResolverPromise>;
+type NodeResult =
+  | { type: "error"; output: TrenchError }
+  | { type: "success"; output: ResolverOutput }; // Adjust the output type based on your ResolverOutput
 
-type ExecutionState = {
-  nodePromises: Record<string, Promise<NodeResult>>;
-  stateUpdaters: Array<StateUpdater>;
-  savedStoreRows: StoreRow[];
-  event: TrenchEvent;
-};
-
-type NodeInstance = {
-  [TFnType in FnType]: {
-    nodeDef: NodeDef<FnType>;
-    resolver: Resolver;
-  };
-};
-
-export type EngineResult = {
-  nodeResult: NodeResult;
-  nodeDef: NodeDef;
-  event: TrenchEvent;
-  engineId: string;
-};
 export class ExecutionEngine {
   engineId: string;
 
-  nodeInstances: Record<string, NodeInstance[FnType]> = {};
-
-  state: ExecutionState | null = null;
-
   context: FnTypeContextMap | null = null;
-  constructor(props: {
-    nodeDefs: Array<NodeDef>;
-    engineId: string;
-    getContext: () => any;
-  }) {
+  nodeDefs: Record<string, NodeDef<FnType>> = {};
+  eventQueue: PQueue;
+  functionQueues: Record<string, PQueue>;
+  state: {
+    events: Array<TrenchEvent>;
+    savedStoreRows: StoreRow[];
+  } | null = null; // Adjust the type as needed
+
+  constructor(props: { nodeDefs: Array<NodeDef<FnType>>; engineId: string }) {
     const { nodeDefs, engineId } = props;
-
     this.engineId = engineId;
+    this.context = this.initializeContext();
+    this.eventQueue = new PQueue({ concurrency: 15 });
+    this.functionQueues = {};
 
+    // Create all function queues
+    nodeDefs.forEach((nodeDef) => {
+      const { getQueueOptions } = getFnTypeResolver(nodeDef.fn.type);
+      const options = getQueueOptions({ fnDef: nodeDef.fn });
+      const queueId = getQueueId(options);
+      if (!this.functionQueues[queueId]) {
+        const queueConfig = QUEUE_TYPE_OPTIONS[options.queueType];
+        this.functionQueues[queueId] = new PQueue({
+          concurrency: queueConfig.concurrency,
+        });
+      }
+
+      this.nodeDefs[nodeDef.id] = nodeDef;
+    });
+  }
+
+  private initializeContext(): FnTypeContextMap {
     const redis = createRedisService();
-
-    this.context = {
-      [FnType.Computed]: {},
+    return {
+      ...BASE_CONTEXT,
       [FnType.Counter]: { redis },
       [FnType.UniqueCounter]: { redis },
       [FnType.GetEntityFeature]: { redis },
-      [FnType.EntityAppearance]: {},
-      [FnType.LogEntityFeature]: {},
       [FnType.CacheEntityFeature]: { redis },
-      [FnType.Event]: {},
-      [FnType.Decision]: {},
-      [FnType.Blocklist]: {},
-    };
-
-    const nodeInstances: NodeInstance[FnType][] = nodeDefs.map((nodeDef) => {
-      const fnType = nodeDef.fn.type;
-      const nodeTypeDef = getFnTypeDef(fnType);
-
-      if (!this.context) {
-        throw new Error("No engine context");
-      }
-
-      const fnTypeResolver = getFnTypeResolver(fnType);
-      const resolver = fnTypeResolver.createResolver({
-        fnDef: nodeDef.fn,
-        input: nodeDef.inputs,
-        context: this.context[fnType],
-      });
-
-      return {
-        nodeDef,
-        resolver,
-      } as NodeInstance[FnType];
-    });
-
-    nodeInstances.forEach((instance) => {
-      this.nodeInstances[instance.nodeDef.id] = instance;
-    });
-
-    validateFnInstanceMap(this.nodeInstances);
-  }
-
-  public initState(event: TrenchEvent) {
-    this.state = {
-      event,
-      nodePromises: {},
-      stateUpdaters: [],
-      savedStoreRows: [
-        {
-          table: StoreTable.Events,
-          row: {
-            id: event.id,
-            type: event.type,
-            timestamp: getUnixTime(event.timestamp),
-            data: event.data,
-          },
-        },
-      ],
     };
   }
 
-  private getFnInstance(nodeId: string) {
-    const instance = this.nodeInstances[nodeId];
-    assert(instance, `No node instance for id: ${nodeId}`);
-    return instance;
-  }
+  private async executeEvent(event: TrenchEvent): Promise<void> {
+    return this.eventQueue.add(async () => {
+      const eventTypeNodes = Object.values(this.nodeDefs).filter(
+        (nodeDef) => nodeDef.eventType === event.type
+      );
 
-  public async evaluateFn(nodeId: string): Promise<NodeResult> {
-    assert(this.state, "Must call initState with a TrenchEvent first");
+      const nodePromisesMap: Map<
+        string,
+        Promise<NodeResult | void>
+      > = new Map();
 
-    const { event, nodePromises } = this.state;
+      const evaluateNode = async (nodeId: string): Promise<NodeResult> => {
+        const nodeDefsMap = this.nodeDefs;
+        const nodeDef = nodeDefsMap[nodeId];
+        assert(nodeDef, `Node definition not found for ${nodeId}`);
 
-    // If node processing has not started, start it
-    if (!nodePromises[nodeId]) {
-      const processFn = async () => {
-        assert(this.state, "No state");
+        // If the node is already being evaluated, return the existing promise
+        const existingNodePromise = nodePromisesMap.get(nodeDef.id);
+        if (existingNodePromise) {
+          const result = await existingNodePromise;
+          return resolveResultOrVoid(result);
+        }
 
-        // Get dependencies
-        const instance = this.getFnInstance(nodeId);
-        const { nodeDef, resolver } = instance;
-
-        // Run getter
-        const resolvedOutput = await resolver({
-          event,
-          engineId: this.engineId,
-          getDependency: async ({ dataPath, expectedSchema }) => {
-            const depFnDef = this.getFnInstance(dataPath.nodeId).nodeDef;
-            const result = await this.evaluateFn(dataPath.nodeId);
-            if (result.type === "error") {
-              throw new Error(
-                `Fn ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
-                  depFnDef
-                )}, which failed with error: ${result.output.message}`
-              );
-            } else {
-              const resolvedValue = dataPath.path.length
-                ? get(result.output.data, dataPath.path)
-                : result.output.data;
-
-              if (expectedSchema) {
-                const type = createDataType(expectedSchema);
-                try {
-                  type.parse(resolvedValue);
-                } catch (e: any) {
-                  throw new Error(
-                    `Fn ${printNodeDef(
-                      nodeDef
-                    )} expects dependency ${printNodeDef(
-                      depFnDef
-                    )} to be of type ${JSON.stringify(
-                      expectedSchema
-                    )}, but parsing failed with error: ${e.message}`
-                  );
-                }
-              }
-              return resolvedValue;
-            }
-          },
-        });
-
-        // const dataType = createDataType(instance.nodeDef.returnSchema);
-        // dataType.parse(resolvedOutput.data);
-
-        // Register state updaters
-        this.state.stateUpdaters.push(...(resolvedOutput.stateUpdaters ?? []));
-
-        // Register saved store rows
-        this.state.savedStoreRows.push(
-          ...(resolvedOutput.savedStoreRows ?? [])
+        // Else create a new promise and add it to the map
+        const { getQueueOptions, createResolver } = getFnTypeResolver(
+          nodeDef.fn.type
         );
+        const options = getQueueOptions({ fnDef: nodeDef.fn });
+        const queueId = getQueueId(options);
+        const fnQueue = this.functionQueues[queueId];
+        assert(fnQueue, `Function queue not found for ${nodeDef.fn.id}`);
 
-        return createSuccess(resolvedOutput);
+        const context = this.context?.[nodeDef.fn.type];
+        assert(context, `Context is not defined.`);
+
+        const nodePromise: Promise<NodeResult | void> = fnQueue
+          .add(async () => {
+            const resolver = createResolver({
+              fnDef: nodeDef.fn,
+              input: nodeDef.inputs,
+              context: context,
+            });
+
+            const resolverResult = await resolver({
+              event,
+              engineId: this.engineId,
+              getDependency: async function (props) {
+                const { dataPath, expectedSchema } = props;
+
+                // Evaluate data path
+                const dataPathNodeDef = nodeDefsMap[dataPath.nodeId];
+                assert(
+                  dataPathNodeDef,
+                  `Node definition not found for ${dataPath.nodeId}`
+                );
+
+                const result = await evaluateNode(dataPath.nodeId);
+                if (result.type === "error") {
+                  throw new Error(
+                    `Fn ${printNodeDef(nodeDef)} depends on node ${printNodeDef(
+                      dataPathNodeDef
+                    )}, which failed with error: ${result.output.message}`
+                  );
+                } else {
+                  const resolvedValue = dataPath.path.length
+                    ? get(result.output.data, dataPath.path)
+                    : result.output.data;
+
+                  if (expectedSchema) {
+                    const type = createDataType(expectedSchema);
+                    try {
+                      type.parse(resolvedValue);
+                    } catch (e: any) {
+                      throw new Error(
+                        `Fn ${printNodeDef(
+                          nodeDef
+                        )} expects dependency ${printNodeDef(
+                          dataPathNodeDef
+                        )} to be of type ${JSON.stringify(
+                          expectedSchema
+                        )}, but parsing failed with error: ${e.message}`
+                      );
+                    }
+                  }
+                  return resolvedValue;
+                }
+              },
+            });
+
+            // Execute all state updates
+            await Promise.all(
+              resolverResult.stateUpdaters?.map((updater) => updater()) ?? []
+            );
+
+            // Append store rows to the state
+            assert(this.state, "State is not defined.");
+            if (resolverResult.savedStoreRows) {
+              this.state.savedStoreRows.push(...resolverResult.savedStoreRows);
+            }
+
+            return {
+              type: "success" as const,
+              output: resolverResult,
+            };
+          })
+          .catch((error) => {
+            return {
+              type: "error" as const,
+              output: { message: error.message },
+            };
+          });
+
+        nodePromisesMap.set(nodeDef.id, nodePromise);
+
+        const result = await nodePromise;
+        return resolveResultOrVoid(result);
       };
 
-      const promise = processFn().catch((e) => {
-        // console.error(e);
-        return createError(e.message);
-      });
-      nodePromises[nodeId] = promise;
-    }
-
-    const nodePromise = nodePromises[nodeId];
-    assert(nodePromise, "No node promise... this should never happen");
-
-    const result = await nodePromise;
-    const instance = this.getFnInstance(nodeId);
-
-    // if (instance.nodeDef.fn.type !== "Event" && result.type === "success") {
-    //   console.log(
-    //     `${instance.nodeDef.fn.type} node ${truncId(nodeId)}:`,
-    //     JSON.stringify(result.output.data)
-    //   );
-    // }
-    return result;
+      await Promise.all(
+        eventTypeNodes.map((nodeDef) => evaluateNode(nodeDef.id))
+      );
+    });
   }
 
-  public async executeStateUpdates() {
-    assert(this.state, "No running execution");
-    const { stateUpdaters } = this.state;
-    await Promise.all(stateUpdaters.map((updater) => updater()));
+  public initState(events: Array<TrenchEvent>): void {
+    this.state = {
+      events,
+      savedStoreRows: [],
+    };
+    this.eventQueue.clear();
+    for (const queue of Object.values(this.functionQueues)) {
+      queue.clear();
+    }
   }
 
-  public async getAllEngineResults() {
-    assert(this.state, "Must call initState with a TrenchEvent first");
+  public async executeToCompletion(): Promise<{
+    savedStoreRows: StoreRow[];
+  }> {
+    assert(this.state, "State is not defined.");
+    this.state.events.forEach((event) => this.executeEvent(event));
+    await this.eventQueue.onIdle();
 
-    const allInstances = Object.values(this.nodeInstances);
-
-    // Initialize all promises
-    for (const instance of allInstances) {
-      if (instance.nodeDef.eventType === this.state.event.type) {
-        this.evaluateFn(instance.nodeDef.id);
-      }
-    }
-
-    // Await all promises
-    const engineResults: Record<string, EngineResult> = {};
-    for (const instance of allInstances) {
-      const { nodeDef } = instance;
-
-      if (nodeDef.eventType !== this.state.event.type) {
-        continue;
-      }
-
-      const result = await this.evaluateFn(nodeDef.id);
-
-      engineResults[nodeDef.id] = {
-        nodeResult: result,
-        nodeDef: instance.nodeDef,
-        event: this.state.event,
-        engineId: this.engineId,
-      };
-    }
-
-    return engineResults;
+    return {
+      savedStoreRows: this.state.savedStoreRows,
+    };
   }
 }
 
-function validateFnInstanceMap(map: Record<string, NodeInstance[FnType]>) {
-  // Check dependencies are valid
-  for (const node of Object.values(map)) {
-    const def = node.nodeDef;
-
-    // console.log("---");
-    // console.log("id:\t", truncId(def.id));
-    // console.log("name:\t", def.name);
-    // console.log("fn_type:\t", def.fn.type);
-    // console.log("fn_name:\t", def.fn.name);
-    // console.log(
-    //   "deps_on:\t",
-    //   Array.from(def.dependsOn).map(truncId).join(", ")
-    // );
-    // console.log("---");
-
-    for (const depFnId of def.dependsOn) {
-      const depFn = map[depFnId];
-      assert(
-        depFn,
-        `Fn ${printNodeDef(
-          def
-        )} depends on node of ID ${depFnId}, which is not included in the engine's node set.`
-      );
-    }
+function resolveResultOrVoid(resultOrVoid: NodeResult | void): NodeResult {
+  if (resultOrVoid) {
+    return resultOrVoid;
   }
+  return {
+    type: "error",
+    output: { message: "Node failed for unknown reason" },
+  };
 }

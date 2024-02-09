@@ -43,6 +43,10 @@ export type FnTypeContextMap = {
   [TFnType in FnType]: ExtractFnTypeDefContext<FnTypeDefsMap[TFnType]>;
 };
 
+export const BASE_CONTEXT: Record<FnType, {}> = Object.fromEntries(
+  Object.values(FnType).map((fnType) => [fnType, {}])
+) as any;
+
 // Build fn def
 
 type Args<T extends FnType> = Omit<FnDef<T>, "id" | "snapshotId">;

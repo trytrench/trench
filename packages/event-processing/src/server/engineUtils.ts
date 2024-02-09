@@ -61,5 +61,5 @@ export async function fetchCurrentEngineId() {
 
 export async function createEngine({ engineId }: { engineId: string }) {
   const nodeDefs = await fetchNodeDefSnapshots({ engineId });
-  return new ExecutionEngine({ nodeDefs, engineId, getContext: () => null });
+  return new ExecutionEngine({ nodeDefs, engineId });
 }

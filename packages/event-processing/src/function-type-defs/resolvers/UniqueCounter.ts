@@ -6,11 +6,18 @@ import { TypeName } from "../../data-types";
 import { getTimeWindowMs } from "../lib/timeWindow";
 import { createFnTypeResolverBuilder } from "../resolverBuilder";
 import { uniqueCounterFnDef } from "../types/UniqueCounter";
+import { QueueType } from "../lib/queueTypes";
 
 const N_BUCKETS = 10;
 
 export const uniqueCounterFnResolver = createFnTypeResolverBuilder()
   .setFnTypeDef(uniqueCounterFnDef)
+  .setGetQueueOptions(({ fnDef }) => {
+    return {
+      uniqueId: fnDef.id,
+      queueType: QueueType.StatefulFunctionQueue,
+    };
+  })
   .setCreateResolver(({ fnDef, input, context }) => {
     return async ({ event, getDependency }) => {
       const { timeWindow, countArgs, countByArgs } = fnDef.config;

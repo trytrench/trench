@@ -7,10 +7,7 @@ import {
   ExecutionEngine,
 } from "event-processing/src/server";
 import { recordEventType } from "./recordEventType";
-import {
-  StoreRow,
-  writeStoreRows,
-} from "event-processing/src/function-type-defs/lib/store";
+import { writeStoreRows } from "event-processing/src/function-type-defs/lib/store";
 
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
@@ -36,27 +33,28 @@ async function initEventHandler() {
     }
 
     const lastEventProcessedId = await fetchLastEventProcessedId();
-    const events = await getEventsSince({ lastEventProcessedId, limit: 30 });
-    if (events.length === 0) {
+    const eventObjs = await getEventsSince({
+      lastEventProcessedId,
+      limit: 30,
+    });
+    if (eventObjs.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;
     }
 
     try {
-      const storeRows: StoreRow[] = [];
-      for (const eventObj of events) {
-        engine.initState(eventObj.event);
-        await recordEventType(eventObj.event.type, eventObj.event);
-        await engine.getAllEngineResults();
-        await engine.executeStateUpdates();
-        storeRows.push(...(engine.state?.savedStoreRows ?? []));
-      }
+      const trenchEvents = eventObjs.map((obj) => obj.event);
+      await Promise.all(
+        trenchEvents.map((event) => recordEventType(event.type, event))
+      );
 
-      await writeStoreRows({ rows: storeRows });
+      engine.initState(eventObjs.map((obj) => obj.event));
+      const { savedStoreRows } = await engine.executeToCompletion();
+      await writeStoreRows({ rows: savedStoreRows });
 
-      const lastEvent = events[events.length - 1]!;
+      const lastEvent = eventObjs[eventObjs.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);
-      console.log(`Processed ${events.length} events`);
+      console.log(`Processed ${eventObjs.length} events`);
     } catch (e) {
       console.error("Error processing events", e);
     }

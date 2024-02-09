@@ -9,6 +9,7 @@ import {
 import { FnType } from "./enum";
 import { TSchema, TypeName } from "../data-types";
 import { FnTypeResolver } from "./fnTypeResolver";
+import { QueueOptions, QueueType } from "./lib/queueTypes";
 
 type InferBuilderFromDef<T extends AnyFnTypeDef> = T extends FnTypeDef<
   infer TFT,
@@ -39,6 +40,17 @@ export interface FnTypeResolverBuilder<
   setFnTypeDef<TFTD extends AnyFnTypeDef>(
     fnTypeDef: TFTD
   ): InferBuilderFromDef<TFTD>;
+  setGetQueueOptions(
+    getQueueOptions: (props: {
+      fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
+    }) => QueueOptions
+  ): FnTypeResolverBuilder<
+    TFnType,
+    TReturnSchema,
+    TConfigSchema,
+    TInputSchema,
+    TContext
+  >;
   setCreateResolver(
     createResolver: (options: {
       fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
@@ -78,6 +90,12 @@ export function createFnTypeResolverBuilder<
   TContext
 > {
   const partialResolver = {
+    getQueueOptions({ fnDef }) {
+      return {
+        uniqueId: fnDef.id,
+        queueType: QueueType.PureFunctionQueue,
+      };
+    },
     ...def,
   } satisfies Partial<FnTypeResolver>;
 
@@ -91,6 +109,11 @@ export function createFnTypeResolverBuilder<
     setCreateResolver(createResolver) {
       return createNewFnTypeResolverBuilder(partialResolver, {
         createResolver,
+      });
+    },
+    setGetQueueOptions(getQueueOptions) {
+      return createNewFnTypeResolverBuilder(partialResolver, {
+        getQueueOptions,
       });
     },
     build() {
