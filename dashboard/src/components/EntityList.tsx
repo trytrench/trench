@@ -61,13 +61,13 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
   });
 
   // Query must be for an entity type
-  useEffect(() => {
-    if (entityTypes && !filters.entityType)
-      setFilters({
-        ...filters,
-        entityType: entityTypes?.[0]?.id,
-      });
-  }, [entityTypes, filters]);
+  // useEffect(() => {
+  //   if (entityTypes && !filters.entityType)
+  //     setFilters({
+  //       ...filters,
+  //       // entityType: entityTypes?.[0]?.id,
+  //     });
+  // }, [entityTypes, filters]);
 
   const { data: views, refetch: refetchViews } =
     api.entityViews.list.useQuery();
@@ -190,7 +190,7 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
-      enabled: !!filters.entityType,
+      // enabled: !!filters.entityType,
     }
   );
 

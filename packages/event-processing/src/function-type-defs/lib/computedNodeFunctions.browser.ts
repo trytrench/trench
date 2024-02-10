@@ -7,4 +7,7 @@ export const functions: typeof fn = {
   geolocate: async (address) => {
     throw new Error("Not implemented in browser");
   },
+  getGithubUserData: async (username) => {
+    throw new Error("Not implemented in browser");
+  },
 };

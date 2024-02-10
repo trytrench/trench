@@ -9,6 +9,7 @@ import {
 import { recordEventType } from "./recordEventType";
 import { writeStoreRows } from "event-processing/src/function-type-defs/lib/store";
 
+const PAUSE_ENGINE = true;
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
   // Check database for new engine, and update in-memory engine if necessary
@@ -27,6 +28,11 @@ initEventHandler();
 
 async function initEventHandler() {
   while (true) {
+    if (PAUSE_ENGINE) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      continue;
+    }
+
     if (!engine) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       continue;

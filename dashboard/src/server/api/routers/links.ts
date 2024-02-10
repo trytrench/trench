@@ -34,10 +34,10 @@ export const linksRouter = createTRPCRouter({
       const query = `
         WITH first_degree_connections AS (
             SELECT DISTINCT
-              f1.entity_type[1] as entity_type_1,
-              f1.entity_id[1] as entity_id_1,
-              f2.entity_type[1] as entity_type_2,
-              f2.entity_id[1] as entity_id_2
+              f1.entity_type as entity_type_1,
+              f1.entity_id as entity_id_1,
+              f2.entity_type as entity_type_2,
+              f2.entity_id as entity_id_2
             FROM
                 features f1
             INNER JOIN
@@ -54,8 +54,8 @@ export const linksRouter = createTRPCRouter({
         ), 
         recent_names AS (
             SELECT
-                entity_type[1] as entity_type,
-                entity_id[1] as entity_id,
+                entity_type as entity_type,
+                entity_id as entity_id,
                 value_String as entity_name
             FROM
                 features

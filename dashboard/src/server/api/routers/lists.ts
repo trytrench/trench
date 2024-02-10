@@ -55,8 +55,8 @@ export const listsRouter = createTRPCRouter({
       return {
         count: 0,
         rows: entities.map((entity) => {
-          const entityType = entity.entity_type[0];
-          const entityId = entity.entity_id[0];
+          const entityType = entity.entity_type;
+          const entityId = entity.entity_id;
           const features = getAnnotatedFeatures(
             featureDefs,
             entityTypes,
