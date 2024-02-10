@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import clsx from "clsx";
-import { TypeName } from "event-processing";
+import { Entity, TypeName } from "event-processing";
 import { LayoutGrid, List, Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -47,17 +47,17 @@ const formSchema = z.object({
 });
 
 interface Props {
-  seenWithEntityId?: string;
+  seenWithEntity?: Entity;
 }
 
-export const EntityList = ({ seenWithEntityId }: Props) => {
+export const EntityList = ({ seenWithEntity }: Props) => {
   const router = useRouter();
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   const [filters, setFilters] = useState<EntityFilters>({
-    seenWithEntityId,
+    seenWithEntity,
   });
 
   // Query must be for an entity type

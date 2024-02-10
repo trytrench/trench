@@ -102,7 +102,7 @@ export async function getEntitiesList(props: {
 }) {
   const { filters, limit, cursor } = props;
 
-  const whereClauses = [];
+  const featureWhereClauses = [];
   const seenHavingClauses = [];
   const seenWhereClauses = [];
 
@@ -113,30 +113,18 @@ export async function getEntitiesList(props: {
     seenWhereClauses.push(`entity_id = '${filters.entityId}'`);
   }
 
-  if (filters.seenWithEntityId) {
-    whereClauses.push(
-      `event_id IN (SELECT event_id FROM features WHERE entity_id = '${filters.seenWithEntityId}')`
-    );
-  }
-
-  if (filters.seenInEventType) {
-    whereClauses.push(
-      `event_id IN (SELECT event_id FROM features WHERE event_type = '${filters.seenInEventType}')`
-    );
-  }
-
   if (filters.features && filters.features.length > 0) {
     const featureConditions = filters.features
       .map((feature) => buildWhereClauseForFeatureFilter(feature))
       .filter((condition) => condition !== "")
       .join(" OR ");
     if (featureConditions) {
-      whereClauses.push(featureConditions);
+      featureWhereClauses.push(featureConditions);
     }
   }
 
   if (filters.eventId) {
-    whereClauses.push(`event_id = '${filters.eventId}'`);
+    featureWhereClauses.push(`event_id = '${filters.eventId}'`);
   }
 
   if (filters.firstSeen) {
@@ -150,7 +138,7 @@ export async function getEntitiesList(props: {
     );
   }
 
-  const whereClausesExist = whereClauses.length > 0;
+  const featureWhereClausesExist = featureWhereClauses.length > 0;
   const seenHavingClause =
     seenHavingClauses.length > 0
       ? `HAVING ${seenHavingClauses.join(" AND ")}`
@@ -161,14 +149,37 @@ export async function getEntitiesList(props: {
     ? `feature_id IN (${featureIdList?.map((fId) => `'${fId}'`).join(",")})`
     : "";
 
+  const eventTypeWhereClause = filters.seenInEventType
+    ? `event_type = '${filters.seenInEventType}'`
+    : "";
+
+  const seenWithEntity = filters.seenWithEntity;
+  const entTypeColumn = seenWithEntity
+    ? "ea_view.entity_type_2"
+    : "features.entity_type";
+  const entColumn = seenWithEntity
+    ? "ea_view.entity_id_2"
+    : "features.entity_id";
+
   const finalQuery = `
     WITH timestamped_entities AS (
         SELECT
-            entity_type,
-            entity_id,
+            ${entTypeColumn} AS entity_type,
+            ${entColumn} AS entity_id,
             min(event_timestamp) AS first_seen,
             max(event_timestamp) AS last_seen
         FROM features
+        ${
+          seenWithEntity
+            ? `
+                JOIN entity_appearance_view AS ea_view ON
+                ea_view.entity_type_1 = '${seenWithEntity.type}'
+                AND ea_view.entity_id_1 = '${seenWithEntity.id}'
+                AND ea_view.entity_type_2 = features.entity_type
+                AND ea_view.entity_id_2 = features.entity_id
+            `
+            : ""
+        }
         WHERE notEmpty(entity_id)
         ${
           seenWhereClauses.length > 0
@@ -187,7 +198,7 @@ export async function getEntitiesList(props: {
         FROM
             timestamped_entities
         ${
-          whereClausesExist
+          featureWhereClausesExist
             ? `
             JOIN (
                 SELECT
@@ -198,13 +209,19 @@ export async function getEntitiesList(props: {
                 WHERE (entity_type, entity_id) IN (
                     SELECT entity_type, entity_id FROM timestamped_entities
                 ) ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
+                ${eventTypeWhereClause ? `AND ${eventTypeWhereClause}` : ""}
             ) as latest_features
             ON
                 timestamped_entities.entity_type = latest_features.entity_type
                 AND timestamped_entities.entity_id = latest_features.entity_id
                 AND latest_features.rn = 1
-            WHERE ${whereClauses.join(" AND ")}
             `
+            : ""
+        }
+        WHERE 1
+        ${
+          featureWhereClausesExist
+            ? `AND ${featureWhereClauses.join(" AND ")}`
             : ""
         }
         GROUP BY
@@ -264,10 +281,9 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  // console.log(entities.data[0]?.features_array.map((f) => f[0]));
-
   console.log("=====");
-  console.log(finalQuery);
+  // console.log(finalQuery);
+  console.log("getEntitiesList");
   console.log(entities.statistics);
 
   return entities.data;
@@ -318,14 +334,9 @@ export const getEventsList = async (options: {
 
   const whereClauses = [...eventWhereClauses, ...featureWhereClauses];
   const whereClausesExist = whereClauses.length > 0;
+
   const finalQuery = `
-    WITH entity_appearances AS (
-        SELECT event_id, entity_type, entity_id
-        FROM features
-        WHERE ${entityApperanceWhereClauses.join(" AND ")}
-        GROUP BY event_id, entity_type, entity_id
-    ),
-    desired_event_ids AS (
+    WITH desired_event_ids AS (
         SELECT DISTINCT events.id as event_id
         FROM events
         FINAL
@@ -334,7 +345,18 @@ export const getEventsList = async (options: {
             ? "LEFT JOIN features ON features.event_id = events.id"
             : ""
         }
-        WHERE events.id IN (SELECT event_id FROM entity_appearances)
+        ${
+          entityApperanceWhereClauses.length > 0
+            ? `
+            WHERE events.id IN (SELECT event_id FROM (
+              SELECT event_id, entity_type, entity_id
+              FROM features
+              WHERE feature_type = 'EntityAppearance'
+              AND ${entityApperanceWhereClauses.join(" AND ")}
+              GROUP BY event_id, entity_type, entity_id
+            ))`
+            : ""
+        }
         ${whereClausesExist ? `AND ${whereClauses.join(" AND ")}` : ""}
         ORDER BY events.id DESC
         LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
@@ -356,7 +378,18 @@ export const getEventsList = async (options: {
         groupArray(tuple(ea.entity_type, ea.entity_id)) OVER (PARTITION BY e.id) AS entities,
         ef.features_arr as features_array
     FROM desired_event_ids
-    LEFT JOIN entity_appearances ea ON desired_event_ids.event_id = ea.event_id
+    LEFT JOIN (
+        SELECT
+            entity_type,
+            entity_id,
+            event_id
+        FROM features
+        FINAL
+        WHERE feature_type = 'EntityAppearance'
+            AND event_id IN (SELECT event_id FROM desired_event_ids)
+        GROUP BY event_id, entity_type, entity_id
+    ) AS ea 
+    ON desired_event_ids.event_id = ea.event_id
     LEFT JOIN events e ON desired_event_ids.event_id = e.id
     LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
     ORDER BY desired_event_ids.event_id DESC;
@@ -379,6 +412,11 @@ export const getEventsList = async (options: {
     data: EventResult[];
     statistics: any;
   }>();
+
+  console.log("=====");
+  console.log(finalQuery);
+  console.log("getEventsList");
+  console.log(events.statistics);
 
   return events.data;
 };

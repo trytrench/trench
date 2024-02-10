@@ -213,7 +213,12 @@ const Page: NextPageWithLayout = () => {
             </TabsContent>
             <TabsContent value="entities" className="relative grow mt-0">
               {entityId && entityTypeId && (
-                <EntityList seenWithEntityId={entityId} />
+                <EntityList
+                  seenWithEntity={{
+                    id: entityId,
+                    type: entityTypeId,
+                  }}
+                />
               )}
             </TabsContent>
             <TabsContent value="links" className="relative grow">

@@ -32,27 +32,7 @@ export const linksRouter = createTRPCRouter({
       // 0: get the type of the entity.
 
       const query = `
-        WITH first_degree_connections AS (
-            SELECT DISTINCT
-              f1.entity_type as entity_type_1,
-              f1.entity_id as entity_id_1,
-              f2.entity_type as entity_type_2,
-              f2.entity_id as entity_id_2
-            FROM
-                features f1
-            INNER JOIN
-                features f2 
-                    ON f1.event_type = f2.event_type
-                    AND f1.event_id = f2.event_id 
-            WHERE
-                f1.feature_type = 'EntityAppearance' AND
-                f2.feature_type = 'EntityAppearance' AND
-                NOT (
-                  f1.entity_type = f2.entity_type
-                  AND f1.entity_id = f2.entity_id 
-                )
-        ), 
-        recent_names AS (
+        WITH recent_names AS (
             SELECT
                 entity_type as entity_type,
                 entity_id as entity_id,
@@ -79,9 +59,9 @@ export const linksRouter = createTRPCRouter({
             fdc2.entity_type_2 as second_degree_type,
             rn2.entity_name as second_degree_name
         FROM
-            first_degree_connections fdc
+            entity_appearance_view fdc
         INNER JOIN
-            first_degree_connections fdc2 
+            entity_appearance_view fdc2 
                 ON fdc.entity_type_2 = fdc2.entity_type_1
                 AND fdc.entity_id_2 = fdc2.entity_id_1
         LEFT JOIN
