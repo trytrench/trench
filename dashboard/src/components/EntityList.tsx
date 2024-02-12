@@ -200,8 +200,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const entityNameMap = useEntityNameMap(entityIds);
 
   useEffect(() => {
-    if (!views)
+    if (!views?.length) {
       setColumnOrder(columns.map((column) => column.id ?? "").filter(Boolean));
+    }
   }, [columns, setColumnOrder, views]);
 
   return (
