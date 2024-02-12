@@ -1,5 +1,8 @@
 import { type Prisma } from "@prisma/client";
-import { createEngine, fetchCurrentEngineId } from "event-processing";
+import {
+  createEngine,
+  fetchCurrentEngineId,
+} from "event-processing/src/server";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { ulid } from "ulid";
 import { z } from "zod";

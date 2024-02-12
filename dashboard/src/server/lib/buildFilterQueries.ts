@@ -413,7 +413,7 @@ export const getEventsList = async (options: {
   }>();
 
   console.log("=====");
-  console.log(finalQuery);
+  // console.log(finalQuery);
   console.log("getEventsList");
   console.log(events.statistics);
 

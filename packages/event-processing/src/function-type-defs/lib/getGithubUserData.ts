@@ -22,10 +22,10 @@ export async function getGithubUserData(username: string) {
     const cachedData = await redis.get(Buffer.from(`github:${username}`));
 
     if (cachedData) {
-      console.log("Using cached data");
+      // console.log("Using cached data");
       return JSON.parse(cachedData);
     } else {
-      console.log("Fetching from GitHub");
+      // console.log("Fetching from GitHub");
       const response = await axios<string>(
         `http://127.0.0.1:5000/${username}`,
         {
