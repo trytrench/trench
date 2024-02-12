@@ -213,7 +213,7 @@ export function DataTable<TData, TValue>({
                   })}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="truncate">
+                    <TableCell key={cell.id} className="truncate max-w-md">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

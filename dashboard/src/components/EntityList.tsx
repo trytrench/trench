@@ -1,50 +1,32 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { ColumnDef } from "@tanstack/react-table";
 import clsx from "clsx";
+import { format } from "date-fns";
 import { TypeName } from "event-processing";
-import { LayoutGrid, List, Loader2Icon } from "lucide-react";
-import Link from "next/link";
+import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { EntityCard } from "~/components/EntityCard";
 import { Button } from "~/components/ui/button";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
+import { handleError } from "~/lib/handleError";
 import { EntityFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
-import { DataTable, useDataTableState } from "./ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
-import { Checkbox } from "./ui/checkbox";
-import { format } from "date-fns";
-import { DataTableViewOptions } from "./ui/data-table-view-options";
+import { EditViewDialog } from "./EditViewDialog";
 import { RenderResult } from "./RenderResult";
+import { Checkbox } from "./ui/checkbox";
+import { DataTable, useDataTableState } from "./ui/data-table";
+import { DataTableViewOptions } from "./ui/data-table-view-options";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Toggle } from "./ui/toggle";
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-});
 
 interface Props {
   seenWithEntityId?: string;
@@ -73,13 +55,8 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
     api.entityViews.list.useQuery();
 
   const { mutateAsync: createView } = api.entityViews.create.useMutation();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-    },
-  });
+  const { mutateAsync: updateView } = api.entityViews.update.useMutation();
+  const { mutateAsync: deleteView } = api.entityViews.delete.useMutation();
 
   const limit = 10;
 
@@ -167,9 +144,14 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
   useEffect(() => {
     if (currentView) {
       setFilters(currentView.config.filters);
-      setViewType(currentView.config.viewType);
-      setColumnOrder(currentView.config.columnOrder);
-      setColumnVisibility(currentView.config.columnVisibility);
+      setViewType(currentView.config.type);
+      if (
+        currentView.config.columnOrder &&
+        currentView.config.columnVisibility
+      ) {
+        setColumnOrder(currentView.config.columnOrder);
+        setColumnVisibility(currentView.config.columnVisibility);
+      }
     }
   }, [currentView, router.query.view, setColumnOrder, setColumnVisibility]);
 
@@ -202,36 +184,19 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
     return allEntities.flatMap((entity) => {
       return (
         entity.features
-          .filter(
-            (feature) =>
+          .map((feature) => {
+            if (
               feature.result.type === "success" &&
               feature.result.data.schema.type === TypeName.Entity
-          )
-          .map((feature) => feature.result.data!.value.id) ?? []
+            ) {
+              return feature.result.data.value.id;
+            }
+          })
+          .filter(Boolean) ?? []
       );
     });
   }, [allEntities]);
   const entityNameMap = useEntityNameMap(entityIds);
-
-  const [open, setOpen] = useState(false);
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    createView({
-      name: values.name,
-      config: {
-        filters: filters,
-        type: viewType,
-        columnOrder,
-        columnVisibility,
-      },
-    })
-      .then(() => {
-        setOpen(false);
-        return refetchViews();
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }
 
   useEffect(() => {
     if (!views)
@@ -261,42 +226,57 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
             <span className="text-xs">List</span>
           </Toggle>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button size="xs" variant="outline">
               Save
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create view</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem className="col-span-3">
-                          <FormLabel>Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Save</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onSelect={() => {
+                if (currentView) {
+                  updateView({
+                    id: currentView.id,
+                    config: {
+                      filters,
+                      type: viewType,
+                      columnOrder,
+                      columnVisibility,
+                    },
+                  })
+                    .then(() => refetchViews())
+                    .catch(handleError);
+                }
+              }}
+            >
+              Save to this view
+            </DropdownMenuItem>
+
+            <EditViewDialog
+              title="Create new view"
+              onSubmit={(values) => {
+                createView({
+                  name: values.name,
+                  config: {
+                    filters: filters,
+                    type: viewType,
+                    columnOrder,
+                    columnVisibility,
+                  },
+                })
+                  .then(() => {
+                    return refetchViews();
+                  })
+                  .catch(handleError);
+              }}
+            >
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                Create new view
+              </DropdownMenuItem>
+            </EditViewDialog>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="flex h-full">
         <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
@@ -304,11 +284,11 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
             Views
           </div>
           {views?.map((view) => (
-            <Link
-              href={`?view=${view.id}`}
+            <div
+              onClick={() => router.push(`?view=${view.id}`)}
               key={view.id}
               className={clsx(
-                "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
+                "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted cursor-pointer",
                 {
                   "bg-accent text-accent-foreground":
                     router.query.view === view.id,
@@ -316,7 +296,52 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
               )}
             >
               {view.name}
-            </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="iconXs"
+                    variant="link"
+                    className="h-3 ml-auto shrink-0"
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                  <EditViewDialog
+                    title="Update view"
+                    onSubmit={(values) => {
+                      if (currentView) {
+                        updateView({
+                          id: currentView.id,
+                          name: values.name,
+                        })
+                          .then(() => {
+                            return refetchViews();
+                          })
+                          .catch(handleError);
+                      }
+                    }}
+                  >
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      Rename
+                    </DropdownMenuItem>
+                  </EditViewDialog>
+
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      if (currentView) {
+                        deleteView({ id: currentView.id })
+                          .then(() => refetchViews())
+                          .catch(handleError);
+                      }
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
 
