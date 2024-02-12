@@ -97,7 +97,7 @@ export const featuresRouter = createTRPCRouter({
               FROM features
               FINAL
               WHERE entity_id IN (${entityIds
-                .map((id) => `['${id}']`)
+                .map((id) => `'${id}'`)
                 .join(",")}) and feature_id in (${featureIds
                 .map((id) => `'${id}'`)
                 .join(",")})
@@ -110,17 +110,16 @@ export const featuresRouter = createTRPCRouter({
 
       const entities = await result.json<
         {
-          entity_type: [string];
-          entity_id: [string];
+          entity_type: string;
+          entity_id: string;
           features_array: Array<[string, string | null, string | null]>;
         }[]
       >();
 
       return entities.map((entity) => {
-        const entityId = entity.entity_id[0];
         return {
-          entityId,
-          entityType: entity.entity_type[0],
+          entityId: entity.entity_id,
+          entityType: entity.entity_type,
           features: getAnnotatedFeatures(
             featureDefs,
             entityTypes,
@@ -150,14 +149,14 @@ export const featuresRouter = createTRPCRouter({
       for (let i = 1; i < featurePath.length; i++) {
         query += ` LEFT JOIN features AS f${
           i + 1
-        } ON f${i}.data_type = 'Entity' AND [simpleJSONExtractString(f${i}.value, 'id')] = f${
+        } ON f${i}.data_type = 'Entity' AND simpleJSONExtractString(f${i}.value, 'id') = f${
           i + 1
-        }.entity_id AND [simpleJSONExtractString(f${i}.value, 'type')] = f${
+        }.entity_id AND simpleJSONExtractString(f${i}.value, 'type') = f${
           i + 1
         }.entity_type AND f${i + 1}.feature_id = '${featurePath[i]}'\n`;
       }
 
-      query += ` WHERE f1.entity_id = ['${entity.id}'] AND f1.entity_type = ['${entity.type}'] AND f1.feature_id = '${featurePath[0]}'\n`;
+      query += ` WHERE f1.entity_id = '${entity.id}' AND f1.entity_type = '${entity.type}' AND f1.feature_id = '${featurePath[0]}'\n`;
       query += ` ORDER BY f${featurePath.length}.event_id DESC LIMIT 1\n`;
 
       // Execute the query

@@ -112,11 +112,6 @@ export const eventFiltersZod = z.object({
       })
     )
     .optional(),
-
-  // old
-  eventLabels: z.array(z.string()).optional(),
-  eventFeatures: z.array(jsonFilterZod).optional(),
-  entityId: z.string().optional(),
 });
 
 export type EventFilters = z.infer<typeof eventFiltersZod>;
@@ -129,7 +124,12 @@ export const entityFiltersZod = z.object({
   features: z.array(featureFiltersZod).optional(),
 
   eventId: z.string().optional(),
-  seenWithEntityId: z.string().optional(),
+  seenWithEntity: z
+    .object({
+      type: z.string(),
+      id: z.string(),
+    })
+    .optional(),
   seenInEventType: z.string().optional(),
 
   // old

@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import clsx from "clsx";
 import { format } from "date-fns";
-import { TypeName } from "event-processing";
+import { Entity, TypeName } from "event-processing";
 import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
@@ -29,27 +29,30 @@ import {
 import { Toggle } from "./ui/toggle";
 
 interface Props {
-  seenWithEntityId?: string;
+  seenWithEntity?: Entity;
 }
 
-export const EntityList = ({ seenWithEntityId }: Props) => {
+export const EntityList = ({ seenWithEntity }: Props) => {
   const router = useRouter();
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const seenWithEntityTypeName = entityTypes?.find(
+    (et) => et.id === seenWithEntity?.type
+  )?.type;
 
   const [filters, setFilters] = useState<EntityFilters>({
-    seenWithEntityId,
+    seenWithEntity,
   });
 
   // Query must be for an entity type
-  useEffect(() => {
-    if (entityTypes && !filters.entityType)
-      setFilters({
-        ...filters,
-        entityType: entityTypes?.[0]?.id,
-      });
-  }, [entityTypes, filters]);
+  // useEffect(() => {
+  //   if (entityTypes && !filters.entityType)
+  //     setFilters({
+  //       ...filters,
+  //       // entityType: entityTypes?.[0]?.id,
+  //     });
+  // }, [entityTypes, filters]);
 
   const { data: views, refetch: refetchViews } =
     api.entityViews.list.useQuery();
@@ -172,7 +175,7 @@ export const EntityList = ({ seenWithEntityId }: Props) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
-      enabled: !!filters.entityType,
+      // enabled: !!filters.entityType,
     }
   );
 

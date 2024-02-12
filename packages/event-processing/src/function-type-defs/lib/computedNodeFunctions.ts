@@ -8,6 +8,7 @@ import type MapiClient from "@mapbox/mapbox-sdk/lib/classes/mapi-client";
 import { env } from "./env";
 
 import { WebServiceClient } from "@maxmind/geoip2-node";
+import { getGithubUserData } from "./getGithubUserData";
 
 const maxMind = new WebServiceClient(
   env.MAXMIND_ACCOUNT_ID ?? "",
@@ -110,4 +111,5 @@ export const functions: typeof fn = {
       countryCode,
     };
   },
+  getGithubUserData,
 };

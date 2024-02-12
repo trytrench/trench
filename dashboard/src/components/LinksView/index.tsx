@@ -6,6 +6,7 @@ import {
   ExternalLinkIcon,
   EyeOffIcon,
   ListFilterIcon,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/router";
 import pluralize from "pluralize";
@@ -18,6 +19,7 @@ import type { LeftItem, RightItem } from "./types";
 import { useEntityName } from "../../hooks/useEntityName";
 import { useEntityNameMap } from "../../hooks/useEntityNameMap";
 import { customEncodeURIComponent } from "../../lib/uri";
+import { LoadingPlaceholder } from "../LoadingPlaceholder";
 
 interface LinksViewProps {
   entityId: string;
@@ -122,7 +124,12 @@ function LinksView({
   }, [links, leftSelection, rightSelection]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center p-4 gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading...</span>
+      </div>
+    );
   }
   return (
     <div className="flex items-stretch">
