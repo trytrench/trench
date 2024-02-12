@@ -10,18 +10,29 @@ const configSchema = z.object({
 });
 
 export const entityViewsRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx, input }) => {
-    const views = await ctx.prisma.entityView.findMany();
-    return views.map((view) => ({
-      ...view,
-      config: view.config as unknown as z.infer<typeof configSchema>,
-    }));
-  }),
+  list: protectedProcedure
+    .input(
+      z.object({
+        entityTypeId: z.string().nullable(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const views = await ctx.prisma.entityView.findMany({
+        where: {
+          entityTypeId: input.entityTypeId,
+        },
+      });
+      return views.map((view) => ({
+        ...view,
+        config: view.config as unknown as z.infer<typeof configSchema>,
+      }));
+    }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
         config: configSchema,
+        entityTypeId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -29,6 +40,7 @@ export const entityViewsRouter = createTRPCRouter({
         data: {
           name: input.name,
           config: input.config,
+          entityTypeId: input.entityTypeId,
         },
       });
     }),

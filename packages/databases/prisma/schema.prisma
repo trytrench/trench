@@ -101,6 +101,9 @@ model EntityView {
 
   name   String
   config Json
+
+  entityType   EntityType? @relation(fields: [entityTypeId], references: [id])
+  entityTypeId String?
 }
 
 model Node {
@@ -198,6 +201,7 @@ model EntityType {
 
   features Feature[]
   pages    EntityTypePage[]
+  views    EntityView[]
 
   type String @unique
 }

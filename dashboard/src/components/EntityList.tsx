@@ -37,9 +37,6 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
-  const seenWithEntityTypeName = entityTypes?.find(
-    (et) => et.id === seenWithEntity?.type
-  )?.type;
 
   const [filters, setFilters] = useState<EntityFilters>({
     seenWithEntity,
@@ -54,8 +51,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   //     });
   // }, [entityTypes, filters]);
 
-  const { data: views, refetch: refetchViews } =
-    api.entityViews.list.useQuery();
+  const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery({
+    entityTypeId: seenWithEntity?.type ?? null,
+  });
 
   const { mutateAsync: createView } = api.entityViews.create.useMutation();
   const { mutateAsync: updateView } = api.entityViews.update.useMutation();
@@ -267,6 +265,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                     columnOrder,
                     columnVisibility,
                   },
+                  entityTypeId: seenWithEntity?.type,
                 })
                   .then(() => {
                     return refetchViews();
@@ -288,7 +287,12 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           </div>
           {views?.map((view) => (
             <div
-              onClick={() => router.push(`?view=${view.id}`)}
+              onClick={() =>
+                router.push({
+                  pathname: router.pathname,
+                  query: { ...router.query, view: view.id },
+                })
+              }
               key={view.id}
               className={clsx(
                 "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted cursor-pointer",
