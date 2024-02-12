@@ -168,7 +168,7 @@ export async function getEntitiesList(props: {
             ${entColumn} AS entity_id,
             min(event_timestamp) AS first_seen,
             max(event_timestamp) AS last_seen
-        FROM features_ent_id AS features
+        FROM features AS features
         ${
           seenWithEntity
             ? `
@@ -204,7 +204,7 @@ export async function getEntitiesList(props: {
                 SELECT
                     *,
                     row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
-                FROM features_feat AS features
+                FROM features AS features
                 FINAL
                 WHERE entity_type IN (SELECT DISTINCT entity_type FROM timestamped_entities)
                 AND entity_id IN (SELECT entity_id FROM timestamped_entities)
@@ -249,7 +249,7 @@ export async function getEntitiesList(props: {
             value,
             error,
             row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
-        FROM features_ent_id AS features
+        FROM features AS features
         FINAL
         WHERE entity_type IN (SELECT DISTINCT entity_type FROM final_entity_results)
         AND entity_id IN (SELECT entity_id FROM final_entity_results)
@@ -281,6 +281,7 @@ export async function getEntitiesList(props: {
   }>();
 
   console.log("=====");
+  // console.log(Object.keys(entities));
   // console.log(finalQuery);
   console.log("getEntitiesList");
   console.log(entities.statistics);
@@ -348,7 +349,7 @@ export const getEventsList = async (options: {
             ? `
             WHERE events.id IN (SELECT event_id FROM (
               SELECT event_id, entity_type, entity_id
-              FROM features_evt AS features
+              FROM features AS features
               WHERE feature_type = 'EntityAppearance'
               AND ${entityApperanceWhereClauses.join(" AND ")}
               GROUP BY event_id, entity_type, entity_id
@@ -363,7 +364,7 @@ export const getEventsList = async (options: {
         SELECT
             event_id,
             groupArray(tuple(feature_id, value, error)) AS features_arr
-        FROM features_evt AS features
+        FROM features AS features
         FINAL
         WHERE event_id IN (SELECT event_id FROM desired_event_ids)
         GROUP BY event_id
@@ -381,7 +382,7 @@ export const getEventsList = async (options: {
             entity_type,
             entity_id,
             event_id
-        FROM features_evt AS features
+        FROM features AS features
         FINAL
         WHERE feature_type = 'EntityAppearance'
             AND event_id IN (SELECT event_id FROM desired_event_ids)
@@ -412,7 +413,7 @@ export const getEventsList = async (options: {
   }>();
 
   console.log("=====");
-  // console.log(finalQuery);
+  console.log(finalQuery);
   console.log("getEventsList");
   console.log(events.statistics);
 

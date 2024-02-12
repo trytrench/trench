@@ -39,6 +39,7 @@ import { format } from "date-fns";
 import { DataTableViewOptions } from "./ui/data-table-view-options";
 import { RenderResult } from "./RenderResult";
 import { Toggle } from "./ui/toggle";
+import { customEncodeURIComponent } from "../lib/uri";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -55,6 +56,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const seenWithEntityTypeName = entityTypes?.find(
+    (et) => et.id === seenWithEntity?.type
+  )?.type;
 
   const [filters, setFilters] = useState<EntityFilters>({
     seenWithEntity,
@@ -305,7 +309,18 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           </div>
           {views?.map((view) => (
             <Link
-              href={`?view=${view.id}`}
+              href={
+                seenWithEntity
+                  ? `/entity/${customEncodeURIComponent(
+                      seenWithEntityTypeName
+                    )}/${customEncodeURIComponent(
+                      seenWithEntity?.id
+                    )}?${new URLSearchParams({
+                      tab: router.query.tab as string,
+                      view: view.id,
+                    }).toString()}`
+                  : `?view=${view.id}`
+              }
               key={view.id}
               className={clsx(
                 "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",

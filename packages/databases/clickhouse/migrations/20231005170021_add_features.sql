@@ -7,8 +7,8 @@ CREATE TABLE features (
     event_timestamp DateTime,
     feature_type LowCardinality(String),
     feature_id LowCardinality(String),
-    entity_type LowCardinality(String), -- Changed from Array
-    entity_id String, -- Changed from Array
+    entity_type LowCardinality(String),
+    entity_id String,
     data_type LowCardinality(Nullable(String)),
     value Nullable(String),
     value_Int64 Nullable(UInt64),
@@ -18,6 +18,6 @@ CREATE TABLE features (
     error Nullable(String),
     is_deleted UInt8
 ) ENGINE = ReplacingMergeTree(created_at, is_deleted)
-ORDER BY (entity_type, event_id, entity_id, feature_id);
+ORDER BY (event_id, feature_id);
 
 -- migrate:down

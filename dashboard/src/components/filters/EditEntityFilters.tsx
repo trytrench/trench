@@ -15,6 +15,8 @@ import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 import { AddEventFilterSubItem } from "./EventFilterSubItem";
+import { useRouter } from "next/router";
+import { handleError } from "../../lib/handleError";
 
 interface EditEntityFiltersProps {
   value: EntityFilters;
@@ -23,6 +25,21 @@ interface EditEntityFiltersProps {
 
 export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
+
+  const router = useRouter();
+
+  const handleChange = (newValue: EntityFilters) => {
+    onChange(newValue);
+    router
+      .push({
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          view: "",
+        },
+      })
+      .catch(handleError);
+  };
 
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
@@ -90,7 +107,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
                     to: lastSeen?.to,
                   }}
                   onSelect={(newRange) => {
-                    onChange({
+                    handleChange({
                       ...value,
                       lastSeen: newRange,
                     });
@@ -102,7 +119,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
             <AddEventFilterSubItem
               onAdd={(eventType) => {
-                onChange({
+                handleChange({
                   ...value,
                   seenInEventType: eventType,
                 });
@@ -119,7 +136,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
               }
               value={entityType ?? null}
               onChange={(type) => {
-                onChange({
+                handleChange({
                   ...value,
                   entityType: type,
                 });
@@ -131,7 +148,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
               featureDefs={filteredFeatureDefs ?? []}
               onAdd={(feature) => {
                 const featuresArr = featureFilters ?? [];
-                onChange({
+                handleChange({
                   ...value,
                   features: [...featuresArr, feature],
                 });
@@ -145,7 +162,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
           <TypeChip
             type={entityTypeObj?.type ?? ""}
             onDelete={() => {
-              onChange({
+              handleChange({
                 ...value,
                 entityType: undefined,
               });
@@ -161,7 +178,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
               to: firstSeen.to,
             }}
             onDelete={() => {
-              onChange({
+              handleChange({
                 ...value,
                 firstSeen: undefined,
               });
@@ -177,7 +194,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
               to: lastSeen.to,
             }}
             onDelete={() => {
-              onChange({
+              handleChange({
                 ...value,
                 lastSeen: undefined,
               });
@@ -191,7 +208,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
             filter={filter}
             onDelete={() => {
               const newFeatures = featureFilters?.filter((_, i) => i !== idx);
-              onChange({
+              handleChange({
                 ...value,
                 features: newFeatures,
               });
@@ -200,7 +217,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
               const newFeatures = featureFilters?.map((f, i) =>
                 i === idx ? newFilter : f
               );
-              onChange({
+              handleChange({
                 ...value,
                 features: newFeatures,
               });
