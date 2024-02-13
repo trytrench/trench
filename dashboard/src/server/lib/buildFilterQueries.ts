@@ -251,6 +251,10 @@ export async function getEntitiesList(props: {
   console.log("getEntitiesList - desired_entities");
   console.log(entities.statistics);
 
+  if (entities.data.length === 0) {
+    return [];
+  }
+
   const finalQuery2 = `
     SELECT
         entity_type,
@@ -422,7 +426,6 @@ export const getEventsList = async (options: {
     ON desired_event_ids.event_id = ef.event_id
     ORDER BY desired_event_ids.event_id DESC;
   `;
-  console.log(finalQuery);
 
   const result = await db.query({
     query: finalQuery,
