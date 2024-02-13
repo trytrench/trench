@@ -43,13 +43,20 @@ const getWhereClausesForDateRange = (
 
 const buildWhereClauseForFeatureFilter = (
   filter: z.infer<typeof featureFiltersZod>
-) => {
+): {
+  clauses: string;
+  featureColumnsNeeded: Set<string>;
+} => {
   if (!filter) {
-    return "";
+    return {
+      clauses: "",
+      featureColumnsNeeded: new Set(),
+    };
   }
 
   const { featureId, dataType, value } = filter;
   const conditions = [];
+  const columnsNeeded = new Set<string>();
 
   conditions.push(`feature_id = '${featureId}'`);
   conditions.push("error IS NULL");
@@ -58,6 +65,8 @@ const buildWhereClauseForFeatureFilter = (
     case TypeName.Int64: {
       const column =
         dataType === TypeName.Float64 ? "value_Float64" : "value_Int64";
+      columnsNeeded.add(column);
+
       checkAtMostOneIsDefined(value);
       if (value.eq !== undefined) conditions.push(`${column} = ${value.eq}`);
       if (value.gt !== undefined) conditions.push(`${column} > ${value.gt}`);
@@ -69,6 +78,8 @@ const buildWhereClauseForFeatureFilter = (
     case TypeName.Name:
     case TypeName.String: {
       const column = "value_String";
+      columnsNeeded.add(column);
+
       checkAtMostOneIsDefined(value);
       if (value.eq !== undefined) conditions.push(`${column} = '${value.eq}'`);
       if (value.contains !== undefined)
@@ -77,6 +88,8 @@ const buildWhereClauseForFeatureFilter = (
     }
     case TypeName.Boolean: {
       const column = "value_Bool";
+      columnsNeeded.add(column);
+
       if (value.eq !== undefined) {
         conditions.push(`${column} = ${value.eq}`);
       }
@@ -84,6 +97,8 @@ const buildWhereClauseForFeatureFilter = (
     }
     case TypeName.Entity: {
       const column = "value"; // String type, should be a JSON encoding of {type: string; id: string;}
+      columnsNeeded.add(column);
+
       if (value.eq !== undefined) {
         conditions.push(`${column}->>'type' = '${value.eq.entityType}'`);
         conditions.push(`${column}->>'id' = '${value.eq.entityId}'`);
@@ -92,7 +107,10 @@ const buildWhereClauseForFeatureFilter = (
     }
   }
 
-  return conditions.length > 0 ? `(${conditions.join(" AND ")})` : "";
+  return {
+    clauses: conditions.length > 0 ? `(${conditions.join(" AND ")})` : "",
+    featureColumnsNeeded: columnsNeeded,
+  };
 };
 
 export async function getEntitiesList(props: {
@@ -113,14 +131,24 @@ export async function getEntitiesList(props: {
     seenWhereClauses.push(`entity_id = '${filters.entityId}'`);
   }
 
+  const allFeatureColumnsNeeded = new Set<string>();
   if (filters.features && filters.features.length > 0) {
-    const featureConditions = filters.features
-      .map((feature) => buildWhereClauseForFeatureFilter(feature))
-      .filter((condition) => condition !== "")
-      .join(" OR ");
-    if (featureConditions) {
-      featureWhereClauses.push(featureConditions);
+    const featureConditions: string[] = [];
+    for (const feature of filters.features) {
+      const { clauses, featureColumnsNeeded } =
+        buildWhereClauseForFeatureFilter(feature);
+      if (clauses) {
+        featureConditions.push(clauses);
+      }
+
+      for (const column of featureColumnsNeeded) {
+        allFeatureColumnsNeeded.add(column);
+      }
     }
+
+    featureWhereClauses.push(
+      featureConditions.filter((condition) => condition !== "").join(" AND ")
+    );
   }
 
   if (filters.eventId) {
@@ -180,7 +208,7 @@ export async function getEntitiesList(props: {
             `
             : ""
         }
-        WHERE notEmpty(entity_id)
+        WHERE entity_id != ''
         ${
           seenWhereClauses.length > 0
             ? `AND ${seenWhereClauses.join(" AND ")}`
@@ -201,12 +229,25 @@ export async function getEntitiesList(props: {
             ? `
             JOIN (
                 SELECT
-                    *,
-                    row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
+                    entity_type,
+                    entity_id,
+                    feature_id,
+                    error,
+                    row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn,
+                    ${
+                      allFeatureColumnsNeeded.size > 0
+                        ? [...allFeatureColumnsNeeded].join(", ")
+                        : ""
+                    }
                 FROM features AS features
-                WHERE (entity_type, entity_id) IN (SELECT entity_type, entity_id FROM timestamped_entities)
+                WHERE 1
                 ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
                 ${eventTypeWhereClause ? `AND ${eventTypeWhereClause}` : ""}
+                ${
+                  filters.entityType
+                    ? `AND entity_type = '${filters.entityType}'`
+                    : ""
+                }
             ) as latest_features
             ON
                 timestamped_entities.entity_type = latest_features.entity_type
@@ -227,7 +268,6 @@ export async function getEntitiesList(props: {
             last_seen DESC
         LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
   `;
-
   const result = await db.query({
     query: finalQuery1,
   });
@@ -245,11 +285,9 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log("=====");
-  // console.log(Object.keys(entities));
-  // console.log(finalQuery);
-  console.log("getEntitiesList - desired_entities");
-  console.log(entities.statistics);
+  if (entities.data.length === 0) {
+    return [];
+  }
 
   const finalQuery2 = `
     SELECT
@@ -286,11 +324,20 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log("=====");
+  console.log();
+  console.log("````````````````````");
+  // console.log(Object.keys(entities));
+  console.log(finalQuery1);
+  console.log("getEntitiesList - desired_entities");
+  printEntityFilters(filters);
+  console.log(entities.statistics);
+  console.log();
   // console.log(Object.keys(entities2));
   // console.log(finalQuery2);
   console.log("getEntitiesList - features");
   console.log(entities2.statistics);
+  console.log("....................");
+  console.log();
 
   // merge the two results
   const entityMap = new Map(
@@ -345,12 +392,12 @@ export const getEventsList = async (options: {
 
     if (filter.features && filter.features.length > 0) {
       const featureConditions = filter.features
-        .map((feature) => buildWhereClauseForFeatureFilter(feature))
-        .filter((condition) => condition !== "")
-        .join(" OR ");
-      if (featureConditions) {
-        featureWhereClauses.push(featureConditions);
-      }
+        .map((feature) => {
+          const { clauses } = buildWhereClauseForFeatureFilter(feature);
+          return clauses;
+        })
+        .filter((clause) => clause !== "");
+      featureWhereClauses.push(featureConditions.join(" AND "));
     }
   }
 
@@ -422,7 +469,6 @@ export const getEventsList = async (options: {
     ON desired_event_ids.event_id = ef.event_id
     ORDER BY desired_event_ids.event_id DESC;
   `;
-  console.log(finalQuery);
 
   const result = await db.query({
     query: finalQuery,
@@ -442,10 +488,64 @@ export const getEventsList = async (options: {
     statistics: any;
   }>();
 
-  console.log("=====");
+  console.log();
   // console.log(finalQuery);
+  console.log("````````````````````");
   console.log("getEventsList");
+  printEventFilters(filter);
   console.log(events.statistics);
+  console.log("....................");
+  console.log();
 
   return events.data;
 };
+
+function printEventFilters(filters: EventFilters) {
+  console.log("EventFilters:");
+  if (filters.dateRange) {
+    console.log("  dateRange:", filters.dateRange);
+  }
+  if (filters.eventType) {
+    console.log("  eventType:", filters.eventType);
+  }
+  if (filters.entities) {
+    console.log("  entities:", filters.entities);
+  }
+  if (filters.features) {
+    console.log(
+      "  features:",
+      filters.features.map((f) => f.featureName)
+    );
+  }
+}
+
+function printEntityFilters(filters: EntityFilters) {
+  console.log("EntityFilters:");
+  if (filters.entityType) {
+    console.log("  entityType:", filters.entityType);
+  }
+  if (filters.entityId) {
+    console.log("  entityId:", filters.entityId);
+  }
+  if (filters.features) {
+    console.log(
+      "  features:",
+      filters.features.map((f) => f.featureName)
+    );
+  }
+  if (filters.eventId) {
+    console.log("  eventId:", filters.eventId);
+  }
+  if (filters.firstSeen) {
+    console.log("  firstSeen:", filters.firstSeen);
+  }
+  if (filters.lastSeen) {
+    console.log("  lastSeen:", filters.lastSeen);
+  }
+  if (filters.seenInEventType) {
+    console.log("  seenInEventType:", filters.seenInEventType);
+  }
+  if (filters.seenWithEntity) {
+    console.log("  seenWithEntity:", filters.seenWithEntity);
+  }
+}
