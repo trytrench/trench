@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Toggle } from "./ui/toggle";
+import { customEncodeURIComponent } from "../lib/uri";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -37,6 +38,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const seenWithEntityTypeName = entityTypes?.find(
+    (et) => et.id === seenWithEntity?.type
+  )?.type;
 
   const [filters, setFilters] = useState<EntityFilters>({
     seenWithEntity,

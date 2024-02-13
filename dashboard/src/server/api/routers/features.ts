@@ -93,14 +93,11 @@ export const featuresRouter = createTRPCRouter({
                   value,
                   event_timestamp,
                   error,
-                  row_number() OVER (PARTITION BY entity_id, feature_id ORDER BY event_timestamp DESC) as rn
+                  row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_timestamp DESC) as rn
               FROM features
               FINAL
-              WHERE entity_id IN (${entityIds
-                .map((id) => `'${id}'`)
-                .join(",")}) and feature_id in (${featureIds
-                .map((id) => `'${id}'`)
-                .join(",")})
+              WHERE entity_id IN (${entityIds.map((id) => `'${id}'`).join(",")})
+              AND feature_id IN (${featureIds.map((id) => `'${id}'`).join(",")})
           ) AS latest_features
           WHERE latest_features.rn = 1
           GROUP BY entity_type, entity_id

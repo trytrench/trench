@@ -161,7 +161,7 @@ export async function getEntitiesList(props: {
     ? "ea_view.entity_id_2"
     : "features.entity_id";
 
-  const finalQuery = `
+  const finalQuery1 = `
     WITH timestamped_entities AS (
         SELECT
             ${entTypeColumn} AS entity_type,
@@ -188,8 +188,7 @@ export async function getEntitiesList(props: {
         }
         GROUP BY entity_type, entity_id
         ${seenHavingClause}
-    ),
-    final_entity_results AS (
+    )
         SELECT 
             entity_type,
             entity_id,
@@ -205,9 +204,7 @@ export async function getEntitiesList(props: {
                     *,
                     row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
                 FROM features AS features
-                FINAL
-                WHERE entity_type IN (SELECT DISTINCT entity_type FROM timestamped_entities)
-                AND entity_id IN (SELECT entity_id FROM timestamped_entities)
+                WHERE (entity_type, entity_id) IN (SELECT entity_type, entity_id FROM timestamped_entities)
                 ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
                 ${eventTypeWhereClause ? `AND ${eventTypeWhereClause}` : ""}
             ) as latest_features
@@ -229,42 +226,10 @@ export async function getEntitiesList(props: {
         ORDER BY
             last_seen DESC
         LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
-    )
-    SELECT
-        final_entity_results.entity_id as entity_id,
-        final_entity_results.entity_type as entity_type,
-        first_seen,
-        last_seen,
-        groupArray(tuple(
-          latest_features_2.feature_id,
-          latest_features_2.value,
-          latest_features_2.error
-        )) as features_array
-    FROM final_entity_results
-    LEFT JOIN (
-        SELECT
-            entity_type,
-            entity_id,
-            feature_id,
-            value,
-            error,
-            row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
-        FROM features AS features
-        FINAL
-        WHERE entity_type IN (SELECT DISTINCT entity_type FROM final_entity_results)
-        AND entity_id IN (SELECT entity_id FROM final_entity_results)
-    ) as latest_features_2
-        ON final_entity_results.entity_type = latest_features_2.entity_type
-        AND final_entity_results.entity_id = latest_features_2.entity_id
-        AND latest_features_2.rn = 1
-    GROUP BY
-        entity_id, entity_type, first_seen, last_seen
-    ORDER BY
-        last_seen DESC;
   `;
 
   const result = await db.query({
-    query: finalQuery,
+    query: finalQuery1,
   });
 
   type EntityResult = {
@@ -283,10 +248,68 @@ export async function getEntitiesList(props: {
   console.log("=====");
   // console.log(Object.keys(entities));
   // console.log(finalQuery);
-  console.log("getEntitiesList");
+  console.log("getEntitiesList - desired_entities");
   console.log(entities.statistics);
 
-  return entities.data;
+  const finalQuery2 = `
+    SELECT
+        entity_type,
+        entity_id,
+        groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
+    FROM (
+        SELECT
+            entity_type,
+            entity_id,
+            feature_id,
+            value,
+            error,
+            row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
+        FROM features AS features
+        WHERE (entity_type, entity_id) IN (${entities.data
+          .map((entity) => `('${entity.entity_type}', '${entity.entity_id}')`)
+          .join(",")})
+    ) as latest_features
+    WHERE latest_features.rn = 1
+    GROUP BY entity_type, entity_id
+  `;
+
+  const result2 = await db.query({
+    query: finalQuery2,
+  });
+
+  const entities2 = await result2.json<{
+    data: {
+      entity_type: string;
+      entity_id: string;
+      features_array: Array<[string, string | null, string | null]>;
+    }[];
+    statistics: any;
+  }>();
+
+  console.log("=====");
+  // console.log(Object.keys(entities2));
+  // console.log(finalQuery2);
+  console.log("getEntitiesList - features");
+  console.log(entities2.statistics);
+
+  // merge the two results
+  const entityMap = new Map(
+    entities2.data.map((entity) => [
+      `${entity.entity_type}-${entity.entity_id}`,
+      entity,
+    ])
+  );
+
+  const mergedEntities = entities.data.map((entity) => {
+    const key = `${entity.entity_type}-${entity.entity_id}`;
+    const features = entityMap.get(key)?.features_array ?? [];
+    return {
+      ...entity,
+      features_array: features,
+    };
+  });
+
+  return mergedEntities;
 }
 
 export const getEventsList = async (options: {
@@ -338,16 +361,16 @@ export const getEventsList = async (options: {
     WITH desired_event_ids AS (
         SELECT DISTINCT events.id as event_id
         FROM events
-        FINAL
         ${
           featureWhereClauses.length > 0
             ? "LEFT JOIN features ON features.event_id = events.id"
             : ""
         }
+        WHERE 1
         ${
           entityApperanceWhereClauses.length > 0
             ? `
-            WHERE events.id IN (SELECT event_id FROM (
+            AND events.id IN (SELECT event_id FROM (
               SELECT event_id, entity_type, entity_id
               FROM features AS features
               WHERE feature_type = 'EntityAppearance'
@@ -365,7 +388,6 @@ export const getEventsList = async (options: {
             event_id,
             groupArray(tuple(feature_id, value, error)) AS features_arr
         FROM features AS features
-        FINAL
         WHERE event_id IN (SELECT event_id FROM desired_event_ids)
         GROUP BY event_id
     )
@@ -383,16 +405,24 @@ export const getEventsList = async (options: {
             entity_id,
             event_id
         FROM features AS features
-        FINAL
         WHERE feature_type = 'EntityAppearance'
             AND event_id IN (SELECT event_id FROM desired_event_ids)
         GROUP BY event_id, entity_type, entity_id
     ) AS ea 
     ON desired_event_ids.event_id = ea.event_id
-    LEFT JOIN events e ON desired_event_ids.event_id = e.id
-    LEFT JOIN event_features ef ON desired_event_ids.event_id = ef.event_id
+    LEFT JOIN (
+        SELECT * FROM events
+        WHERE id IN (SELECT event_id FROM desired_event_ids)
+    ) AS e
+    ON desired_event_ids.event_id = e.id
+    LEFT JOIN (
+        SELECT * FROM event_features
+        WHERE event_id IN (SELECT event_id FROM desired_event_ids)
+    ) AS ef
+    ON desired_event_ids.event_id = ef.event_id
     ORDER BY desired_event_ids.event_id DESC;
   `;
+  console.log(finalQuery);
 
   const result = await db.query({
     query: finalQuery,
@@ -413,7 +443,7 @@ export const getEventsList = async (options: {
   }>();
 
   console.log("=====");
-  console.log(finalQuery);
+  // console.log(finalQuery);
   console.log("getEventsList");
   console.log(events.statistics);
 

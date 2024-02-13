@@ -7,12 +7,9 @@ import {
   FnTypeContextMap,
   NodeDef,
   Resolver,
-  StateUpdater,
   TrenchEvent,
-  getFnTypeDef,
 } from "../function-type-defs";
-import { InferSchemaType, TSchema, createDataType } from "../data-types";
-import { getUnixTime } from "date-fns";
+import { createDataType } from "../data-types";
 import { get } from "lodash";
 import { getFnTypeResolver } from "../function-type-defs/resolvers";
 import { printNodeDef } from "../function-type-defs/lib/print";
@@ -47,7 +44,7 @@ export class ExecutionEngine {
     const { nodeDefs, engineId } = props;
     this.engineId = engineId;
     this.context = this.initializeContext();
-    this.eventQueue = new PQueue({ concurrency: 15 });
+    this.eventQueue = new PQueue({ concurrency: 5 });
     this.functionQueues = {};
 
     // Create all function queues

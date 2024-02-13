@@ -23,8 +23,8 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
         feature_id: featureId,
         data_type: featureSchema.type,
         is_deleted: 0,
-        entity_type: [] as string[],
-        entity_id: [] as string[],
+        entity_type: "",
+        entity_id: "",
       };
 
       try {
@@ -36,8 +36,8 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
               entityType: undefined,
             },
           });
-          baseData.entity_type.push(assignToEntity.type);
-          baseData.entity_id.push(assignToEntity.id);
+          baseData.entity_type = assignToEntity.type;
+          baseData.entity_id = assignToEntity.id;
         }
 
         const value = await getDependency({

@@ -7,7 +7,12 @@ import {
   ExecutionEngine,
 } from "event-processing/src/server";
 import { recordEventType } from "./recordEventType";
-import { writeStoreRows } from "event-processing/src/function-type-defs/lib/store";
+import {
+  StoreRow,
+  StoreTable,
+  writeStoreRows,
+} from "event-processing/src/function-type-defs/lib/store";
+import { getUnixTime } from "date-fns";
 
 const PAUSE_ENGINE = true;
 var engine: ExecutionEngine | null = null;
@@ -41,7 +46,7 @@ async function initEventHandler() {
     const lastEventProcessedId = await fetchLastEventProcessedId();
     const eventObjs = await getEventsSince({
       lastEventProcessedId,
-      limit: 30,
+      limit: 10000,
     });
     if (eventObjs.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -56,7 +61,21 @@ async function initEventHandler() {
 
       engine.initState(eventObjs.map((obj) => obj.event));
       const { savedStoreRows } = await engine.executeToCompletion();
-      await writeStoreRows({ rows: savedStoreRows });
+
+      const eventRows: StoreRow[] = trenchEvents.map((event) => ({
+        table: StoreTable.Events,
+        row: {
+          id: event.id,
+          type: event.type,
+          data: event.data,
+          timestamp: getUnixTime(event.timestamp),
+        },
+      }));
+
+      await Promise.all([
+        writeStoreRows({ rows: savedStoreRows }),
+        writeStoreRows({ rows: eventRows }),
+      ]);
 
       const lastEvent = eventObjs[eventObjs.length - 1]!;
       await setLastEventProcessedId(lastEvent.event.id);
