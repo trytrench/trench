@@ -85,6 +85,8 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   });
   const limit = 10;
 
+  const [isEditing, setIsEditing] = useState(false);
+
   const {
     data: entities,
     isLoading: entitiesLoading,
@@ -306,6 +308,17 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                         key={`${entity.entityType}:${entity.entityId}`}
                         entity={entity}
                         entityNameMap={entityNameMap}
+                        featureOrder={viewConfig.gridConfig?.featureOrder ?? []}
+                        onFeatureOrderChange={(newOrder) =>
+                          setViewConfig({
+                            ...viewConfig,
+                            gridConfig: {
+                              featureOrder: newOrder,
+                            },
+                          })
+                        }
+                        isEditing={isEditing}
+                        onIsEditingChange={setIsEditing}
                       />
                     );
                   })}
