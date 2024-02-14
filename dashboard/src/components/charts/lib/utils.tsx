@@ -97,20 +97,6 @@ export function getColorClassNames(
     };
   }
 
-  console.log({
-    bgColor: `bg-${color}-${shade}`,
-    selectBgColor: `ui-selected:bg-${color}-${shade}`,
-    hoverBgColor: `hover:bg-${color}-${shade}`,
-    textColor: `text-${color}-${shade}`,
-    selectTextColor: `ui-selected:text-${color}-${shade}`,
-    hoverTextColor: `hover:text-${color}-${shade}`,
-    borderColor: `border-${color}-${shade}`,
-    selectBorderColor: `ui-selected:border-${color}-${shade}`,
-    hoverBorderColor: `hover:border-${color}-${shade}`,
-    ringColor: `ring-${color}-${shade}`,
-    strokeColor: `stroke-${color}-${shade}`,
-    fillColor: `fill-${color}-${shade}`,
-  });
   return {
     bgColor: `bg-${color}-${shade}`,
     selectBgColor: `ui-selected:bg-${color}-${shade}`,

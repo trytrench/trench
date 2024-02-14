@@ -38,7 +38,14 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
       // If there are views, and the query param is set, set the view config
       if (router.query.view) {
         const view = views.find((view) => view.id === router.query.view);
-        if (view) setViewConfig(view.config);
+        if (view)
+          setViewConfig({
+            ...view.config,
+            filters: {
+              ...view.config.filters,
+              seenWithEntity,
+            },
+          });
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
@@ -49,7 +56,7 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
           .catch(handleError);
       }
     }
-  }, [views, router]);
+  }, [views, router, seenWithEntity]);
 
   useEffect(() => {
     // If there are no views, default to viewing the first entity type

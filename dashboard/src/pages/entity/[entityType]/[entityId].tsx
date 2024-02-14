@@ -1,15 +1,17 @@
 import { format } from "date-fns";
+import { TypeName } from "event-processing";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { type DateRange } from "react-day-picker";
 import { StringParam, useQueryParam } from "use-query-params";
 import AppLayout from "~/components/AppLayout";
-import { DatePickerWithRange } from "~/components/DatePickerWithRange";
+import { EntityList } from "~/components/EntityList";
+import EventCharts from "~/components/EventCharts";
 import EventsList from "~/components/EventsList";
+import { FeatureGrid } from "~/components/FeatureGrid";
 import LinksView from "~/components/LinksView";
-import { Badge } from "~/components/ui/badge";
+import { Card } from "~/components/ui/card";
 import { ClearableSelect } from "~/components/ui/custom/clearable-select";
-import { LabelList } from "~/components/ui/custom/label-list";
 import {
   Tabs,
   TabsContent,
@@ -17,23 +19,12 @@ import {
   TabsTrigger,
 } from "~/components/ui/custom/light-tabs";
 import { Panel } from "~/components/ui/custom/panel";
-import { PropertyList } from "~/components/ui/custom/property-list";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { useDecision } from "~/hooks/useDecision";
+import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
-import {
-  RenderResult,
-  RenderTypedData,
-} from "../../../components/RenderResult";
-import { EntityPageEditor } from "../../../components/entity-page/EntityPageEditor";
-import { useEntityName } from "~/hooks/useEntityName";
-import { FeatureGrid } from "~/components/FeatureGrid";
-import { useEntityNameMap } from "~/hooks/useEntityNameMap";
-import { TypeName } from "event-processing";
-import { useDecision } from "~/hooks/useDecision";
-import { RenderDecision } from "~/components/RenderDecision";
 import { customDecodeURIComponent } from "../../../lib/uri";
-import { EntityList } from "~/components/EntityList";
 
 type Option = {
   label: string;
@@ -51,8 +42,8 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center gap-4 px-2 pb-2 border-b">
+    <div className="h-full">
+      <div className="flex items-center gap-4 px-8 py-2 border-b">
         <span className="whitespace-nowrap text-sm">Filter</span>
 
         <ClearableSelect
@@ -67,23 +58,20 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
           isClearable={true}
         />
       </div>
-      <div className="grow relative">
-        <div className="absolute inset-0">
-          <ScrollArea className="h-full pr-4">
-            <LinksView
-              entityId={entityId ?? ""}
-              entityType={entityType}
-              leftTypeFilter={filterEntityType?.value ?? ""}
-              onLeftTypeFilterChange={(newValue) => {
-                const eType = entityTypes?.find((et) => et.id === newValue);
-                setFilterEntityType(
-                  eType ? { label: eType.type, value: eType.id } : undefined
-                );
-              }}
-            />
-          </ScrollArea>
-        </div>
-      </div>
+
+      <ScrollArea className="h-full px-8">
+        <LinksView
+          entityId={entityId ?? ""}
+          entityType={entityType}
+          leftTypeFilter={filterEntityType?.value ?? ""}
+          onLeftTypeFilterChange={(newValue) => {
+            const eType = entityTypes?.find((et) => et.id === newValue);
+            setFilterEntityType(
+              eType ? { label: eType.type, value: eType.id } : undefined
+            );
+          }}
+        />
+      </ScrollArea>
     </div>
   );
 }
@@ -118,81 +106,33 @@ const Page: NextPageWithLayout = () => {
   );
   const decision = useDecision(entity?.features ?? []);
 
-  const entityInfo = useMemo(
-    () =>
-      entity
-        ? {
-            Type: entityTypeName,
-            // Name: entityData.name,
-            ID: entity.entityId,
-            "First Seen": format(entity.firstSeenAt, "yyyy-MM-dd HH:mm:ss"),
-            "Last Seen": format(entity.lastSeenAt, "yyyy-MM-dd HH:mm:ss"),
-          }
-        : {},
-    [entity, entityTypeName]
-  );
-
   const [tab, setTab] = useQueryParam("tab", StringParam);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   return (
-    <main className="h-full flex flex-col">
-      <div className="px-12 py-6 border-b flex items-baseline gap-3 shrink-0 text-emphasis-foreground">
-        <h1 className="text-2xl">{entity?.entityName}</h1>
-        <Badge className="-translate-y-0.5">{entityTypeName}</Badge>
-        {decision && <RenderDecision decision={decision} />}
+    <main className="h-full">
+      <div className="px-12 py-6">
+        <h1 className="text-2xl text-emphasis-foreground">
+          {entityTypeName}: {entity?.entityName}
+        </h1>
+        {/* <Badge className="-translate-y-0.5">{entityTypeName}</Badge> */}
+        {/* {decision && <RenderDecision decision={decision} />} */}
       </div>
-      <div className="grid grid-cols-4 flex-1">
-        <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
-          <Panel>
-            <h1 className="shrink-0 text-emphasis-foreground mb-2">
-              Entity Information
-            </h1>
 
-            <PropertyList
-              entries={Object.entries(entityInfo).map(([key, value]) => ({
-                label: key,
-                value: value as string,
-              }))}
-            />
-          </Panel>
-          {/* <Panel>
-            <h1 className="shrink-0 text-emphasis-foreground mb-2">Labels</h1>
-
-            {entityLabels.length ? (
-              <div className="flex flex-row flex-wrap">
-                {entityLabels.map((label) => (
-                  <Badge key={label}>{label}</Badge>
-                ))}
-              </div>
-            ) : (
-              <span className="italic text-muted-foreground text-sm">None</span>
-            )}
-          </Panel> */}
-          <Panel>
-            <h1 className="shrink-0 text-emphasis-foreground mb-2">Data</h1>
-            <FeatureGrid
-              features={entity?.features ?? []}
-              entityNameMap={entityNameMap}
-              cols={1}
-            />
-          </Panel>
-        </div>
-        <div className="flex flex-col col-span-3 p-4 py-2 overflow-hidden h-full">
-          <Tabs
-            defaultValue="history"
-            className="flex flex-col grow"
-            value={tab ?? "history"}
-            onValueChange={setTab}
-          >
-            <TabsList className="w-full">
-              {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
-              <TabsTrigger value="history">Event History</TabsTrigger>
-              <TabsTrigger value="entities">Entities</TabsTrigger>
-              <TabsTrigger value="links">Related Entities</TabsTrigger>
-              <TabsTrigger value="page">Custom Page</TabsTrigger>
-            </TabsList>
-            {/* <TabsContent value="explorer">
+      <Tabs
+        defaultValue="history"
+        className="h-full"
+        value={tab ?? "overview"}
+        onValueChange={setTab}
+      >
+        <TabsList className="px-8">
+          {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="entities">Entities</TabsTrigger>
+          <TabsTrigger value="links">Related Entities</TabsTrigger>
+          <TabsTrigger value="history">Event History</TabsTrigger>
+          {/* <TabsTrigger value="page">Custom Page</TabsTrigger> */}
+        </TabsList>
+        {/* <TabsContent value="explorer">
               <div className="">
                 <DatePickerWithRange
                   dateRange={dateRange}
@@ -201,40 +141,62 @@ const Page: NextPageWithLayout = () => {
               </div>
               <EventsDashboard entityId={entityId} datasetId={datasetId} />
             </TabsContent> */}
-            <TabsContent value="history" className="relative grow mt-0">
-              {entityId && entityTypeId && (
-                <EventsList
-                  entity={{
-                    id: entityId,
-                    type: entityTypeId,
-                  }}
+        <TabsContent value="overview" className="h-full mt-0">
+          <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
+            {entity && (
+              <Panel>
+                <div className="text-muted-foreground text-sm">
+                  First Seen: {format(entity.firstSeenAt, "MMM d, yyyy h:mm a")}
+                </div>
+                <div className="text-muted-foreground text-sm mb-4">
+                  Last Seen: {format(entity.lastSeenAt, "MMM d, yyyy h:mm a")}
+                </div>
+                <FeatureGrid
+                  features={entity.features ?? []}
+                  entityNameMap={entityNameMap}
+                  cols={5}
                 />
-              )}
-            </TabsContent>
-            <TabsContent value="entities" className="relative grow mt-0">
-              {entityId && entityTypeId && (
-                <EntityList
-                  seenWithEntity={{
-                    id: entityId,
-                    type: entityTypeId,
-                  }}
+                <div className="h-8" />
+              </Panel>
+            )}
+            {entity && (
+              <Card className="p-8">
+                <EventCharts
+                  entity={{ id: entity.entityId, type: entity.entityType }}
                 />
-              )}
-            </TabsContent>
-            <TabsContent value="links" className="relative grow">
-              {entityId && entityTypeId && (
-                <RelatedEntities
-                  entityId={entityId}
-                  entityType={entityTypeId}
-                />
-              )}
-            </TabsContent>
-            <TabsContent value="page" className="relative grow">
-              <EntityPageEditor />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="history" className="h-full mt-0">
+          {entityId && entityTypeId && (
+            <EventsList
+              entity={{
+                id: entityId,
+                type: entityTypeId,
+              }}
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="entities" className="h-full mt-0">
+          {entityId && entityTypeId && (
+            <EntityList
+              seenWithEntity={{
+                id: entityId,
+                type: entityTypeId,
+              }}
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="links" className="h-full mt-0">
+          {entityId && entityTypeId && (
+            <RelatedEntities entityId={entityId} entityType={entityTypeId} />
+          )}
+        </TabsContent>
+        {/* <TabsContent value="page" className="h-full mt-0">
+          <EntityPageEditor />
+        </TabsContent> */}
+      </Tabs>
     </main>
   );
 };

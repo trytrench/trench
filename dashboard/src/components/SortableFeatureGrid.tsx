@@ -125,8 +125,8 @@ export const SortableFeatureGrid = ({
         >
           {rulesToShow.map(({ featureId, featureName, rule }) => (
             <div key={featureId} className="flex space-x-1 items-center">
-              <div className={`rounded-full ${rule!.color} w-2 h-2`} />
-              <div className="font-semibold">{featureName}</div>
+              <div className={`rounded-full ${rule!.color} w-2 h-2 shrink-0`} />
+              <div className="font-semibold truncate">{featureName}</div>
             </div>
           ))}
         </div>
