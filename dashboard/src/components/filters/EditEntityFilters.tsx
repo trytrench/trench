@@ -30,15 +30,6 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
   const handleChange = (newValue: EntityFilters) => {
     onChange(newValue);
-    router
-      .push({
-        pathname: router.pathname,
-        query: {
-          ...router.query,
-          view: "",
-        },
-      })
-      .catch(handleError);
   };
 
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();

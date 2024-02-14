@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { entityFiltersZod } from "~/shared/validation";
-
-const configSchema = z.object({
-  type: z.enum(["list", "grid"]),
-  filters: entityFiltersZod,
-  columnOrder: z.array(z.string()).optional(),
-  columnVisibility: z.record(z.boolean()).optional(),
-});
+import {
+  type EntityViewConfig,
+  entityViewConfigZod,
+} from "~/shared/validation";
 
 export const entityViewsRouter = createTRPCRouter({
   list: protectedProcedure
@@ -24,14 +20,14 @@ export const entityViewsRouter = createTRPCRouter({
       });
       return views.map((view) => ({
         ...view,
-        config: view.config as unknown as z.infer<typeof configSchema>,
+        config: view.config as unknown as EntityViewConfig,
       }));
     }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-        config: configSchema,
+        config: entityViewConfigZod,
         entityTypeId: z.string().optional(),
       })
     )
@@ -49,7 +45,7 @@ export const entityViewsRouter = createTRPCRouter({
       z.object({
         id: z.string(),
         name: z.string().optional(),
-        config: configSchema.optional(),
+        config: entityViewConfigZod.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

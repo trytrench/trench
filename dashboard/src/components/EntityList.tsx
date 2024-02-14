@@ -1,25 +1,19 @@
-import { ColumnDef } from "@tanstack/react-table";
 import clsx from "clsx";
-import { format } from "date-fns";
 import { Entity, TypeName } from "event-processing";
 import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
 import { Button } from "~/components/ui/button";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
-import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { handleError } from "~/lib/handleError";
-import { EntityFilters } from "~/shared/validation";
-import { RouterOutputs, api } from "~/utils/api";
+import { EntityViewConfig } from "~/shared/validation";
+import { api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
 import { EditViewDialog } from "./EditViewDialog";
-import { RenderResult } from "./RenderResult";
-import { Checkbox } from "./ui/checkbox";
-import { DataTable, useDataTableState } from "./ui/data-table";
-import { DataTableViewOptions } from "./ui/data-table-view-options";
+import { EntityListDataTable } from "./EntityListDataTable";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,138 +21,69 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Toggle } from "./ui/toggle";
-import { customEncodeURIComponent } from "../lib/uri";
+
+const useEntityViewConfig = (seenWithEntity: Entity) => {
+  const router = useRouter();
+
+  const { data: views, refetch } = api.entityViews.list.useQuery({
+    entityTypeId: seenWithEntity?.type ?? null,
+  });
+
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
+  const [viewConfig, setViewConfig] = useState<EntityViewConfig | null>(null);
+
+  useEffect(() => {
+    if (views?.[0]) {
+      // If there are views, and the query param is set, set the view config
+      if (router.query.view) {
+        const view = views.find((view) => view.id === router.query.view);
+        if (view) setViewConfig(view.config);
+      } else {
+        // If there are views, but no query param, set the query param to the first view
+        router
+          .push({
+            pathname: router.pathname,
+            query: { ...router.query, view: views[0].id },
+          })
+          .catch(handleError);
+      }
+    }
+  }, [views, router]);
+
+  useEffect(() => {
+    // If there are no views, default to viewing the first entity type
+    if (views && !views.length && entityTypes?.[0] && !viewConfig) {
+      setViewConfig({
+        type: "grid",
+        filters: {
+          entityType: entityTypes[0].id,
+          seenWithEntity,
+        },
+      });
+    }
+  }, [views, entityTypes, seenWithEntity, viewConfig]);
+
+  return { viewConfig, setViewConfig };
+};
 
 interface Props {
-  seenWithEntity?: Entity;
+  seenWithEntity: Entity;
 }
 
 export const EntityList = ({ seenWithEntity }: Props) => {
   const router = useRouter();
-  const [viewType, setViewType] = useState<"grid" | "list">("grid");
 
-  const { data: entityTypes } = api.entityTypes.list.useQuery();
-  const seenWithEntityTypeName = entityTypes?.find(
-    (et) => et.id === seenWithEntity?.type
-  )?.type;
-
-  const [filters, setFilters] = useState<EntityFilters>({
-    seenWithEntity,
-  });
-
-  // Query must be for an entity type
-  // useEffect(() => {
-  //   if (entityTypes && !filters.entityType)
-  //     setFilters({
-  //       ...filters,
-  //       // entityType: entityTypes?.[0]?.id,
-  //     });
-  // }, [entityTypes, filters]);
-
-  const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery({
-    entityTypeId: seenWithEntity?.type ?? null,
-  });
+  const { viewConfig, setViewConfig } = useEntityViewConfig(seenWithEntity);
 
   const { mutateAsync: createView } = api.entityViews.create.useMutation();
   const { mutateAsync: updateView } = api.entityViews.update.useMutation();
   const { mutateAsync: deleteView } = api.entityViews.delete.useMutation();
 
+  const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery({
+    entityTypeId: seenWithEntity?.type ?? null,
+  });
   const limit = 10;
-
-  const { data: features } = api.features.list.useQuery();
-  const filteredFeatures = useMemo(
-    () =>
-      features?.filter(
-        (feature) => feature.entityTypeId === filters.entityType
-      ),
-    [features, filters.entityType]
-  );
-
-  const columns: ColumnDef<
-    RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
-  >[] = useMemo(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "entityId",
-        id: "ID",
-        header: "ID",
-      },
-      {
-        header: "Last Seen",
-        id: "Last Seen",
-        accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
-      },
-      ...((filteredFeatures?.map((feature) => ({
-        id: feature.name,
-        header: feature.name,
-        cell: ({ row }) => {
-          const value = row.original.features.find(
-            (f) => f.featureId === feature.id
-          );
-          if (!value) return null;
-          return value.rule && value.result.type === "success" ? (
-            value.result.data.value && (
-              <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
-            )
-          ) : value.result ? (
-            <RenderResult result={value.result} />
-          ) : null;
-        },
-      })) ?? []) as ColumnDef<
-        RouterOutputs["lists"]["getEntitiesList"]["rows"][number]
-      >[]),
-    ],
-    [filteredFeatures]
-  );
-
-  const { columnVisibility, setColumnVisibility, columnOrder, setColumnOrder } =
-    useDataTableState({
-      columnVisibility: {},
-      columnOrder: columns.map((column) => column.id ?? "").filter(Boolean),
-    });
-
-  const currentView = useMemo(
-    () => views?.find((view) => view.id === router.query.view) ?? null,
-    [views, router.query.view]
-  );
-
-  useEffect(() => {
-    if (currentView) {
-      setFilters(currentView.config.filters);
-      setViewType(currentView.config.type);
-      if (
-        currentView.config.columnOrder &&
-        currentView.config.columnVisibility
-      ) {
-        setColumnOrder(currentView.config.columnOrder);
-        setColumnVisibility(currentView.config.columnVisibility);
-      }
-    }
-  }, [currentView, router.query.view, setColumnOrder, setColumnVisibility]);
 
   const {
     data: entities,
@@ -168,7 +93,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     hasNextPage,
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
-      entityFilters: filters,
+      entityFilters: viewConfig?.filters ?? {},
       // sortBy,
       // limit,
     },
@@ -177,8 +102,18 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
-      // enabled: !!filters.entityType,
+      enabled: !!viewConfig,
     }
+  );
+
+  const { data: features } = api.features.list.useQuery();
+
+  const filteredFeatures = useMemo(
+    () =>
+      features?.filter(
+        (feature) => feature.entityTypeId === viewConfig?.filters.entityType
+      ),
+    [features, viewConfig]
   );
 
   const allEntities = useMemo(() => {
@@ -203,30 +138,40 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   }, [allEntities]);
   const entityNameMap = useEntityNameMap(entityIds);
 
-  useEffect(() => {
-    if (!views?.length) {
-      setColumnOrder(columns.map((column) => column.id ?? "").filter(Boolean));
-    }
-  }, [columns, setColumnOrder, views]);
+  const handleTableConfigChange = useCallback(
+    (config: Exclude<EntityViewConfig["tableConfig"], undefined>) => {
+      if (viewConfig) setViewConfig({ ...viewConfig, tableConfig: config });
+    },
+    [viewConfig, setViewConfig]
+  );
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex p-3 px-8 border-b items-center">
-        <EditEntityFilters value={filters} onChange={setFilters} />
+        <EditEntityFilters
+          value={viewConfig?.filters ?? {}}
+          onChange={(filters) => {
+            if (viewConfig) setViewConfig({ ...viewConfig, filters });
+          }}
+        />
 
         <div className="flex gap-1">
           <Toggle
             className="h-6 flex items-center"
-            onClick={() => setViewType("grid")}
-            pressed={viewType === "grid"}
+            onClick={() => {
+              if (viewConfig) setViewConfig({ ...viewConfig, type: "grid" });
+            }}
+            pressed={viewConfig?.type === "grid"}
           >
             <LayoutGrid className="h-4 w-4 mr-1.5" />
             <span className="text-xs">Grid</span>
           </Toggle>
           <Toggle
             className="h-6 flex items-center"
-            onClick={() => setViewType("list")}
-            pressed={viewType === "list"}
+            onClick={() => {
+              if (viewConfig) setViewConfig({ ...viewConfig, type: "list" });
+            }}
+            pressed={viewConfig?.type === "list"}
           >
             <List className="h-4 w-4 mr-1.5" />
             <span className="text-xs">List</span>
@@ -241,15 +186,10 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           <DropdownMenuContent>
             <DropdownMenuItem
               onSelect={() => {
-                if (currentView) {
+                if (viewConfig && typeof router.query.view === "string") {
                   updateView({
-                    id: currentView.id,
-                    config: {
-                      filters,
-                      type: viewType,
-                      columnOrder,
-                      columnVisibility,
-                    },
+                    id: router.query.view,
+                    config: viewConfig,
                   })
                     .then(() => refetchViews())
                     .catch(handleError);
@@ -262,20 +202,16 @@ export const EntityList = ({ seenWithEntity }: Props) => {
             <EditViewDialog
               title="Create new view"
               onSubmit={(values) => {
-                createView({
-                  name: values.name,
-                  config: {
-                    filters: filters,
-                    type: viewType,
-                    columnOrder,
-                    columnVisibility,
-                  },
-                  entityTypeId: seenWithEntity?.type,
-                })
-                  .then(() => {
-                    return refetchViews();
+                if (viewConfig)
+                  createView({
+                    name: values.name,
+                    config: viewConfig,
+                    entityTypeId: seenWithEntity?.type,
                   })
-                  .catch(handleError);
+                    .then(() => {
+                      return refetchViews();
+                    })
+                    .catch(handleError);
               }}
             >
               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -323,9 +259,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                   <EditViewDialog
                     title="Update view"
                     onSubmit={(values) => {
-                      if (currentView) {
+                      if (typeof router.query.view === "string") {
                         updateView({
-                          id: currentView.id,
+                          id: router.query.view,
                           name: values.name,
                         })
                           .then(() => {
@@ -342,8 +278,8 @@ export const EntityList = ({ seenWithEntity }: Props) => {
 
                   <DropdownMenuItem
                     onSelect={() => {
-                      if (currentView) {
-                        deleteView({ id: currentView.id })
+                      if (typeof router.query.view === "string") {
+                        deleteView({ id: router.query.view })
                           .then(() => refetchViews())
                           .catch(handleError);
                       }
@@ -357,7 +293,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           ))}
         </div>
 
-        {viewType === "grid" ? (
+        {viewConfig?.type === "grid" ? (
           <ScrollArea className="h-full flex-1">
             <div className="flex flex-col gap-4 px-8 py-4">
               {entitiesLoading ? (
@@ -393,42 +329,18 @@ export const EntityList = ({ seenWithEntity }: Props) => {
             </div>
           </ScrollArea>
         ) : (
-          <div className="px-8 overflow-x-auto flex-1">
-            <DataTable
-              columns={columns}
-              data={allEntities}
-              columnVisibility={columnVisibility}
-              onColumnVisibilityChange={setColumnVisibility}
-              columnOrder={columnOrder}
-              onColumnOrderChange={setColumnOrder}
-              loading={entitiesLoading}
-              onRowClick={(entity) =>
-                router.push(
-                  `/entity/${entityTypes?.find(
-                    (et) => et.id === entity.entityType
-                  )?.type}/${entity.entityId}`
-                )
+          <EntityListDataTable
+            features={filteredFeatures ?? []}
+            entities={allEntities}
+            config={
+              viewConfig?.tableConfig ?? {
+                columnVisibility: {},
+                columnOrder: [],
               }
-              renderHeader={(table) => (
-                <>
-                  <Input
-                    placeholder="Filter event types..."
-                    value={
-                      (table.getColumn("Name")?.getFilterValue() as string) ??
-                      ""
-                    }
-                    onChange={(event) =>
-                      table
-                        .getColumn("Name")
-                        ?.setFilterValue(event.target.value)
-                    }
-                    className="max-w-sm"
-                  />
-                  <DataTableViewOptions table={table} />
-                </>
-              )}
-            />
-          </div>
+            }
+            loading={entitiesLoading}
+            onConfigChange={handleTableConfigChange}
+          />
         )}
 
         <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>

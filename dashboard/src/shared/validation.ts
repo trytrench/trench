@@ -147,3 +147,21 @@ export const findTopEntitiesArgs = z.object({
 });
 
 export type FindTopEntitiesArgs = z.infer<typeof findTopEntitiesArgs>;
+
+export const entityViewConfigZod = z.object({
+  type: z.enum(["list", "grid"]),
+  filters: entityFiltersZod,
+  tableConfig: z
+    .object({
+      columnOrder: z.array(z.string()),
+      columnVisibility: z.record(z.boolean()),
+    })
+    .optional(),
+  gridConfig: z
+    .object({
+      featureOrder: z.array(z.string()),
+    })
+    .optional(),
+});
+
+export type EntityViewConfig = z.infer<typeof entityViewConfigZod>;
