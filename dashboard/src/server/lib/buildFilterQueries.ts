@@ -186,7 +186,7 @@ export async function getEntitiesList(props: {
             unique_entity_id,
             first_seen,
             last_seen
-        FROM entity_seen
+        FROM entity_seen_view
         WHERE 1
         ${
           seenWithEntity
@@ -198,8 +198,10 @@ export async function getEntitiesList(props: {
             : ""
         }
         ${seenWhereClause}
+        ${filters.entityId ? `AND entity_id = '${filters.entityId}'` : ""}
+        ${filters.entityType ? `AND entity_type = '${filters.entityType}'` : ""}
     )
-        SELECT 
+        SELECT
             unique_entity_id,
             first_seen,
             last_seen
@@ -248,6 +250,8 @@ export async function getEntitiesList(props: {
     data: EntityResult[];
     statistics: any;
   }>();
+
+  console.log(entities.data);
 
   if (entities.data.length === 0) {
     console.log("Early return");
@@ -534,7 +538,6 @@ export const getEventsList = async (options: {
     ORDER BY events.id DESC
     LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
   `;
-
   const eventIDsResultRaw = await db.query({ query: eventIDsQuery });
 
   const eventIDsResult = await eventIDsResultRaw.json<{
