@@ -31,7 +31,10 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { EntityFilters } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
-import { EditEntityFilters } from "../components/filters/EditEntityFilters";
+import {
+  EditEntityFilters,
+  useEntityFilters,
+} from "../components/filters/EditEntityFilters";
 import { DataTable, useDataTableState } from "./ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "./ui/checkbox";
@@ -60,9 +63,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     (et) => et.id === seenWithEntity?.type
   )?.type;
 
-  const [filters, setFilters] = useState<EntityFilters>({
-    seenWithEntity,
-  });
+  const { value: filters, onChange: setFilters } = useEntityFilters();
 
   // Query must be for an entity type
   // useEffect(() => {
@@ -175,7 +176,13 @@ export const EntityList = ({ seenWithEntity }: Props) => {
       setColumnOrder(currentView.config.columnOrder);
       setColumnVisibility(currentView.config.columnVisibility);
     }
-  }, [currentView, router.query.view, setColumnOrder, setColumnVisibility]);
+  }, [
+    currentView,
+    router.query.view,
+    setColumnOrder,
+    setColumnVisibility,
+    setFilters,
+  ]);
 
   const {
     data: entities,
@@ -185,7 +192,10 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     hasNextPage,
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
-      entityFilters: filters,
+      entityFilters: {
+        ...filters,
+        seenWithEntity: seenWithEntity,
+      },
       // sortBy,
       // limit,
     },

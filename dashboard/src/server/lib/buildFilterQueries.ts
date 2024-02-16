@@ -8,6 +8,12 @@ import {
 } from "../../shared/validation";
 import { db } from "databases";
 import { TypeName } from "event-processing";
+import format from "date-fns/format";
+import { uniq, uniqBy } from "lodash";
+import {
+  printEntityFilters,
+  printEventFilters,
+} from "../../shared/printFilters";
 
 type EventFilters = z.infer<typeof eventFiltersZod>;
 
@@ -59,7 +65,7 @@ const buildWhereClauseForFeatureFilter = (
   const columnsNeeded = new Set<string>();
 
   conditions.push(`feature_id = '${featureId}'`);
-  conditions.push("error IS NULL");
+  // conditions.push("error IS NULL");
   switch (dataType) {
     case TypeName.Float64:
     case TypeName.Int64: {
@@ -121,15 +127,7 @@ export async function getEntitiesList(props: {
   const { filters, limit, cursor } = props;
 
   const featureWhereClauses = [];
-  const seenHavingClauses = [];
   const seenWhereClauses = [];
-
-  if (filters.entityType) {
-    seenWhereClauses.push(`entity_type = '${filters.entityType}'`);
-  }
-  if (filters.entityId) {
-    seenWhereClauses.push(`entity_id = '${filters.entityId}'`);
-  }
 
   const allFeatureColumnsNeeded = new Set<string>();
   if (filters.features && filters.features.length > 0) {
@@ -147,7 +145,7 @@ export async function getEntitiesList(props: {
     }
 
     featureWhereClauses.push(
-      featureConditions.filter((condition) => condition !== "").join(" AND ")
+      featureConditions.filter((condition) => condition !== "").join(" OR ")
     );
   }
 
@@ -155,22 +153,21 @@ export async function getEntitiesList(props: {
     featureWhereClauses.push(`event_id = '${filters.eventId}'`);
   }
 
+  seenWhereClauses.push(`unique_entity_id != ''`);
   if (filters.firstSeen) {
-    seenHavingClauses.push(
+    seenWhereClauses.push(
       ...getWhereClausesForDateRange(filters.firstSeen, "first_seen")
     );
   }
   if (filters.lastSeen) {
-    seenHavingClauses.push(
+    seenWhereClauses.push(
       ...getWhereClausesForDateRange(filters.lastSeen, "last_seen")
     );
   }
 
   const featureWhereClausesExist = featureWhereClauses.length > 0;
-  const seenHavingClause =
-    seenHavingClauses.length > 0
-      ? `HAVING ${seenHavingClauses.join(" AND ")}`
-      : "";
+  const seenWhereClause =
+    seenWhereClauses.length > 0 ? `AND ${seenWhereClauses.join(" AND ")}` : "";
 
   const featureIdList = filters.features?.map((feature) => feature.featureId);
   const featureIdWhereClause = featureIdList
@@ -182,44 +179,28 @@ export async function getEntitiesList(props: {
     : "";
 
   const seenWithEntity = filters.seenWithEntity;
-  const entTypeColumn = seenWithEntity
-    ? "ea_view.entity_type_2"
-    : "features.entity_type";
-  const entColumn = seenWithEntity
-    ? "ea_view.entity_id_2"
-    : "features.entity_id";
 
   const finalQuery1 = `
     WITH timestamped_entities AS (
         SELECT
-            ${entTypeColumn} AS entity_type,
-            ${entColumn} AS entity_id,
-            min(event_timestamp) AS first_seen,
-            max(event_timestamp) AS last_seen
-        FROM features AS features
+            unique_entity_id,
+            first_seen,
+            last_seen
+        FROM entity_seen
+        WHERE 1
         ${
           seenWithEntity
-            ? `
-                JOIN entity_appearance_view AS ea_view ON
-                ea_view.entity_type_1 = '${seenWithEntity.type}'
-                AND ea_view.entity_id_1 = '${seenWithEntity.id}'
-                AND ea_view.entity_type_2 = features.entity_type
-                AND ea_view.entity_id_2 = features.entity_id
-            `
+            ? `AND unique_entity_id IN (
+                SELECT eav.unique_entity_id_2 AS unique_entity_id
+                FROM entity_appearance_view AS eav
+                WHERE eav.unique_entity_id_1 = '${seenWithEntity.type}_${seenWithEntity.id}'
+            )`
             : ""
         }
-        WHERE entity_id != ''
-        ${
-          seenWhereClauses.length > 0
-            ? `AND ${seenWhereClauses.join(" AND ")}`
-            : ""
-        }
-        GROUP BY entity_type, entity_id
-        ${seenHavingClause}
+        ${seenWhereClause}
     )
         SELECT 
-            entity_type,
-            entity_id,
+            unique_entity_id,
             first_seen,
             last_seen
         FROM
@@ -227,19 +208,9 @@ export async function getEntitiesList(props: {
         ${
           featureWhereClausesExist
             ? `
-            JOIN (
-                SELECT
-                    entity_type,
-                    entity_id,
-                    feature_id,
-                    error,
-                    row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn,
-                    ${
-                      allFeatureColumnsNeeded.size > 0
-                        ? [...allFeatureColumnsNeeded].join(", ")
-                        : ""
-                    }
-                FROM features AS features
+            LEFT SEMI JOIN (
+                SELECT DISTINCT unique_entity_id
+                FROM entity_features_view AS features
                 WHERE 1
                 ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
                 ${eventTypeWhereClause ? `AND ${eventTypeWhereClause}` : ""}
@@ -248,34 +219,27 @@ export async function getEntitiesList(props: {
                     ? `AND entity_type = '${filters.entityType}'`
                     : ""
                 }
-            ) as latest_features
-            ON
-                timestamped_entities.entity_type = latest_features.entity_type
-                AND timestamped_entities.entity_id = latest_features.entity_id
-                AND latest_features.rn = 1
+                ${
+                  featureWhereClausesExist
+                    ? `AND ${featureWhereClauses.join(" AND ")}`
+                    : ""
+                }
+            ) AS features
+            ON timestamped_entities.unique_entity_id = features.unique_entity_id
             `
             : ""
         }
-        WHERE 1
-        ${
-          featureWhereClausesExist
-            ? `AND ${featureWhereClauses.join(" AND ")}`
-            : ""
-        }
-        GROUP BY
-            entity_id, entity_type, first_seen, last_seen
         ORDER BY
             last_seen DESC
         LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
   `;
+
   const result = await db.query({
     query: finalQuery1,
   });
 
   type EntityResult = {
-    entity_type: string;
-    entity_id: string;
-    features_array: Array<[string, string | null, string | null]>;
+    unique_entity_id: string;
     first_seen: string;
     last_seen: string;
   };
@@ -286,48 +250,44 @@ export async function getEntitiesList(props: {
   }>();
 
   if (entities.data.length === 0) {
+    console.log("Early return");
     return [];
   }
 
   const finalQuery2 = `
     SELECT
+        unique_entity_id,
         entity_type,
         entity_id,
-        groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
-    FROM (
-        SELECT
-            entity_type,
-            entity_id,
-            feature_id,
-            value,
-            error,
-            row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_id DESC) AS rn
-        FROM features AS features
-        WHERE (entity_type, entity_id) IN (${entities.data
-          .map((entity) => `('${entity.entity_type}', '${entity.entity_id}')`)
-          .join(",")})
-    ) as latest_features
-    WHERE latest_features.rn = 1
-    GROUP BY entity_type, entity_id
+        groupArray((feature_id, value)) as features_array
+    FROM entity_features_view
+    WHERE unique_entity_id IN (${entities.data
+      .map((entity) => `'${entity.unique_entity_id}'`)
+      .join(", ")})
+    GROUP BY unique_entity_id, entity_type, entity_id
+    SETTINGS optimize_move_to_prewhere_if_final = 1
   `;
 
   const result2 = await db.query({
     query: finalQuery2,
   });
-
   const entities2 = await result2.json<{
     data: {
+      unique_entity_id: string;
       entity_type: string;
       entity_id: string;
-      features_array: Array<[string, string | null, string | null]>;
+      features_array: Array<[string, string | null]>;
     }[];
     statistics: any;
   }>();
 
   console.log();
   console.log("````````````````````");
+  console.log("Time:", format(new Date(), "h:mm:ss a"));
+  console.log();
+
   // console.log(Object.keys(entities));
-  console.log(finalQuery1);
+  // console.log(finalQuery1);
   console.log("getEntitiesList - desired_entities");
   printEntityFilters(filters);
   console.log(entities.statistics);
@@ -341,18 +301,24 @@ export async function getEntitiesList(props: {
 
   // merge the two results
   const entityMap = new Map(
-    entities2.data.map((entity) => [
-      `${entity.entity_type}-${entity.entity_id}`,
-      entity,
-    ])
+    entities2.data.map((entity) => [entity.unique_entity_id, entity])
   );
 
-  const mergedEntities = entities.data.map((entity) => {
-    const key = `${entity.entity_type}-${entity.entity_id}`;
-    const features = entityMap.get(key)?.features_array ?? [];
+  const mergedEntities: {
+    entity_id: string;
+    entity_type: string;
+    first_seen: string;
+    last_seen: string;
+    features_array: Array<[string, string | null, null]>;
+  }[] = entities.data.map((entity) => {
+    const key = entity.unique_entity_id;
+    const entityData = entityMap.get(key);
+    const features = entityData?.features_array ?? [];
     return {
       ...entity,
-      features_array: features,
+      entity_id: entityData?.entity_id ?? "",
+      entity_type: entityData?.entity_type ?? "",
+      features_array: features.map((arr) => [...arr, null]), // Error is null
     };
   });
 
@@ -397,7 +363,7 @@ export const getEventsList = async (options: {
           return clauses;
         })
         .filter((clause) => clause !== "");
-      featureWhereClauses.push(featureConditions.join(" AND "));
+      featureWhereClauses.push(featureConditions.join(" OR "));
     }
   }
 
@@ -499,53 +465,3 @@ export const getEventsList = async (options: {
 
   return events.data;
 };
-
-function printEventFilters(filters: EventFilters) {
-  console.log("EventFilters:");
-  if (filters.dateRange) {
-    console.log("  dateRange:", filters.dateRange);
-  }
-  if (filters.eventType) {
-    console.log("  eventType:", filters.eventType);
-  }
-  if (filters.entities) {
-    console.log("  entities:", filters.entities);
-  }
-  if (filters.features) {
-    console.log(
-      "  features:",
-      filters.features.map((f) => f.featureName)
-    );
-  }
-}
-
-function printEntityFilters(filters: EntityFilters) {
-  console.log("EntityFilters:");
-  if (filters.entityType) {
-    console.log("  entityType:", filters.entityType);
-  }
-  if (filters.entityId) {
-    console.log("  entityId:", filters.entityId);
-  }
-  if (filters.features) {
-    console.log(
-      "  features:",
-      filters.features.map((f) => f.featureName)
-    );
-  }
-  if (filters.eventId) {
-    console.log("  eventId:", filters.eventId);
-  }
-  if (filters.firstSeen) {
-    console.log("  firstSeen:", filters.firstSeen);
-  }
-  if (filters.lastSeen) {
-    console.log("  lastSeen:", filters.lastSeen);
-  }
-  if (filters.seenInEventType) {
-    console.log("  seenInEventType:", filters.seenInEventType);
-  }
-  if (filters.seenWithEntity) {
-    console.log("  seenWithEntity:", filters.seenWithEntity);
-  }
-}

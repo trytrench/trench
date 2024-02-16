@@ -12,6 +12,7 @@ export type FeatureRow = {
   feature_id: string;
   entity_type: string;
   entity_id: string;
+  unique_entity_id: string;
   data_type: string;
   value: string | null;
   value_Int64: number | null;
@@ -46,15 +47,19 @@ export enum StoreTable {
 //   });
 // }
 
-export type StoreRow =
-  | {
-      table: StoreTable.Features;
-      row: FeatureRow;
-    }
-  | {
-      table: StoreTable.Events;
-      row: EventTableRow;
-    };
+export type StoreRowMap = {
+  [StoreTable.Features]: FeatureRow;
+  [StoreTable.Events]: EventTableRow;
+};
+
+export type RowConfigMap = {
+  [K in StoreTable]: {
+    table: K;
+    row: StoreRowMap[K];
+  };
+};
+
+export type StoreRow = RowConfigMap[keyof RowConfigMap];
 
 const ALL_TABLES = [StoreTable.Features, StoreTable.Events];
 

@@ -12,7 +12,7 @@ import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
 import { FeatureGrid } from "./FeatureGrid";
 import { RenderDecision } from "./RenderDecision";
-import { EditEventFilters } from "./filters/EditEventFilters";
+import { EditEventFilters, useEventFilters } from "./filters/EditEventFilters";
 import { Panel } from "./ui/custom/panel";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -25,8 +25,7 @@ export default function EventsList({ entity }: EventsListProps) {
   const [view, setView] = useState<"grid" | "list">("list");
   const [limit, setLimit] = useState(50);
 
-  const [eventFilters, setEventFilters] = useState<EventFilters>({});
-
+  const { value: eventFilters } = useEventFilters();
   const {
     data: events,
     fetchNextPage,
@@ -115,12 +114,7 @@ export default function EventsList({ entity }: EventsListProps) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <EditEventFilters
-            value={eventFilters ?? {}}
-            onChange={(newFilters) => {
-              setEventFilters(newFilters);
-            }}
-          />
+          <EditEventFilters />
 
           <div className="flex pl-2 border-l gap-1">
             <Toggle

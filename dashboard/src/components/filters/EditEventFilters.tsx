@@ -1,3 +1,5 @@
+"use client";
+
 import { Check, ListFilter } from "lucide-react";
 import { ulid } from "ulid";
 import { EventFilters } from "../../shared/validation";
@@ -15,14 +17,37 @@ import {
 import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
+import { decodeEventFilters, encodeEventFilters } from "../../lib/filters";
+import { useRouter } from "next/router";
+import { handleError } from "../../lib/handleError";
 
-interface EditEventFiltersProps {
-  value: EventFilters;
-  onChange: (value: EventFilters) => void;
+export function useEventFilters() {
+  const router = useRouter();
+
+  const searchParams = router.asPath.split("?").slice(1).join("?");
+  const value = decodeEventFilters(
+    new URLSearchParams(router.query as Record<string, string>)
+  );
+
+  const onChange = (newValue: EventFilters) => {
+    const params = encodeEventFilters(newValue);
+    router
+      .push({
+        pathname: router.pathname,
+        query: {
+          ...Object.fromEntries(params),
+        },
+      })
+      .catch(handleError);
+  };
+
+  return { value, onChange };
 }
 
-export function EditEventFilters(props: EditEventFiltersProps) {
-  const { value, onChange } = props;
+export function EditEventFilters() {
+  const router = useRouter();
+
+  const { value, onChange } = useEventFilters();
 
   const { data: allEventTypes } = api.eventTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();

@@ -111,6 +111,8 @@ export const linksRouter = createTRPCRouter({
         statistics: any;
       }>();
 
+      // console.log(parsed.data.length);
+
       const firstDegreeEntities: EntityWithName[] = uniqBy(
         parsed.data.map((item) => {
           return {

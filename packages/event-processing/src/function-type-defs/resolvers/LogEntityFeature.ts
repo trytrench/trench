@@ -25,6 +25,7 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
         is_deleted: 0,
         entity_type: "",
         entity_id: "",
+        unique_entity_id: "",
       };
 
       try {
@@ -38,6 +39,7 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
           });
           baseData.entity_type = assignToEntity.type;
           baseData.entity_id = assignToEntity.id;
+          baseData.unique_entity_id = `${assignToEntity.type}_${assignToEntity.id}`;
         }
 
         const value = await getDependency({

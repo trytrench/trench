@@ -1,3 +1,5 @@
+"use client";
+
 import { ListFilter } from "lucide-react";
 import { type EntityFilters } from "../../shared/validation";
 import { api } from "../../utils/api";
@@ -17,16 +19,41 @@ import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 import { AddEventFilterSubItem } from "./EventFilterSubItem";
 import { useRouter } from "next/router";
 import { handleError } from "../../lib/handleError";
+import { decodeEntityFilters, encodeEntityFilters } from "../../lib/filters";
+import { useSearchParams } from "next/navigation";
+import { printEntityFilters } from "../../shared/printFilters";
 
-interface EditEntityFiltersProps {
-  value: EntityFilters;
-  onChange: (value: EntityFilters) => void;
+export function useEntityFilters() {
+  const router = useRouter();
+
+  const value = decodeEntityFilters(
+    new URLSearchParams(router.query as Record<string, string>)
+  );
+
+  const onChange = (newValue: EntityFilters) => {
+    printEntityFilters(newValue);
+
+    const params = encodeEntityFilters(newValue);
+
+    router
+      .push({
+        pathname: router.pathname,
+        query: {
+          entityId: router.query.entityId,
+          entityType: router.query.entityType,
+          ...Object.fromEntries(params),
+        },
+      })
+      .catch(handleError);
+  };
+
+  return { value, onChange };
 }
 
-export function EditEntityFilters(props: EditEntityFiltersProps) {
-  const { value, onChange } = props;
-
+export function EditEntityFilters() {
   const router = useRouter();
+
+  const { value, onChange } = useEntityFilters();
 
   const handleChange = (newValue: EntityFilters) => {
     onChange(newValue);
