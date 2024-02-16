@@ -25,8 +25,8 @@ export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
         >
           {rulesToShow.map(({ featureId, featureName, rule }) => (
             <div key={featureId} className="flex space-x-1 items-center">
-              <div className={`rounded-full ${rule!.color} w-2 h-2`} />
-              <div className="font-semibold">{featureName}</div>
+              <div className={`rounded-full ${rule!.color} w-2 h-2 shrink-0`} />
+              <div className="font-semibold truncate">{featureName}</div>
             </div>
           ))}
         </div>
@@ -38,8 +38,8 @@ export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
         {features
           .filter((feature) => !feature.rule)
           .map(({ featureId, featureName, result }) => (
-            <div key={featureId} className="truncate">
-              <div className="font-semibold">{featureName}</div>
+            <div key={featureId}>
+              <div className="font-semibold truncate">{featureName}</div>
               {result.type === "success" &&
               result.data.schema.type === TypeName.Entity ? (
                 <EntityChip

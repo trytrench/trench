@@ -445,7 +445,7 @@ export const getEventsList = async (options: {
     event_type: string;
     event_timestamp: Date;
     event_data: string;
-    entities: Array<[string[], string[]]>;
+    entities: Array<[string, string]>;
     features_array: Array<[string, string | null, string | null]>;
   };
 

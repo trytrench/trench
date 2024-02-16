@@ -1,22 +1,46 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { EventViewConfig, eventViewConfig } from "~/shared/validation";
 
-export const eventViews = createTRPCRouter({
+export const eventViewsRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx, input }) => {
-    return ctx.prisma.entityViews.findMany();
+    const views = await ctx.prisma.eventView.findMany();
+    return views.map((view) => ({
+      ...view,
+      config: view.config as unknown as EventViewConfig,
+    }));
   }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-        filters: z.record(z.any()),
+        config: eventViewConfig,
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.entityViews.create({
+      return ctx.prisma.eventView.create({
         data: {
           name: input.name,
-          filters: input.filters,
+          config: input.config,
+        },
+      });
+    }),
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        config: eventViewConfig.optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.eventView.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          name: input.name,
+          config: input.config,
         },
       });
     }),
@@ -27,7 +51,7 @@ export const eventViews = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.prisma.entityType.delete({
+      return await ctx.prisma.eventView.delete({
         where: {
           id: input.id,
         },

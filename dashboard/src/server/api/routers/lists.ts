@@ -126,25 +126,14 @@ export const listsRouter = createTRPCRouter({
     }),
 });
 
-function getUniqueEntities(
-  entities_array: Array<[string[], string[]]>
-): Entity[] {
-  const entities: Entity[] = [];
-  for (const [entity_types, entity_ids] of entities_array) {
-    for (let i = 0; i < entity_ids.length; i++) {
-      const entity_id = entity_ids[i];
-      const entity_type = entity_types[i];
-      const found = entities.some(
-        (entity) => entity.id === entity_id && entity.type === entity_type
-      );
-      if (found) {
-        continue;
-      }
-      if (!entity_id || !entity_type) {
-        throw new Error("Invalid entity array from clickhouse");
-      }
-      entities.push({ id: entity_id, type: entity_type });
-    }
-  }
+function getUniqueEntities(entities_array: Array<[string, string]>): Entity[] {
+  const entities: Entity[] = uniqBy(
+    entities_array,
+    ([entity_type, entity_id]) => [entity_type, entity_id].join()
+  ).map(([entity_type, entity_id]) => ({
+    type: entity_type,
+    id: entity_id,
+  }));
+
   return entities;
 }

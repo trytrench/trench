@@ -1,31 +1,90 @@
-import { format } from "date-fns";
+import clsx from "clsx";
 import { Entity } from "event-processing";
 import { uniq } from "lodash";
-import { LayoutGrid, List, Loader2Icon } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  LayoutGrid,
+  List,
+  Loader2Icon,
+  MoreHorizontal,
+} from "lucide-react";
+import { useRouter } from "next/router";
+import { useEffect, useMemo, useState } from "react";
 import { Toggle } from "~/components/ui/toggle";
-import { useDecision } from "~/hooks/useDecision";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
-import { type EventFilters } from "~/shared/validation";
+import { handleError } from "~/lib/handleError";
+import { EventViewConfig } from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
+import { EditViewDialog } from "./EditViewDialog";
+import { EventCard } from "./EventCard";
 import { EventDrawer } from "./EventDrawer";
 import { EventListItem } from "./EventListItem";
-import { FeatureGrid } from "./FeatureGrid";
-import { RenderDecision } from "./RenderDecision";
-import { EditEventFilters, useEventFilters } from "./filters/EditEventFilters";
-import { Panel } from "./ui/custom/panel";
+import { EditEventFilters } from "./filters/EditEventFilters";
+import { Button } from "./ui/button";
 import { SpinnerButton } from "./ui/custom/spinner-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { ScrollArea } from "./ui/scroll-area";
 
 interface EventsListProps {
   entity: Entity;
 }
 
+const useEventViewConfig = (entity?: Entity) => {
+  const router = useRouter();
+
+  const { data: views, refetch } = api.eventViews.list.useQuery();
+
+  const [viewConfig, setViewConfig] = useState<EventViewConfig | null>(null);
+
+  useEffect(() => {
+    if (views?.[0]) {
+      // If there are views, and the query param is set, set the view config
+      if (router.query.view) {
+        const view = views.find((view) => view.id === router.query.view);
+        if (view) setViewConfig(view.config);
+      } else {
+        // If there are views, but no query param, set the query param to the first view
+        router
+          .push({
+            pathname: router.pathname,
+            query: { ...router.query, view: views[0].id },
+          })
+          .catch(handleError);
+      }
+    }
+  }, [views, router, entity]);
+
+  useEffect(() => {
+    // If there are no views, set default
+    if (views && !views.length && !viewConfig) {
+      setViewConfig({
+        type: "grid",
+        filters: {},
+        gridConfig: {},
+      });
+    }
+  }, [views, viewConfig]);
+
+  return { viewConfig, setViewConfig };
+};
+
 export default function EventsList({ entity }: EventsListProps) {
-  const [view, setView] = useState<"grid" | "list">("list");
+  const router = useRouter();
+  const { viewConfig, setViewConfig } = useEventViewConfig();
+
   const [limit, setLimit] = useState(50);
 
-  const { value: eventFilters } = useEventFilters();
+  const { mutateAsync: createView } = api.eventViews.create.useMutation();
+  const { mutateAsync: updateView } = api.eventViews.update.useMutation();
+  const { mutateAsync: deleteView } = api.eventViews.delete.useMutation();
+
+  const { data: views, refetch: refetchViews } = api.eventViews.list.useQuery();
+
   const {
     data: events,
     fetchNextPage,
@@ -35,7 +94,7 @@ export default function EventsList({ entity }: EventsListProps) {
   } = api.lists.getEventsList.useInfiniteQuery(
     {
       eventFilters: {
-        ...eventFilters,
+        ...viewConfig?.filters,
         entities: entity ? [entity] : undefined,
       },
       limit,
@@ -68,7 +127,7 @@ export default function EventsList({ entity }: EventsListProps) {
   };
   const listItems: (DividerItem | EventItem)[] = useMemo(() => {
     // not applicable in list view
-    if (view !== "grid") return [];
+    if (viewConfig?.type !== "grid") return [];
 
     // if two events differ by over two hours, insert a divider item
     const dividerThreshold = 1000 * 60 * 60 * 2;
@@ -95,11 +154,15 @@ export default function EventsList({ entity }: EventsListProps) {
     }
 
     return items;
-  }, [allEvents, view]);
+  }, [allEvents, viewConfig]);
 
   const [selectedEvent, setSelectedEvent] = useState<
     RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
   >(null);
+
+  const [showViews, setShowViews] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
 
   return (
     <>
@@ -114,99 +177,259 @@ export default function EventsList({ entity }: EventsListProps) {
       <div className="flex flex-col h-full">
         {/* Grid / List view Toggle */}
         <div className="flex justify-between items-center py-3 px-8 border-b">
-          <EditEventFilters />
+          <Button
+            size="iconXs"
+            variant="outline"
+            className="mr-8"
+            onClick={() => setShowViews(!showViews)}
+          >
+            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          </Button>
+          <EditEventFilters
+            value={viewConfig?.filters ?? {}}
+            onChange={(newFilters) => {
+              if (viewConfig)
+                setViewConfig({ ...viewConfig, filters: newFilters });
+            }}
+          />
 
           <div className="flex pl-2 border-l gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </Button>
             <Toggle
               className="p-1 px-2 my-auto h-6 flex items-center"
-              onClick={() => setView("grid")}
-              pressed={view === "grid"}
+              onClick={() => {
+                if (viewConfig) setViewConfig({ ...viewConfig, type: "grid" });
+              }}
+              pressed={viewConfig?.type === "grid"}
             >
               <LayoutGrid className="h-4 w-4 mr-1.5" />
               <span className="text-xs">Grid</span>
             </Toggle>
             <Toggle
               className="p-1 px-2 my-auto h-6 flex items-center"
-              onClick={() => setView("list")}
-              pressed={view === "list"}
+              onClick={() => {
+                if (viewConfig) setViewConfig({ ...viewConfig, type: "feed" });
+              }}
+              pressed={viewConfig?.type === "feed"}
             >
               <List className="h-4 w-4 mr-1.5" />
-              <span className="text-xs">List</span>
+              <span className="text-xs">Feed</span>
             </Toggle>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="xs" variant="outline">
+                Save
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (viewConfig && typeof router.query.view === "string") {
+                    console.log(viewConfig);
+                    updateView({
+                      id: router.query.view,
+                      config: viewConfig,
+                    })
+                      .then(() => refetchViews())
+                      .catch(handleError);
+                  }
+                }}
+              >
+                Save to this view
+              </DropdownMenuItem>
+
+              <EditViewDialog
+                title="Create new view"
+                onSubmit={(values) => {
+                  if (viewConfig)
+                    createView({
+                      name: values.name,
+                      config: viewConfig,
+                      // entityTypeId: seenWithEntity?.type,
+                    })
+                      .then(() => {
+                        return refetchViews();
+                      })
+                      .catch(handleError);
+                }}
+              >
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  Create new view
+                </DropdownMenuItem>
+              </EditViewDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* The Events List */}
-        <div className="grow flex flex-col relative px-4 pt-2">
-          {eventsLoading ? (
-            <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
-          ) : (
-            <div className="absolute inset-0">
-              <ScrollArea className="h-full px-4">
-                {view === "list" ? (
-                  <>
-                    <div className="h-2" />
-                    {allEvents.map((event) => (
-                      <EventListItem
-                        key={event.id}
-                        event={event}
-                        onClick={() => {
-                          setSelectedEvent(event);
-                        }}
-                        selected={selectedEvent?.id === event.id}
-                      />
-                    ))}
-                  </>
-                ) : (
-                  listItems.map((item, idx) =>
-                    item.type === "event" ? (
-                      <EventCard
-                        key={item.event.id}
-                        event={item.event}
-                        isFirst={idx === 0}
-                        isLast={idx === listItems.length - 1}
-                        entityNameMap={entityNameMap}
-                      />
-                    ) : (
-                      <TimeDivider
-                        key={item.duration}
-                        duration={item.duration}
-                      />
-                    )
-                  )
-                )}
-                <div className="w-auto mt-4 mb-6 flex justify-center">
-                  {hasNextPage ? (
-                    <SpinnerButton
-                      variant="outline"
-                      onClick={() => {
-                        fetchNextPage().catch((err) => {
-                          console.error(err);
-                        });
-                      }}
-                      loading={isFetchingNextPage}
-                    >
-                      Fetch more events
-                    </SpinnerButton>
-                  ) : (
-                    <div className="text-sm text-muted-fg italic">
-                      No more Events.
-                    </div>
+        <div className="flex h-full">
+          {showViews && (
+            <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
+              <div className="text-sm font-medium text-emphasis-foreground">
+                Views
+              </div>
+
+              {views?.map((view) => (
+                <div
+                  onClick={() =>
+                    router.push({
+                      pathname: router.pathname,
+                      query: { ...router.query, view: view.id },
+                    })
+                  }
+                  key={view.id}
+                  className={clsx(
+                    "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted cursor-pointer",
+                    {
+                      "bg-accent text-accent-foreground":
+                        router.query.view === view.id,
+                    }
                   )}
+                >
+                  {view.name}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="iconXs"
+                        variant="link"
+                        className="h-3 ml-auto shrink-0"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent>
+                      <EditViewDialog
+                        title="Update view"
+                        onSubmit={(values) => {
+                          if (typeof router.query.view === "string") {
+                            updateView({
+                              id: router.query.view,
+                              name: values.name,
+                            })
+                              .then(() => {
+                                return refetchViews();
+                              })
+                              .catch(handleError);
+                          }
+                        }}
+                      >
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          Rename
+                        </DropdownMenuItem>
+                      </EditViewDialog>
+
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          if (typeof router.query.view === "string") {
+                            deleteView({ id: router.query.view })
+                              .then(() => refetchViews())
+                              .catch(handleError);
+                          }
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </ScrollArea>
+              ))}
             </div>
           )}
 
-          <div className="h-16 shrink-0"></div>
+          {/* The Events List */}
+          <div className="grow flex flex-col relative px-4 pt-2">
+            {eventsLoading ? (
+              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+            ) : (
+              <div className="absolute inset-0">
+                <ScrollArea className="h-full px-4">
+                  {viewConfig?.type === "feed" ? (
+                    <>
+                      <div className="h-2" />
+                      {allEvents.map((event) => (
+                        <EventListItem
+                          key={event.id}
+                          event={event}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                          }}
+                          selected={selectedEvent?.id === event.id}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    listItems.map((item, idx) =>
+                      item.type === "event" ? (
+                        <EventCard
+                          key={item.event.id}
+                          event={item.event}
+                          isFirst={idx === 0}
+                          isLast={idx === listItems.length - 1}
+                          entityNameMap={entityNameMap}
+                          config={
+                            viewConfig?.gridConfig[item.event.type] ?? {
+                              featureOrder: {},
+                              entityTypeOrder: [],
+                            }
+                          }
+                          onConfigChange={(newConfig) => {
+                            if (viewConfig)
+                              setViewConfig({
+                                ...viewConfig,
+                                gridConfig: {
+                                  ...viewConfig.gridConfig,
+                                  [item.event.type]: newConfig,
+                                },
+                              });
+                          }}
+                          isEditing={isEditing}
+                        />
+                      ) : (
+                        <TimeDivider
+                          key={item.duration}
+                          duration={item.duration}
+                        />
+                      )
+                    )
+                  )}
+                  <div className="w-auto mt-4 mb-6 flex justify-center">
+                    {hasNextPage ? (
+                      <SpinnerButton
+                        variant="outline"
+                        onClick={() => {
+                          fetchNextPage().catch((err) => {
+                            console.error(err);
+                          });
+                        }}
+                        loading={isFetchingNextPage}
+                      >
+                        Fetch more events
+                      </SpinnerButton>
+                    ) : (
+                      <div className="text-sm text-muted-fg italic">
+                        No more Events.
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            <div className="h-16 shrink-0"></div>
+          </div>
         </div>
         <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
       </div>
     </>
   );
 }
-
-//
 
 interface TimeDividerProps {
   duration: number;
@@ -270,48 +493,6 @@ function TimeDivider({ duration }: TimeDividerProps) {
       <div className="italic text-muted-foreground my-auto grow text-md">
         {timeToWords(duration)}
       </div>
-    </div>
-  );
-}
-
-//
-
-interface EventCardProps {
-  event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
-  isFirst: boolean;
-  isLast: boolean;
-  entityNameMap: Record<string, string>;
-}
-
-function EventCard({ event, isFirst, isLast, entityNameMap }: EventCardProps) {
-  const decision = useDecision(event.features);
-
-  return (
-    <div className="flex">
-      <div className="w-[3rem] relative shrink-0">
-        <div className="absolute left-0 w-[2px] bg-muted-foreground ml-3 h-full" />
-        <div className="absolute w-[14px] h-[14px] left-[6px] top-[24px] rounded-full bg-background border-2 border-muted-foreground" />
-        {isFirst && (
-          <div className="absolute top-0 w-full h-4 bg-gradient-to-b from-background" />
-        )}
-        {isLast && (
-          <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-background" />
-        )}
-      </div>
-      <div className="w-[16rem] mt-4">
-        <div className="flex">
-          <h1 className="text-lg text-emphasis-foreground">{event.type}</h1>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
-        </div>
-        <div className="flex text-sm items-center mt-2">
-          {decision && <RenderDecision decision={decision} />}
-        </div>
-      </div>
-      <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        <FeatureGrid features={event.features} entityNameMap={entityNameMap} />
-      </Panel>
     </div>
   );
 }

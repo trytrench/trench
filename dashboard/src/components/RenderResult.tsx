@@ -29,25 +29,26 @@ export function RenderResult({ result }: { result: Result }) {
         </TooltipProvider>
       );
     case "success":
-      return <RenderTypedData data={result.data} />;
+      return (
+        <div className="truncate">
+          <RenderTypedData data={result.data} />
+        </div>
+      );
   }
 }
 export function RenderTypedData({ data }: { data: TypedData }) {
   switch (data.schema.type) {
-    case TypeName.Entity:
-      // return <EntityChip entity={data.value} />;
-      return <div>Lel</div>;
     case TypeName.Boolean:
-      return <div>{data.value ? "True" : "False"}</div>;
+      return data.value ? "True" : "False";
     case TypeName.String:
     case TypeName.Name:
-      return <div>{data.value}</div>;
+      return data.value;
     case TypeName.Float64:
     case TypeName.Int64:
-      return <div>{data.value}</div>;
+      return data.value;
     case TypeName.Location:
 
     default:
-      return <div>{JSON.stringify(data.value)}</div>;
+      return JSON.stringify(data.value);
   }
 }
