@@ -87,7 +87,7 @@ export const linksRouter = createTRPCRouter({
             }
       
       `;
-
+      console.log(query);
       const result = await db.query({
         query,
       });

@@ -325,7 +325,7 @@ export async function getEntitiesList(props: {
   return mergedEntities;
 }
 
-export const getEventsList = async (options: {
+export const getEventsListOld = async (options: {
   filter: EventFilters;
   limit?: number;
   cursor?: number;
@@ -455,7 +455,7 @@ export const getEventsList = async (options: {
   }>();
 
   console.log();
-  // console.log(finalQuery);
+  console.log(finalQuery);
   console.log("````````````````````");
   console.log("getEventsList");
   printEventFilters(filter);
@@ -464,4 +464,164 @@ export const getEventsList = async (options: {
   console.log();
 
   return events.data;
+};
+
+export const getEventsList = async (options: {
+  filter: EventFilters;
+  limit?: number;
+  cursor?: number;
+}) => {
+  const { filter, limit, cursor } = options;
+
+  // Query 1: Identifying relevant event IDs
+  const eventWhereClauses = [];
+  const featureWhereClauses = [];
+  const entityApperanceWhereClauses = [];
+
+  if (filter.dateRange) {
+    eventWhereClauses.push(
+      ...getWhereClausesForDateRange(filter.dateRange, "timestamp")
+    );
+  }
+
+  if (filter.eventType) {
+    eventWhereClauses.push(`type = '${filter.eventType}'`);
+  }
+
+  if (filter.entities && filter.entities.length > 0) {
+    const entityConditions = filter.entities
+      .map(
+        (entity) =>
+          `(entity_type = '${entity.type}' AND entity_id = '${entity.id}')`
+      )
+      .join(" OR ");
+    entityApperanceWhereClauses.push(entityConditions);
+  }
+
+  if (filter.features && filter.features.length > 0) {
+    const featureConditions = filter.features
+      .map((feature) => {
+        const { clauses } = buildWhereClauseForFeatureFilter(feature);
+        return clauses;
+      })
+      .filter((clause) => clause !== "");
+    featureWhereClauses.push(featureConditions.join(" OR "));
+  }
+
+  const whereClauses = [...eventWhereClauses, ...featureWhereClauses];
+  const whereClausesExist = whereClauses.length > 0;
+
+  const eventIDsQuery = `
+    SELECT DISTINCT events.id as event_id
+    FROM events
+    ${
+      featureWhereClauses.length > 0
+        ? "LEFT JOIN features ON features.event_id = events.id"
+        : ""
+    }
+    WHERE 1
+    ${
+      entityApperanceWhereClauses.length > 0
+        ? `AND events.id IN (
+            SELECT event_id FROM features
+            WHERE feature_type = 'EntityAppearance'
+            AND ${entityApperanceWhereClauses.join(" AND ")}
+            GROUP BY event_id
+          )`
+        : ""
+    }
+    ${whereClausesExist ? `AND ${whereClauses.join(" AND ")}` : ""}
+    ORDER BY events.id DESC
+    LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
+  `;
+
+  const eventIDsResultRaw = await db.query({ query: eventIDsQuery });
+
+  const eventIDsResult = await eventIDsResultRaw.json<{
+    data: Array<{ event_id: string }>;
+    statistics: any;
+  }>();
+
+  if (eventIDsResult.data.length === 0) {
+    return [];
+  }
+
+  const eventIDs = eventIDsResult.data.map((event) => event.event_id);
+
+  if (eventIDs.length === 0) {
+    return [];
+  }
+  // Query 2: Fetching event details for the identified event IDs
+  const eventsDetailsQuery = `
+    WITH features_subset AS (
+        SELECT 
+            event_id,
+            feature_id,
+            value,
+            error,
+            feature_type,
+            entity_type,
+            entity_id
+        FROM features
+        FINAL
+        WHERE event_id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
+    ),
+    event_features AS (
+        SELECT
+            event_id,
+            groupArray(tuple(feature_id, value, error)) AS features_arr
+        FROM features_subset
+        WHERE event_id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
+        GROUP BY event_id
+    ),
+    entity_appearances AS (
+        SELECT
+            event_id,
+            groupArray(tuple(entity_type, entity_id)) AS entities
+        FROM features_subset
+        WHERE feature_type = 'EntityAppearance'
+        AND event_id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
+        GROUP BY event_id
+    )
+    SELECT
+        e.id as event_id,
+        any(e.type) as event_type,
+        any(e.timestamp) as event_timestamp,
+        any(e.data) as event_data,
+        any(entities) as entities,
+        any(features_arr) as features
+    FROM events e
+    LEFT JOIN event_features ef ON e.id = ef.event_id
+    LEFT JOIN entity_appearances ea ON e.id = ea.event_id
+    WHERE e.id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
+    GROUP BY e.id
+    ORDER BY e.id DESC
+  `;
+
+  const eventsDetailsResultRaw = await db.query({ query: eventsDetailsQuery });
+
+  const eventsDetailsResult = await eventsDetailsResultRaw.json<{
+    data: Array<{
+      event_id: string;
+      event_type: string;
+      event_timestamp: Date;
+      event_data: string;
+      entities: Array<[string, string]>;
+      features: Array<[string, string | null, string | null]>;
+    }>;
+    statistics: any;
+  }>();
+
+  // console.log(JSON.stringify(eventsDetailsResult.data[0], null, 2));
+
+  console.log();
+  console.log("````````````````````");
+  console.log("getEventsList");
+  printEventFilters(filter);
+  console.log(eventIDsResult.statistics);
+  console.log(eventsDetailsResult.statistics);
+  console.log("....................");
+  console.log();
+
+  return eventsDetailsResult.data;
 };

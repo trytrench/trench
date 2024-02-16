@@ -24,7 +24,6 @@ import { handleError } from "../../lib/handleError";
 export function useEventFilters() {
   const router = useRouter();
 
-  const searchParams = router.asPath.split("?").slice(1).join("?");
   const value = decodeEventFilters(
     new URLSearchParams(router.query as Record<string, string>)
   );

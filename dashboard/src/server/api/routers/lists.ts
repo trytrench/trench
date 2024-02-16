@@ -118,7 +118,7 @@ export const listsRouter = createTRPCRouter({
           features: getAnnotatedFeatures(
             featureDefs,
             entityTypes,
-            event.features_array,
+            event.features,
             rules
           ),
         })),
