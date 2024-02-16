@@ -35,7 +35,7 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
-          .push({
+          .replace({
             pathname: router.pathname,
             query: { ...router.query, view: views[0].id },
           })
@@ -201,12 +201,19 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           .catch(handleError);
       }}
       onCreate={(name) => {
-        if (typeof router.query.view !== "string" || !viewConfig) return;
+        if (!viewConfig) return;
         createView({
           name,
           config: viewConfig,
+          entityTypeId: seenWithEntity.type,
         })
-          .then(() => {
+          .then((view) => {
+            router
+              .replace({
+                pathname: router.pathname,
+                query: { ...router.query, view: view.id },
+              })
+              .catch(handleError);
             return refetchViews();
           })
           .catch(handleError);
@@ -232,8 +239,8 @@ export const EntityList = ({ seenWithEntity }: Props) => {
       isEditing={isEditing}
     >
       {viewConfig?.type === "grid" ? (
-        <ScrollArea className="h-full flex-1">
-          <div className="flex flex-col gap-4 px-8 py-4">
+        <ScrollArea className="h-full">
+          <div className="space-y-4 px-8 py-4">
             {entitiesLoading ? (
               <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
             ) : (

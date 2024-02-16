@@ -37,7 +37,7 @@ const useEventViewConfig = (entity?: Entity) => {
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
-          .push({
+          .replace({
             pathname: router.pathname,
             query: { ...router.query, view: views[0].id },
           })
@@ -91,6 +91,7 @@ export default function EventsList({ entity }: EventsListProps) {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
+      enabled: !!viewConfig,
     }
   );
 
@@ -222,7 +223,13 @@ export default function EventsList({ entity }: EventsListProps) {
             name,
             config: viewConfig,
           })
-            .then(() => {
+            .then((view) => {
+              router
+                .replace({
+                  pathname: router.pathname,
+                  query: { ...router.query, view: view.id },
+                })
+                .catch(handleError);
               return refetchViews();
             })
             .catch(handleError);

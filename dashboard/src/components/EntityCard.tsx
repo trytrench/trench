@@ -68,27 +68,29 @@ export const EntityCard = ({
                 >
                   <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {entity.features.map((feature) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={feature.featureId}
-                        className="capitalize"
-                        checked={featureOrder.includes(feature.featureId)}
-                        onCheckedChange={(value) =>
-                          onFeatureOrderChange(
-                            value
-                              ? [...featureOrder, feature.featureId]
-                              : featureOrder.filter(
-                                  (id) => id !== feature.featureId
-                                )
-                          )
-                        }
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        {feature.featureName}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
+                  {entity.features
+                    .filter((feature) => !feature.rule)
+                    .map((feature) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={feature.featureId}
+                          className="capitalize"
+                          checked={featureOrder.includes(feature.featureId)}
+                          onCheckedChange={(value) =>
+                            onFeatureOrderChange(
+                              value
+                                ? [...featureOrder, feature.featureId]
+                                : featureOrder.filter(
+                                    (id) => id !== feature.featureId
+                                  )
+                            )
+                          }
+                          onSelect={(event) => event.preventDefault()}
+                        >
+                          {feature.featureName}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
                 </DropdownMenuContent>
               </DropdownMenu>
             </>

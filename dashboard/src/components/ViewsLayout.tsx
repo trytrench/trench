@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EditViewDialog } from "./EditViewDialog";
 import { Button } from "./ui/button";
 import {
@@ -39,9 +39,13 @@ export function ViewsLayout({
   onIsEditingChange,
 }: Props) {
   const router = useRouter();
+  const currentView = useMemo(
+    () => views.find((v) => v.id === router.query.view),
+    [router.query.view, views]
+  );
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full ">
       <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
         <div className="text-sm font-medium text-emphasis-foreground">
           Views
@@ -69,9 +73,9 @@ export function ViewsLayout({
         ))}
       </div>
 
-      <div className="flex-1 h-full">
+      <div className="flex-1">
         {isEditing ? (
-          <div className="flex justify-end items-center py-3 px-8 border-b">
+          <div className="flex justify-end items-center h-14 px-8 border-b">
             <div className="space-x-2">
               <Button
                 variant="outline"
@@ -86,9 +90,9 @@ export function ViewsLayout({
             </div>
           </div>
         ) : (
-          <div className="flex items-center py-3 px-8 border-b">
+          <div className="flex items-center h-14 px-8 border-b">
             <div className="text-emphasis-foreground text-sm">
-              {views.find((v) => v.id === router.query.view)?.name}
+              {currentView?.name}
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -97,21 +101,27 @@ export function ViewsLayout({
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent>
+              <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={() => onIsEditingChange(true)}>
                   Edit
                 </DropdownMenuItem>
 
-                <EditViewDialog
-                  title="Rename view"
-                  onSubmit={(values) => onRename(values.name)}
-                >
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    Rename
-                  </DropdownMenuItem>
-                </EditViewDialog>
+                {currentView && (
+                  <>
+                    <EditViewDialog
+                      title="Rename view"
+                      onSubmit={(values) => onRename(values.name)}
+                    >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Rename
+                      </DropdownMenuItem>
+                    </EditViewDialog>
 
-                <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onDelete}>
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -120,27 +130,38 @@ export function ViewsLayout({
             <div className="flex items-center gap-2 ml-auto">
               {toggleComponent}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {currentView ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="xs" variant="outline">
+                      Save
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={onSave}>
+                      Save to this view
+                    </DropdownMenuItem>
+
+                    <EditViewDialog
+                      title="Create new view"
+                      onSubmit={(values) => onCreate(values.name)}
+                    >
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Create new view
+                      </DropdownMenuItem>
+                    </EditViewDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <EditViewDialog
+                  title="Create new view"
+                  onSubmit={(values) => onCreate(values.name)}
+                >
                   <Button size="xs" variant="outline">
                     Save
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={onSave}>
-                    Save to this view
-                  </DropdownMenuItem>
-
-                  <EditViewDialog
-                    title="Create new view"
-                    onSubmit={(values) => onCreate(values.name)}
-                  >
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      Create new view
-                    </DropdownMenuItem>
-                  </EditViewDialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </EditViewDialog>
+              )}
             </div>
           </div>
         )}
@@ -151,9 +172,7 @@ export function ViewsLayout({
           </div>
         )}
 
-        <div className="grow flex flex-col relative px-4 pt-2 h-full">
-          {children}
-        </div>
+        <div className="relative px-4 pt-2 h-full">{children}</div>
       </div>
     </div>
   );

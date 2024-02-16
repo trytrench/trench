@@ -46,10 +46,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="p-1 px-2 my-auto h-6 flex items-center hover:bg-muted hover:text-muted-foreground"
-        >
+        <Button variant="ghost" size="xs">
           <ListFilter className="h-4 w-4 mr-1.5" />
           <span className="text-xs">Filter</span>
         </Button>
