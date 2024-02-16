@@ -12,11 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
-import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
-import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 import { AddEventFilterSubItem } from "./EventFilterSubItem";
-import { useRouter } from "next/router";
-import { handleError } from "../../lib/handleError";
+import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
 interface EditEntityFiltersProps {
   value: EntityFilters;
@@ -25,8 +22,6 @@ interface EditEntityFiltersProps {
 
 export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
-
-  const router = useRouter();
 
   const handleChange = (newValue: EntityFilters) => {
     onChange(newValue);
@@ -48,187 +43,100 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
     return f.entityTypeId === entityType;
   });
 
-  const entityTypeObj = allEntityTypes?.find((e) => e.id === entityType);
-
   return (
-    <>
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="p-1 px-2 my-auto h-6 flex items-center hover:bg-muted hover:text-muted-foreground"
-            >
-              <ListFilter className="h-4 w-4 mr-1.5" />
-              <span className="text-xs">Filter</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            {/* First Seen / Last Seen Filter */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>First Seen</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={firstSeen?.from}
-                  selected={{
-                    from: firstSeen?.from,
-                    to: firstSeen?.to,
-                  }}
-                  onSelect={(newRange) => {
-                    onChange({
-                      ...value,
-                      firstSeen: newRange,
-                    });
-                  }}
-                  numberOfMonths={2}
-                />
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Last Seen</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={lastSeen?.from}
-                  selected={{
-                    from: lastSeen?.from,
-                    to: lastSeen?.to,
-                  }}
-                  onSelect={(newRange) => {
-                    handleChange({
-                      ...value,
-                      lastSeen: newRange,
-                    });
-                  }}
-                  numberOfMonths={2}
-                />
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            <AddEventFilterSubItem
-              onAdd={(eventType) => {
-                handleChange({
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="p-1 px-2 my-auto h-6 flex items-center hover:bg-muted hover:text-muted-foreground"
+        >
+          <ListFilter className="h-4 w-4 mr-1.5" />
+          <span className="text-xs">Filter</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {/* First Seen / Last Seen Filter */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>First Seen</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={firstSeen?.from}
+              selected={{
+                from: firstSeen?.from,
+                to: firstSeen?.to,
+              }}
+              onSelect={(newRange) => {
+                onChange({
                   ...value,
-                  seenInEventType: eventType,
+                  firstSeen: newRange,
                 });
               }}
+              numberOfMonths={2}
             />
-
-            {/* Type Filter */}
-            <TypeSelectorSubItem
-              types={
-                allEntityTypes?.map((e) => ({
-                  id: e.id,
-                  name: e.type,
-                })) ?? []
-              }
-              value={entityType ?? null}
-              onChange={(type) => {
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Last Seen</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={lastSeen?.from}
+              selected={{
+                from: lastSeen?.from,
+                to: lastSeen?.to,
+              }}
+              onSelect={(newRange) => {
                 handleChange({
                   ...value,
-                  entityType: type,
+                  lastSeen: newRange,
                 });
               }}
+              numberOfMonths={2}
             />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
 
-            {/* Feature Filter*/}
-            <AddFeatureFilterSubItem
-              featureDefs={filteredFeatureDefs ?? []}
-              onAdd={(feature) => {
-                const featuresArr = featureFilters ?? [];
-                handleChange({
-                  ...value,
-                  features: [...featuresArr, feature],
-                });
-              }}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="mr-auto ml-3 flex gap-1 flex-wrap">
-        {entityType && (
-          <TypeChip
-            type={entityTypeObj?.type ?? ""}
-            onDelete={() => {
-              handleChange({
-                ...value,
-                entityType: undefined,
-              });
-            }}
-          />
-        )}
+        <AddEventFilterSubItem
+          onAdd={(eventType) => {
+            handleChange({
+              ...value,
+              seenInEventType: eventType,
+            });
+          }}
+        />
 
-        {firstSeen?.from && firstSeen.to && (
-          <DateRangeChip
-            title="First Seen"
-            dateRange={{
-              from: firstSeen.from,
-              to: firstSeen.to,
-            }}
-            onDelete={() => {
-              handleChange({
-                ...value,
-                firstSeen: undefined,
-              });
-            }}
-          />
-        )}
+        {/* Type Filter */}
+        <TypeSelectorSubItem
+          types={
+            allEntityTypes?.map((e) => ({
+              id: e.id,
+              name: e.type,
+            })) ?? []
+          }
+          value={entityType ?? null}
+          onChange={(type) => {
+            handleChange({
+              ...value,
+              entityType: type,
+            });
+          }}
+        />
 
-        {lastSeen?.from && lastSeen.to && (
-          <DateRangeChip
-            title="Last Seen"
-            dateRange={{
-              from: lastSeen.from,
-              to: lastSeen.to,
-            }}
-            onDelete={() => {
-              handleChange({
-                ...value,
-                lastSeen: undefined,
-              });
-            }}
-          />
-        )}
-
-        {featureFilters?.map((filter, idx) => (
-          <FeatureFilterChip
-            key={idx}
-            filter={filter}
-            onDelete={() => {
-              const newFeatures = featureFilters?.filter((_, i) => i !== idx);
-              handleChange({
-                ...value,
-                features: newFeatures,
-              });
-            }}
-            onChange={(newFilter) => {
-              const newFeatures = featureFilters?.map((f, i) =>
-                i === idx ? newFilter : f
-              );
-              handleChange({
-                ...value,
-                features: newFeatures,
-              });
-            }}
-          />
-        ))}
-
-        {seenInEventType && (
-          <TypeChip
-            title="Event"
-            type={seenInEventType}
-            onDelete={() => {
-              onChange({
-                ...value,
-                seenInEventType: undefined,
-              });
-            }}
-          />
-        )}
-      </div>
-    </>
+        {/* Feature Filter*/}
+        <AddFeatureFilterSubItem
+          featureDefs={filteredFeatureDefs ?? []}
+          onAdd={(feature) => {
+            const featuresArr = featureFilters ?? [];
+            handleChange({
+              ...value,
+              features: [...featuresArr, feature],
+            });
+          }}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

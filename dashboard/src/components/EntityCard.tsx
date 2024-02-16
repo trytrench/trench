@@ -1,6 +1,5 @@
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
-import { MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useDecision } from "~/hooks/useDecision";
 import { api, type RouterOutputs } from "~/utils/api";
@@ -11,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -23,7 +21,6 @@ interface Props {
   featureOrder: string[];
   onFeatureOrderChange: (newOrder: string[]) => void;
   isEditing?: boolean;
-  onIsEditingChange: (isEditing: boolean) => void;
 }
 
 export const EntityCard = ({
@@ -32,7 +29,6 @@ export const EntityCard = ({
   featureOrder,
   onFeatureOrderChange,
   isEditing = false,
-  onIsEditingChange,
 }: Props) => {
   const decision = useDecision(entity.features);
   const { data: entityTypes } = api.entityTypes.list.useQuery();
@@ -95,32 +91,8 @@ export const EntityCard = ({
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                size="sm"
-                className="h-8"
-                onClick={() => onIsEditingChange(false)}
-              >
-                Done
-              </Button>
             </>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="iconXs" variant="link" className="h-3">
-                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent>
-              <DropdownMenuItem
-                onSelect={() => {
-                  onIsEditingChange(true);
-                }}
-              >
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* <div className="ml-3">

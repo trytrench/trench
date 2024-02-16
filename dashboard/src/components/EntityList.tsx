@@ -1,10 +1,8 @@
-import clsx from "clsx";
 import { Entity, TypeName } from "event-processing";
-import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
+import { LayoutGrid, List, Loader2Icon } from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
-import { Button } from "~/components/ui/button";
 import { SpinnerButton } from "~/components/ui/custom/spinner-button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
@@ -12,20 +10,15 @@ import { handleError } from "~/lib/handleError";
 import { EntityViewConfig } from "~/shared/validation";
 import { api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
-import { EditViewDialog } from "./EditViewDialog";
 import { EntityListDataTable } from "./EntityListDataTable";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Toggle } from "./ui/toggle";
+import { ViewsLayout } from "./ViewsLayout";
+import { RenderEntityFilters } from "./filters/RenderEntityFilters";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 const useEntityViewConfig = (seenWithEntity: Entity) => {
   const router = useRouter();
 
-  const { data: views, refetch } = api.entityViews.list.useQuery({
+  const { data: views } = api.entityViews.list.useQuery({
     entityTypeId: seenWithEntity?.type ?? null,
   });
 
@@ -38,14 +31,7 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
       // If there are views, and the query param is set, set the view config
       if (router.query.view) {
         const view = views.find((view) => view.id === router.query.view);
-        if (view)
-          setViewConfig({
-            ...view.config,
-            filters: {
-              ...view.config.filters,
-              seenWithEntity,
-            },
-          });
+        if (view) setViewConfig(view.config);
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
@@ -56,17 +42,14 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
           .catch(handleError);
       }
     }
-  }, [views, router, seenWithEntity]);
+  }, [views, router]);
 
   useEffect(() => {
     // If there are no views, default to viewing the first entity type
     if (views && !views.length && entityTypes?.[0] && !viewConfig) {
       setViewConfig({
         type: "grid",
-        filters: {
-          entityType: entityTypes[0].id,
-          seenWithEntity,
-        },
+        filters: { entityType: entityTypes[0].id },
       });
     }
   }, [views, entityTypes, seenWithEntity, viewConfig]);
@@ -102,7 +85,10 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     hasNextPage,
   } = api.lists.getEntitiesList.useInfiniteQuery(
     {
-      entityFilters: viewConfig?.filters ?? {},
+      entityFilters: {
+        ...viewConfig?.filters,
+        seenWithEntity,
+      },
       // sortBy,
       // limit,
     },
@@ -155,161 +141,105 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex p-3 px-8 border-b items-center">
+    <ViewsLayout
+      views={views ?? []}
+      filterComponent={
         <EditEntityFilters
           value={viewConfig?.filters ?? {}}
           onChange={(filters) => {
             if (viewConfig) setViewConfig({ ...viewConfig, filters });
           }}
         />
-
-        <div className="flex gap-1">
-          <Toggle
-            className="h-6 flex items-center"
-            onClick={() => {
-              if (viewConfig) setViewConfig({ ...viewConfig, type: "grid" });
+      }
+      toggleComponent={
+        <Tabs
+          value={viewConfig?.type}
+          onValueChange={(value) => {
+            if (!viewConfig) return;
+            setViewConfig({
+              ...viewConfig,
+              type: value as "grid" | "list",
+            });
+          }}
+        >
+          <TabsList className="p-0.5">
+            <TabsTrigger className="px-2" value="grid">
+              <LayoutGrid className="h-4 w-4" />
+            </TabsTrigger>
+            <TabsTrigger className="px-2" value="list">
+              <List className="h-4 w-4" />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      }
+      filtersComponent={
+        !isEditing &&
+        viewConfig?.filters &&
+        Object.entries(viewConfig.filters).filter((filter) =>
+          Array.isArray(filter[1]) ? filter[1].length : filter[1]
+        ).length > 0 && (
+          <div className="border-b px-6 py-3 flex justify-between"></div>
+        ) ? (
+          <RenderEntityFilters
+            filters={viewConfig.filters}
+            onFiltersChange={(filters) => {
+              setViewConfig({
+                ...viewConfig,
+                filters,
+              });
             }}
-            pressed={viewConfig?.type === "grid"}
-          >
-            <LayoutGrid className="h-4 w-4 mr-1.5" />
-            <span className="text-xs">Grid</span>
-          </Toggle>
-          <Toggle
-            className="h-6 flex items-center"
-            onClick={() => {
-              if (viewConfig) setViewConfig({ ...viewConfig, type: "list" });
-            }}
-            pressed={viewConfig?.type === "list"}
-          >
-            <List className="h-4 w-4 mr-1.5" />
-            <span className="text-xs">List</span>
-          </Toggle>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="xs" variant="outline">
-              Save
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              onSelect={() => {
-                if (viewConfig && typeof router.query.view === "string") {
-                  updateView({
-                    id: router.query.view,
-                    config: viewConfig,
-                  })
-                    .then(() => refetchViews())
-                    .catch(handleError);
-                }
-              }}
-            >
-              Save to this view
-            </DropdownMenuItem>
-
-            <EditViewDialog
-              title="Create new view"
-              onSubmit={(values) => {
-                if (viewConfig)
-                  createView({
-                    name: values.name,
-                    config: viewConfig,
-                    entityTypeId: seenWithEntity?.type,
-                  })
-                    .then(() => {
-                      return refetchViews();
-                    })
-                    .catch(handleError);
-              }}
-            >
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                Create new view
-              </DropdownMenuItem>
-            </EditViewDialog>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="flex h-full">
-        <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
-          <div className="text-sm font-medium text-emphasis-foreground">
-            Views
-          </div>
-          {views?.map((view) => (
-            <div
-              onClick={() =>
-                router.push({
-                  pathname: router.pathname,
-                  query: { ...router.query, view: view.id },
-                })
-              }
-              key={view.id}
-              className={clsx(
-                "px-4 py-1 w-full text-sm text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted cursor-pointer",
-                {
-                  "bg-accent text-accent-foreground":
-                    router.query.view === view.id,
-                }
-              )}
-            >
-              {view.name}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="iconXs"
-                    variant="link"
-                    className="h-3 ml-auto shrink-0"
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent>
-                  <EditViewDialog
-                    title="Update view"
-                    onSubmit={(values) => {
-                      if (typeof router.query.view === "string") {
-                        updateView({
-                          id: router.query.view,
-                          name: values.name,
-                        })
-                          .then(() => {
-                            return refetchViews();
-                          })
-                          .catch(handleError);
-                      }
-                    }}
-                  >
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      Rename
-                    </DropdownMenuItem>
-                  </EditViewDialog>
-
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      if (typeof router.query.view === "string") {
-                        deleteView({ id: router.query.view })
-                          .then(() => refetchViews())
-                          .catch(handleError);
-                      }
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
-        </div>
-
-        {viewConfig?.type === "grid" ? (
-          <ScrollArea className="h-full flex-1">
-            <div className="flex flex-col gap-4 px-8 py-4">
-              {entitiesLoading ? (
-                <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
-              ) : (
-                <>
-                  {allEntities.map((entity) => {
+          />
+        ) : undefined
+      }
+      onSave={() => {
+        if (typeof router.query.view !== "string" || !viewConfig) return;
+        updateView({
+          id: router.query.view,
+          config: viewConfig,
+        })
+          .then(() => refetchViews())
+          .catch(handleError);
+      }}
+      onCreate={(name) => {
+        if (typeof router.query.view !== "string" || !viewConfig) return;
+        createView({
+          name,
+          config: viewConfig,
+        })
+          .then(() => {
+            return refetchViews();
+          })
+          .catch(handleError);
+      }}
+      onRename={(name) => {
+        if (typeof router.query.view !== "string") return;
+        updateView({
+          id: router.query.view,
+          name,
+        })
+          .then(() => {
+            return refetchViews();
+          })
+          .catch(handleError);
+      }}
+      onDelete={() => {
+        if (typeof router.query.view !== "string") return;
+        deleteView({ id: router.query.view })
+          .then(() => refetchViews())
+          .catch(handleError);
+      }}
+      onIsEditingChange={setIsEditing}
+      isEditing={isEditing}
+    >
+      {viewConfig?.type === "grid" ? (
+        <ScrollArea className="h-full flex-1">
+          <div className="flex flex-col gap-4 px-8 py-4">
+            {entitiesLoading ? (
+              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+            ) : (
+              <>
+                {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
+                  (entity) => {
                     return (
                       <EntityCard
                         key={`${entity.entityType}:${entity.entityId}`}
@@ -325,46 +255,43 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                           })
                         }
                         isEditing={isEditing}
-                        onIsEditingChange={setIsEditing}
                       />
                     );
-                  })}
-                  {hasNextPage && (
-                    <div className="self-center my-4">
-                      <SpinnerButton
-                        variant="outline"
-                        onClick={() => {
-                          fetchNextPage().catch((err) => {
-                            console.error(err);
-                          });
-                        }}
-                        loading={isFetchingNextPage}
-                      >
-                        Fetch more entities
-                      </SpinnerButton>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </ScrollArea>
-        ) : (
-          <EntityListDataTable
-            features={filteredFeatures ?? []}
-            entities={allEntities}
-            config={
-              viewConfig?.tableConfig ?? {
-                columnVisibility: {},
-                columnOrder: [],
-              }
+                  }
+                )}
+                {hasNextPage && (
+                  <div className="self-center my-4">
+                    <SpinnerButton
+                      variant="outline"
+                      onClick={() => {
+                        fetchNextPage().catch((err) => {
+                          console.error(err);
+                        });
+                      }}
+                      loading={isFetchingNextPage}
+                    >
+                      Fetch more entities
+                    </SpinnerButton>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      ) : (
+        <EntityListDataTable
+          features={filteredFeatures ?? []}
+          entities={allEntities}
+          config={
+            viewConfig?.tableConfig ?? {
+              columnVisibility: {},
+              columnOrder: [],
             }
-            loading={entitiesLoading}
-            onConfigChange={handleTableConfigChange}
-          />
-        )}
-
-        <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div>
-      </div>
-    </div>
+          }
+          loading={entitiesLoading}
+          onConfigChange={handleTableConfigChange}
+        />
+      )}
+    </ViewsLayout>
   );
 };

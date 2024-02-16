@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { useMemo } from "react";
 
 export const EventCardSection = ({
   id,
@@ -37,6 +38,10 @@ export const EventCardSection = ({
 }) => {
   const { data: features } = api.features.list.useQuery();
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const entityTypeName = useMemo(
+    () => entityTypes?.find((et) => et.id === entity.type)?.type ?? "",
+    [entity.type, entityTypes]
+  );
 
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
@@ -51,42 +56,18 @@ export const EventCardSection = ({
       <div className="flex items-center mb-2">
         {isEditing && (
           <GripVertical
-            className="cursor-pointer w-4 h-4 shrink-0"
+            className="cursor-pointer w-4 h-4 mr-1 shrink-0"
             {...attributes}
             {...listeners}
           />
         )}
 
-        <div className="text-md mr-1">
-          {
-            entityTypes?.find((entityType) => entityType.id === entity.type)
-              ?.type
-          }
-        </div>
-
         <EntityChip
           entityId={entity.id}
           entityType={entity.type}
-          name={entityNameMap[entity.id] ?? entity.id}
-          href={`/entity/${entity.type}/${entity.id}`}
+          name={`${entityTypeName}: ${entityNameMap[entity.id] ?? entity.id}`}
+          href={`/entity/${entityTypeName}/${entity.id}`}
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="iconXs" variant="link" className="h-3">
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              onSelect={() => {
-                // onIsEditingChange(true);
-              }}
-            >
-              Edit
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {isEditing && (
           <>

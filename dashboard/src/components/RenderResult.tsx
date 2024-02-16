@@ -42,7 +42,7 @@ export function RenderTypedData({ data }: { data: TypedData }) {
       return data.value ? "True" : "False";
     case TypeName.String:
     case TypeName.Name:
-      return data.value;
+      return data.value || "-";
     case TypeName.Float64:
     case TypeName.Int64:
       return data.value;

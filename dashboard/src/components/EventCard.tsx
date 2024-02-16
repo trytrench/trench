@@ -7,7 +7,10 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
@@ -30,11 +33,13 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { EventCardSection } from "./EventCardSection";
+import { MoreHorizontal } from "lucide-react";
 
 interface Props {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
@@ -105,75 +110,76 @@ export function EventCard({
           {format(new Date(event.timestamp), "MMM d, yyyy h:mm:ss a")}
         </div>
         <div className="flex text-sm items-center mt-2">
-          {decision && <RenderDecision decision={decision} />}
+          {isEditing && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden mb-4 h-8 lg:flex"
+                >
+                  <MixerHorizontalIcon className="mr-2 h-4 w-4" />
+                  View
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-[150px] max-h-[400px] overflow-auto"
+              >
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {nodes
+                  .filter((node) => hasFnType(node, FnType.EntityAppearance))
+                  .map((node) => (
+                    <DropdownMenuCheckboxItem
+                      key={node.id}
+                      className="capitalize"
+                      // Assumes that an event will have one entity per entity type
+                      checked={
+                        hasFnType(node, FnType.EntityAppearance) &&
+                        config.entityTypeOrder.includes(
+                          node.fn.returnSchema.entityType
+                        )
+                      }
+                      onCheckedChange={(value) => {
+                        if (hasFnType(node, FnType.EntityAppearance)) {
+                          onConfigChange(
+                            value
+                              ? {
+                                  ...config,
+                                  entityTypeOrder: [
+                                    ...config.entityTypeOrder,
+                                    node.fn.returnSchema.entityType,
+                                  ],
+                                }
+                              : {
+                                  ...config,
+                                  entityTypeOrder:
+                                    config.entityTypeOrder.filter(
+                                      (id) =>
+                                        id !== node.fn.returnSchema.entityType
+                                    ),
+                                }
+                          );
+                        }
+                      }}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {node.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {/* {decision && <RenderDecision decision={decision} />} */}
         </div>
       </div>
       <Panel className="mt-3 min-w-0 flex-1 text-sm text-muted-foreground">
-        {isEditing && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden mb-4 h-8 lg:flex"
-              >
-                <MixerHorizontalIcon className="mr-2 h-4 w-4" />
-                View
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-[150px] max-h-[400px] overflow-auto"
-            >
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {nodes
-                .filter((node) => hasFnType(node, FnType.EntityAppearance))
-                .map((node) => (
-                  <DropdownMenuCheckboxItem
-                    key={node.id}
-                    className="capitalize"
-                    // Assumes that an event will have one entity per entity type
-                    checked={
-                      hasFnType(node, FnType.EntityAppearance) &&
-                      config.entityTypeOrder.includes(
-                        node.fn.returnSchema.entityType
-                      )
-                    }
-                    onCheckedChange={(value) => {
-                      if (hasFnType(node, FnType.EntityAppearance)) {
-                        onConfigChange(
-                          value
-                            ? {
-                                ...config,
-                                entityTypeOrder: [
-                                  ...config.entityTypeOrder,
-                                  node.fn.returnSchema.entityType,
-                                ],
-                              }
-                            : {
-                                ...config,
-                                entityTypeOrder: config.entityTypeOrder.filter(
-                                  (id) => id !== node.fn.returnSchema.entityType
-                                ),
-                              }
-                        );
-                      }
-                    }}
-                    onSelect={(event) => event.preventDefault()}
-                  >
-                    {node.name}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
+          modifiers={[restrictToParentElement, restrictToVerticalAxis]}
         >
           <SortableContext
             items={event.entities.map((entity) => entity.type)}
