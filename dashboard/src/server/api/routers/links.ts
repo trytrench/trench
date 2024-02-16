@@ -47,7 +47,7 @@ export const linksRouter = createTRPCRouter({
             SELECT
                 unique_entity_id,
                 value_String as entity_name
-            FROM entity_features_view
+            FROM latest_entity_features_view
             WHERE
                 data_type = 'Name'
         ),
@@ -114,7 +114,7 @@ export const linksRouter = createTRPCRouter({
           SELECT
               unique_entity_id,
               value_String as entity_name
-          FROM entity_features_view
+          FROM latest_entity_features_view
           WHERE
               data_type = 'Name'
           AND unique_entity_id IN (${uniqueIds
