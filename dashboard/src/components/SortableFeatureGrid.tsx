@@ -19,6 +19,7 @@ import { GripVertical, X } from "lucide-react";
 import { AnnotatedFeature } from "~/shared/types";
 import { EntityChip } from "./EntityChip";
 import { RenderResult } from "./RenderResult";
+import { sortBy } from "lodash";
 
 const SortableFeature = ({
   id,
@@ -55,7 +56,10 @@ const SortableFeature = ({
         )}
         <div className="font-semibold truncate">{name}</div>
         {isEditing && (
-          <X className="ml-auto cursor-pointer w-4 h-4" onClick={onDelete} />
+          <X
+            className="ml-auto cursor-pointer w-4 h-4 shrink-0"
+            onClick={onDelete}
+          />
         )}
       </div>
       <div className="truncate">
@@ -148,32 +152,27 @@ export const SortableFeatureGrid = ({
               )
               .map((feature) => feature.featureId)}
           >
-            {features
-              .filter(
+            {sortBy(
+              features.filter(
                 (feature) =>
                   !feature.rule && featureOrder.includes(feature.featureId)
-              )
-              .sort((a, b) => {
-                return (
-                  featureOrder.indexOf(a.featureId) -
-                  featureOrder.indexOf(b.featureId)
-                );
-              })
-              .map(({ featureId, featureName, result }) => (
-                <SortableFeature
-                  key={featureId}
-                  id={featureId}
-                  name={featureName}
-                  result={result}
-                  entityNameMap={entityNameMap}
-                  onDelete={() => {
-                    onFeatureOrderChange(
-                      featureOrder.filter((id) => id !== featureId)
-                    );
-                  }}
-                  isEditing={isEditing}
-                />
-              ))}
+              ),
+              (feature) => featureOrder.indexOf(feature.featureId)
+            ).map(({ featureId, featureName, result }) => (
+              <SortableFeature
+                key={featureId}
+                id={featureId}
+                name={featureName}
+                result={result}
+                entityNameMap={entityNameMap}
+                onDelete={() => {
+                  onFeatureOrderChange(
+                    featureOrder.filter((id) => id !== featureId)
+                  );
+                }}
+                isEditing={isEditing}
+              />
+            ))}
           </SortableContext>
         </DndContext>
       </div>

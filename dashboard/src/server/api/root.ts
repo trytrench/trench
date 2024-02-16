@@ -9,6 +9,7 @@ import { entityViewsRouter } from "./routers/entityViews";
 import { decisionsRouter } from "./routers/decisions";
 import { editorRouter } from "./routers/editor";
 import { chartsRouter } from "./routers/charts";
+import { eventViewsRouter } from "./routers/eventViews";
 
 /**
  * This is the primary router for your server.
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   decisions: decisionsRouter,
   editor: editorRouter,
   charts: chartsRouter,
+  eventViews: eventViewsRouter,
 });
 
 // export type definition of API
