@@ -1,4 +1,4 @@
-import { countBy, groupBy, uniq } from "lodash";
+import { countBy, groupBy, mapValues, sumBy, uniq } from "lodash";
 import {
   EntityWithName,
   LeftItem,
@@ -53,14 +53,16 @@ export const processQueryOutput = ({
   const groupedLinks = rawLinks.filter((l) => isGrouped(l.from.type));
 
   // UNGROUPED, 1: get right entity ids
-  const linksPerUngroupedLeft = countBy(notGroupedLinks, (l) => l.from.id);
   const nonHiddenLinks = notGroupedLinks.filter(
-    (l) => linksPerUngroupedLeft[l.from.id]! <= HIDE_LINKS_THRESHOLD
+    (l) => l.to.numLinks <= HIDE_LINKS_THRESHOLD
   );
   const rightSide = uniq(nonHiddenLinks.map((l) => l.to.id));
 
   // GROUPED, 1: get right entity ids
-  const linksPerGroupedLeft = countBy(groupedLinks, (l) => l.from.type);
+  const linksPerGroupedLeft = mapValues(
+    groupBy(groupedLinks, (l) => l.from.type),
+    (links) => sumBy(links, (l) => l.to.numLinks)
+  );
   // TODO: for right side, only get the top 20 per type by link count
   const groupLinks = Object.entries(
     groupBy(groupedLinks, (l) => l.from.type)
@@ -91,7 +93,7 @@ export const processQueryOutput = ({
 
   const linkItems: LinkItem[] = [
     ...ungroupedLinks.map((l) => {
-      const isHidden = linksPerUngroupedLeft[l.from.id]! > HIDE_LINKS_THRESHOLD;
+      const isHidden = l.to.numLinks > HIDE_LINKS_THRESHOLD;
       return {
         itemType: isHidden ? ("hiddenLink" as const) : ("link" as const),
         from: l.from.id,
@@ -109,14 +111,13 @@ export const processQueryOutput = ({
 
   const leftItems: LeftItem[] = [
     ...notGrouped.map((e) => {
-      const linkCount = linksPerUngroupedLeft[e.id] ?? 0;
       return {
         itemType: "entity" as const,
         id: e.id,
         type: e.type,
         name: e.name,
-        linkCount: linkCount,
-        isHidden: linkCount > HIDE_LINKS_THRESHOLD,
+        linkCount: e.numLinks,
+        isHidden: e.numLinks > HIDE_LINKS_THRESHOLD,
       };
     }),
     ...groupedTypes.map((type) => ({

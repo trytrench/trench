@@ -255,8 +255,6 @@ function LeftSideCard(props: LeftSideCardProps) {
   const { item, isActive, isSelected, onClick, onFilterClick, divRef, href } =
     props;
 
-  const nameMap = useEntityNameMap([item.id]);
-
   const { data: entityTypes } = api.entityTypes.list.useQuery();
   const entityTypesMap = useMemo(() => {
     return new Map(entityTypes?.map((et) => [et.id, et.type]) ?? []);
@@ -309,7 +307,7 @@ function LeftSideCard(props: LeftSideCardProps) {
             <div className="font-semibold text-emphasis-foreground">
               {entityTypesMap.get(item.type)}
             </div>
-            <div className="">{nameMap[item.name] ?? item.name}</div>
+            <div className="">{item.name}</div>
           </div>
         </div>
       )}

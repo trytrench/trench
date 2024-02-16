@@ -3,7 +3,7 @@ import { FnType } from "../enum";
 import { createFnTypeDefBuilder } from "../builder";
 import { TypeName, createDataType } from "../../data-types";
 import { ClickhouseClient } from "databases";
-import { StoreTable } from "../lib/store";
+import { StoreRow, StoreRowMap, StoreTable } from "../lib/store";
 import { getUnixTime } from "date-fns";
 import { get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
@@ -37,7 +37,7 @@ export const entityAppearanceFnResolver = createFnTypeResolverBuilder()
         id,
       };
 
-      const rowToSave = {
+      const rowToSave: StoreRowMap[StoreTable.Features] = {
         engine_id: engineId,
         created_at: getUnixTime(new Date()),
         event_type: event.type,
@@ -47,6 +47,7 @@ export const entityAppearanceFnResolver = createFnTypeResolverBuilder()
         feature_id: entity.type,
         entity_type: entity.type,
         entity_id: entity.id,
+        unique_entity_id: `${entity.type}_${entity.id}`,
         data_type: TypeName.Entity,
         value: JSON.stringify(entity),
         value_Int64: null,
