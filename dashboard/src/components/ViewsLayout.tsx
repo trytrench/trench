@@ -73,7 +73,7 @@ export function ViewsLayout({
         ))}
       </div>
 
-      <div className="flex flex-col h-full overflow-auto">
+      <div className="flex flex-col h-full flex-grow overflow-auto">
         {isEditing ? (
           <div className="flex justify-end items-center h-14 px-8 border-b shrink-0">
             <div className="space-x-2">
