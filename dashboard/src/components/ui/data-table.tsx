@@ -157,7 +157,7 @@ export function DataTable<TData, TValue>({
   );
 
   return (
-    <div>
+    <div className="relative">
       <div className="flex items-center py-4">{renderHeader?.(table)}</div>
       <div className="rounded-md border">
         <Table>

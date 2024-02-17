@@ -45,8 +45,8 @@ export function ViewsLayout({
   );
 
   return (
-    <div className="flex h-full ">
-      <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6">
+    <div className="flex h-full items-stretch">
+      <div className="w-64 border-r shrink-0 space-y-1 pt-4 px-6 h-full">
         <div className="text-sm font-medium text-emphasis-foreground">
           Views
         </div>
@@ -73,9 +73,9 @@ export function ViewsLayout({
         ))}
       </div>
 
-      <div className="flex-1">
+      <div className="flex flex-col h-full overflow-auto">
         {isEditing ? (
-          <div className="flex justify-end items-center h-14 px-8 border-b">
+          <div className="flex justify-end items-center h-14 px-8 border-b shrink-0">
             <div className="space-x-2">
               <Button
                 variant="outline"
@@ -90,7 +90,7 @@ export function ViewsLayout({
             </div>
           </div>
         ) : (
-          <div className="flex items-center h-14 px-8 border-b">
+          <div className="flex items-center h-14 px-8 border-b shrink-0">
             <div className="text-emphasis-foreground text-sm">
               {currentView?.name}
             </div>
@@ -172,7 +172,8 @@ export function ViewsLayout({
           </div>
         )}
 
-        <div className="relative px-4 pt-2 h-full">{children}</div>
+        {/* <div className="flex-grow px-4 pt-2 bg-blue-100 ">{children}</div> */}
+        <div className="flex-grow min-h-0">{children}</div>
       </div>
     </div>
   );

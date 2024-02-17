@@ -1,5 +1,6 @@
 import { type z } from "zod";
 import {
+  EntityViewConfig,
   type entityFiltersZod,
   type eventFiltersZod,
 } from "../shared/validation";

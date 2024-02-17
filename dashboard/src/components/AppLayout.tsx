@@ -7,9 +7,9 @@ interface Props {
 
 export default function AppLayout({ children }: Props) {
   return (
-    <div className="h-0 min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       <Navbar />
-      <div className="flex-1 overflow-auto">{children}</div>
+      <div className="flex-grow w-full min-h-0">{children}</div>
     </div>
   );
 }
