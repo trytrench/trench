@@ -10,6 +10,7 @@ import {
 import {
   SortableContext,
   arrayMove,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
@@ -121,6 +122,13 @@ export const SortableFeatureGrid = ({
     }
   }
 
+  const filteredFeatures = sortBy(
+    features.filter(
+      (feature) => !feature.rule && featureOrder.includes(feature.featureId)
+    ),
+    (feature) => featureOrder.indexOf(feature.featureId)
+  );
+
   return features.length > 0 ? (
     <>
       {rulesToShow.length > 0 && (
@@ -149,20 +157,10 @@ export const SortableFeatureGrid = ({
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={features
-              .filter(
-                (feature) =>
-                  !feature.rule && featureOrder.includes(feature.featureId)
-              )
-              .map((feature) => feature.featureId)}
+            strategy={rectSortingStrategy}
+            items={filteredFeatures.map((feature) => feature.featureId)}
           >
-            {sortBy(
-              features.filter(
-                (feature) =>
-                  !feature.rule && featureOrder.includes(feature.featureId)
-              ),
-              (feature) => featureOrder.indexOf(feature.featureId)
-            ).map(({ featureId, featureName, result }) => (
+            {filteredFeatures.map(({ featureId, featureName, result }) => (
               <SortableFeature
                 key={featureId}
                 id={featureId}

@@ -44,7 +44,7 @@ export class ExecutionEngine {
     const { nodeDefs, engineId } = props;
     this.engineId = engineId;
     this.context = this.initializeContext();
-    this.eventQueue = new PQueue({ concurrency: 5 });
+    this.eventQueue = new PQueue({ concurrency: 1 });
     this.functionQueues = {};
 
     // Create all function queues
