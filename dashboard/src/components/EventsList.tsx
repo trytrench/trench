@@ -218,7 +218,7 @@ export default function EventsList({ entity }: EventsListProps) {
             .catch(handleError);
         }}
         onCreate={(name) => {
-          if (typeof router.query.view !== "string" || !viewConfig) return;
+          if (!viewConfig) return;
           createView({
             name,
             config: viewConfig,

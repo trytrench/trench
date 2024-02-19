@@ -14,7 +14,7 @@ import {
 } from "event-processing/src/function-type-defs/lib/store";
 import { getUnixTime } from "date-fns";
 
-const PAUSE_ENGINE = true;
+const PAUSE_ENGINE = false;
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
   // Check database for new engine, and update in-memory engine if necessary
@@ -46,7 +46,7 @@ async function initEventHandler() {
     const lastEventProcessedId = await fetchLastEventProcessedId();
     const eventObjs = await getEventsSince({
       lastEventProcessedId,
-      limit: 100000,
+      limit: 1000,
     });
     if (eventObjs.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -68,7 +68,7 @@ async function initEventHandler() {
           id: event.id,
           type: event.type,
           data: event.data,
-          timestamp: getUnixTime(event.timestamp),
+          timestamp: event.timestamp.getTime(),
         },
       }));
 
