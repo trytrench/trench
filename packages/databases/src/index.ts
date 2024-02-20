@@ -31,6 +31,7 @@ if (env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export const db = createClient({
   host: env.CLICKHOUSE_URL,
+  password: env.CLICKHOUSE_PASSWORD,
 });
 
 export type ClickhouseClient = typeof db;
