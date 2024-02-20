@@ -8,6 +8,7 @@ import {
   TypeName,
   hasFnType,
 } from "event-processing";
+import { MoreHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
+import { handleError } from "~/lib/handleError";
 import { api } from "~/utils/api";
 import { generateNanoId } from "../../../../packages/common/src";
 import { CreateEventFeatureDialog } from "./CreateEventFeatureDialog";
@@ -26,9 +28,6 @@ import { CreateRuleDialog } from "./CreateRuleDialog";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
-import { handleError } from "~/lib/handleError";
-import { MoreHorizontal } from "lucide-react";
-import { Separator } from "../ui/separator";
 
 const FeatureItem = ({
   feature,
@@ -56,7 +55,7 @@ const FeatureItem = ({
         value={dataPath}
         onChange={onDataPathChange}
         eventType={eventType}
-        desiredSchema={feature.schema}
+        // desiredSchema={feature.schema}
       />
     </div>
   );
@@ -169,12 +168,14 @@ export default function AssignEntities({ eventType }: Props) {
 
   const filteredFeatures = useMemo(
     () =>
-      features?.filter((feature) =>
-        selectedNodeId === EVENT
+      features?.filter((feature) => {
+        const selectedNodeSchema = selectedNode?.fn.returnSchema;
+        return selectedNodeId === EVENT
           ? feature.eventTypeId === eventType
-          : // TODO: Fix types
-            feature.entityTypeId === selectedNode?.fn.returnSchema.entityType
-      ),
+          : selectedNodeSchema &&
+              selectedNodeSchema.type === TypeName.Entity &&
+              selectedNodeSchema.entityType === feature.entityTypeId;
+      }),
     [features, selectedNodeId, selectedNode, eventType]
   );
 
@@ -182,9 +183,14 @@ export default function AssignEntities({ eventType }: Props) {
     <div>
       <Card className="flex relative">
         <div className="p-4 w-48 border-r">
-          <NodeItem
-            name="Event"
-            selected={selectedNodeId === EVENT}
+          <div
+            className={clsx(
+              "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center",
+              {
+                "bg-accent text-accent-foreground": selectedNodeId === EVENT,
+                "hover:bg-muted cursor-pointer": selectedNodeId !== EVENT,
+              }
+            )}
             onClick={() => setSelectedNodeId(EVENT)}
           />
 
@@ -332,7 +338,6 @@ export default function AssignEntities({ eventType }: Props) {
                           entityDataPath: {
                             nodeId: selectedNode.id,
                             path: [],
-                            schema: selectedNode.fn.returnSchema,
                           },
                         },
                       })

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { TypeName } from "event-processing";
 import { useEntityName } from "~/hooks/useEntityName";
+import { type FeatureSuccess } from "../shared/types";
 
 interface Props {
   entityId: string;
@@ -36,7 +37,8 @@ export const EntityHoverCard = ({ entityId, entityType, children }: Props) => {
             feature.result.type === "success" &&
             feature.result.data.schema.type === TypeName.Entity
         )
-        .map((feature) => feature.result.data.value.id) ?? []
+        .map((feature) => (feature.result as FeatureSuccess).data.value.id) ??
+      []
     );
   }, [entity]);
   const entityNameMap = useEntityNameMap(entityIds);

@@ -30,18 +30,18 @@ import { TypeName } from "event-processing";
 interface TypeChipProps extends React.ComponentPropsWithoutRef<"div"> {
   type: string;
   onDelete?: () => void;
+  title?: string;
 }
 
-const TypeChip = ({ type, onDelete, className, ...props }: TypeChipProps) => {
+const TypeChip = ({
+  type,
+  onDelete,
+  className,
+  title = "Type",
+}: TypeChipProps) => {
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "flex pr-2 animate-in zoom-in-95 fade-in-20 bg-card",
-        className
-      )}
-    >
-      Type: {type}
+    <Badge variant="outline" className={cn("flex pr-2 bg-card", className)}>
+      {title}: {type}
       <button
         className="ml-1 rounded-full flex items-center"
         onClick={onDelete}
@@ -66,10 +66,7 @@ const LabelChip = ({
   ...props
 }: LabelChipProps) => {
   return (
-    <Badge
-      variant="default"
-      className={cn("flex pr-2 animate-in zoom-in-95 fade-in-20", className)}
-    >
+    <Badge variant="default" className={cn("flex pr-2", className)}>
       {label}
       <button
         className="ml-1 rounded-full flex items-center"
@@ -103,10 +100,7 @@ const DateRangeChip = ({
   }
 
   return (
-    <Badge
-      variant="default"
-      className={cn("flex pr-2 animate-in zoom-in-95 fade-in-20", className)}
-    >
+    <Badge variant="default" className={cn("flex pr-2", className)}>
       {title}: {dateRangeString}
       <button
         className="ml-1 rounded-full flex items-center"
@@ -140,7 +134,7 @@ const JsonFilterChip = ({
   const availableOps = useMemo(() => getAvailableOps(dataType), [dataType]);
 
   return (
-    <div className="flex animate-in zoom-in-95 fade-in-20">
+    <div className="flex">
       <Badge
         variant="outline"
         className={cn("rounded-r-none border-r-none pr-2", className)}
@@ -330,6 +324,7 @@ export function FeatureFilterChip(props: {
         />
       );
     }
+    case TypeName.Name:
     case TypeName.String: {
       return (
         <StringFilterChip
@@ -462,7 +457,10 @@ function NumberFilterChip(props: {
   );
 }
 
-type StringFilter = Extract<FeatureFilter, { dataType: TypeName.String }>;
+type StringFilter = Extract<
+  FeatureFilter,
+  { dataType: TypeName.String | TypeName.Name }
+>;
 
 const STRING_FILTER_OPS = [
   { key: "eq", label: "=" },

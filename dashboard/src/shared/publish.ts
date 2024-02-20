@@ -1,16 +1,16 @@
 import {
-  FnDef,
+  type FnDef,
   FnType,
-  NodeDefAny,
-  TSchema,
+  type NodeDefAny,
   TypeName,
   buildNodeDefWithFn,
-  createDataType,
   getFnTypeDef,
   hasFnType,
+  type DataPathInfoGetter,
   type NodeDef,
+  type TSchema,
 } from "event-processing";
-import { assert, generateNanoId } from "../../../packages/common/src";
+import { generateNanoId } from "../../../packages/common/src";
 
 export function prune(nodeDefs: NodeDef[]): NodeDef[] {
   const allDependsOn = new Set<string>();
@@ -77,31 +77,61 @@ export function checkErrors(nodeDefs: NodeDefAny[]): Record<string, string> {
 
   const allNodeDefs = nodeDefs;
 
+  const nodeDefMap = new Map<string, NodeDefAny>();
+  allNodeDefs.forEach((def) => {
+    nodeDefMap.set(def.id, def);
+  });
+
+  const getDataPathInfo: DataPathInfoGetter = (dataPath) => {
+    const { nodeId, path } = dataPath;
+    const nodeDef = nodeDefMap.get(nodeId);
+    if (!nodeDef) return { schema: null };
+    const schema = getSchemaAtPath(nodeDef.fn.returnSchema, path);
+    return { schema };
+  };
+
   allNodeDefs.forEach((nodeDef) => {
-    const { getDataPaths } = getFnTypeDef(nodeDef.fn.type);
+    const { getDataPaths, validateInputs, inputSchema } = getFnTypeDef(
+      nodeDef.fn.type
+    );
     const dataPaths = getDataPaths(nodeDef.inputs);
 
-    dataPaths.forEach((path) => {
-      const pathNode = allNodeDefs.find((def) => def.id === path.nodeId);
-      assert(pathNode, `Node ${path.nodeId} not found`);
-
-      const pathNodeReturnSchema = pathNode.fn.returnSchema;
-      const actualSchema = getSchemaAtPath(pathNodeReturnSchema, path.path);
-
-      const expectedSchemaType = createDataType(path.schema);
-
+    // Check all data paths are valid
+    for (const path of dataPaths) {
+      const actualSchema = getDataPathInfo(path).schema;
       if (!actualSchema) {
-        errors[nodeDef.id] = `Invalid data path`;
-      } else if (!expectedSchemaType.isSuperTypeOf(actualSchema)) {
-        errors[nodeDef.id] = `Invalid data path`;
+        errors[nodeDef.id] = `Invalid data path: [${
+          path.nodeId
+        }, ${path.path.join(".")}]`;
+        return;
       }
+    }
+
+    // Check inputs are valid
+    const result = inputSchema.safeParse(nodeDef.inputs);
+    if (!result.success) {
+      errors[nodeDef.id] = `Input parsing failed: ${result.error.message}`;
+      return;
+    }
+
+    // Check fn-specific validation
+    const fnValidateResult = validateInputs({
+      inputs: nodeDef.inputs,
+      fnDef: nodeDef.fn,
+      getDataPathInfo,
     });
+    if (!fnValidateResult.success) {
+      errors[nodeDef.id] = `Fn validation failed: ${fnValidateResult.error}`;
+    }
   });
 
   return errors;
 }
 
-function getSchemaAtPath(schema: TSchema, path: string[]): TSchema | null {
+export function getSchemaAtPath(
+  schema: TSchema,
+  path: string[]
+): TSchema | null {
   let currentSchema = schema;
   for (const key of path) {
     if (currentSchema.type !== TypeName.Object) return null;

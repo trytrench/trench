@@ -1,4 +1,4 @@
-import { FnType } from "event-processing";
+import { type FnType } from "event-processing";
 import { atom } from "jotai";
 
 type EditNodeSheetState =

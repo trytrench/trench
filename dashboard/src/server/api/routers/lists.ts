@@ -55,19 +55,31 @@ export const listsRouter = createTRPCRouter({
       return {
         count: 0,
         rows: entities.map((entity) => {
-          const entityType = entity.entity_type[0];
-          const entityId = entity.entity_id[0];
+          const entityType = entity.entity_type;
+          const entityId = entity.entity_id;
+          const features = getAnnotatedFeatures(
+            featureDefs,
+            entityTypes,
+            entity.features_array,
+            rules
+          );
+          const nameFeature = features.find(
+            (f) =>
+              f.result.type === "success" &&
+              f.result.data.schema.type === TypeName.Name
+          );
+          const entityName: string =
+            nameFeature?.result.type === "success"
+              ? nameFeature.result.data.value
+              : entityId;
+
           return {
             entityType,
             entityId,
+            entityName,
             firstSeenAt: new Date(entity.first_seen),
             lastSeenAt: new Date(entity.last_seen),
-            features: getAnnotatedFeatures(
-              featureDefs,
-              entityTypes,
-              entity.features_array,
-              rules
-            ),
+            features: features,
           };
         }),
       };
@@ -106,7 +118,7 @@ export const listsRouter = createTRPCRouter({
           features: getAnnotatedFeatures(
             featureDefs,
             entityTypes,
-            event.features_array,
+            event.features,
             rules
           ),
         })),
@@ -114,25 +126,14 @@ export const listsRouter = createTRPCRouter({
     }),
 });
 
-function getUniqueEntities(
-  entities_array: Array<[string[], string[]]>
-): Entity[] {
-  const entities: Entity[] = [];
-  for (const [entity_types, entity_ids] of entities_array) {
-    for (let i = 0; i < entity_ids.length; i++) {
-      const entity_id = entity_ids[i];
-      const entity_type = entity_types[i];
-      const found = entities.some(
-        (entity) => entity.id === entity_id && entity.type === entity_type
-      );
-      if (found) {
-        continue;
-      }
-      if (!entity_id || !entity_type) {
-        throw new Error("Invalid entity array from clickhouse");
-      }
-      entities.push({ id: entity_id, type: entity_type });
-    }
-  }
+function getUniqueEntities(entities_array: Array<[string, string]>): Entity[] {
+  const entities: Entity[] = uniqBy(
+    entities_array,
+    ([entity_type, entity_id]) => [entity_type, entity_id].join()
+  ).map(([entity_type, entity_id]) => ({
+    type: entity_type,
+    id: entity_id,
+  }));
+
   return entities;
 }

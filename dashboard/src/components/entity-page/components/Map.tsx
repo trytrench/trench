@@ -1,4 +1,3 @@
-import { useComponentConfig } from "../useComponentConfig";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
 import Map, { Layer, Marker, Source } from "react-map-gl";
@@ -7,7 +6,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import WebMercatorViewport from "@math.gl/web-mercator";
 import { CreditCard, PersonStanding, Phone } from "lucide-react";
 import { env } from "../../../env";
-import { FeaturePathItem } from "../../../shared/types";
 import { useAtom } from "jotai";
 import { isEditModeAtom } from "../state";
 import { FeatureSelector } from "../FeatureSelector";
@@ -16,24 +14,25 @@ import { api } from "../../../utils/api";
 import { EditModeOverlay } from "../EditModeOverlay";
 
 export interface MapConfig {
-  locationFeaturePath: FeaturePathItem[];
+  locationFeaturePath: string[];
 }
 
 export const MapComponent: EntityPageComponent<MapConfig> = ({
   id,
   entity,
+  config,
+  setConfig,
 }) => {
-  const [config, setConfig] = useComponentConfig<ComponentType.Map>(id);
   // Component implementation
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
   const { data: location } = api.features.getValue.useQuery(
     {
       entity,
-      featurePath: config.config.locationFeaturePath,
+      featurePath: config.locationFeaturePath,
     },
     {
-      enabled: !!config.config.locationFeaturePath.length,
+      enabled: !!config.locationFeaturePath.length,
     }
   );
 
@@ -68,14 +67,11 @@ export const MapComponent: EntityPageComponent<MapConfig> = ({
             <FeatureSelector
               desiredSchema={{ type: TypeName.Location }}
               baseEntityTypeId={entity.type}
-              value={config.config.locationFeaturePath}
+              value={config.locationFeaturePath}
               onChange={(path) => {
-                setConfig((config) => ({
-                  ...config,
-                  config: {
-                    ...config.config,
-                    locationFeaturePath: path,
-                  },
+                setConfig((prev) => ({
+                  ...prev,
+                  locationFeaturePath: path,
                 }));
               }}
             />

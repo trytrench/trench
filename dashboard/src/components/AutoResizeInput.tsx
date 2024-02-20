@@ -40,7 +40,6 @@ export function AutoResizeInput({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        console.log("Clicked outside");
         onClickOutside?.(event);
       }
     }

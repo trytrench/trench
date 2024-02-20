@@ -1,23 +1,61 @@
-import { TypeName } from "event-processing";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  type EntityViewConfig,
+  entityViewConfigZod,
+} from "~/shared/validation";
 
 export const entityViewsRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx, input }) => {
-    return ctx.prisma.entityViews.findMany();
-  }),
+  list: protectedProcedure
+    .input(
+      z.object({
+        entityTypeId: z.string().nullable(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const views = await ctx.prisma.entityView.findMany({
+        where: {
+          entityTypeId: input.entityTypeId,
+        },
+      });
+      return views.map((view) => ({
+        ...view,
+        config: view.config as unknown as EntityViewConfig,
+      }));
+    }),
   create: protectedProcedure
     .input(
       z.object({
         name: z.string(),
-        filters: z.record(z.any()),
+        config: entityViewConfigZod,
+        entityTypeId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.entityViews.create({
+      return ctx.prisma.entityView.create({
         data: {
           name: input.name,
-          filters: input.filters,
+          config: input.config,
+          entityTypeId: input.entityTypeId,
+        },
+      });
+    }),
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        config: entityViewConfigZod.optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.entityView.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          name: input.name,
+          config: input.config,
         },
       });
     }),
@@ -28,7 +66,7 @@ export const entityViewsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.prisma.entityType.delete({
+      return await ctx.prisma.entityView.delete({
         where: {
           id: input.id,
         },

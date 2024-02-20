@@ -5,33 +5,18 @@ import {
   type NodeDef,
   hasType,
   type TSchema,
-  TypeName,
-  createDataType,
   type FnDefAny,
   type NodeDefAny,
   getFnTypeDef,
+  nodeIdsFromDataPaths,
+  type DataPathInfoGetter,
 } from "event-processing";
-import { type StoreApi, type UseBoundStore, create } from "zustand";
+import { create } from "zustand";
 import { assert } from "../../../../../../packages/common/src";
-import { persist, createJSONStorage, PersistStorage } from "zustand/middleware";
-import superjson from "superjson"; //  can use anything: serialize-javascript, devalue, etc.
-import { checkErrors } from "../../../../shared/publish";
-
-type WithSelectors<S> = S extends { getState: () => infer T }
-  ? S & { use: { [K in keyof T]: () => T[K] } }
-  : never;
-
-const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
-  _store: S
-) => {
-  const store = _store as WithSelectors<typeof _store>;
-  store.use = {};
-  for (const k of Object.keys(store.getState())) {
-    (store.use as any)[k] = () => store((s) => s[k as keyof typeof s]);
-  }
-
-  return store;
-};
+import { persist, type PersistStorage } from "zustand/middleware";
+import superjson from "superjson";
+import { getSchemaAtPath } from "../../../../shared/publish";
+import { createSelectors } from "../../../../lib/zustand";
 
 type RawNode<T extends FnType = FnType> = Omit<NodeDef<T>, "fn"> & {
   fnId: string;
@@ -47,13 +32,21 @@ export type Engine = {
   id: string;
   createdAt: Date;
 };
+
+export type EngineCompileStatus =
+  | { status: "idle" }
+  | { status: "compiling" }
+  | { status: "success" }
+  | { status: "error"; errors: Record<string, string> };
+
 interface EditorState {
   engine: Engine | null;
   hasChanged: boolean;
 
   nodes: Record<string, RawNode>;
   fns: Record<string, FnDefAny>;
-  errors: Record<string, string>; // Map nodeIds to error messages
+
+  status: EngineCompileStatus;
 
   initializeFromNodeDefs: (props: {
     engine: Engine;
@@ -61,7 +54,9 @@ interface EditorState {
     force?: boolean;
   }) => void;
 
-  updateErrors: () => void;
+  // Update status
+  updateErrors: () => Promise<void>;
+  setStatus: (status: EngineCompileStatus) => void;
 
   setNodeDefWithFn: <T extends FnType>(
     fnType: T,
@@ -75,6 +70,8 @@ interface EditorState {
   setFnDef: <T extends FnType>(fnDef: FnDefSetArgs<T>) => Promise<FnDef<T>>;
 
   deleteNodeDef: (nodeId: string) => Promise<void>;
+
+  getDataPathInfo: DataPathInfoGetter;
 }
 
 function fnDefIsValid(fnDef: FnDefAny): fnDef is FnDef {
@@ -94,13 +91,13 @@ function validateFnInput(
   dependsOn: Set<string>;
 } {
   const type = getFnTypeDef(fnType);
-  const { inputSchema, getDependencies } = type;
+  const { inputSchema, getDataPaths } = type;
 
   // Validate inputs
   inputSchema.parse(inputs);
 
   return {
-    dependsOn: getDependencies(inputs),
+    dependsOn: nodeIdsFromDataPaths(getDataPaths(inputs)),
   };
 }
 
@@ -125,15 +122,22 @@ const useEditorStoreBase = create<EditorState>()(
       nodes: {},
       fns: {},
       errors: {},
+      status: { status: "idle" },
 
-      updateErrors: () => {
-        const state = get();
+      updateErrors: async () => {
+        get().setStatus({ status: "compiling" });
+        const allNodeDefs = selectors.getNodeDefs()(get());
+        const errors = await checkErrorsWithWorker(allNodeDefs);
 
-        const allNodeDefs = selectors.getNodeDefs()(state);
+        if (Object.keys(errors).length === 0) {
+          get().setStatus({ status: "success" });
+        } else {
+          get().setStatus({ status: "error", errors });
+        }
+      },
 
-        const errors = checkErrors(allNodeDefs);
-
-        set({ errors });
+      setStatus: (status) => {
+        set({ status });
       },
 
       initializeFromNodeDefs: ({ engine, nodeDefs, force }) => {
@@ -158,7 +162,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: false,
         });
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       setNodeDefWithFn: async (fnType, nodeDef) => {
@@ -185,7 +189,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return {
           ...nodeDef,
@@ -204,7 +208,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return fnDef;
       },
@@ -230,7 +234,7 @@ const useEditorStoreBase = create<EditorState>()(
           hasChanged: true,
         }));
 
-        get().updateErrors();
+        get().setStatus({ status: "idle" });
 
         return {
           ...nodeDef,
@@ -246,6 +250,19 @@ const useEditorStoreBase = create<EditorState>()(
           delete nodes[nodeId];
           return { nodes, hasChanged: true };
         });
+      },
+
+      getDataPathInfo: (dataPath) => {
+        const state = get();
+        const nodeDef = selectors.getNodeDef(dataPath.nodeId)(state);
+
+        let schema: TSchema | null = null;
+        if (nodeDef) {
+          schema = getSchemaAtPath(nodeDef.fn.returnSchema, dataPath.path);
+        }
+        return {
+          schema,
+        };
       },
     }),
     {
@@ -321,3 +338,37 @@ export const selectors = {
       return allFnDefs as FnDef<T extends FnType ? T : FnType>[];
     },
 };
+
+// Create a function that encapsulates the communication with the web worker
+function checkErrorsWithWorker(
+  nodeDefs: NodeDefAny[]
+): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
+    const errorCheckerWorker: Worker = new Worker(
+      new URL("./errorCheckerWorker", import.meta.url)
+    );
+
+    // Listen for messages from the web worker
+    errorCheckerWorker.onmessage = function (event: MessageEvent) {
+      const errors: Record<string, string> = event.data;
+      // Resolve the promise with the errors received from the web worker
+      resolve(errors);
+      // Terminate the web worker
+      errorCheckerWorker.terminate();
+    };
+
+    // Handle any errors or termination of the web worker
+    errorCheckerWorker.onerror = function (error: ErrorEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    errorCheckerWorker.onmessageerror = function (error: MessageEvent) {
+      // Reject the promise with the error
+      reject(error);
+    };
+
+    // Send the nodeDefs array to the web worker
+    errorCheckerWorker.postMessage(nodeDefs);
+  });
+}

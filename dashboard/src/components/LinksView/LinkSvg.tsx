@@ -23,7 +23,7 @@ export function LinkSVG(props: LinkSVGProps) {
     leftSelection === linkItem.from || rightSelection === linkItem.to;
 
   let opacity = 1;
-  let colorName = "text-muted-foreground";
+  const colorName = "text-muted-foreground";
 
   if (explicitlySelected) {
   } else if (linkItem.itemType === "hiddenLink") {

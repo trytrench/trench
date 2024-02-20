@@ -1,6 +1,11 @@
 import type { EntityType, EventType, Feature, Rule } from "@prisma/client";
-import { FeatureDef, TSchema, TypeName, getTypedData } from "event-processing";
-import { AnnotatedFeature } from "../../shared/types";
+import {
+  type FeatureDef,
+  type TSchema,
+  TypeName,
+  getTypedData,
+} from "event-processing";
+import { type AnnotatedFeature } from "../../shared/types";
 import { prisma } from "databases";
 
 export function getAnnotatedFeatures(
@@ -79,7 +84,7 @@ export async function getLatestFeatureDefs(): Promise<FeatureDef[]> {
       name: f.name,
       description: f.description ?? undefined,
       schema: f.schema as unknown as TSchema,
-      entityTypeId: f.entityTypeId,
+      entityTypeId: f.entityTypeId ?? undefined,
     };
   });
 }

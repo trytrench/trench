@@ -2,9 +2,9 @@ import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import type EditorApi from "monaco-editor/esm/vs/editor/editor.api";
 import { IDisposable, Position } from "monaco-editor/esm/vs/editor/editor.api";
 import { useMonacoEditor } from "./useMonacoEditor";
-import { COMPILER_OPTIONS } from "./compilerOptions";
 
 import { useTheme } from "next-themes";
+import { TS_COMPILER_OPTIONS } from "event-processing/src/function-type-defs/types/Computed";
 
 export type ChangeHandler = (
   value: string,
@@ -22,6 +22,7 @@ export interface MonacoEditorProps {
   readOnly?: boolean;
   prefix?: string;
   suffix?: string;
+  typeDefs?: string;
 }
 
 function getLineCount(text: string) {
@@ -37,6 +38,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   readOnly,
   prefix = "",
   suffix = "",
+  typeDefs = "",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const monacoEditorObj = useMonacoEditor();
@@ -96,11 +98,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       monacoEditor.Uri.file("example.tsx")
     );
 
-    monacoEditor.languages.typescript.typescriptDefaults.addExtraLib(
-      ``,
-      "file:///node_modules/@my-project/package-one/index.d.ts" // irrelevant?
-    );
-
     const editor = monacoEditor.editor.create(containerRef.current, {
       scrollBeyondLastLine: true,
       minimap: {
@@ -113,12 +110,18 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     });
 
     monacoEditor.languages.typescript.typescriptDefaults.setCompilerOptions(
-      COMPILER_OPTIONS as any
+      TS_COMPILER_OPTIONS as any
     );
     monacoEditor.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false,
     });
+    monacoEditor.languages.typescript.typescriptDefaults.setExtraLibs([
+      {
+        content: typeDefs,
+        filePath: "test.ts",
+      },
+    ]);
 
     editor.onDidChangeCursorSelection(({ selection }) => {
       const editableRange = new monacoEditor.Range(
@@ -165,7 +168,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       model.dispose();
       onChangeModelContentSubscription.dispose();
     };
-  }, [monacoEditorObj.state, containerRef.current]);
+  }, [monacoEditorObj.state, containerRef.current, typeDefs]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {

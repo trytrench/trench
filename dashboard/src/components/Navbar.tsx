@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { getInitials } from "~/utils/getInitials";
+import { cn } from "../lib/utils";
 
 interface Props {
   href: string;
@@ -41,8 +42,8 @@ const NavItem = ({ href, children, ...props }: Props) => {
 };
 
 const TABS = [
-  { name: "Events", path: "events" },
   { name: "Finder", path: "find" },
+  { name: "Events", path: "events" },
   { name: "Data Model", path: "settings" },
 ];
 
@@ -71,28 +72,24 @@ export const Navbar = () => {
         </h1>
       </NextLink>
 
-      <Tabs
-        className=""
-        value={activeTab}
-        onValueChange={(tab) => {
-          router.push(`/${tab}`).catch(handleError);
-        }}
-      >
-        <TabsList className="pl-2 border-b-0">
-          {TABS.map((tab) => {
-            return (
-              <TabsTrigger
-                key={tab.path}
-                value={tab.path}
-                className="border-b-0 text-muted-foreground data-[state=active]:text-emphasis-foreground hover:text-emphasis-foreground"
-              >
-                {tab.name}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-      </Tabs>
-
+      <div className="pl-2">
+        {TABS.map((tab) => {
+          const isActive = tab.path === activeTab;
+          return (
+            <NextLink
+              key={tab.path}
+              href={`/${tab.path}`}
+              className={cn({
+                "border-b-0 text-muted-foreground hover:text-emphasis-foreground px-3 py-1.5 text-sm":
+                  true,
+                "text-emphasis-foreground": isActive,
+              })}
+            >
+              {tab.name}
+            </NextLink>
+          );
+        })}
+      </div>
       <div className="grow" />
 
       <div className="flex items-center gap-4 text-sm">

@@ -13,13 +13,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "~/components/ui/command";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -132,11 +125,15 @@ export function AssignFeature({
       .catch(handleError);
   };
 
+  const getDataPathInfo = useEditorStore.use.getDataPathInfo();
   const filteedFeatures =
     features?.filter((feature) => {
-      const entitySchema = form.watch("entityDataPath")?.schema;
-      if (entitySchema?.type === TypeName.Entity) {
-        return feature.entityTypeId === entitySchema.entityType;
+      const dataPath = form.watch("entityDataPath");
+      if (dataPath) {
+        const { schema } = getDataPathInfo(dataPath);
+        if (schema?.type === TypeName.Entity) {
+          return feature.entityTypeId === schema.entityType;
+        }
       }
       return true;
     }) ?? [];
@@ -188,31 +185,10 @@ export function AssignFeature({
 
               <FormField
                 control={form.control}
-                name="featureId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>To feature:</FormLabel>
-                    <ComboboxSelector
-                      value={field.value}
-                      onSelect={field.onChange}
-                      options={
-                        filteedFeatures.map((f) => ({
-                          label: f.name,
-                          value: f.id,
-                        })) ?? []
-                      }
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="entityDataPath"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Of entity:</FormLabel>
+                    <FormLabel>to entity:</FormLabel>
                     <FormControl>
                       <SelectDataPath
                         value={field.value ?? null}
@@ -234,6 +210,29 @@ export function AssignFeature({
                   </FormItem>
                 )}
               />
+
+              {form.watch("entityDataPath") && (
+                <FormField
+                  control={form.control}
+                  name="featureId"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>on feature:</FormLabel>
+                      <ComboboxSelector
+                        value={field.value}
+                        onSelect={field.onChange}
+                        options={
+                          filteedFeatures.map((f) => ({
+                            label: f.name,
+                            value: f.id,
+                          })) ?? []
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
             <DialogFooter>
               <Button type="submit">Save</Button>

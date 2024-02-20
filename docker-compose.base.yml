@@ -26,6 +26,7 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+    mem_limit: 8G # Limit the memory usage to 4 GB
 
 volumes:
   postgres_data:

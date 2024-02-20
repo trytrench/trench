@@ -1,10 +1,9 @@
 import { z } from "zod";
-import { TSchema, tSchemaZod } from "../data-types";
+import { TSchema } from "../data-types";
 
 export const dataPathZodSchema = z.object({
   nodeId: z.string(), // Node id
   path: z.array(z.string()), // Array of field strings, assuming [nodeId] refers to an object
-  schema: tSchemaZod,
 });
 
 export type DataPath = z.infer<typeof dataPathZodSchema>;
@@ -19,8 +18,6 @@ export const DataPathUtils = {
   },
 };
 
-/**
- * How data paths should work
- *
- * data path should always have a source.
- */
+export type DataPathInfoGetter = (dataPath: DataPath) => {
+  schema: TSchema | null;
+};

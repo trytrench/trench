@@ -9,6 +9,7 @@ import { SelectDataPath } from "./SelectDataPath"; // Make sure this path is cor
 import { z } from "zod";
 import { MinusCircle, PlusCircle } from "lucide-react";
 import { type CountArgs } from "event-processing/src/function-type-defs/lib/args";
+import { useEditorStore } from "./editor/state/zustand";
 
 interface SelectDataPathListProps {
   eventType: string;
@@ -29,6 +30,8 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
 }) => {
   const [dataPaths, setDataPaths] = useState<DataPath[]>(initialValue ?? []);
   const [args, setArgs] = useState<CountArgs>(initialArgs ?? []);
+
+  const getDataPathInfo = useEditorStore.use.getDataPathInfo();
 
   // Sync local `dataPaths` and `args` state with props
   useEffect(() => {
@@ -52,16 +55,17 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
     const newDataPath: DataPath = {
       nodeId: "",
       path: [],
-      schema: { type: TypeName.Any },
     };
     const newDataPaths = [...dataPaths, newDataPath];
     setDataPaths(newDataPaths);
     onChange(newDataPaths);
 
     if (isEditingArgs) {
+      const { schema } = getDataPathInfo(newDataPath);
+      if (!schema) return;
       const newArg = {
         argName: `arg${dataPaths.length + 1}`,
-        schema: newDataPath.schema,
+        schema: schema,
       };
       const updatedArgs = [...args, newArg];
       setArgs(updatedArgs);
@@ -80,9 +84,11 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
     const arg = args[index];
     if (isEditingArgs && arg) {
       const updatedArgs = [...args];
+      const { schema } = getDataPathInfo(newDataPath);
+      if (!schema) return;
       updatedArgs[index] = {
         ...arg,
-        schema: newDataPath.schema,
+        schema: schema,
       };
       setArgs(updatedArgs);
       if (onArgsChange) {
@@ -109,7 +115,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
 
   return (
     <div>
-      {args.map((arg, index) => (
+      {dataPaths.map((dataPath, index) => (
         <div key={index} className="flex items-center space-x-2 mb-2">
           {/* {isEditingArgs && (
             <input
@@ -126,7 +132,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
             onChange={(newValue) => {
               if (newValue) updateDataPath(index, newValue);
             }}
-            desiredSchema={isEditingArgs ? undefined : arg.schema}
+            // desiredSchema={isEditingArgs ? undefined : arg.schema}
           />
           <button
             onClick={() => removeDataPath(index)}

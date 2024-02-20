@@ -4,4 +4,6 @@ export enum ComponentType {
   Feature = "Feature",
   Title = "Title",
   VerticalList = "VerticalList",
+  Color = "Color",
+  FeatureGrid = "FeatureGrid",
 }

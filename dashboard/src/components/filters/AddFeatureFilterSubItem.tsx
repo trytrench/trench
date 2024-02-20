@@ -37,6 +37,10 @@ const DATA_TYPE_TO_ICON = {
   [TypeName.Array]: BracesIcon,
   [TypeName.Any]: TypeIcon,
   [TypeName.Location]: TypeIcon,
+  [TypeName.Tuple]: TypeIcon,
+  [TypeName.Name]: TypeIcon,
+  [TypeName.Date]: TypeIcon,
+  [TypeName.Rule]: TypeIcon,
 } satisfies Record<TypeName, LucideIcon>;
 
 export function AddFeatureFilterSubItem(props: {

@@ -2,7 +2,7 @@ import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getCsrfToken } from "next-auth/react";
+import { getCsrfToken, signIn } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { handleError } from "../lib/handleError";
 
 export default function Page({
   csrfToken,
@@ -25,7 +26,16 @@ export default function Page({
         </CardHeader>
         <form method="post" action="/api/auth/callback/credentials">
           <CardContent className="grid gap-4">
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                signIn("google", {
+                  callbackUrl: "/",
+                }).catch(handleError);
+              }}
+            >
               <svg role="img" viewBox="0 0 24 24" className="mr-2 h-4 w-4">
                 <path
                   fill="currentColor"

@@ -40,9 +40,13 @@ class RedisService implements RedisInterface {
   async del(...keys: Buffer[]) {
     return this.conn.del(...keys);
   }
-  async set(key: Buffer, value: string, mode?: "NX" | "XX") {
-    const args = mode ? [mode] : [];
-    const rv = await this.conn.set(key, value, ...args);
+  async set(
+    key: Buffer,
+    value: string,
+    mode?: "NX" | "XX" | "EX",
+    expiration?: number
+  ) {
+    const rv = await this.conn.set(key, value, mode, expiration);
     if (rv === "OK") {
       return true;
     } else if (rv === null) {

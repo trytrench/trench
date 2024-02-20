@@ -6,14 +6,20 @@ import {
   ExternalLinkIcon,
   EyeOffIcon,
   ListFilterIcon,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/router";
 import pluralize from "pluralize";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "~/utils/api";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
-import { FirstLinkSVG, LinkSVG, sortedForLeftSvgs } from "./LinkSvg";
+import { FirstLinkSVG, LinkSVG } from "./LinkSvg";
+import { sortedForLeftSvgs } from "./sortedForLeftSvgs";
 import type { LeftItem, RightItem } from "./types";
+import { useEntityName } from "../../hooks/useEntityName";
+import { useEntityNameMap } from "../../hooks/useEntityNameMap";
+import { customEncodeURIComponent } from "../../lib/uri";
+import { LoadingPlaceholder } from "../LoadingPlaceholder";
 
 interface LinksViewProps {
   entityId: string;
@@ -28,8 +34,8 @@ function LinksView({
   leftTypeFilter,
   onLeftTypeFilterChange,
 }: LinksViewProps) {
-  const router = useRouter();
-  const { data } = api.links.relatedEntities.useQuery(
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const { data, isLoading } = api.links.relatedEntities.useQuery(
     {
       entityId: entityId ?? "",
       entityType: entityType,
@@ -42,7 +48,7 @@ function LinksView({
 
   const left = data?.left ?? [];
   const right = data?.right ?? [];
-  const links = data?.links ?? [];
+  const links = useMemo(() => data?.links ?? [], [data]);
 
   left.sort((a, b) => {
     if (a.linkCount > HIDE_LINKS_THRESHOLD) return 1;
@@ -63,7 +69,7 @@ function LinksView({
     setRSelection(null);
   }, [leftTypeFilter]);
 
-  const selectionExists = leftSelection || rightSelection;
+  const selectionExists = leftSelection ?? rightSelection;
 
   //
 
@@ -102,7 +108,7 @@ function LinksView({
   //
 
   const activeIds = useMemo(() => {
-    let ids = new Set<string>();
+    const ids = new Set<string>();
     if (leftSelection) {
       ids.add(leftSelection);
       for (const link of links) {
@@ -117,6 +123,14 @@ function LinksView({
     return ids;
   }, [links, leftSelection, rightSelection]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center p-4 gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading...</span>
+      </div>
+    );
+  }
   return (
     <div className="flex items-stretch">
       <div id="leftLeft" className="w-[40px] shrink-0 relative">
@@ -140,6 +154,8 @@ function LinksView({
           {left.map((item) => {
             const isSelected = leftSelection === item.id;
             const isActive = !selectionExists || activeIds.has(item.id);
+
+            const entType = entityTypes?.find((et) => et.id === item.type);
             return (
               <LeftSideCard
                 key={item.id}
@@ -155,7 +171,9 @@ function LinksView({
                   onLeftTypeFilterChange?.(item.type);
                 }}
                 divRef={(element) => (leftDivs.current[item.id] = element)}
-                href={`/entity/${item.id}?tab=links`}
+                href={`/entity/${customEncodeURIComponent(
+                  entType?.type
+                )}/${customEncodeURIComponent(item.id)}?tab=links`}
               />
             );
           })}
@@ -181,6 +199,7 @@ function LinksView({
         {right.map((item) => {
           const isSelected = rightSelection === item.id;
           const isActive = !selectionExists || activeIds.has(item.id); // TODO: active when linked to right selection.
+          const entType = entityTypes?.find((et) => et.id === item.type);
           return (
             <RightSideCard
               key={item.id}
@@ -192,7 +211,9 @@ function LinksView({
                 setLSelection(null);
               }}
               divRef={(element) => (rightDivs.current[item.id] = element)}
-              href={`/entity/${item.id}?tab=links`}
+              href={`/entity/${customEncodeURIComponent(
+                entType?.type
+              )}/${customEncodeURIComponent(item.id)}?tab=links`}
             />
           );
         })}
@@ -234,14 +255,21 @@ function LeftSideCard(props: LeftSideCardProps) {
   const { item, isActive, isSelected, onClick, onFilterClick, divRef, href } =
     props;
 
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const entityTypesMap = useMemo(() => {
+    return new Map(entityTypes?.map((et) => [et.id, et.type]) ?? []);
+  }, [entityTypes]);
+
   const isGroup = item.itemType === "group";
+
+  const entityTypeName = entityTypesMap.get(item.type) ?? item.type;
 
   let entityCountStr = "";
   if (isGroup) {
     if (item.entityCount >= INTERNAL_LIMIT) {
-      entityCountStr = `${INTERNAL_LIMIT}+ ${pluralize(item.type)}`;
+      entityCountStr = `${INTERNAL_LIMIT}+ ${pluralize(entityTypeName)}`;
     } else {
-      entityCountStr = `${item.entityCount} ${pluralize(item.type)}`;
+      entityCountStr = `${item.entityCount} ${pluralize(entityTypeName)}`;
     }
   }
 
@@ -277,7 +305,7 @@ function LeftSideCard(props: LeftSideCardProps) {
           <BoxIcon className="my-auto text-accent-foreground" size={18} />
           <div className="min-w-0 text-sm">
             <div className="font-semibold text-emphasis-foreground">
-              {item.type}
+              {entityTypesMap.get(item.type)}
             </div>
             <div className="">{item.name}</div>
           </div>

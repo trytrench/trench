@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { FnType } from "event-processing";
 import { useAtom } from "jotai";
 import { MoreHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { CreateEntityAppearanceDialog } from "~/components/nodes/CreateEntityAppearanceDialog";
 import { Button } from "~/components/ui/button";
@@ -67,6 +67,11 @@ export function EventEditor({ eventType }: Props) {
   const deleteNodeDef = useEditorStore.use.deleteNodeDef();
   const toasts = useMutationToasts();
 
+  useEffect(() => {
+    if (!selectedNode && filteredNodes[0])
+      setSelectedNodeId(filteredNodes[0].id);
+  }, [selectedNode, filteredNodes]);
+
   return (
     <div>
       <div className="text-lg font-medium">Event Data</div>
@@ -121,11 +126,11 @@ export function EventEditor({ eventType }: Props) {
       </div>
 
       <Card className="flex h-96">
-        <div className="p-4 w-80 border-r">
+        <ScrollArea className="p-4 w-80 border-r">
           {filteredNodes?.map((node) => (
             <div
               className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center",
+                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-baseline",
                 {
                   "bg-accent text-accent-foreground":
                     selectedNode?.id === node.id,
@@ -159,20 +164,22 @@ export function EventEditor({ eventType }: Props) {
                   >
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      deleteNodeDef(node.id)
-                        .catch(toasts.deleteNode.onError)
-                        .catch(handleError);
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
+                  {node.fn.type !== FnType.Event && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        deleteNodeDef(node.id)
+                          .catch(toasts.deleteNode.onError)
+                          .catch(handleError);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           ))}
-        </div>
+        </ScrollArea>
         <ScrollArea className="py-4 px-8 flex-1 text-sm">
           {selectedNode && (
             <SchemaDisplay
@@ -194,7 +201,6 @@ export function EventEditor({ eventType }: Props) {
                         dataPath: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                         entityDataPath: undefined,
                         featureId: "",
@@ -211,7 +217,6 @@ export function EventEditor({ eventType }: Props) {
                         dataPath: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                         entityDataPath: undefined,
                         featureId: "",
@@ -228,7 +233,6 @@ export function EventEditor({ eventType }: Props) {
                         path: {
                           nodeId: selectedNode.id,
                           path: dataPath.path,
-                          schema: dataPath.schema,
                         },
                       }}
                       title="New Entity"

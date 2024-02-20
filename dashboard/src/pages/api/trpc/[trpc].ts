@@ -3,6 +3,8 @@ import { env } from "~/env.js";
 import { appRouter } from "~/server/api/root";
 import { createTRPCContext } from "~/server/api/trpc";
 
+const DEBUG = true;
+
 // export API handler
 export default createNextApiHandler({
   router: appRouter,
@@ -10,9 +12,13 @@ export default createNextApiHandler({
   onError:
     env.NODE_ENV === "development"
       ? ({ path, error }) => {
-          console.error(
-            `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
-          );
+          if (DEBUG) {
+            console.error(error);
+          } else {
+            console.error(
+              `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`
+            );
+          }
         }
       : undefined,
 });

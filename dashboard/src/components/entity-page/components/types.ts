@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { type ReactNode, type SetStateAction } from "react";
 
 export type EntityPageComponent<TConfig> = (props: {
   id: string;
@@ -7,4 +7,5 @@ export type EntityPageComponent<TConfig> = (props: {
     id: string;
   };
   config: TConfig;
+  setConfig: (arg: SetStateAction<TConfig>) => void;
 }) => ReactNode;

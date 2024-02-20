@@ -32,15 +32,15 @@ export function DataTableViewOptions<TData>({
           View
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[150px]">
+      <DropdownMenuContent
+        align="end"
+        className="w-[150px] max-h-[400px] overflow-auto"
+      >
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
           .getAllColumns()
-          .filter(
-            (column) =>
-              typeof column.accessorFn !== "undefined" && column.getCanHide()
-          )
+          .filter((column) => column.getCanHide())
           .map((column) => {
             return (
               <DropdownMenuCheckboxItem
@@ -48,6 +48,7 @@ export function DataTableViewOptions<TData>({
                 className="capitalize"
                 checked={column.getIsVisible()}
                 onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                onSelect={(event) => event.preventDefault()}
               >
                 {column.id}
               </DropdownMenuCheckboxItem>

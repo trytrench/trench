@@ -1,10 +1,9 @@
 import {
-  DataPath,
+  type DataPath,
   DataPathUtils,
   FnType,
-  TSchema,
+  type TSchema,
   TypeName,
-  buildNodeDefWithFn,
   createDataType,
   hasFnType,
 } from "event-processing";
@@ -45,6 +44,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
   } = props;
 
   const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
+  const getDataPathInfo = useEditorStore.use.getDataPathInfo();
 
   const valueNode = useMemo(() => {
     return nodes?.find((n) => n.id === value?.nodeId);
@@ -59,6 +59,9 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
       return value;
     }
   }, [value, valueNode]);
+  const dpSelectorSchema = dataPathSelectorValue
+    ? getDataPathInfo(dataPathSelectorValue).schema
+    : null;
 
   return (
     <div className="flex">
@@ -69,7 +72,7 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
         disablePathSelection={disablePathSelection}
         desiredSchema={desiredSchema}
       />
-      {dataPathSelectorValue?.schema.type === TypeName.Entity && (
+      {dpSelectorSchema?.type === TypeName.Entity && (
         <SelectEntityFeatureNodeDataPath
           eventType={eventType}
           value={value}
@@ -91,7 +94,7 @@ function SelectEntityFeatureNodeDataPath(props: {
 
   const { toast } = useToast();
   const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
-
+  const getDatapathInfo = useEditorStore.use.getDataPathInfo();
   const createNodeWithFn = useEditorStore.use.setNodeDefWithFn();
 
   const valueNode = useMemo(() => {
@@ -116,10 +119,14 @@ function SelectEntityFeatureNodeDataPath(props: {
       ? valueNode.fn.config.featureId ?? null
       : null;
 
+  const selectedDpSchema = selectedEntityDataPath
+    ? getDatapathInfo(selectedEntityDataPath).schema
+    : null;
+
   const { data: features } = api.features.list.useQuery({
     entityTypeId:
-      selectedEntityDataPath?.schema.type === TypeName.Entity
-        ? selectedEntityDataPath.schema.entityType
+      selectedDpSchema?.type === TypeName.Entity
+        ? selectedDpSchema.entityType
         : undefined,
   });
 
@@ -162,7 +169,6 @@ function SelectEntityFeatureNodeDataPath(props: {
           onChange({
             nodeId: foundNode.id,
             path: [],
-            schema: foundNode.fn.returnSchema,
           });
         } else {
           createNodeWithFn(FnType.GetEntityFeature, {
@@ -187,7 +193,6 @@ function SelectEntityFeatureNodeDataPath(props: {
               onChange({
                 nodeId: newDef.id,
                 path: [],
-                schema: newDef.fn.returnSchema,
               });
             })
             .catch((err) => {

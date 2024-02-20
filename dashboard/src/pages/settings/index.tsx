@@ -1,9 +1,11 @@
 import clsx from "clsx";
 import { isAfter } from "date-fns";
 import { FnType, TSchema } from "event-processing";
+import { CheckIcon, XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
+  EngineCompileStatus,
   selectors,
   useEditorStore,
 } from "~/components/nodes/editor/state/zustand";
@@ -14,7 +16,35 @@ import { api } from "~/utils/api";
 import { generateNanoId } from "../../../../packages/common/src";
 import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
-import { useMutationToasts } from "../../components/nodes/editor/useMutationToasts";
+import { useMutationToasts } from "~/components/nodes/editor/useMutationToasts";
+
+function StatusIndicator(props: { status: EngineCompileStatus }) {
+  const { status } = props;
+  switch (status.status) {
+    case "idle":
+    case "compiling":
+      return (
+        <div className="flex items-center gap-1 text-xs text-gray-400 px-3 p-1 rounded-sm bg-gray-50">
+          Compiling...
+        </div>
+      );
+    case "error":
+      const errors = status.errors;
+      return (
+        <div className="flex items-center gap-1 text-xs text-red-600 px-3 p-1 rounded-sm bg-red-50">
+          <XIcon className="h-4 w-4 " />
+          <span>{`Errors (${Object.keys(errors).length})`}</span>
+        </div>
+      );
+    case "success":
+      return (
+        <div className="flex items-center gap-1 text-xs text-green-600 px-3 p-1 rounded-sm bg-green-50">
+          <CheckIcon className="h-4 w-4" />
+          <span>Success</span>
+        </div>
+      );
+  }
+}
 
 const Page: NextPageWithLayout = () => {
   const eventNodes = useEditorStore(
@@ -28,11 +58,14 @@ const Page: NextPageWithLayout = () => {
 
   const { mutateAsync: publish } = api.editor.saveNewEngine.useMutation();
   const nodes = useEditorStore(selectors.getNodeDefs());
-
+  const status = useEditorStore.use.status();
   const editorEngine = useEditorStore((state) => state.engine);
   const editorHasChanged = useEditorStore((state) => state.hasChanged);
+  const updateErrors = useEditorStore.use.updateErrors();
 
   const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
+  const fnDefs = useEditorStore(selectors.getFnDefs());
+  const setFnDef = useEditorStore.use.setFnDef();
 
   const { data: latestEngine } = api.editor.getLatestEngine.useQuery();
 
@@ -40,6 +73,16 @@ const Page: NextPageWithLayout = () => {
     { engineId: editorEngine?.id ?? "" },
     { enabled: !!editorEngine }
   );
+
+  // Compile every second if there are changes
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (status.status === "idle") {
+        updateErrors().catch(handleError);
+      }
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [status, editorHasChanged, updateErrors]);
 
   // Initialize if editor hasn't been initialized yet, and we have data
   useEffect(() => {
@@ -81,6 +124,8 @@ const Page: NextPageWithLayout = () => {
     );
   }, [eventNodes, eventTypes]);
 
+  const { data: features } = api.features.list.useQuery();
+
   const toasts = useMutationToasts();
 
   return (
@@ -90,7 +135,47 @@ const Page: NextPageWithLayout = () => {
         <div className="max-w-6xl mx-auto flex items-center h-full justify-between">
           <div className="flex items-center gap-4">
             <div className="text-3xl text-emphasis-foreground">Data Model</div>
-
+            {/* <Button
+              onClick={() => {
+                for (const fnDef of fnDefs) {
+                  if (fnDef.type === FnType.LogEntityFeature) {
+                    const config: any = fnDef.config;
+                    const feature = features?.find(
+                      (f) => f.id === config.featureId
+                    );
+                    if (feature && feature.name === "Name") {
+                      setFnDef({
+                        ...fnDef,
+                        config: {
+                          ...fnDef.config,
+                          featureSchema: { type: TypeName.Name },
+                        },
+                      }).catch(handleError);
+                    }
+                  }
+                }
+              }}
+            >
+              Fix name loggers
+            </Button> */}
+            {editorHasChanged && (
+              <Button
+                onClick={() => {
+                  if (editorEngineRemote) {
+                    initializeEditor({
+                      engine: {
+                        id: editorEngineRemote.id,
+                        createdAt: editorEngineRemote.createdAt,
+                      },
+                      nodeDefs: editorEngineRemote.nodeDefs,
+                      force: true,
+                    });
+                  }
+                }}
+              >
+                Reset Changes
+              </Button>
+            )}
             {editorIsUpgradable && (
               <Button
                 onClick={() => {
@@ -110,27 +195,10 @@ const Page: NextPageWithLayout = () => {
               </Button>
             )}
           </div>
-          <div className="flex space-x-2">
-            {editorHasChanged && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (editorEngineRemote) {
-                    initializeEditor({
-                      engine: {
-                        id: editorEngineRemote.id,
-                        createdAt: editorEngineRemote.createdAt,
-                      },
-                      nodeDefs: editorEngineRemote.nodeDefs,
-                      force: true,
-                    });
-                  }
-                }}
-              >
-                Discard
-              </Button>
-            )}
+          <div className="flex gap-4 items-center">
+            <StatusIndicator status={status} />
             <Button
+              disabled={status.status !== "success" || !editorHasChanged}
               onClick={() => {
                 publish({
                   nodeDefs: nodes,

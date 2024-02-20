@@ -1,21 +1,25 @@
-import { AnyZodObject, ZodObject, z } from "zod";
-import { FnType } from "./types/_enum";
+import { ZodType, ZodObject, z } from "zod";
+import { FnType } from "./enum";
 import { InferSchemaType, TSchema, TypeName, tSchemaZod } from "../data-types";
 import { StoreRow } from "./lib/store";
-import { DataPath } from "../data-path";
+import { DataPath, DataPathInfoGetter } from "../data-path";
 import { FnTypeDefsMap } from ".";
 
 export type FnDef<
   TFnType extends FnType = FnType,
-  TReturnSchema extends TSchema = FnTypeDefsMap[TFnType] extends FnTypeDef<
-    any,
-    infer ReturnSchema,
-    any,
-    any
-  >
+  TReturnSchema extends TSchema = FnType extends TFnType
+    ? TSchema
+    : FnTypeDefsMap[TFnType] extends FnTypeDef<
+        any,
+        infer ReturnSchema,
+        any,
+        any
+      >
     ? ReturnSchema
     : TSchema,
-  TConfig = FnTypeDefsMap[TFnType]["configSchema"]["_input"],
+  TConfig = FnType extends TFnType
+    ? any
+    : FnTypeDefsMap[TFnType]["configSchema"]["_input"],
 > = {
   id: string;
   type: TFnType;
@@ -56,25 +60,38 @@ export type Resolver<TReturn extends TSchema = TSchema> = (input: {
   data: InferSchemaType<TReturn>;
 }>;
 
-export type FnTypeDef<
+export type InputValidatorResult =
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+export type InputValidator<
   TFnType extends FnType = any,
   TReturn extends TSchema = any,
-  TConfigSchema extends AnyZodObject = ZodObject<{}>,
-  TInputSchema extends AnyZodObject = ZodObject<{}>,
+  TConfigSchema extends ZodType = ZodType,
+  TInputSchema extends ZodType = ZodType,
+> = (options: {
+  inputs: z.infer<TInputSchema>;
+  fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
+  getDataPathInfo: DataPathInfoGetter;
+}) => InputValidatorResult;
+
+export type FnTypeDef<
+  TFnType extends FnType = FnType,
+  TReturn extends TSchema = TSchema,
+  TConfigSchema extends ZodType = ZodType,
+  TInputSchema extends ZodType = ZodType,
   TContext = any,
 > = {
   fnType: TFnType;
   configSchema: TConfigSchema;
   inputSchema: TInputSchema;
-  createResolver: (options: {
-    fnDef: FnDef<TFnType, TReturn, z.infer<TConfigSchema>>;
-    input: z.infer<TInputSchema>;
-    context: TContext;
-  }) => Resolver<TReturn>;
-  getDependencies: (inputs: z.infer<TInputSchema>) => Set<string>;
   getDataPaths: (inputs: z.infer<TInputSchema>) => DataPath[];
-  validateInputs: (options: {
-    inputs: z.infer<TInputSchema>;
-    config: z.infer<TConfigSchema>;
-  }) => boolean;
+  validateInputs: InputValidator<TFnType, TReturn, TConfigSchema, TInputSchema>;
 };
+
+export type AnyFnTypeDef = FnTypeDef<any, any, any, any, any>;

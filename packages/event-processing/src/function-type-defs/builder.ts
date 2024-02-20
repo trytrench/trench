@@ -1,12 +1,11 @@
 import { AnyZodObject, ZodNull, ZodObject, ZodUndefined, z } from "zod";
-import { FnDef, FnTypeDef, Resolver } from "./functionTypeDef";
-import { FnType } from "./types/_enum";
+import { FnDef, FnTypeDef, InputValidator, Resolver } from "./functionTypeDef";
+import { FnType } from "./enum";
 import { TSchema, TypeName } from "../data-types";
-import { DataPath } from "../data-path";
+import { DataPath, DataPathInfoGetter } from "../data-path";
 
-// FnTypeDefBuilder interface
 export interface FnTypeDefBuilder<
-  TFnType extends FnType = any,
+  TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
@@ -30,20 +29,9 @@ export interface FnTypeDefBuilder<
   setInputSchema<TIS extends AnyZodObject>(
     inputSchema: TIS
   ): FnTypeDefBuilder<TFnType, TReturnSchema, TConfigSchema, TIS, TContext>;
-  setReturnSchema<T extends TypeName>(
-    returnType: T
-  ): FnTypeDefBuilder<
+  setReturnSchema<T extends TSchema>(): FnTypeDefBuilder<
     TFnType,
-    Extract<TSchema, { type: T }>,
-    TConfigSchema,
-    TInputSchema,
-    TContext
-  >;
-  setGetDependencies(
-    getDependencies: (input: z.infer<TInputSchema>) => Set<string>
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
+    T,
     TConfigSchema,
     TInputSchema,
     TContext
@@ -58,10 +46,12 @@ export interface FnTypeDefBuilder<
     TContext
   >;
   setValidateInputs(
-    validateInputs: (options: {
-      inputs: z.infer<TInputSchema>;
-      config: z.infer<TConfigSchema>;
-    }) => boolean
+    validateInputs: InputValidator<
+      TFnType,
+      TReturnSchema,
+      TConfigSchema,
+      TInputSchema
+    >
   ): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
@@ -69,21 +59,21 @@ export interface FnTypeDefBuilder<
     TInputSchema,
     TContext
   >;
-  setCreateResolver<
-    TCR extends (options: {
-      fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
-      input: z.infer<TInputSchema>;
-      context: TContext;
-    }) => Resolver<TReturnSchema>,
-  >(
-    createResolver: TCR
-  ): FnTypeDefBuilder<
-    TFnType,
-    TReturnSchema,
-    TConfigSchema,
-    TInputSchema,
-    TContext
-  >;
+  // setCreateResolver<
+  //   TCR extends (options: {
+  //     fnDef: FnDef<TFnType, TReturnSchema, z.infer<TConfigSchema>>;
+  //     input: z.infer<TInputSchema>;
+  //     context: TContext;
+  //   }) => Resolver<TReturnSchema>,
+  // >(
+  //   createResolver: TCR
+  // ): FnTypeDefBuilder<
+  //   TFnType,
+  //   TReturnSchema,
+  //   TConfigSchema,
+  //   TInputSchema,
+  //   TContext
+  // >;
   setContextType<TCtx>(): FnTypeDefBuilder<
     TFnType,
     TReturnSchema,
@@ -102,7 +92,7 @@ export interface FnTypeDefBuilder<
 
 // createFnTypeDefBuilder function
 export function createFnTypeDefBuilder<
-  TFnType extends FnType = any,
+  TFnType extends FnType = FnType,
   TReturnSchema extends TSchema = TSchema,
   TConfigSchema extends AnyZodObject = ZodObject<{}>,
   TInputSchema extends AnyZodObject = ZodObject<{}>,
@@ -119,9 +109,8 @@ export function createFnTypeDefBuilder<
   const partialDef = {
     configSchema: z.object({}),
     inputSchema: z.object({}),
-    getDependencies: () => new Set(),
     getDataPaths: () => [],
-    validateInputs: () => true,
+    validateInputs: () => ({ success: true }),
     ...def,
   } satisfies Partial<FnTypeDef>;
 
@@ -133,9 +122,6 @@ export function createFnTypeDefBuilder<
     setConfigSchema(configSchema) {
       return createNewFnTypeDefBuilder(partialDef, { configSchema });
     },
-    setGetDependencies(getDependencies) {
-      return createNewFnTypeDefBuilder(partialDef, { getDependencies });
-    },
     setGetDataPaths(getDataPaths) {
       return createNewFnTypeDefBuilder(partialDef, { getDataPaths });
     },
@@ -145,7 +131,7 @@ export function createFnTypeDefBuilder<
     setInputSchema(inputSchema) {
       return createNewFnTypeDefBuilder(partialDef, { inputSchema });
     },
-    setReturnSchema(returnSchema) {
+    setReturnSchema() {
       return createNewFnTypeDefBuilder(partialDef, {});
     },
     setContextType<TC>() {
@@ -157,19 +143,15 @@ export function createFnTypeDefBuilder<
         TC
       >(partialDef, {});
     },
-    setCreateResolver(createResolver) {
-      return createNewFnTypeDefBuilder(partialDef, { createResolver });
-    },
     build() {
       if (
-        !partialDef.fnType ||
-        !partialDef.configSchema ||
-        !partialDef.createResolver ||
-        !partialDef.inputSchema
+        // These fields have to be set via the builder
+        !partialDef.fnType
       ) {
         throw new Error("Missing required properties to build FnTypeDef");
       }
-      return partialDef as FnTypeDef<
+
+      return partialDef as unknown as FnTypeDef<
         TFnType,
         TReturnSchema,
         TConfigSchema,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createFnTypeDefBuilder } from "../builder";
-import { FnType } from "./_enum";
+import { FnType } from "../enum";
 import { TypeName } from "../../data-types";
 import { dataPathZodSchema } from "../../data-path";
 
@@ -17,38 +17,8 @@ export const decisionFnDef = createFnTypeDefBuilder()
       elseDecisionId: z.string(),
     })
   )
-  .setReturnSchema(TypeName.String)
+  .setReturnSchema<{ type: TypeName.String }>()
   .setGetDataPaths((input) => {
     return input.conditions.flatMap((condition) => condition.rules);
-  })
-  .setGetDependencies((input) => {
-    return new Set(
-      input.conditions.flatMap((condition) =>
-        condition.rules.map((rule) => rule.nodeId)
-      )
-    );
-  })
-  .setCreateResolver(({ fnDef, input }) => {
-    return async ({ event, getDependency }) => {
-      const { conditions, elseDecisionId } = input;
-
-      for (const condition of conditions) {
-        let isTrue = true;
-        for (const rule of condition.rules) {
-          const value = await getDependency({
-            dataPath: rule,
-          });
-
-          if (!value) {
-            isTrue = false;
-            break;
-          }
-        }
-
-        if (isTrue) return { data: condition.decisionId };
-      }
-
-      return { data: elseDecisionId };
-    };
   })
   .build();

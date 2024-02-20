@@ -74,7 +74,6 @@ export default function Page() {
   });
 
   const [dataPath, setDataPath] = useState<DataPath | null>(null);
-  console.log(dataPath);
   return (
     <div className="text-sm p-4 flex flex-col items-start gap-4">
       {/* <ShowSchema schema={cardEntity.schema} />

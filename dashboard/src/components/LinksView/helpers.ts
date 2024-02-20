@@ -1,17 +1,25 @@
-import { countBy, groupBy, uniq } from "lodash";
-import { LeftItem, LinkItem, RawLeft, RawLinks, RightItem } from "./types";
+import { countBy, groupBy, mapValues, sumBy, uniq } from "lodash";
+import {
+  EntityWithName,
+  LeftItem,
+  LinkItem,
+  RawLeft,
+  RawLinks,
+  RightItem,
+} from "./types";
 import { Entity } from "event-processing";
+import { prisma } from "databases";
 
-export const INTERNAL_LIMIT = 1000;
+export const INTERNAL_LIMIT = 100;
 export const GROUP_THRESHOLD = 3;
 export const HIDE_LINKS_THRESHOLD = 30;
 export const MAX_ENTITIES_PER_GROUP = 10;
 
 type ProcessInput = {
-  rawLeft: Entity[];
+  rawLeft: EntityWithName[];
   rawLinks: {
-    from: Entity;
-    to: Entity;
+    from: EntityWithName;
+    to: EntityWithName;
   }[];
   shouldGroup: boolean;
 };
@@ -45,14 +53,16 @@ export const processQueryOutput = ({
   const groupedLinks = rawLinks.filter((l) => isGrouped(l.from.type));
 
   // UNGROUPED, 1: get right entity ids
-  const linksPerUngroupedLeft = countBy(notGroupedLinks, (l) => l.from.id);
   const nonHiddenLinks = notGroupedLinks.filter(
-    (l) => linksPerUngroupedLeft[l.from.id]! <= HIDE_LINKS_THRESHOLD
+    (l) => l.to.numLinks <= HIDE_LINKS_THRESHOLD
   );
   const rightSide = uniq(nonHiddenLinks.map((l) => l.to.id));
 
   // GROUPED, 1: get right entity ids
-  const linksPerGroupedLeft = countBy(groupedLinks, (l) => l.from.type);
+  const linksPerGroupedLeft = mapValues(
+    groupBy(groupedLinks, (l) => l.from.type),
+    (links) => sumBy(links, (l) => l.to.numLinks)
+  );
   // TODO: for right side, only get the top 20 per type by link count
   const groupLinks = Object.entries(
     groupBy(groupedLinks, (l) => l.from.type)
@@ -83,7 +93,7 @@ export const processQueryOutput = ({
 
   const linkItems: LinkItem[] = [
     ...ungroupedLinks.map((l) => {
-      const isHidden = linksPerUngroupedLeft[l.from.id]! > HIDE_LINKS_THRESHOLD;
+      const isHidden = l.to.numLinks > HIDE_LINKS_THRESHOLD;
       return {
         itemType: isHidden ? ("hiddenLink" as const) : ("link" as const),
         from: l.from.id,
@@ -101,14 +111,13 @@ export const processQueryOutput = ({
 
   const leftItems: LeftItem[] = [
     ...notGrouped.map((e) => {
-      const linkCount = linksPerUngroupedLeft[e.id] ?? 0;
       return {
         itemType: "entity" as const,
         id: e.id,
         type: e.type,
-        name: e.id,
-        linkCount: linkCount,
-        isHidden: linkCount > HIDE_LINKS_THRESHOLD,
+        name: e.name,
+        linkCount: e.numLinks,
+        isHidden: e.numLinks > HIDE_LINKS_THRESHOLD,
       };
     }),
     ...groupedTypes.map((type) => ({
@@ -125,7 +134,7 @@ export const processQueryOutput = ({
     return {
       itemType: "entity" as const,
       id: id,
-      name: theEntity.to.id,
+      name: theEntity.to.name,
       type: theEntity.to.type,
       linkCount: 0, // TODO
     };

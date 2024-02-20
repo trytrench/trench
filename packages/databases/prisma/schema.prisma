@@ -85,22 +85,25 @@ model Decision {
   type        String
 }
 
-model EventViews {
+model EventView {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name    String
-  filters Json
+  name   String
+  config Json
 }
 
-model EntityViews {
+model EntityView {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name    String
-  filters Json
+  name   String
+  config Json
+
+  entityType   EntityType? @relation(fields: [entityTypeId], references: [id])
+  entityTypeId String?
 }
 
 model Node {
@@ -139,7 +142,7 @@ model FnSnapshot {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  fn   Fn @relation(fields: [fnId], references: [id])
+  fn   Fn     @relation(fields: [fnId], references: [id])
   fnId String
 
   config       Json
@@ -147,14 +150,15 @@ model FnSnapshot {
 
   nodeSnapshots NodeSnapshot[]
 }
+
 model Fn {
   id        String   @id @default(dbgenerated("nanoid()"))
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name         String
-  description  String?
-  type         String
+  name        String
+  description String?
+  type        String
 
   snapshots FnSnapshot[]
 }
@@ -197,6 +201,7 @@ model EntityType {
 
   features Feature[]
   pages    EntityTypePage[]
+  views    EntityView[]
 
   type String @unique
 }
@@ -217,7 +222,7 @@ model EventType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  exampleEvent Json?
+  exampleEvent  Json?
   exampleSchema Json?
 
   features Feature[]

@@ -1,7 +1,5 @@
 import { TypeName, parseTypedData } from "event-processing";
-import { FeaturePathItem } from "../../../shared/types";
 import { api } from "../../../utils/api";
-import { useComponentConfig } from "../useComponentConfig";
 import { ComponentType } from "./_enum";
 import { EntityPageComponent } from "./types";
 import { isEditModeAtom } from "../state";
@@ -10,25 +8,25 @@ import { RenderResult, RenderTypedData } from "../../RenderResult";
 import { FeatureSelector } from "../FeatureSelector";
 
 export type EntityConfig = {
-  entityFeaturePath: FeaturePathItem[];
+  entityFeaturePath: string[];
 };
 
 export const EntityComponent: EntityPageComponent<EntityConfig> = ({
   id,
   entity,
+  config,
+  setConfig,
 }) => {
   // Component implementation
   const [isEditMode] = useAtom(isEditModeAtom);
 
-  const [config, setConfig] = useComponentConfig<ComponentType.Entity>(id);
-
   const { data: entFeature } = api.features.getValue.useQuery(
     {
       entity,
-      featurePath: config.config.entityFeaturePath,
+      featurePath: config.entityFeaturePath,
     },
     {
-      enabled: !!config.config.entityFeaturePath.length,
+      enabled: !!config.entityFeaturePath.length,
     }
   );
 
@@ -53,13 +51,10 @@ export const EntityComponent: EntityPageComponent<EntityConfig> = ({
           <FeatureSelector
             desiredSchema={{ type: TypeName.Entity }}
             baseEntityTypeId={entity.type}
-            value={config.config.entityFeaturePath}
+            value={config.entityFeaturePath}
             onChange={(value) => {
               setConfig({
-                ...config,
-                config: {
-                  entityFeaturePath: value,
-                },
+                entityFeaturePath: value,
               });
             }}
           />

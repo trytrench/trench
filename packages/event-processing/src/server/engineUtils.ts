@@ -1,7 +1,7 @@
 import { GlobalStateKey, prisma } from "databases";
 import { ExecutionEngine } from "./engine";
-import { NodeDef, FnType } from "./function-type-defs";
-import { TSchema } from "./data-types";
+import { NodeDef, FnType, FnDef } from "../function-type-defs";
+import { TSchema } from "../data-types";
 
 async function fetchNodeDefSnapshots({
   engineId,
@@ -37,14 +37,12 @@ async function fetchNodeDefSnapshots({
     const { node, fnSnapshot } = nodeSnapshot;
     return {
       id: nodeSnapshot.nodeId,
-      snapshotId: nodeSnapshot.id,
       eventType: node.eventType,
       name: node.name,
       inputs: nodeSnapshot.inputs as unknown as any,
       dependsOn: new Set(nodeSnapshot.dependsOn),
       fn: {
         id: fnSnapshot.fnId,
-        snapshotId: fnSnapshot.id,
         type: fnSnapshot.fn.type as any,
         name: fnSnapshot.fn.name,
         config: fnSnapshot.config as unknown as any,
@@ -63,5 +61,5 @@ export async function fetchCurrentEngineId() {
 
 export async function createEngine({ engineId }: { engineId: string }) {
   const nodeDefs = await fetchNodeDefSnapshots({ engineId });
-  return new ExecutionEngine({ nodeDefs, engineId, getContext: () => null });
+  return new ExecutionEngine({ nodeDefs, engineId });
 }

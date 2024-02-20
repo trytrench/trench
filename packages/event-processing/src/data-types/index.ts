@@ -14,6 +14,10 @@ export enum TypeName {
   Date = "Date",
   Rule = "Rule",
   Tuple = "Tuple",
+  Name = "Name",
+  Union = "Union",
+  Undefined = "Undefined",
+  Null = "Null",
 }
 
 export type Entity = {
@@ -75,11 +79,30 @@ export interface TRuleSchema extends TSchemaBase {
   type: TypeName.Rule;
 }
 
-interface TTupleSchema<T extends TSchema[] = TSchema[]> extends TSchemaBase {
+export interface TTupleSchema<T extends TSchema[] = TSchema[]>
+  extends TSchemaBase {
   type: TypeName.Tuple;
   items: {
     [K in keyof T]: T[K];
   };
+}
+
+export interface TNameSchema extends TSchemaBase {
+  type: TypeName.Name;
+}
+
+export interface TUnionSchema<T extends TSchema[] = TSchema[]>
+  extends TSchemaBase {
+  type: TypeName.Union;
+  unionTypes: T;
+}
+
+export interface TUndefinedSchema extends TSchemaBase {
+  type: TypeName.Undefined;
+}
+
+export interface TNullSchema extends TSchemaBase {
+  type: TypeName.Null;
 }
 
 interface SchemaTypeMap {
@@ -95,6 +118,10 @@ interface SchemaTypeMap {
   [TypeName.Date]: Date;
   [TypeName.Rule]: boolean;
   [TypeName.Tuple]: any[]; // Placeholder, will be refined later
+  [TypeName.Name]: string;
+  [TypeName.Union]: any;
+  [TypeName.Undefined]: undefined;
+  [TypeName.Null]: null;
 }
 
 type InferTupleItemType<T> = T extends TSchema ? InferSchemaType<T> : never;
@@ -124,6 +151,22 @@ abstract class IDataType<TS extends TSchema> {
   isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return schema.type === this.schema.type;
   }
+
+  /**
+   * Can the argument schema be assigned to this type?
+   *
+   * Sometimes a super type can be assigned to a sub type, for example:
+   *  - `string` can be assigned to `name`
+   *  - `int64` can be assigned to `float64`
+   */
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    return this.isSuperTypeOf(schema);
+  }
+
+  equals<T extends TSchema>(schema: T): boolean {
+    const otherType = createDataType(schema);
+    return this.isSuperTypeOf(schema) && otherType.isSuperTypeOf(this.schema);
+  }
 }
 
 // Implementations for each data type
@@ -135,6 +178,9 @@ class StringDataType extends IDataType<TStringSchema> {
   }
   toTypescript(): string {
     return "string";
+  }
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
+    return schema.type === TypeName.String || schema.type === TypeName.Name;
   }
 }
 
@@ -160,6 +206,10 @@ class Float64DataType extends IDataType<TFloat64Schema> {
     if (schema.type === TypeName.Float64) return true;
     if (schema.type === TypeName.Int64) return true;
     return false;
+  }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.Int64) return true;
+    return super.canBeAssigned(schema);
   }
 }
 
@@ -264,6 +314,9 @@ class AnyDataType extends IDataType<TAnySchema> {
   isSuperTypeOf<T extends TSchema>(schema: T): boolean {
     return true;
   }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    return true;
+  }
 }
 
 class DateDataType extends IDataType<TDateSchema> {
@@ -307,6 +360,61 @@ class TupleDataType<TItems extends TSchema[]> extends IDataType<
   }
 }
 
+class NameDataType extends IDataType<TNameSchema> {
+  parse(input: any): string {
+    if (typeof input !== "string") this.throwParseError(input);
+    return input;
+  }
+  toTypescript(): string {
+    return "string";
+  }
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.String) return true;
+    return super.canBeAssigned(schema);
+  }
+}
+
+class UnionDataType extends IDataType<TUnionSchema> {
+  parse(input: any): any {
+    for (const schema of this.schema.unionTypes) {
+      try {
+        return createDataType(schema).parse(input);
+      } catch {}
+    }
+    throw new Error(`Invalid input for union type: ${JSON.stringify(input)}`);
+  }
+  toTypescript(): string {
+    return this.schema.unionTypes
+      .map((schema) => createDataType(schema).toTypescript())
+      .join(" | ");
+  }
+  isSuperTypeOf<T extends TSchema>(schema: T): boolean {
+    return this.schema.unionTypes.some((s) =>
+      createDataType(s).isSuperTypeOf(schema)
+    );
+  }
+}
+
+class UndefinedDataType extends IDataType<TUndefinedSchema> {
+  parse(input: any): undefined {
+    if (typeof input !== "undefined") this.throwParseError(input);
+    return input;
+  }
+  toTypescript(): string {
+    return "undefined";
+  }
+}
+
+class NullDataType extends IDataType<TNullSchema> {
+  parse(input: any): null {
+    if (input !== null) this.throwParseError(input);
+    return input;
+  }
+  toTypescript(): string {
+    return "null";
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -338,7 +446,7 @@ export const DATA_TYPES_REGISTRY = {
   },
   [TypeName.Entity]: {
     type: EntityDataType,
-    defaultSchema: { type: TypeName.Entity },
+    defaultSchema: { type: TypeName.Entity, entityType: undefined },
   },
   [TypeName.Array]: {
     type: ArrayDataType,
@@ -364,6 +472,22 @@ export const DATA_TYPES_REGISTRY = {
     type: TupleDataType,
     defaultSchema: { type: TypeName.Tuple, items: [] },
   },
+  [TypeName.Name]: {
+    type: NameDataType,
+    defaultSchema: { type: TypeName.Name },
+  },
+  [TypeName.Union]: {
+    type: UnionDataType,
+    defaultSchema: { type: TypeName.Union, unionTypes: [] },
+  },
+  [TypeName.Undefined]: {
+    type: UndefinedDataType,
+    defaultSchema: { type: TypeName.Undefined },
+  },
+  [TypeName.Null]: {
+    type: NullDataType,
+    defaultSchema: { type: TypeName.Null },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -383,7 +507,11 @@ export type TSchema =
   | TAnySchema
   | TDateSchema
   | TRuleSchema
-  | TTupleSchema;
+  | TTupleSchema
+  | TNameSchema
+  | TUnionSchema
+  | TUndefinedSchema
+  | TNullSchema;
 
 export const tSchemaZod = z.custom<TSchema>((input) => {
   if (!input) return false;
@@ -468,9 +596,9 @@ export function inferSchemaFromJsonObject(jsonObj: any): TSchema {
       };
     }
   } else if (jsonObj === null) {
-    return { type: TypeName.Any };
+    return { type: TypeName.Null };
   } else if (typeof jsonObj === "undefined") {
-    return { type: TypeName.Any };
+    return { type: TypeName.Undefined };
   } else if (typeof jsonObj === "object") {
     const properties: Record<string, TSchema> = {};
     for (const key in jsonObj) {

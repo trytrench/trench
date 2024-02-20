@@ -1,40 +1,58 @@
-import { TSchema, TypeName, createDataType } from "event-processing";
+import { type TSchema, TypeName, createDataType } from "event-processing";
 import { api } from "../../utils/api";
 import { SchemaTag } from "../SchemaTag";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
-import { FeaturePathItem } from "../../shared/types";
+import { Button } from "../ui/button";
 
 export function FeatureSelector(props: {
   baseEntityTypeId: string;
-  desiredSchema: TSchema;
-  value: FeaturePathItem[];
-  onChange: (value: FeaturePathItem[]) => void;
+  desiredSchema?: TSchema;
+  value: string[];
+  onChange: (value: string[]) => void;
 }) {
   const { value, onChange, desiredSchema, baseEntityTypeId } = props;
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const { data: allFeatures } = api.features.list.useQuery();
 
-  const finalItem = value[value.length - 1]!;
-  const desiredType = finalItem ? createDataType(desiredSchema) : null;
+  const lastFeatureId = value[value.length - 1];
+  const lastFeature = allFeatures?.find(
+    (feature) => feature.id === lastFeatureId
+  );
+  const desiredType = desiredSchema ? createDataType(desiredSchema) : null;
   const isValidSelection = desiredType
-    ? desiredType.isSuperTypeOf(finalItem.schema)
+    ? desiredType.isSuperTypeOf(lastFeature?.schema ?? { type: TypeName.Any })
     : false;
   return (
     <div className="flex flex-wrap">
+      {/* <Button
+        onClick={() => {
+          onChange([]);
+        }}
+      >
+        Clear
+      </Button> */}
       {isValidSelection ? (
         <div className="text-green-400">✅</div>
       ) : (
         <div className="text-red-400">❌</div>
       )}
       {value.map((item, index) => {
-        const previousItemSchema = value[index - 1]?.schema;
-        if (previousItemSchema && previousItemSchema.type !== TypeName.Entity) {
-          return <div key={index}>should never happen</div>;
-        }
+        const previousFeatureId = value[index - 1];
+        const previousFeature = allFeatures?.find(
+          (feature) => feature.id === previousFeatureId
+        );
+
+        const prevFtSchema = previousFeature?.schema;
+
         const prevEntityType =
-          index === 0 ? baseEntityTypeId : previousItemSchema!.entityType;
+          index === 0
+            ? baseEntityTypeId
+            : prevFtSchema?.type === TypeName.Entity
+            ? prevFtSchema.entityType
+            : null;
 
         return (
-          <SelectFeaturePathItem
+          <SelectFeature
             key={index}
             previousEntityTypeId={
               index === 0
@@ -45,7 +63,7 @@ export function FeatureSelector(props: {
             }
             value={item}
             onChange={(item) => {
-              const newValue: FeaturePathItem[] = [];
+              const newValue: string[] = [];
               for (let i = 0; i < index; i++) {
                 if (i < index) {
                   newValue.push(value[i]!);
@@ -58,8 +76,8 @@ export function FeatureSelector(props: {
           />
         );
       })}
-      {!finalItem && (
-        <SelectFeaturePathItem
+      {!lastFeatureId && (
+        <SelectFeature
           previousEntityTypeId={baseEntityTypeId}
           value={null}
           onChange={(item) => {
@@ -68,9 +86,9 @@ export function FeatureSelector(props: {
           desiredSchema={desiredSchema}
         />
       )}
-      {finalItem?.schema.type === TypeName.Entity && (
-        <SelectFeaturePathItem
-          previousEntityTypeId={finalItem.schema.entityType}
+      {lastFeature?.schema.type === TypeName.Entity && (
+        <SelectFeature
+          previousEntityTypeId={lastFeature.schema.entityType}
           value={null}
           onChange={(item) => {
             onChange([...value, item]);
@@ -82,28 +100,25 @@ export function FeatureSelector(props: {
   );
 }
 
-function SelectFeaturePathItem(props: {
+function SelectFeature(props: {
   previousEntityTypeId?: string;
-  value: FeaturePathItem | null;
-  onChange: (item: FeaturePathItem) => void;
-  desiredSchema: TSchema;
+  value: string | null;
+  onChange: (item: string) => void;
+  desiredSchema?: TSchema;
 }) {
   const { value, onChange, previousEntityTypeId, desiredSchema } = props;
   const { data: features } = api.features.list.useQuery({});
 
   return (
     <Select
-      value={value?.featureId ?? ""}
+      value={value ?? ""}
       onValueChange={(val) => {
-        const newFeature = features?.find((feature) => feature.id === val);
-        if (newFeature) {
-          onChange({ featureId: newFeature.id, schema: newFeature.schema });
-        }
+        onChange(val);
       }}
     >
       <SelectTrigger>
         {value ? (
-          <RenderFeaturePathItem item={value} />
+          <RenderFeatureId id={value} />
         ) : (
           <div className="text-gray-400">Select feature</div>
         )}
@@ -114,13 +129,15 @@ function SelectFeaturePathItem(props: {
             (feature) =>
               feature.entityTypeId === previousEntityTypeId &&
               (feature.schema.type === TypeName.Entity ||
-                createDataType(desiredSchema).isSuperTypeOf(feature.schema))
+                createDataType(
+                  desiredSchema ?? {
+                    type: TypeName.Any,
+                  }
+                ).isSuperTypeOf(feature.schema))
           )
           ?.map((feature) => (
             <SelectItem key={feature.id} value={feature.id}>
-              <RenderFeaturePathItem
-                item={{ featureId: feature.id, schema: feature.schema }}
-              />
+              <RenderFeatureId id={feature.id} />
             </SelectItem>
           ))}
       </SelectContent>
@@ -128,18 +145,19 @@ function SelectFeaturePathItem(props: {
   );
 }
 
-function RenderFeaturePathItem(props: { item: FeaturePathItem }) {
-  const { item } = props;
+function RenderFeatureId(props: { id: string }) {
+  const { id } = props;
   const { data: features } = api.features.list.useQuery({});
 
-  const desiredFeature = features?.find(
-    (feature) => feature.id === item.featureId
-  );
+  const desiredFeature = features?.find((feature) => feature.id === id);
 
+  if (!desiredFeature) {
+    return <div>Feature not found</div>;
+  }
   return (
     <div className="flex items-center gap-2">
-      <div className="text-gray-400">{desiredFeature?.name}</div>
-      <SchemaTag schema={item.schema} />
+      <div className="text-gray-400">{desiredFeature.name}</div>
+      <SchemaTag schema={desiredFeature.schema} />
     </div>
   );
 }

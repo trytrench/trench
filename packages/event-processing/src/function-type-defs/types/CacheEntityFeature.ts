@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FnType } from "./_enum";
+import { FnType } from "../enum";
 import { createFnTypeDefBuilder } from "../builder";
 import {
   Entity,
@@ -36,48 +36,5 @@ export const cacheEntityFeatureFnDef = createFnTypeDefBuilder()
     const paths = [input.dataPath];
     if (input.entityDataPath) paths.push(input.entityDataPath);
     return paths;
-  })
-  .setGetDependencies((input) => {
-    const set = new Set<string>();
-    if (input.entityDataPath) set.add(input.entityDataPath.nodeId);
-    set.add(input.dataPath.nodeId);
-    return set;
-  })
-  .setCreateResolver(({ fnDef, context, input }) => {
-    return async ({ event, getDependency, engineId }) => {
-      const { featureId, featureSchema } = fnDef.config;
-
-      const { entityDataPath, dataPath } = input;
-
-      let assignToEntity = entityDataPath
-        ? await getDependency({
-            dataPath: entityDataPath,
-            expectedSchema: {
-              type: TypeName.Entity,
-            },
-          })
-        : null;
-
-      const value = await getDependency({
-        dataPath: dataPath,
-        expectedSchema: dataPath.schema,
-      });
-
-      const redisKey = hashObject({
-        featureId,
-        entity: assignToEntity,
-      });
-
-      const redisValue = JSON.stringify(value);
-
-      const stateUpdater = async () => {
-        await context.redis.set(redisKey, redisValue);
-      };
-
-      return {
-        stateUpdaters: [stateUpdater],
-        data: value,
-      };
-    };
   })
   .build();
