@@ -38,8 +38,6 @@ export function LinkSVG(props: LinkSVGProps) {
     }
   }
 
-  console.log(opacity);
-
   // bezier curve
   return (
     <path

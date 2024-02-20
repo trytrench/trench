@@ -51,49 +51,4 @@ declare let fn: {
   }>;
 
   getIpData: (ipAddress: string) => Promise<IpAddressInfo>;
-
-  getGithubUserData: (username: string) => Promise<{
-    fullName: string;
-    username: string;
-    bio: string;
-    followers: number;
-    following: number;
-    company: string;
-    location: string;
-    websiteUrl: string;
-    repositories: number;
-    stars: number;
-    projects: number;
-    packages: number;
-    sponsoring: number;
-    socialLinks: string[];
-    isPro: boolean;
-    contributionsPastYear: number;
-    createdYear: string;
-    createdDate: string;
-    readmeContent: string;
-    sponsors: { url: string; avatar: string; username: string }[];
-    sponsorees: { url: string; avatar: string; username: string }[];
-    organizations: {
-      name: string;
-      avatar: string;
-      url: string;
-    }[];
-    achievements: {
-      url: string;
-      imgSrc: string;
-      name: string;
-      tier: string;
-    }[];
-    pinnedRepos: {
-      title: string;
-      url: string;
-      description: string;
-      isForked: boolean;
-      programmingLanguage: string;
-      stars: number;
-      forks: number;
-    }[];
-    isDeleted: boolean;
-  }>;
 };
