@@ -1,7 +1,18 @@
-import { type ColumnDef } from "@tanstack/react-table";
+import {
+  ColumnFiltersState,
+  ColumnOrderState,
+  SortingState,
+  VisibilityState,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import SettingsLayout from "~/components/SettingsLayout";
 import { CreateEntityTypeDialog } from "~/components/nodes/CreateEntityTypeDialog";
 import { Button } from "~/components/ui/button";
@@ -24,6 +35,8 @@ import {
 } from "~/components/ui/tooltip";
 import { api, type RouterOutputs } from "~/utils/api";
 import { type NextPageWithLayout } from "../_app";
+import eventTypes from "./event-types";
+import { handleError } from "../../lib/handleError";
 
 const Page: NextPageWithLayout = () => {
   const { data: entityTypes, refetch: refetchEntityTypes } =
@@ -75,8 +88,7 @@ const Page: NextPageWithLayout = () => {
                       <Info className="h-4 w-4" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Created by {row.original.createdBy} on{" "}
-                      {format(row.original.createdAt, "MMM d, yyyy")}
+                      Created on {format(row.original.createdAt, "MMM d, yyyy")}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -98,7 +110,7 @@ const Page: NextPageWithLayout = () => {
                           .then(() => {
                             return refetchEntityTypes();
                           })
-                          .catch((error) => {});
+                          .catch(handleError);
                       }}
                     >
                       Delete
@@ -110,8 +122,34 @@ const Page: NextPageWithLayout = () => {
           },
         },
       ],
-      []
+      [deleteEntityType, refetchEntityTypes]
     );
+
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
+  const table = useReactTable({
+    data: entityTypes ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onColumnOrderChange: setColumnOrder,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      columnOrder,
+    },
+  });
 
   return (
     <div>
@@ -124,8 +162,7 @@ const Page: NextPageWithLayout = () => {
         </Button>
       </CreateEntityTypeDialog>
       <DataTable
-        columns={columns}
-        data={entityTypes ?? []}
+        table={table}
         renderHeader={(table) => (
           <>
             <Input

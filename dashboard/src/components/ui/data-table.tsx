@@ -45,15 +45,10 @@ import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { Skeleton } from "./skeleton";
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
   renderHeader?: (table: TableType<TData>) => React.ReactNode;
   onRowClick?: (row: TData) => void;
-  columnVisibility: VisibilityState;
-  onColumnVisibilityChange: OnChangeFn<VisibilityState>;
-  columnOrder: ColumnOrderState;
-  onColumnOrderChange: OnChangeFn<ColumnOrderState>;
   loading?: boolean;
+  table: TableType<TData>;
 }
 
 export const useDataTableState = ({
@@ -99,54 +94,23 @@ const SortableTableHead = ({
 };
 
 export function DataTable<TData, TValue>({
-  columns,
-  data,
   renderHeader,
   onRowClick,
-  columnVisibility,
-  onColumnVisibilityChange,
-  columnOrder,
-  onColumnOrderChange,
   loading = false,
+  table,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [rowSelection, setRowSelection] = React.useState({});
-
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange,
-    onRowSelectionChange: setRowSelection,
-    onColumnOrderChange,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-      columnOrder,
-    },
-  });
-
   const handleDragEnd = React.useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (over && active.id !== over.id) {
-        const oldIndex = columnOrder.indexOf(active.id as string);
-        const newIndex = columnOrder.indexOf(over.id as string);
+        const colOrder = table.getState().columnOrder;
+        const oldIndex = colOrder.indexOf(active.id as string);
+        const newIndex = colOrder.indexOf(over.id as string);
 
-        onColumnOrderChange(arrayMove(columnOrder, oldIndex, newIndex));
+        table.setColumnOrder(arrayMove(colOrder, oldIndex, newIndex));
       }
     },
-    [onColumnOrderChange, columnOrder]
+    [table]
   );
 
   const sensors = useSensors(
@@ -171,7 +135,7 @@ export function DataTable<TData, TValue>({
                   modifiers={[restrictToHorizontalAxis]}
                 >
                   <SortableContext
-                    items={columnOrder}
+                    items={table.getState().columnOrder}
                     strategy={horizontalListSortingStrategy}
                   >
                     {headerGroup.headers.map((header) => {
@@ -195,7 +159,7 @@ export function DataTable<TData, TValue>({
             {loading ? (
               Array.from({ length: 10 }).map((_, index) => (
                 <TableRow key={index}>
-                  {columns.map((column) => (
+                  {table.getAllColumns().map((column) => (
                     <TableCell key={column.id}>
                       <Skeleton className="w-[100px] h-[20px]" />
                     </TableCell>
@@ -225,7 +189,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={table.getAllColumns().length}
                   className="h-24 text-center"
                 >
                   No results.

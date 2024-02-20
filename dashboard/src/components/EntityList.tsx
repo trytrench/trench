@@ -8,12 +8,32 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { handleError } from "~/lib/handleError";
 import { EntityViewConfig } from "~/shared/validation";
-import { api } from "~/utils/api";
+import { RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
-import { EntityListDataTable } from "./EntityListDataTable";
 import { ViewsLayout } from "./ViewsLayout";
 import { RenderEntityFilters } from "./filters/RenderEntityFilters";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { DataTableViewOptions } from "./ui/data-table-view-options";
+import { Input } from "./ui/input";
+import { DataTable } from "./ui/data-table";
+import { Checkbox } from "@radix-ui/react-checkbox";
+import {
+  ColumnDef,
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+  ColumnOrderState,
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
+import { format } from "date-fns";
+import { config } from "webpack";
+import entityTypes from "../pages/settings/entity-types";
+import eventTypes from "../pages/settings/event-types";
+import { RenderResult } from "./RenderResult";
 
 const useEntityViewConfig = (seenWithEntity?: Entity) => {
   const router = useRouter();
@@ -63,6 +83,7 @@ interface Props {
 
 export const EntityList = ({ seenWithEntity }: Props) => {
   const router = useRouter();
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
 
   const { viewConfig, setViewConfig } = useEntityViewConfig(seenWithEntity);
 
@@ -73,7 +94,8 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery({
     entityTypeId: seenWithEntity?.type ?? null,
   });
-  const limit = 10;
+
+  const [limit, setLimit] = useState(10);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -90,7 +112,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         seenWithEntity,
       },
       // sortBy,
-      // limit,
+      limit,
     },
     {
       getNextPageParam: (lastPage, pages) => {
@@ -133,12 +155,142 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   }, [allEntities]);
   const entityNameMap = useEntityNameMap(entityIds);
 
-  const handleTableConfigChange = useCallback(
-    (config: Exclude<EntityViewConfig["tableConfig"], undefined>) => {
-      if (viewConfig) setViewConfig({ ...viewConfig, tableConfig: config });
-    },
-    [viewConfig, setViewConfig]
+  // Table
+  type EntityData = RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
+  const columns: ColumnDef<EntityData>[] = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "entityId",
+        id: "ID",
+        header: "ID",
+      },
+      {
+        header: "Last Seen",
+        id: "Last Seen",
+        accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
+      },
+      ...(filteredFeatures?.map(
+        (feature) =>
+          ({
+            id: feature.name,
+            header: feature.name,
+            cell: ({ row }) => {
+              const value = row.original.features.find(
+                (f) => f.featureId === feature.id
+              );
+              if (!value) return null;
+              return value.rule && value.result.type === "success" ? (
+                value.result.data.value && (
+                  <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
+                )
+              ) : value.result ? (
+                <RenderResult result={value.result} />
+              ) : null;
+            },
+          }) as ColumnDef<EntityData>
+      ) ?? []),
+    ],
+    [filteredFeatures]
   );
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
+  const table = useReactTable({
+    data: allEntities ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: (updater) => {
+      setViewConfig((prevConfig) => {
+        if (!prevConfig?.tableConfig) return prevConfig;
+        return {
+          ...prevConfig,
+          tableConfig: {
+            ...prevConfig.tableConfig,
+            columnVisibility:
+              typeof updater === "function"
+                ? updater(prevConfig.tableConfig.columnVisibility)
+                : updater,
+          },
+        };
+      });
+    },
+    onRowSelectionChange: setRowSelection,
+    onColumnOrderChange: (updater) => {
+      setViewConfig((prevConfig) => {
+        if (!prevConfig?.tableConfig) return prevConfig;
+        return {
+          ...prevConfig,
+          tableConfig: {
+            ...prevConfig.tableConfig,
+            columnOrder:
+              typeof updater === "function"
+                ? updater(prevConfig.tableConfig.columnOrder)
+                : updater,
+          },
+        };
+      });
+    },
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility: viewConfig?.tableConfig?.columnVisibility ?? {},
+      rowSelection,
+      columnOrder: viewConfig?.tableConfig?.columnOrder ?? [],
+    },
+  });
+
+  // If config hasn't been set or the entity type changed, set it to the default
+  useEffect(() => {
+    const config = viewConfig?.tableConfig;
+    if (!config) return;
+    if (
+      !config.columnOrder.length ||
+      config.columnOrder.some((column) => !columns.some((c) => c.id === column))
+    ) {
+      setViewConfig((prevConfig) => {
+        if (!prevConfig?.tableConfig) return prevConfig;
+        return {
+          ...prevConfig,
+          tableConfig: {
+            ...prevConfig.tableConfig,
+            columnOrder: columns
+              .map((column) => column.id ?? "")
+              .filter(Boolean),
+            columnVisibility: config.columnVisibility,
+          },
+        };
+      });
+    }
+  }, [columns, setViewConfig, viewConfig?.tableConfig]);
 
   return (
     <ViewsLayout
@@ -287,18 +439,37 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         </ScrollArea>
       ) : (
         <div className="h-full py-4 overflow-y-scroll">
-          <EntityListDataTable
-            features={filteredFeatures ?? []}
-            entities={allEntities}
-            config={
-              viewConfig?.tableConfig ?? {
-                columnVisibility: {},
-                columnOrder: [],
+          <div className="px-8 overflow-x-auto h-full">
+            <DataTable
+              table={table}
+              loading={false}
+              onRowClick={(entity) =>
+                router.push(
+                  `/entity/${entityTypes?.find(
+                    (et) => et.id === entity.entityType
+                  )?.type}/${entity.entityId}`
+                )
               }
-            }
-            loading={entitiesLoading}
-            onConfigChange={handleTableConfigChange}
-          />
+              renderHeader={(table) => (
+                <>
+                  <Input
+                    placeholder="Filter event types..."
+                    value={
+                      (table.getColumn("Name")?.getFilterValue() as string) ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      table
+                        .getColumn("Name")
+                        ?.setFilterValue(event.target.value)
+                    }
+                    className="max-w-sm"
+                  />
+                  <DataTableViewOptions table={table} />
+                </>
+              )}
+            />
+          </div>
         </div>
       )}
     </ViewsLayout>

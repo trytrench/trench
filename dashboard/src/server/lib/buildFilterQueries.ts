@@ -122,9 +122,9 @@ const buildWhereClauseForFeatureFilter = (
 export async function getEntitiesList(props: {
   filters: EntityFilters;
   limit?: number;
-  cursor?: number;
+  offset?: number;
 }) {
-  const { filters, limit, cursor } = props;
+  const { filters, limit, offset } = props;
 
   const featureWhereClauses = [];
   const seenWhereClauses = [];
@@ -233,7 +233,7 @@ export async function getEntitiesList(props: {
         }
         ORDER BY
             last_seen DESC
-        LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
+        LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
   `;
 
   const result = await db.query({
@@ -332,9 +332,9 @@ export async function getEntitiesList(props: {
 export const getEventsList = async (options: {
   filter: EventFilters;
   limit?: number;
-  cursor?: number;
+  offset?: number;
 }) => {
-  const { filter, limit, cursor } = options;
+  const { filter, limit, offset } = options;
 
   // Query 1: Identifying relevant event IDs
   const eventWhereClauses = [];
@@ -395,7 +395,7 @@ export const getEventsList = async (options: {
     }
     ${whereClausesExist ? `AND ${whereClauses.join(" AND ")}` : ""}
     ORDER BY events.id DESC
-    LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
+    LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
   `;
   const eventIDsResultRaw = await db.query({ query: eventIDsQuery });
 

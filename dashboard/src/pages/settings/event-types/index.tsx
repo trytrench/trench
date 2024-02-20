@@ -1,5 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ColumnDef } from "@tanstack/react-table";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type ColumnOrderState,
+  type SortingState,
+  type VisibilityState,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Info, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
@@ -42,8 +53,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { RouterOutputs, api } from "~/utils/api";
+import { type RouterOutputs, api } from "~/utils/api";
 import { type NextPageWithLayout } from "../../_app";
+import React from "react";
+import { handleError } from "../../../lib/handleError";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -137,7 +150,7 @@ const Page: NextPageWithLayout = () => {
                           .then(() => {
                             return refetchEventTypes();
                           })
-                          .catch((error) => {});
+                          .catch(handleError);
                       }}
                     >
                       Delete
@@ -152,6 +165,32 @@ const Page: NextPageWithLayout = () => {
       [deleteEventType, refetchEventTypes]
     );
 
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = useState({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
+  const table = useReactTable({
+    data: eventTypes ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onColumnOrderChange: setColumnOrder,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      columnOrder,
+    },
+  });
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     createEventType({
       name: values.name,
@@ -161,7 +200,7 @@ const Page: NextPageWithLayout = () => {
         form.reset();
         return refetchEventTypes();
       })
-      .catch((error) => {});
+      .catch(handleError);
   }
 
   return (
@@ -170,8 +209,7 @@ const Page: NextPageWithLayout = () => {
         <h1 className="text-2xl text-emphasis-foreground">Event Types</h1>
       </div>
       <DataTable
-        columns={columns}
-        data={eventTypes ?? []}
+        table={table}
         onRowClick={(row) =>
           void router.push(`/settings/event-types/${row.id}`)
         }
