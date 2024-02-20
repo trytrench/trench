@@ -18,7 +18,7 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
         created_at: new Date().getTime(),
         event_type: event.type,
         event_id: event.id,
-        event_timestamp: getUnixTime(event.timestamp),
+        event_timestamp: event.timestamp.getTime(),
         feature_type: fnDef.type,
         feature_id: featureId,
         data_type: featureSchema.type,
