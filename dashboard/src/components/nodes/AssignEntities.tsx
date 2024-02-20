@@ -6,9 +6,9 @@ import {
   FnType,
   NodeDef,
   TypeName,
-  createDataType,
   hasFnType,
 } from "event-processing";
+import { MoreHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Input } from "~/components/ui/input";
+import { handleError } from "~/lib/handleError";
 import { api } from "~/utils/api";
 import { generateNanoId } from "../../../../packages/common/src";
 import { CreateEventFeatureDialog } from "./CreateEventFeatureDialog";
@@ -27,9 +28,6 @@ import { CreateRuleDialog } from "./CreateRuleDialog";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
-import { handleError } from "~/lib/handleError";
-import { MoreHorizontal } from "lucide-react";
-import { has } from "lodash";
 
 const FeatureItem = ({
   feature,
@@ -59,6 +57,43 @@ const FeatureItem = ({
         eventType={eventType}
         // desiredSchema={feature.schema}
       />
+    </div>
+  );
+};
+
+const NodeItem = ({
+  name,
+  selected,
+  onClick,
+  onDelete,
+}: {
+  name: string;
+  selected: boolean;
+  onClick: () => void;
+  onDelete?: () => void;
+}) => {
+  return (
+    <div
+      className={clsx(
+        "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
+        { "bg-accent text-accent-foreground": selected }
+      )}
+      onClick={onClick}
+    >
+      <div>{name}</div>
+      {onDelete && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="iconXs" variant="link" className="h-3 ml-auto">
+              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 };
@@ -106,12 +141,25 @@ export default function AssignEntities({ eventType }: Props) {
 
     if (!foundNode) return null;
 
-    if (hasFnType(foundNode, FnType.EntityAppearance)) {
+    if (
+      hasFnType(foundNode, FnType.EntityAppearance) ||
+      foundNode.fn.returnSchema.type === TypeName.Entity
+    ) {
       return foundNode;
     } else {
       throw new Error("This node is not an entity appearance node");
     }
   }, [selectedNodeId, nodes]);
+
+  const computedEntityNodes = useMemo(
+    () =>
+      nodes?.filter(
+        (node) =>
+          node.fn.returnSchema.type === TypeName.Entity &&
+          hasFnType(node, FnType.Computed)
+      ),
+    [nodes]
+  );
 
   const setNodeDef = useEditorStore.use.setNodeDefWithFn();
   const deleteNodeDef = useEditorStore.use.deleteNodeDef();
@@ -144,50 +192,34 @@ export default function AssignEntities({ eventType }: Props) {
               }
             )}
             onClick={() => setSelectedNodeId(EVENT)}
-          >
-            Event
-          </div>
+          />
+
           {nodes
             ?.filter((node) => hasFnType(node, FnType.EntityAppearance))
             .map((node) => (
-              <div
-                className={clsx(
-                  "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center",
-                  {
-                    "bg-accent text-accent-foreground":
-                      selectedNodeId === node.id,
-                    "hover:bg-muted cursor-pointer": selectedNodeId !== node.id,
-                  }
-                )}
-                onClick={() => setSelectedNodeId(node.id)}
+              <NodeItem
                 key={node.id}
-              >
-                <div>{node.name}</div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="iconXs"
-                      variant="link"
-                      className="h-3 ml-auto"
-                    >
-                      <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        deleteNodeDef(node.id)
-                          .catch(toasts.deleteNode.onError)
-                          .catch(handleError);
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                onDelete={() =>
+                  deleteNodeDef(node.id)
+                    .catch(toasts.deleteNode.onError)
+                    .catch(handleError)
+                }
+                name={node.name}
+                selected={selectedNodeId === node.id}
+                onClick={() => setSelectedNodeId(node.id)}
+              />
             ))}
+
+          {computedEntityNodes.length > 0 && <Separator className="my-1" />}
+
+          {computedEntityNodes.map((node) => (
+            <NodeItem
+              key={node.id}
+              name={node.name}
+              selected={selectedNodeId === node.id}
+              onClick={() => setSelectedNodeId(node.id)}
+            />
+          ))}
         </div>
         {selectedNodeId && (
           <div className="flex-1">
@@ -237,29 +269,30 @@ export default function AssignEntities({ eventType }: Props) {
               </DropdownMenu>
             </div>
             <div className="flex flex-col px-6 pt-2 pb-4">
-              {selectedNode && (
-                <FeatureItem
-                  feature={{
-                    id: "id",
-                    name: "ID",
-                    schema: {
-                      type: TypeName.String,
-                    },
-                  }}
-                  dataPath={selectedNode.inputs.dataPath}
-                  eventType={eventType}
-                  onDataPathChange={(dataPath) => {
-                    if (!dataPath) return;
+              {selectedNode &&
+                hasFnType(selectedNode, FnType.EntityAppearance) && (
+                  <FeatureItem
+                    feature={{
+                      id: "id",
+                      name: "ID",
+                      schema: {
+                        type: TypeName.String,
+                      },
+                    }}
+                    dataPath={selectedNode.inputs.dataPath}
+                    eventType={eventType}
+                    onDataPathChange={(dataPath) => {
+                      if (!dataPath) return;
 
-                    setNodeDef(FnType.EntityAppearance, {
-                      ...selectedNode,
-                      inputs: { dataPath },
-                    })
-                      .catch(toasts.createNode.onError)
-                      .catch(handleError);
-                  }}
-                />
-              )}
+                      setNodeDef(FnType.EntityAppearance, {
+                        ...selectedNode,
+                        inputs: { dataPath },
+                      })
+                        .catch(toasts.createNode.onError)
+                        .catch(handleError);
+                    }}
+                  />
+                )}
 
               {!selectedNode || !filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No features</div>
