@@ -204,7 +204,8 @@ export async function getEntitiesList(props: {
         SELECT
             unique_entity_id,
             first_seen,
-            last_seen
+            last_seen,
+            count() OVER() AS total_count
         FROM
             timestamped_entities
         ${
@@ -244,6 +245,7 @@ export async function getEntitiesList(props: {
     unique_entity_id: string;
     first_seen: string;
     last_seen: string;
+    total_count: string | null;
   };
 
   const entities = await result.json<{
@@ -251,11 +253,18 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log(entities.data);
+  const totalCount = entities.data[0]?.total_count
+    ? parseInt(entities.data[0].total_count)
+    : 0;
+
+  console.log(entities.data[0]);
 
   if (entities.data.length === 0) {
     console.log("Early return");
-    return [];
+    return {
+      count: 0,
+      rows: [],
+    };
   }
 
   const finalQuery2 = `
@@ -326,7 +335,10 @@ export async function getEntitiesList(props: {
     };
   });
 
-  return mergedEntities;
+  return {
+    count: totalCount,
+    rows: mergedEntities,
+  };
 }
 
 export const getEventsList = async (options: {

@@ -8,7 +8,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { handleError } from "~/lib/handleError";
 import { EntityViewConfig } from "~/shared/validation";
-import { RouterOutputs, api } from "~/utils/api";
+import { RouterInputs, RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
 import { ViewsLayout } from "./ViewsLayout";
 import { RenderEntityFilters } from "./filters/RenderEntityFilters";
@@ -28,6 +28,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  PaginationState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { config } from "webpack";
@@ -94,34 +95,56 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery({
     entityTypeId: seenWithEntity?.type ?? null,
   });
-
-  const [limit, setLimit] = useState(10);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const {
-    data: entities,
-    isLoading: entitiesLoading,
-    fetchNextPage,
-    isFetchingNextPage,
-    hasNextPage,
-  } = api.lists.getEntitiesList.useInfiniteQuery(
-    {
+  // const {
+  //   data: entities,
+  //   isLoading: entitiesLoading,
+  //   fetchNextPage,
+  //   isFetchingNextPage,
+  //   hasNextPage,
+  // } = api.lists.getEntitiesList.useInfiniteQuery(
+  //   {
+  //     entityFilters: {
+  //       ...viewConfig?.filters,
+  //       seenWithEntity,
+  //     },
+  //     // sortBy,
+  //     limit: pagination.pageSize,
+  //   },
+  //   {
+  //     getNextPageParam: (lastPage, pages) => {
+  //       // if (lastPage.rows.length < pagination.pageSize) return undefined;
+  //       return pages.length * pagination.pageSize;
+  //     },
+  //     enabled: viewConfig?.type === "grid",
+  //   }
+  // );
+
+  const queryProps: RouterInputs["lists"]["getEntitiesList"] = useMemo(() => {
+    return {
       entityFilters: {
         ...viewConfig?.filters,
         seenWithEntity,
       },
-      // sortBy,
-      limit,
-    },
-    {
-      getNextPageParam: (lastPage, pages) => {
-        if (lastPage.rows.length < limit) return undefined;
-        return pages.length * limit;
-      },
-      enabled: !!viewConfig,
-    }
-  );
+      limit: pagination.pageSize,
+      cursor: pagination.pageIndex * pagination.pageSize,
+    };
+  }, [viewConfig, seenWithEntity, pagination]);
+
+  const {
+    data: entities,
+    isLoading: entitiesTableLoading,
+    isFetching: fetchingEntities,
+  } = api.lists.getEntitiesList.useQuery(queryProps, {
+    keepPreviousData: true,
+    staleTime: 15000,
+  });
 
   const { data: features } = api.features.list.useQuery();
 
@@ -134,7 +157,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   );
 
   const allEntities = useMemo(() => {
-    return entities?.pages.flatMap((page) => page.rows) ?? [];
+    return entities?.rows ?? [];
   }, [entities]);
 
   const entityIds = useMemo<string[]>(() => {
@@ -219,8 +242,9 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
+
   const table = useReactTable({
-    data: allEntities ?? [],
+    data: allEntities,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -259,12 +283,19 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         };
       });
     },
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    // autoResetPageIndex: false,
+    pageCount: entities?.count
+      ? Math.ceil(entities.count / pagination.pageSize)
+      : 0,
     state: {
       sorting,
       columnFilters,
       columnVisibility: viewConfig?.tableConfig?.columnVisibility ?? {},
       rowSelection,
       columnOrder: viewConfig?.tableConfig?.columnOrder ?? [],
+      pagination,
     },
   });
 
@@ -393,7 +424,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
       {viewConfig?.type === "grid" ? (
         <ScrollArea className="h-full">
           <div className="space-y-4 px-8 py-4">
-            {entitiesLoading ? (
+            {entitiesTableLoading ? (
               <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
             ) : (
               <>
@@ -418,7 +449,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                     );
                   }
                 )}
-                {hasNextPage && (
+                {/* {hasNextPage && (
                   <div className="self-center my-4">
                     <SpinnerButton
                       variant="outline"
@@ -432,7 +463,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
                       Fetch more entities
                     </SpinnerButton>
                   </div>
-                )}
+                )} */}
               </>
             )}
           </div>
@@ -442,7 +473,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           <div className="px-8 overflow-x-auto h-full">
             <DataTable
               table={table}
-              loading={false}
+              loading={fetchingEntities}
               onRowClick={(entity) =>
                 router.push(
                   `/entity/${entityTypes?.find(

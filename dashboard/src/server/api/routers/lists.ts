@@ -42,7 +42,7 @@ export const listsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
 
-      const entities = await getEntitiesList({
+      const { rows: entities, count } = await getEntitiesList({
         filters: filters,
         limit: input.limit,
         offset: input.cursor,
@@ -53,7 +53,7 @@ export const listsRouter = createTRPCRouter({
       const rules = await prisma.rule.findMany();
 
       return {
-        count: 0,
+        count: count,
         rows: entities.map((entity) => {
           const entityType = entity.entity_type;
           const entityId = entity.entity_id;
