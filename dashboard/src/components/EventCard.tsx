@@ -90,6 +90,13 @@ export function EventCard({
     })
   );
 
+  const sortedEntityTypes = sortBy(
+    event.entities.filter((entity) =>
+      config.entityTypeOrder.includes(entity.type)
+    ),
+    (entity) => config.entityTypeOrder.indexOf(entity.type)
+  );
+
   return (
     <div className="flex">
       <div className="w-[3rem] relative shrink-0">
@@ -182,15 +189,10 @@ export function EventCard({
           modifiers={[restrictToParentElement, restrictToVerticalAxis]}
         >
           <SortableContext
-            items={event.entities.map((entity) => entity.type)}
+            items={sortedEntityTypes.map((entity) => entity.type)}
             strategy={verticalListSortingStrategy}
           >
-            {sortBy(
-              event.entities.filter((entity) =>
-                config.entityTypeOrder.includes(entity.type)
-              ),
-              (entity) => config.entityTypeOrder.indexOf(entity.type)
-            ).map((entity) => (
+            {sortedEntityTypes.map((entity) => (
               <EventCardSection
                 id={entity.type}
                 key={entity.id}

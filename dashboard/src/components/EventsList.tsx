@@ -18,7 +18,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface EventsListProps {
-  entity: Entity;
+  entity?: Entity;
 }
 
 const useEventViewConfig = (entity?: Entity) => {
@@ -254,8 +254,8 @@ export default function EventsList({ entity }: EventsListProps) {
         {eventsLoading ? (
           <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
         ) : (
-          <div className="absolute inset-0">
-            <ScrollArea className="h-full px-4">
+          <div className="relative flex-grow h-full overflow-y-auto">
+            <ScrollArea className="px-4">
               {viewConfig?.type === "feed" ? (
                 <>
                   <div className="h-2" />
@@ -328,8 +328,6 @@ export default function EventsList({ entity }: EventsListProps) {
             </ScrollArea>
           </div>
         )}
-
-        <div className="h-16 shrink-0"></div>
       </ViewsLayout>
 
       {/* <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div> */}

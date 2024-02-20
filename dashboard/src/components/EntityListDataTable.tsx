@@ -107,7 +107,7 @@ export const EntityListDataTable = ({
   }, [config, columns, onConfigChange]);
 
   return (
-    <div className="px-8 overflow-x-auto flex-1">
+    <div className="px-8 overflow-x-auto h-full">
       <DataTable
         columns={columns}
         data={entities}

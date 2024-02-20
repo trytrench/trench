@@ -15,7 +15,7 @@ import { ViewsLayout } from "./ViewsLayout";
 import { RenderEntityFilters } from "./filters/RenderEntityFilters";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
-const useEntityViewConfig = (seenWithEntity: Entity) => {
+const useEntityViewConfig = (seenWithEntity?: Entity) => {
   const router = useRouter();
 
   const { data: views } = api.entityViews.list.useQuery({
@@ -58,7 +58,7 @@ const useEntityViewConfig = (seenWithEntity: Entity) => {
 };
 
 interface Props {
-  seenWithEntity: Entity;
+  seenWithEntity?: Entity;
 }
 
 export const EntityList = ({ seenWithEntity }: Props) => {
@@ -205,7 +205,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         createView({
           name,
           config: viewConfig,
-          entityTypeId: seenWithEntity.type,
+          entityTypeId: seenWithEntity?.type,
         })
           .then((view) => {
             router
@@ -286,18 +286,20 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           </div>
         </ScrollArea>
       ) : (
-        <EntityListDataTable
-          features={filteredFeatures ?? []}
-          entities={allEntities}
-          config={
-            viewConfig?.tableConfig ?? {
-              columnVisibility: {},
-              columnOrder: [],
+        <div className="h-full py-4 overflow-y-scroll">
+          <EntityListDataTable
+            features={filteredFeatures ?? []}
+            entities={allEntities}
+            config={
+              viewConfig?.tableConfig ?? {
+                columnVisibility: {},
+                columnOrder: [],
+              }
             }
-          }
-          loading={entitiesLoading}
-          onConfigChange={handleTableConfigChange}
-        />
+            loading={entitiesLoading}
+            onConfigChange={handleTableConfigChange}
+          />
+        </div>
       )}
     </ViewsLayout>
   );
