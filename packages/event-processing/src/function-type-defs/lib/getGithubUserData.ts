@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import axiosRetry from "axios-retry";
 import * as cheerio from "cheerio";
-import { createRedisService } from "databases/src/redis";
+import { createRedisService } from "databases";
 import { sortBy } from "lodash";
 
 axiosRetry(axios, {
