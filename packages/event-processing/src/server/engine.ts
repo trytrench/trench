@@ -1,5 +1,5 @@
 import PQueue from "p-queue";
-import { createRedisService } from "databases/src/redis";
+import { createRedisService } from "databases";
 import { assert } from "common";
 import {
   BASE_CONTEXT,
