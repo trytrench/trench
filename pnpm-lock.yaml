@@ -516,6 +516,9 @@ importers:
       pg-format:
         specifier: ^1.0.4
         version: 1.0.4
+      simhash-js:
+        specifier: ^1.0.0
+        version: 1.0.0
       superjson:
         specifier: ^1.13.1
         version: 1.13.3
@@ -11748,6 +11751,10 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
     dev: true
+
+  /simhash-js@1.0.0:
+    resolution: {integrity: sha512-0amkwlDBXWWidaAXVpiZVF6xYNS8qG3mBbGcLRcyaAPsFDcsoaMxocBc08hrxI0dDDnd4IbfRkTJpTxks79/tg==}
+    dev: false
 
   /sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
