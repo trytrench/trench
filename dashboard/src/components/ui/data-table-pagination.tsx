@@ -50,8 +50,10 @@ export function DataTablePagination<TData>({
           </Select>
         </div>
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
+          Page {formatNumber(table.getState().pagination.pageIndex + 1)}
+          {table.getPageCount() > 0 && (
+            <> of {formatNumber(table.getPageCount())}</>
+          )}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -85,7 +87,7 @@ export function DataTablePagination<TData>({
             variant="outline"
             className="hidden h-8 w-8 p-0 lg:flex"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
+            disabled={!table.getCanNextPage() || table.getPageCount() < 0}
           >
             <span className="sr-only">Go to last page</span>
             <DoubleArrowRightIcon className="h-4 w-4" />
@@ -94,4 +96,8 @@ export function DataTablePagination<TData>({
       </div>
     </div>
   );
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString();
 }

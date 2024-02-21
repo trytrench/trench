@@ -33,6 +33,8 @@ type IpAddressInfo = {
 };
 
 declare let fn: {
+  simhash: (input: string) => string;
+
   geolocate: (addr: {
     line1?: string;
     line2?: string;

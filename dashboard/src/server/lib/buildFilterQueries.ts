@@ -122,9 +122,9 @@ const buildWhereClauseForFeatureFilter = (
 export async function getEntitiesList(props: {
   filters: EntityFilters;
   limit?: number;
-  cursor?: number;
+  offset?: number;
 }) {
-  const { filters, limit, cursor } = props;
+  const { filters, limit, offset } = props;
 
   const featureWhereClauses = [];
   const seenWhereClauses = [];
@@ -204,7 +204,8 @@ export async function getEntitiesList(props: {
         SELECT
             unique_entity_id,
             first_seen,
-            last_seen
+            last_seen,
+            count() OVER() AS total_count
         FROM
             timestamped_entities
         ${
@@ -233,7 +234,7 @@ export async function getEntitiesList(props: {
         }
         ORDER BY
             last_seen DESC
-        LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
+        LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
   `;
 
   const result = await db.query({
@@ -244,6 +245,7 @@ export async function getEntitiesList(props: {
     unique_entity_id: string;
     first_seen: string;
     last_seen: string;
+    total_count: string | null;
   };
 
   const entities = await result.json<{
@@ -251,11 +253,18 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log(entities.data);
+  const totalCount = entities.data[0]?.total_count
+    ? parseInt(entities.data[0].total_count)
+    : 0;
+
+  console.log(entities.data[0]);
 
   if (entities.data.length === 0) {
     console.log("Early return");
-    return [];
+    return {
+      count: 0,
+      rows: [],
+    };
   }
 
   const finalQuery2 = `
@@ -326,15 +335,18 @@ export async function getEntitiesList(props: {
     };
   });
 
-  return mergedEntities;
+  return {
+    count: totalCount,
+    rows: mergedEntities,
+  };
 }
 
 export const getEventsList = async (options: {
   filter: EventFilters;
   limit?: number;
-  cursor?: number;
+  offset?: number;
 }) => {
-  const { filter, limit, cursor } = options;
+  const { filter, limit, offset } = options;
 
   // Query 1: Identifying relevant event IDs
   const eventWhereClauses = [];
@@ -395,7 +407,7 @@ export const getEventsList = async (options: {
     }
     ${whereClausesExist ? `AND ${whereClauses.join(" AND ")}` : ""}
     ORDER BY events.id DESC
-    LIMIT ${limit ?? 50} OFFSET ${cursor ?? 0}
+    LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
   `;
   const eventIDsResultRaw = await db.query({ query: eventIDsQuery });
 
