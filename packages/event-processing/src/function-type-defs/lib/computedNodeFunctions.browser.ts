@@ -4,6 +4,12 @@ export const functions: typeof fn = {
   simhash: (text) => {
     throw new Error("Not implemented in browser");
   },
+  normalize: (text) => {
+    throw new Error("Not implemented in browser");
+  },
+  countUserMentions: (text) => {
+    throw new Error("Not implemented in browser");
+  },
   getIpData: async (ipAddress) => {
     throw new Error("Not implemented in browser");
   },

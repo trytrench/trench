@@ -10,18 +10,20 @@ import { env } from "./env";
 import { WebServiceClient } from "@maxmind/geoip2-node";
 import { getGithubUserData } from "./getGithubUserData";
 import { SimHash } from "simhash-js";
+import { countUserMentions } from "./countUserMentions";
+import { normalize, simhash } from "./simhash";
 
 const maxMind = new WebServiceClient(
   env.MAXMIND_ACCOUNT_ID ?? "",
   env.MAXMIND_LICENSE_KEY ?? ""
 );
-const jsSimhash = new SimHash();
 
 export const functions: typeof fn = {
-  simhash: (text: string) => {
-    const hashHex: string = jsSimhash.hash(text).toString(16);
-    return hashHex.padStart(8, "0");
-  },
+  simhash,
+
+  normalize,
+
+  countUserMentions,
 
   getIpData: async (ipAddress) => {
     const data = await maxMind.insights(ipAddress);

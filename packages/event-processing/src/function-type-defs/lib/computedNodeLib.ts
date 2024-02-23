@@ -35,6 +35,10 @@ type IpAddressInfo = {
 declare let fn: {
   simhash: (input: string) => string;
 
+  normalize: (input: string) => string;
+
+  countUserMentions: (text: string) => number;
+
   geolocate: (addr: {
     line1?: string;
     line2?: string;
