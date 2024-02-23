@@ -1,11 +1,11 @@
 import {
   DndContext,
-  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   restrictToParentElement,
@@ -24,8 +24,7 @@ import { sortBy } from "lodash";
 import { useCallback } from "react";
 import { useDecision } from "~/hooks/useDecision";
 import type { EventViewConfig } from "~/shared/validation";
-import type { RouterOutputs } from "~/utils/api";
-import { RenderDecision } from "./RenderDecision";
+import { EventCardSection } from "./EventCardSection";
 import { selectors, useEditorStore } from "./nodes/editor/state/zustand";
 import { Button } from "./ui/button";
 import { Panel } from "./ui/custom/panel";
@@ -33,13 +32,10 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { EventCardSection } from "./EventCardSection";
-import { MoreHorizontal } from "lucide-react";
 
 interface Props {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
@@ -192,6 +188,15 @@ export function EventCard({
             items={sortedEntityTypes.map((entity) => entity.type)}
             strategy={verticalListSortingStrategy}
           >
+            <EventCardSection
+              id="event"
+              entityNameMap={entityNameMap}
+              isEditing={isEditing}
+              config={config}
+              onConfigChange={onConfigChange}
+              event={event}
+            />
+
             {sortedEntityTypes.map((entity) => (
               <EventCardSection
                 id={entity.type}
