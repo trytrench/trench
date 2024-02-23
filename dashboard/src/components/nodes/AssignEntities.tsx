@@ -7,6 +7,7 @@ import {
   NodeDef,
   TypeName,
   createDataType,
+  getFnTypeDef,
   hasFnType,
 } from "event-processing";
 import { useMemo, useState } from "react";
@@ -75,18 +76,27 @@ export default function AssignEntities({ eventType }: Props) {
 
   const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
+  const [selectedNodeId, setSelectedNodeId] = useState(EVENT);
+
   const featureToNodeMap = useMemo(() => {
     if (!nodes) return {};
     return nodes.reduce(
       (acc, node) => {
-        if (hasFnType(node, FnType.LogEntityFeature)) {
+        const { getDataPaths } = getFnTypeDef(node.fn.type);
+        const dataPaths = getDataPaths(node.inputs);
+        const dataPathNodeIds = dataPaths.map((path) => path.nodeId);
+
+        if (
+          hasFnType(node, FnType.LogEntityFeature) &&
+          dataPathNodeIds.includes(selectedNodeId)
+        ) {
           return { ...acc, [node.fn.config.featureId]: node };
         }
         return acc;
       },
       {} as Record<string, NodeDef<FnType.LogEntityFeature>>
     );
-  }, [nodes]);
+  }, [nodes, selectedNodeId]);
 
   const featureToRuleMap = useMemo(() => {
     if (!rules) return {};
@@ -97,8 +107,6 @@ export default function AssignEntities({ eventType }: Props) {
       {} as Record<string, Rule>
     );
   }, [rules]);
-
-  const [selectedNodeId, setSelectedNodeId] = useState(EVENT);
 
   const selectedNode = useMemo(() => {
     if (selectedNodeId === EVENT) return null;
