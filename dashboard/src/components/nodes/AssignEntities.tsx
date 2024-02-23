@@ -192,7 +192,9 @@ export default function AssignEntities({ eventType }: Props) {
               }
             )}
             onClick={() => setSelectedNodeId(EVENT)}
-          />
+          >
+            Event
+          </div>
 
           {nodes
             ?.filter((node) => hasFnType(node, FnType.EntityAppearance))
@@ -236,7 +238,10 @@ export default function AssignEntities({ eventType }: Props) {
                     entityTypeId={
                       selectedNodeId === EVENT
                         ? undefined
-                        : selectedNode?.fn.returnSchema.entityType
+                        : selectedNode &&
+                          hasFnType(selectedNode, FnType.EntityAppearance)
+                        ? selectedNode?.fn.returnSchema.entityType
+                        : undefined
                     }
                     eventTypeId={
                       selectedNodeId === EVENT ? eventType : undefined
@@ -255,7 +260,8 @@ export default function AssignEntities({ eventType }: Props) {
                         Create feature
                       </DropdownMenuItem>
                     </CreateEventFeatureDialog>
-                  ) : (
+                  ) : selectedNode &&
+                    hasFnType(selectedNode, FnType.EntityAppearance) ? (
                     <CreateFeatureDialog
                       title="Create entity feature"
                       entityTypeId={selectedNode?.fn.returnSchema.entityType}
@@ -264,7 +270,7 @@ export default function AssignEntities({ eventType }: Props) {
                         Create feature
                       </DropdownMenuItem>
                     </CreateFeatureDialog>
-                  )}
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -294,7 +300,7 @@ export default function AssignEntities({ eventType }: Props) {
                   />
                 )}
 
-              {!selectedNode || !filteredFeatures?.length ? (
+              {!selectedNodeId || !filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No features</div>
               ) : (
                 filteredFeatures.map((feature) => (
@@ -335,10 +341,13 @@ export default function AssignEntities({ eventType }: Props) {
                         },
                         inputs: {
                           dataPath,
-                          entityDataPath: {
-                            nodeId: selectedNode.id,
-                            path: [],
-                          },
+                          entityDataPath:
+                            selectedNodeId === EVENT
+                              ? undefined
+                              : {
+                                  nodeId: selectedNodeId,
+                                  path: [],
+                                },
                         },
                       })
                         // .then(toasts.createNode.onSuccess)
