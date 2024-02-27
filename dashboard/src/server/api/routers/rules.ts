@@ -40,4 +40,31 @@ export const rulesRouter = createTRPCRouter({
 
       return feature;
     }),
+
+  update: protectedProcedure
+
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        color: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const rule = await ctx.prisma.rule.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          color: input.color,
+          feature: {
+            update: {
+              name: input.name,
+            },
+          },
+        },
+      });
+
+      return rule;
+    }),
 });

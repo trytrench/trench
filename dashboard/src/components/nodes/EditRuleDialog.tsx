@@ -37,25 +37,19 @@ const formSchema = z.object({
 interface Props {
   title: string;
   children: React.ReactNode;
-  eventTypeId?: string;
-  entityTypeId?: string;
+  rule: { id: string; name: string; color?: string };
 }
 
-export const CreateRuleDialog = ({
-  title,
-  children,
-  eventTypeId,
-  entityTypeId,
-}: Props) => {
+export const EditRuleDialog = ({ title, children, rule }: Props) => {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      color: "bg-gray-400",
+      name: rule.name,
+      color: rule.color ?? "bg-gray-400",
     },
   });
-  const { mutateAsync: createRule } = api.rules.create.useMutation();
+  const { mutateAsync: updateRule } = api.rules.update.useMutation();
 
   const { refetch: refetchFeatures } = api.features.list.useQuery(undefined, {
     enabled: false,
@@ -77,18 +71,17 @@ export const CreateRuleDialog = ({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((values) => {
-              createRule({
+              updateRule({
+                id: rule.id,
                 name: values.name,
                 color: values.color,
-                entityTypeId,
-                eventTypeId,
               })
-                .then(toasts.createRule.onSuccess)
                 .then(() => {
                   void refetchFeatures();
                   return refetchRules();
                 })
-                .catch(toasts.createRule.onError)
+                .then(toasts.updateRule.onSuccess)
+                .catch(toasts.updateRule.onError)
                 .catch(handleError);
 
               setOpen(false);

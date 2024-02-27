@@ -51,6 +51,20 @@ export const featuresRouter = createTRPCRouter({
 
       return feature;
     }),
+  update: protectedProcedure
+    .input(z.object({ id: z.string(), name: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const feature = await ctx.prisma.feature.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          name: input.name,
+        },
+      });
+
+      return feature;
+    }),
 
   createEventFeature: protectedProcedure
     .input(featureDefSchema.omit({ id: true }))
@@ -186,21 +200,28 @@ export const featuresRouter = createTRPCRouter({
       return featureResult[0]!;
     }),
 
-  //   delete: protectedProcedure
-  //     .input(z.object({ id: z.string() }))
-  //     .mutation(async ({ ctx, input }) => {
-  //       await ctx.prisma.listItem.deleteMany({
-  //         where: {
-  //           listId: input.id,
-  //         },
-  //       });
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const rule = await ctx.prisma.rule.findFirst({
+        where: {
+          featureId: input.id,
+        },
+      });
 
-  //       return ctx.prisma.list.delete({
-  //         where: {
-  //           id: input.id,
-  //         },
-  //       });
-  //     }),
+      if (rule)
+        await ctx.prisma.rule.delete({
+          where: {
+            featureId: input.id,
+          },
+        });
+
+      return ctx.prisma.feature.delete({
+        where: {
+          id: input.id,
+        },
+      });
+    }),
   //   get: protectedProcedure
   //     .input(
   //       z.object({
