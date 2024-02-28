@@ -29,6 +29,7 @@ export type LeftEntity = {
   linkCount: number;
   name: string;
   isHidden: boolean;
+  jaccardSimilarity: number;
 };
 
 export type LeftGroup = {
@@ -37,6 +38,7 @@ export type LeftGroup = {
   type: string;
   linkCount: number;
   entityCount: number;
+  jaccardSimilarity: number;
 };
 
 export type LeftItem = LeftEntity | LeftGroup;
@@ -61,15 +63,32 @@ export type WeightedLink = {
   to: string;
   weight: number;
   reference: number;
+  linkCount: number;
 };
 
 export type LinkItem = SingleLink | HiddenLink | WeightedLink;
 
 // Right
 
-export type RightItem = {
+export type RightEntity = {
   itemType: "entity";
   id: string;
   name: string;
   type: string;
+  linkCount: number;
+  similarityIndex: number;
 };
+
+export type RightGroup = {
+  itemType: "group";
+  id: string;
+  name: string;
+  type: string;
+  linkCount: number;
+  entityCount: number;
+  similarityIndex: number;
+  fromIds: string[];
+  entities: RightEntity[];
+};
+
+export type RightItem = RightEntity | RightGroup;

@@ -3,14 +3,23 @@ import clsx from "clsx";
 import {
   BoxesIcon,
   BoxIcon,
+  ChevronDown,
+  ExpandIcon,
   ExternalLinkIcon,
   EyeOffIcon,
   ListFilterIcon,
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/router";
-import pluralize from "pluralize";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import pluralize, { plural } from "pluralize";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "~/utils/api";
 import { HIDE_LINKS_THRESHOLD, INTERNAL_LIMIT } from "./helpers";
 import { FirstLinkSVG, LinkSVG } from "./LinkSvg";
@@ -20,6 +29,8 @@ import { useEntityName } from "../../hooks/useEntityName";
 import { useEntityNameMap } from "../../hooks/useEntityNameMap";
 import { customEncodeURIComponent } from "../../lib/uri";
 import { LoadingPlaceholder } from "../LoadingPlaceholder";
+import { useEntityPageSubject } from "../../hooks/useEntityPageSubject";
+import { sumBy } from "lodash";
 
 interface LinksViewProps {
   entityId: string;
@@ -34,6 +45,8 @@ function LinksView({
   leftTypeFilter,
   onLeftTypeFilterChange,
 }: LinksViewProps) {
+  const [joinKeysToExpand, setJoinKeysToExpand] = useState<string[]>([]);
+
   const { data: entityTypes } = api.entityTypes.list.useQuery();
   const { data, isLoading } = api.links.relatedEntities.useQuery(
     {
@@ -46,15 +59,9 @@ function LinksView({
     { enabled: !!entityId && !!entityType }
   );
 
-  const left = data?.left ?? [];
+  const left = useMemo(() => data?.left ?? [], [data]);
   const right = data?.right ?? [];
   const links = useMemo(() => data?.links ?? [], [data]);
-
-  left.sort((a, b) => {
-    if (a.linkCount > HIDE_LINKS_THRESHOLD) return 1;
-    if (b.linkCount > HIDE_LINKS_THRESHOLD) return -1;
-    return b.linkCount - a.linkCount;
-  });
 
   //
 
@@ -80,9 +87,11 @@ function LinksView({
   const [linkWidth, setLinkWidth] = useState(0);
   const [lHeights, setLHeights] = useState({} as Record<string, number>);
   const [rHeights, setRHeights] = useState({} as Record<string, number>);
-
-  const computeHeights = () => {
-    if (!linksRef.current || !leftDivs.current || !rightDivs.current) return;
+  const computeHeights = useCallback(() => {
+    if (!linksRef.current || !leftDivs.current || !rightDivs.current) {
+      console.log("early return");
+      return;
+    }
 
     const lHeights = Object.fromEntries(
       Object.entries(leftDivs.current).map(([key, value]) => [
@@ -100,12 +109,15 @@ function LinksView({
     setLHeights(lHeights);
     setRHeights(rHeights);
     setLinkWidth(linksRef.current?.offsetWidth ?? 0);
-  };
+  }, [leftDivs, rightDivs, linksRef]);
 
-  useLayoutEffect(computeHeights, [leftSelection, leftTypeFilter]);
+  useLayoutEffect(computeHeights, [
+    leftSelection,
+    leftTypeFilter,
+    links,
+    computeHeights,
+  ]);
   useResizeObserver(linksRef, computeHeights);
-
-  //
 
   const activeIds = useMemo(() => {
     const ids = new Set<string>();
@@ -123,6 +135,10 @@ function LinksView({
     return ids;
   }, [links, leftSelection, rightSelection]);
 
+  const leftItemMap = useMemo(() => {
+    return new Map(left.map((item) => [item.id, item]));
+  }, [left]);
+
   if (isLoading) {
     return (
       <div className="flex items-center p-4 gap-2">
@@ -133,14 +149,14 @@ function LinksView({
   }
   return (
     <div className="flex items-stretch">
-      <div id="leftLeft" className="w-[40px] shrink-0 relative">
+      <div id="leftLeft" className="w-[60px] shrink-0 relative">
         <svg className="w-full h-full">
           {sortedForLeftSvgs(left, leftSelection, lastLeftSelection).map(
             (entity) => {
               return (
                 <FirstLinkSVG
                   y={lHeights[entity.id] ?? 0}
-                  x={40}
+                  x={60}
                   key={`${entity.id}-left`}
                   active={leftSelection === "" || leftSelection === entity.id}
                 />
@@ -156,32 +172,76 @@ function LinksView({
             const isActive = !selectionExists || activeIds.has(item.id);
 
             const entType = entityTypes?.find((et) => et.id === item.type);
+
+            const showRightLinksCount = isActive && !!rightSelection;
+            const linksFromLeftToRight = sumBy(
+              links.filter(
+                (link) => link.from === item.id && link.to === rightSelection
+              ),
+              (link) => link.linkCount
+            );
+
+            const showTotalLinksCount = leftSelection === item.id;
+            const totalLinksCount = sumBy(
+              links.filter((link) => link.from === item.id),
+              (link) => link.linkCount
+            );
+
             return (
-              <LeftSideCard
+              <div
+                className="relative"
                 key={item.id}
-                item={item}
-                isActive={isActive}
-                isSelected={isSelected}
-                onClick={() => {
-                  setLastLeftSelection(leftSelection);
-                  setLSelection((old) => (old === item.id ? null : item.id));
-                  setRSelection(null);
-                }}
-                onFilterClick={() => {
-                  onLeftTypeFilterChange?.(item.type);
-                }}
-                divRef={(element) => (leftDivs.current[item.id] = element)}
-                href={`/entity/${customEncodeURIComponent(
-                  entType?.type
-                )}/${customEncodeURIComponent(item.id)}?tab=links`}
-              />
+                ref={(element) => (leftDivs.current[item.id] = element)}
+              >
+                <div className="absolute left-[calc(100%+4px)] bottom-[calc(50%+2px)] pointer-events-none select-none">
+                  <div
+                    color="gray"
+                    className={clsx({
+                      "text-xs text-muted-foreground": true,
+                      "opacity-100": showRightLinksCount,
+                      "opacity-0": !showRightLinksCount,
+                    })}
+                  >
+                    {linksFromLeftToRight}
+                  </div>
+                </div>
+                <div className="absolute left-[calc(100%+4px)] bottom-[calc(50%+2px)] pointer-events-none select-none">
+                  <div
+                    color="gray"
+                    className={clsx({
+                      "text-xs text-muted-foreground": true,
+                      "opacity-100": showTotalLinksCount,
+                      "opacity-0": !showTotalLinksCount,
+                    })}
+                  >
+                    {totalLinksCount}
+                  </div>
+                </div>
+                <LeftSideCard
+                  key={item.id}
+                  item={item}
+                  isActive={isActive}
+                  isSelected={isSelected}
+                  onClick={() => {
+                    setLastLeftSelection(leftSelection);
+                    setLSelection((old) => (old === item.id ? null : item.id));
+                    setRSelection(null);
+                  }}
+                  onFilterClick={() => {
+                    onLeftTypeFilterChange?.(item.type);
+                  }}
+                  href={`/entity/${customEncodeURIComponent(
+                    entType?.type
+                  )}/${customEncodeURIComponent(item.id)}?tab=links`}
+                />
+              </div>
             );
           })}
         </div>
       </div>
       <div id="links" className="flex-1" ref={linksRef}>
         <svg className="w-full h-full">
-          {links.map((link) => (
+          {links.map((link, idx) => (
             <LinkSVG
               y1={lHeights[link.from] ?? -10}
               y2={rHeights[link.to] ?? -10}
@@ -189,7 +249,7 @@ function LinksView({
               linkItem={link}
               leftSelection={leftSelection}
               rightSelection={rightSelection}
-              key={`${link.from}-${link.to}`}
+              key={`${link.from}-${link.to}-${idx}`}
             />
           ))}
         </svg>
@@ -200,21 +260,64 @@ function LinksView({
           const isSelected = rightSelection === item.id;
           const isActive = !selectionExists || activeIds.has(item.id); // TODO: active when linked to right selection.
           const entType = entityTypes?.find((et) => et.id === item.type);
+
+          const showLeftLinksCount = isActive && !!leftSelection;
+          const linksFromRightToLeft = sumBy(
+            links.filter(
+              (link) => link.to === item.id && link.from === leftSelection
+            ),
+            (link) => link.linkCount
+          );
           return (
-            <RightSideCard
+            <div
               key={item.id}
-              item={item}
-              isActive={isActive}
-              isSelected={isSelected}
-              onClick={() => {
-                setRSelection((old) => (old === item.id ? null : item.id));
-                setLSelection(null);
-              }}
-              divRef={(element) => (rightDivs.current[item.id] = element)}
-              href={`/entity/${customEncodeURIComponent(
-                entType?.type
-              )}/${customEncodeURIComponent(item.id)}?tab=links`}
-            />
+              className="relative"
+              ref={(element) => (rightDivs.current[item.id] = element)}
+            >
+              <div className="absolute right-[calc(100%+4px)] bottom-[calc(50%+2px)] pointer-events-none select-none">
+                <div
+                  color="gray"
+                  className={clsx({
+                    "text-xs  text-muted-foreground": true,
+                    "opacity-100": isSelected,
+                    "opacity-0": !isSelected,
+                  })}
+                >
+                  {item.linkCount}
+                </div>
+              </div>
+              <div className="absolute right-[calc(100%+4px)] bottom-[calc(50%+2px)] pointer-events-none select-none">
+                <div
+                  color="gray"
+                  className={clsx({
+                    "text-xs  text-muted-foreground": true,
+                    "opacity-100": showLeftLinksCount,
+                    "opacity-0": !showLeftLinksCount,
+                  })}
+                >
+                  {linksFromRightToLeft}
+                </div>
+              </div>
+
+              <RightSideCard
+                key={item.id}
+                item={item}
+                isActive={isActive}
+                isSelected={isSelected}
+                onClick={() => {
+                  setRSelection((old) => (old === item.id ? null : item.id));
+                  setLSelection(null);
+                }}
+                // divRef={(element) => (rightDivs.current[item.id] = element)}
+                href={`/entity/${customEncodeURIComponent(
+                  entType?.type
+                )}/${customEncodeURIComponent(item.id)}?tab=links`}
+                leftItemMap={leftItemMap}
+                onExpandClick={() => {
+                  computeHeights();
+                }}
+              />
+            </div>
           );
         })}
       </div>
@@ -247,7 +350,7 @@ interface LeftSideCardProps {
   isSelected: boolean;
   onClick: () => void;
   onFilterClick: () => void;
-  divRef: React.Ref<HTMLDivElement>;
+  divRef?: React.Ref<HTMLDivElement>;
   href: string;
 }
 
@@ -337,7 +440,7 @@ function LeftSideCard(props: LeftSideCardProps) {
       </div>
 
       {/* the link number indicator (right side) */}
-      <div className="absolute left-[calc(100%+8px)] top-1 pointer-events-none select-none">
+      <div className="absolute right-[calc(100%+4px)] bottom-[calc(50%+4px)] pointer-events-none select-none">
         <div
           color="gray"
           className={`text-xs  text-muted-foreground ${
@@ -384,43 +487,135 @@ interface RightSideCardProps {
   isActive: boolean;
   isSelected: boolean;
   onClick: () => void;
-  divRef: React.Ref<HTMLDivElement>;
+  divRef?: React.Ref<HTMLDivElement>;
   href: string;
+  leftItemMap?: Map<string, LeftItem>;
+  onExpandClick?: (joinKey: string) => void;
 }
 
 function RightSideCard(props: RightSideCardProps) {
-  const { item, isActive, isSelected, onClick, divRef, href } = props;
+  const {
+    item,
+    isActive,
+    isSelected,
+    onClick,
+    divRef,
+    href,
+    leftItemMap,
+    onExpandClick,
+  } = props;
+  const { type } = useEntityPageSubject();
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
 
+  const entityTypeName = entityTypes?.find((et) => et.id === type)?.type;
+  const [expanded, setExpanded] = useState(false);
   return (
     <div key={item.id} ref={divRef}>
       <div
         className={clsx({
           "p-2 px-3 cursor-pointer transition rounded-lg border shadow-sm":
             true,
-          "opacity-30": !isActive,
-          "bg-accent": isSelected,
+          "opacity-20": !isActive,
+          "bg-accent border-blue-500": isSelected,
         })}
+        style={{
+          // based on weight, darken the background. weight is a number between 0 and 1.
+          backgroundColor: `rgba(200, 220, 255, ${1 * item.similarityIndex})`,
+        }}
         onClick={onClick}
       >
-        <div className="flex justify-between">
-          <div className="min-w-0 flex gap-2 text-sm">
-            <div className="font-semibold text-emphasis-foreground">
-              {item.name}
+        {item.itemType === "entity" ? (
+          <div className="flex justify-between">
+            <div className="min-w-0 flex gap-2 text-sm">
+              <div className="font-semibold text-emphasis-foreground">
+                {item.name}
+              </div>
             </div>
+            <a
+              className="my-auto"
+              href={href}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <ExternalLinkIcon
+                className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
+                size={18}
+              />
+            </a>
           </div>
-          <a
-            className="my-auto"
-            href={href}
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <ExternalLinkIcon
-              className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
-              size={18}
-            />
-          </a>
-        </div>
+        ) : (
+          <div>
+            <div className="flex justify-between">
+              <div className="min-w-0 gap-2 text-sm">
+                <div className="font-semibold text-emphasis-foreground italic">
+                  {item.entityCount} {plural(entityTypeName ?? "")}
+                </div>
+                <div className="text-xs mt-0.5 text-gray-400 italic">
+                  Linked to{" "}
+                  {item.fromIds
+                    .map((id) => {
+                      const leftItem = leftItemMap?.get(id);
+                      if (leftItem?.itemType === "entity") {
+                        return leftItem.name;
+                      } else {
+                        const entityType = entityTypes?.find(
+                          (et) => et.id === leftItem?.type
+                        );
+                        return plural(`${entityType?.type ?? ""}`);
+                      }
+                    })
+                    .join(", ")}
+                </div>
+              </div>
+              {item.entities.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded((prev) => !prev);
+                    onExpandClick?.(item.fromIds.join(","));
+                  }}
+                >
+                  <ChevronDown
+                    className={clsx({
+                      "text-foreground opacity-30 hover:opacity-70 transition":
+                        true,
+                      "rotate-180": expanded,
+                    })}
+                    size={18}
+                  />
+                </button>
+              )}
+            </div>
+            {expanded && (
+              <div className="mt-4 text-sm flex flex-col gap-2">
+                {item.entities.map((entity) => (
+                  <div key={entity.id} className="flex justify-between">
+                    <div className="flex gap-2">
+                      <div className="font-semibold">{entity.name}</div>
+                      <div className="text-gray-400 italic">
+                        {entity.linkCount} links
+                      </div>
+                    </div>
+                    <a
+                      href={`/entity/${customEncodeURIComponent(
+                        entityTypeName
+                      )}/${customEncodeURIComponent(entity.id)}?tab=links`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <ExternalLinkIcon
+                        className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
+                        size={18}
+                      />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
