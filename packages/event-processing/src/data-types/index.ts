@@ -297,7 +297,9 @@ class ObjectDataType<TProps extends Record<string, TSchema>> extends IDataType<
     const result = [];
     for (const key in this.schema.properties) {
       result.push(
-        `${key}: ${createDataType(this.schema.properties[key]!).toTypescript()}`
+        `"${key}": ${createDataType(
+          this.schema.properties[key]!
+        ).toTypescript()}`
       );
     }
     return `{ ${result.join("; ")} }`;

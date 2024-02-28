@@ -82,13 +82,13 @@ describe("inferSchemaFromJsonObject Tests", () => {
 
   test("should handle undefined", () => {
     expect(inferSchemaFromJsonObject(undefined)).toEqual({
-      type: TypeName.Any,
+      type: TypeName.Undefined,
     });
   });
 
   test("should handle null", () => {
     expect(inferSchemaFromJsonObject(null)).toEqual({
-      type: TypeName.Any,
+      type: TypeName.Null,
     });
   });
 });

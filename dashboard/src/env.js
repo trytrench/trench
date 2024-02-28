@@ -33,6 +33,7 @@ export const env = createEnv({
     API_KEY: z.string().optional(),
     CLIENT_KEY: z.string().optional(),
     JWT_SECRET: z.string().optional(),
+    SENTRY_DSN: z.string().optional(),
   },
 
   /**
@@ -64,6 +65,7 @@ export const env = createEnv({
     API_KEY: process.env.API_KEY,
     CLIENT_KEY: process.env.CLIENT_KEY,
     JWT_SECRET: process.env.JWT_SECRET,
+    SENTRY_DSN: process.env.SENTRY_DSN,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

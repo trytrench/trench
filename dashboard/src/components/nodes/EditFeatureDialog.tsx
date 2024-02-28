@@ -20,50 +20,35 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
+import { handleError } from "~/lib/handleError";
 import { api } from "~/utils/api";
 import { useMutationToasts } from "./editor/useMutationToasts";
-import { handleError } from "~/lib/handleError";
+import { FeatureDef } from "event-processing";
 
 const formSchema = z.object({
-  name: z.string().min(1),
-  color: z.string(),
+  name: z.string(),
 });
 
 interface Props {
   title: string;
   children: React.ReactNode;
-  eventTypeId?: string;
-  entityTypeId?: string;
+  feature: FeatureDef;
 }
 
-export const CreateRuleDialog = ({
-  title,
-  children,
-  eventTypeId,
-  entityTypeId,
-}: Props) => {
+export const EditFeatureDialog = ({ title, feature, children }: Props) => {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      color: "bg-gray-400",
+      name: feature.name,
     },
   });
-  const { mutateAsync: createRule } = api.rules.create.useMutation();
 
   const { refetch: refetchFeatures } = api.features.list.useQuery(undefined, {
     enabled: false,
   });
 
-  const { refetch: refetchRules } = api.rules.list.useQuery(undefined, {
-    enabled: false,
-  });
+  const { mutateAsync: updateFeature } = api.features.update.useMutation();
 
   const toasts = useMutationToasts();
 
@@ -77,18 +62,13 @@ export const CreateRuleDialog = ({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((values) => {
-              createRule({
+              updateFeature({
+                id: feature.id,
                 name: values.name,
-                color: values.color,
-                entityTypeId,
-                eventTypeId,
               })
-                .then(toasts.createRule.onSuccess)
-                .then(() => {
-                  void refetchFeatures();
-                  return refetchRules();
-                })
-                .catch(toasts.createRule.onError)
+                .then(toasts.updateFeature.onSuccess)
+                .then(() => refetchFeatures())
+                .catch(toasts.updateFeature.onError)
                 .catch(handleError);
 
               setOpen(false);
@@ -110,40 +90,6 @@ export const CreateRuleDialog = ({
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div>
-                <div className="text-sm font-medium mb-2">Color</div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <div
-                        className={`rounded-full ${form.watch(
-                          "color"
-                        )} w-3 h-3`}
-                      ></div>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="flex space-x-2">
-                      {[
-                        "bg-gray-400",
-                        "bg-green-600",
-                        "bg-yellow-300",
-                        "bg-orange-400",
-                        "bg-red-500",
-                      ].map((color) => (
-                        <div
-                          key={color}
-                          onClick={() => {
-                            form.setValue("color", color);
-                          }}
-                          className={`rounded-full ${color} w-4 h-4`}
-                        />
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
               </div>
             </div>
             <DialogFooter>

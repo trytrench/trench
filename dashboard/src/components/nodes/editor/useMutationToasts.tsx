@@ -112,6 +112,36 @@ export function useMutationToasts() {
     throw err;
   };
 
+  const handleUpdateFeatureSuccess = () => {
+    toast({
+      title: "Feature updated",
+      duration: 5000,
+    });
+  };
+
+  const handleUpdateFeatureError = (err: Error) => {
+    toast({
+      title: "Error updating feature",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleDeleteFeatureSuccess = () => {
+    toast({
+      title: "Feature deleted",
+      duration: 5000,
+    });
+  };
+
+  const handleDeleteFeatureError = () => {
+    toast({
+      title: "Error deleting feature",
+      duration: 5000,
+    });
+  };
+
   const handleCreateRuleSuccess = (rule: Rule & { feature: Feature }) => {
     toast({
       title: "Rule created",
@@ -123,6 +153,22 @@ export function useMutationToasts() {
   const handleCreateRuleError = (err: Error) => {
     toast({
       title: "Error creating rule",
+      description: err.message,
+      duration: 5000,
+    });
+    throw err;
+  };
+
+  const handleUpdateRuleSuccess = () => {
+    toast({
+      title: "Rule updated",
+      duration: 5000,
+    });
+  };
+
+  const handleUpdateRuleError = (err: Error) => {
+    toast({
+      title: "Error updating rule",
       description: err.message,
       duration: 5000,
     });
@@ -217,9 +263,21 @@ export function useMutationToasts() {
       onError: handleCreateFeatureError,
       onSuccess: handleCreateFeatureSuccess,
     },
+    deleteFeature: {
+      onError: handleDeleteFeatureError,
+      onSuccess: handleDeleteFeatureSuccess,
+    },
+    updateFeature: {
+      onError: handleUpdateFeatureError,
+      onSuccess: handleUpdateFeatureSuccess,
+    },
     createRule: {
       onError: handleCreateRuleError,
       onSuccess: handleCreateRuleSuccess,
+    },
+    updateRule: {
+      onError: handleUpdateRuleError,
+      onSuccess: handleUpdateRuleSuccess,
     },
     createEventFeature: {
       onError: handleCreateEventFeatureError,
