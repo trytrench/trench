@@ -389,7 +389,7 @@ function LeftSideCard(props: LeftSideCardProps) {
         "group flex gap-4 justify-between transition cursor-pointer relative px-4 py-3 mb-2 border rounded-lg shadow-sm":
           true,
         "opacity-30": !isActive,
-        "bg-accent": isSelected,
+        "bg-accent border-primary-foreground": isSelected,
       })}
       ref={divRef}
       onClick={onClick}
@@ -463,7 +463,7 @@ function LeftSideCard(props: LeftSideCardProps) {
             <EyeOffIcon
               size={18}
               className={`text-muted-foreground p-0 m-0 ${
-                isSelected ? "" : "opacity-20"
+                isSelected ? "" : "opacity-30"
               }`}
             />
 
@@ -515,8 +515,8 @@ function RightSideCard(props: RightSideCardProps) {
         className={clsx({
           "p-2 px-3 cursor-pointer transition rounded-lg border shadow-sm":
             true,
-          "opacity-20": !isActive,
-          "bg-accent border-blue-500": isSelected,
+          "opacity-40": !isActive,
+          "bg-accent border-primary-foreground": isSelected,
         })}
         style={{
           // based on weight, darken the background. weight is a number between 0 and 1.
@@ -552,7 +552,7 @@ function RightSideCard(props: RightSideCardProps) {
                   {item.entityCount} {plural(entityTypeName ?? "")}
                 </div>
                 <div className="text-xs mt-0.5 text-gray-400 italic">
-                  Linked to{" "}
+                  Linked via{" "}
                   {item.fromIds
                     .map((id) => {
                       const leftItem = leftItemMap?.get(id);

@@ -25,6 +25,7 @@ import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { customDecodeURIComponent } from "../../../lib/uri";
+import { Badge } from "../../../components/ui/badge";
 
 type Option = {
   label: string;
@@ -112,7 +113,7 @@ const Page: NextPageWithLayout = () => {
     <main className="h-full flex flex-col">
       <div className="px-12 py-6">
         <h1 className="text-2xl text-emphasis-foreground">
-          {entityTypeName}: {entity?.entityName}
+          {entity?.entityName} <Badge>{entityTypeName}</Badge>
         </h1>
         {/* <Badge className="-translate-y-0.5">{entityTypeName}</Badge> */}
         {/* {decision && <RenderDecision decision={decision} />} */}
