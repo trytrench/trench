@@ -39,7 +39,7 @@ export const editorRouter = createTRPCRouter({
       Object.entries(errors).forEach(([nodeId, error]) => {
         const node = input.nodeDefs.find((def) => def.id === nodeId);
         throw new Error(
-          `Cannoy publish: Node "${
+          `Cannot publish: Node "${
             node?.name ?? "<Unnamed>"
           }" has error: "${error}"`
         );

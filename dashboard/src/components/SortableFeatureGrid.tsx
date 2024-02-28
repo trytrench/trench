@@ -21,6 +21,7 @@ import { AnnotatedFeature } from "~/shared/types";
 import { EntityChip } from "./EntityChip";
 import { RenderResult } from "./RenderResult";
 import { sortBy } from "lodash";
+import { useCallback } from "react";
 
 const SortableFeature = ({
   id,
@@ -110,17 +111,20 @@ export const SortableFeatureGrid = ({
     })
   );
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    if (typeof active.id !== "string" || typeof over?.id !== "string") return;
+      if (typeof active.id !== "string" || typeof over?.id !== "string") return;
 
-    const oldIndex = featureOrder.indexOf(active.id);
-    const newIndex = featureOrder.indexOf(over.id);
-    if (active.id !== over.id) {
-      onFeatureOrderChange(arrayMove(featureOrder, oldIndex, newIndex));
-    }
-  }
+      const oldIndex = featureOrder.indexOf(active.id);
+      const newIndex = featureOrder.indexOf(over.id);
+      if (active.id !== over.id) {
+        onFeatureOrderChange(arrayMove(featureOrder, oldIndex, newIndex));
+      }
+    },
+    [featureOrder, onFeatureOrderChange]
+  );
 
   const filteredFeatures = sortBy(
     features.filter(

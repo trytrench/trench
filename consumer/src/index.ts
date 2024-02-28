@@ -46,7 +46,7 @@ async function initEventHandler() {
     const lastEventProcessedId = await fetchLastEventProcessedId();
     const eventObjs = await getEventsSince({
       lastEventProcessedId,
-      limit: 10000,
+      limit: 1000,
     });
     if (eventObjs.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -68,7 +68,7 @@ async function initEventHandler() {
           id: event.id,
           type: event.type,
           data: event.data,
-          timestamp: getUnixTime(event.timestamp),
+          timestamp: event.timestamp.getTime(),
         },
       }));
 

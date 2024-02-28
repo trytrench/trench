@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { FnType } from "event-processing";
 import { useAtom } from "jotai";
 import { MoreHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SchemaDisplay } from "~/components/features/SchemaDisplay";
 import { CreateEntityAppearanceDialog } from "~/components/nodes/CreateEntityAppearanceDialog";
 import { Button } from "~/components/ui/button";
@@ -66,6 +66,11 @@ export function EventEditor({ eventType }: Props) {
 
   const deleteNodeDef = useEditorStore.use.deleteNodeDef();
   const toasts = useMutationToasts();
+
+  useEffect(() => {
+    if (!selectedNode && filteredNodes[0])
+      setSelectedNodeId(filteredNodes[0].id);
+  }, [selectedNode, filteredNodes]);
 
   return (
     <div>

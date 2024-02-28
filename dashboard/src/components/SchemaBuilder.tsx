@@ -110,6 +110,30 @@ export const SchemaBuilder: React.FC<SchemaBuilderProps> = React.memo(
 
         {value.type === TypeName.Object && (
           <>
+            <button
+              type="button"
+              className="font-mono inline ml-4 text-blue-300"
+              onClick={() => {
+                let num = 1;
+
+                const propKeys = Object.keys(value.properties);
+                while (propKeys.includes(`prop_${num}`)) {
+                  num++;
+                }
+                const newPropName = `prop_${num}`;
+                onChange({
+                  ...value,
+                  properties: {
+                    ...value.properties,
+                    [newPropName]:
+                      DATA_TYPES_REGISTRY[TypeName.String].defaultSchema,
+                  },
+                });
+              }}
+            >
+              add
+            </button>
+
             <div className="flex ml-4 flex-col items-start">
               {Object.entries(value.properties).map(([propKey, propSchema]) => (
                 <ObjectProperty

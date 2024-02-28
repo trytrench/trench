@@ -15,7 +15,7 @@ export const logEntityFeatureFnResolver = createFnTypeResolverBuilder()
 
       const baseData = {
         engine_id: engineId,
-        created_at: getUnixTime(new Date()),
+        created_at: new Date().getTime(),
         event_type: event.type,
         event_id: event.id,
         event_timestamp: getUnixTime(event.timestamp),
