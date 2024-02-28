@@ -1,0 +1,15 @@
+diff --git a/index.js b/index.js
+index b34d1b6850cf03f3abe2fda77debe95a32e3214e..9ae535d64d7da100f887d12ca4c50cdbfacec07c 100644
+--- a/index.js
++++ b/index.js
+@@ -1,7 +1,6 @@
+-Jenkins = require('./Jenkins.js').Jenkins;
+-SimHash = require('./SimHash.js').SimHash;
+-Comparator = require('./Comparator.js').Comparator;
+-
++const Jenkins = require("./Jenkins.js").Jenkins;
++const SimHash = require("./SimHash.js").SimHash;
++const Comparator = require("./Comparator.js").Comparator;
+ 
+ module.exports.Jenkins = Jenkins;
+ module.exports.SimHash = SimHash;

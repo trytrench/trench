@@ -18,5 +18,10 @@
     "prettier": "^3.0.3",
     "turbo": "1.10.4"
   },
-  "packageManager": "pnpm@8.8.0"
+  "packageManager": "pnpm@8.8.0",
+  "pnpm": {
+    "patchedDependencies": {
+      "simhash-js@1.0.0": "patches/simhash-js@1.0.0.patch"
+    }
+  }
 }
