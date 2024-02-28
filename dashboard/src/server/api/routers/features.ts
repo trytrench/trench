@@ -96,25 +96,23 @@ export const featuresRouter = createTRPCRouter({
       const result = await db.query({
         query: `
           SELECT
+              unique_entity_id,
               entity_type,
               entity_id,
               groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
           FROM (
-              SELECT
-                  entity_type,
-                  entity_id,
-                  feature_id,
-                  value,
-                  event_timestamp,
-                  error,
-                  row_number() OVER (PARTITION BY entity_type, entity_id, feature_id ORDER BY event_timestamp DESC) as rn
-              FROM features
-              FINAL
-              WHERE entity_id IN (${entityIds.map((id) => `'${id}'`).join(",")})
-              AND feature_id IN (${featureIds.map((id) => `'${id}'`).join(",")})
-          ) AS latest_features
-          WHERE latest_features.rn = 1
-          GROUP BY entity_type, entity_id
+            SELECT
+                unique_entity_id,
+                entity_type,
+                entity_id,
+                groupArray((feature_id, value)) as features_array
+            FROM latest_entity_features_view
+            WHERE unique_entity_id IN (${entityIds
+              .map((id) => `'${id}'`)
+              .join(",")})
+            AND data_type = 'Name'
+            GROUP BY unique_entity_id, entity_type, entity_id
+            SETTINGS optimize_move_to_prewhere_if_final = 1
         `,
         format: "JSONEachRow",
       });

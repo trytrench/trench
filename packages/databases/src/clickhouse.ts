@@ -122,14 +122,14 @@ async function runMigrations() {
   await db.command({
     query: `
         CREATE TABLE IF NOT EXISTS entities_seen_mv_table (
-            unique_entity_id String,
-            entity_id String,
-            entity_type String,
-            first_seen SimpleAggregateFunction(min, String),
-            last_seen SimpleAggregateFunction(max, String)
+            unique_entity_id String CODEC(ZSTD(1)),
+            entity_id String CODEC(ZSTD(1)),
+            entity_type LowCardinality(String) CODEC(ZSTD(1)),
+            first_seen SimpleAggregateFunction(min, DateTime64) CODEC(Delta(8), ZSTD(1)),
+            last_seen SimpleAggregateFunction(max, DateTime64) CODEC(Delta(8), ZSTD(1))
         )
         ENGINE = AggregatingMergeTree()
-        ORDER BY (unique_entity_id); 
+        ORDER BY (unique_entity_id, entity_type, entity_id);
     `,
     clickhouse_settings: {
       wait_end_of_query: 1,

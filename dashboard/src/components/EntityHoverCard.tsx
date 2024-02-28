@@ -37,8 +37,10 @@ export const EntityHoverCard = ({ entityId, entityType, children }: Props) => {
             feature.result.type === "success" &&
             feature.result.data.schema.type === TypeName.Entity
         )
-        .map((feature) => (feature.result as FeatureSuccess).data.value.id) ??
-      []
+        .map((feature) => {
+          const data = (feature.result as FeatureSuccess).data;
+          return `${data.value.type}_${data.value.id}`;
+        }) ?? []
     );
   }, [entity]);
   const entityNameMap = useEntityNameMap(entityIds);

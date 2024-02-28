@@ -169,7 +169,8 @@ export const EntityList = ({ seenWithEntity }: Props) => {
               feature.result.type === "success" &&
               feature.result.data.schema.type === TypeName.Entity
             ) {
-              return feature.result.data.value.id;
+              const { type, id } = feature.result.data.value;
+              return `${type}_${id}`;
             }
           })
           .filter(Boolean) ?? []

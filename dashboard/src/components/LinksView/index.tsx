@@ -26,7 +26,6 @@ import { FirstLinkSVG, LinkSVG } from "./LinkSvg";
 import { sortedForLeftSvgs } from "./sortedForLeftSvgs";
 import type { LeftItem, RightItem } from "./types";
 import { useEntityName } from "../../hooks/useEntityName";
-import { useEntityNameMap } from "../../hooks/useEntityNameMap";
 import { customEncodeURIComponent } from "../../lib/uri";
 import { LoadingPlaceholder } from "../LoadingPlaceholder";
 import { useEntityPageSubject } from "../../hooks/useEntityPageSubject";

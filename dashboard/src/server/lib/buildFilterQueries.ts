@@ -300,7 +300,7 @@ export async function getEntitiesList(props: {
   console.log();
 
   // console.log(Object.keys(entities));
-  // console.log(finalQuery1);
+  console.log(finalQuery1);
   console.log("getEntitiesList - desired_entities");
   printEntityFilters(filters);
   console.log(entities.statistics);

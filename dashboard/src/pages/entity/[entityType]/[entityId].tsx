@@ -26,6 +26,7 @@ import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { customDecodeURIComponent } from "../../../lib/uri";
 import { Badge } from "../../../components/ui/badge";
+import { FeatureSuccess } from "../../../shared/types";
 
 type Option = {
   label: string;
@@ -103,7 +104,10 @@ const Page: NextPageWithLayout = () => {
           feature.result.type === "success" &&
           feature.result.data.schema.type === TypeName.Entity
       )
-      .map((feature) => feature.result.data!.value.id as string) ?? []
+      .map((feature) => {
+        const data = (feature.result as FeatureSuccess).data;
+        return `${data.value.type}_${data.value.id}`;
+      }) ?? []
   );
   const decision = useDecision(entity?.features ?? []);
 
