@@ -25,6 +25,8 @@ import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { type NextPageWithLayout } from "~/pages/_app";
 import { api } from "~/utils/api";
 import { customDecodeURIComponent } from "../../../lib/uri";
+import { Badge } from "../../../components/ui/badge";
+import { FeatureSuccess } from "../../../shared/types";
 
 type Option = {
   label: string;
@@ -59,7 +61,7 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
         />
       </div>
 
-      <ScrollArea className="h-full px-8">
+      <ScrollArea className="px-8">
         <LinksView
           entityId={entityId ?? ""}
           entityType={entityType}
@@ -102,17 +104,20 @@ const Page: NextPageWithLayout = () => {
           feature.result.type === "success" &&
           feature.result.data.schema.type === TypeName.Entity
       )
-      .map((feature) => feature.result.data!.value.id as string) ?? []
+      .map((feature) => {
+        const data = (feature.result as FeatureSuccess).data;
+        return `${data.value.type}_${data.value.id}`;
+      }) ?? []
   );
   const decision = useDecision(entity?.features ?? []);
 
   const [tab, setTab] = useQueryParam("tab", StringParam);
 
   return (
-    <main className="h-full">
+    <main className="h-full flex flex-col">
       <div className="px-12 py-6">
         <h1 className="text-2xl text-emphasis-foreground">
-          {entityTypeName}: {entity?.entityName}
+          {entity?.entityName} <Badge>{entityTypeName}</Badge>
         </h1>
         {/* <Badge className="-translate-y-0.5">{entityTypeName}</Badge> */}
         {/* {decision && <RenderDecision decision={decision} />} */}
@@ -120,11 +125,11 @@ const Page: NextPageWithLayout = () => {
 
       <Tabs
         defaultValue="history"
-        className="h-full"
+        className="flex-grow overflow-auto flex flex-col relative"
         value={tab ?? "overview"}
         onValueChange={setTab}
       >
-        <TabsList className="px-8">
+        <TabsList className="px-8 shrink-0 sticky top-0 bg-white z-10">
           {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="entities">Entities</TabsTrigger>
@@ -141,7 +146,7 @@ const Page: NextPageWithLayout = () => {
               </div>
               <EventsDashboard entityId={entityId} datasetId={datasetId} />
             </TabsContent> */}
-        <TabsContent value="overview" className="h-full mt-0">
+        <TabsContent value="overview" className="mt-0 overflow-auto">
           <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
             {entity && (
               <Panel>
@@ -168,7 +173,7 @@ const Page: NextPageWithLayout = () => {
             )}
           </div>
         </TabsContent>
-        <TabsContent value="history" className="h-full mt-0">
+        <TabsContent value="history" className="flex-grow mt-0">
           {entityId && entityTypeId && (
             <EventsList
               entity={{
@@ -178,7 +183,7 @@ const Page: NextPageWithLayout = () => {
             />
           )}
         </TabsContent>
-        <TabsContent value="entities" className="h-full mt-0">
+        <TabsContent value="entities" className="flex-grow mt-0">
           {entityId && entityTypeId && (
             <EntityList
               seenWithEntity={{
@@ -188,7 +193,7 @@ const Page: NextPageWithLayout = () => {
             />
           )}
         </TabsContent>
-        <TabsContent value="links" className="h-full mt-0">
+        <TabsContent value="links" className="flex-grow mt-0">
           {entityId && entityTypeId && (
             <RelatedEntities entityId={entityId} entityType={entityTypeId} />
           )}

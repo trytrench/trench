@@ -1,4 +1,4 @@
-import Dagre from "@dagrejs/dagre";
+import Dagre, { type Label } from "@dagrejs/dagre";
 import { api } from "../utils/api";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
@@ -8,6 +8,7 @@ import ReactFlow, {
   type NodeChange,
   applyEdgeChanges,
   applyNodeChanges,
+  Position,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { getFnTypeDef } from "event-processing";
@@ -24,11 +25,19 @@ const getLayoutedElements = (
   g.setGraph({
     rankdir: "RL",
     nodesep: 100, // Horizontal spacing between nodes
-    ranksep: 400, // Vertical spacing between ranks (layers of nodes)
+    ranksep: 200, // Vertical spacing between ranks (layers of nodes)
   });
 
   edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-  nodes.forEach((node) => g.setNode(node.id, node));
+
+  const nodeLabelMap: Record<string, Label> = {};
+  nodes.forEach((node) => {
+    nodeLabelMap[node.id] = {
+      width: 200,
+      height: 100,
+    };
+  });
+  Object.entries(nodeLabelMap).forEach(([key, value]) => g.setNode(key, value));
 
   Dagre.layout(g);
 
@@ -44,14 +53,13 @@ const getLayoutedElements = (
 
 export default function Page() {
   const { data: engine } = api.editor.getLatestEngine.useQuery();
-
   useEffect(() => {
     const nodes: Node[] =
       engine?.nodeDefs.map((nodeDef) => {
         return {
           id: nodeDef.id,
-          sourcePosition: "left",
-          targetPosition: "right",
+          sourcePosition: Position.Left,
+          targetPosition: Position.Right,
           data: {
             label: (
               <div className="flex flex-col text-left">

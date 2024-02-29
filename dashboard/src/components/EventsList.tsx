@@ -100,7 +100,11 @@ export default function EventsList({ entity }: EventsListProps) {
   }, [events]);
 
   const entityIds = useMemo(() => {
-    return uniq(allEvents.flatMap((event) => event.entities.map((e) => e.id)));
+    return uniq(
+      allEvents.flatMap((event) =>
+        event.entities.map((e) => `${e.type}_${e.id}`)
+      )
+    );
   }, [allEvents]);
   const entityNameMap = useEntityNameMap(entityIds);
 

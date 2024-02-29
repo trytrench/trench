@@ -93,7 +93,7 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  value={option.label}
+                  value={option.value}
                   key={option.value}
                   onSelect={() => {
                     setOpen(false);

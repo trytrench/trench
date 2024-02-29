@@ -35,7 +35,10 @@ export function EventDrawer(props: {
     }
   );
 
-  const entityIds = entitiesList?.rows.map((entity) => entity.entityId) ?? [];
+  const entityIds =
+    entitiesList?.rows.map(
+      (entity) => `${entity.entityType}_${entity.entityId}`
+    ) ?? [];
   const entityNameMap = useEntityNameMap(entityIds);
 
   return (

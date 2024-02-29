@@ -1,4 +1,4 @@
-import { LeftItem, LinkItem } from "./types";
+import { LeftItem, LinkItem, WeightedLink } from "./types";
 
 interface LinkSVGProps {
   y1: number;
@@ -6,7 +6,7 @@ interface LinkSVGProps {
   x: number;
   leftSelection: string | null;
   rightSelection: string | null;
-  linkItem: LinkItem;
+  linkItem: WeightedLink;
 }
 
 // vvv Svg links from left side to right side vvv
@@ -22,20 +22,15 @@ export function LinkSVG(props: LinkSVGProps) {
   const explicitlySelected =
     leftSelection === linkItem.from || rightSelection === linkItem.to;
 
-  let opacity = 1;
-  const colorName = "text-muted-foreground";
+  const colorName = explicitlySelected
+    ? "text-primary-foreground"
+    : "text-muted-foreground";
 
+  let opacity = 1;
   if (explicitlySelected) {
-  } else if (linkItem.itemType === "hiddenLink") {
-    opacity = 0.05;
-  } else if (linkItem.itemType === "link") {
-    opacity = selectionExists ? 0.05 : 1;
+    opacity = Math.sqrt(Math.max(linkItem.weight, 0.1));
   } else if (linkItem.itemType === "weightedLink") {
-    if (selectionExists) {
-      opacity = 0.05;
-    } else {
-      opacity = 0.3 + (0.7 * linkItem.weight) / linkItem.reference;
-    }
+    opacity = linkItem.weight;
   }
 
   console.log(opacity);
@@ -48,7 +43,7 @@ export function LinkSVG(props: LinkSVGProps) {
       } ${y2} L ${x} ${y2}`}
       fill="transparent"
       stroke="currentColor"
-      strokeWidth={1.5}
+      strokeWidth={explicitlySelected ? 3 : 1.5}
       className={`${colorName} transition`}
       style={{ opacity: opacity }}
     />
