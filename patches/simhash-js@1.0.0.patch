@@ -1,5 +1,40 @@
+diff --git a/Jenkins.js b/Jenkins.js
+index ec57370b273cdbc79deb120b949dd499495bba48..843494d602ab7fc02395e8988cb3f24fc78aada7 100644
+--- a/Jenkins.js
++++ b/Jenkins.js
+@@ -72,7 +72,7 @@ function lookup3(k, pc, pb) {
+         c += k.charCodeAt(offset + 10) << 16;
+         c += k.charCodeAt(offset + 11) << 24;
+ 
+-        mixed = mix(a, b, c);
++        const mixed = mix(a, b, c);
+         a = mixed.a;
+         b = mixed.b;
+         c = mixed.c;
+@@ -115,7 +115,7 @@ function lookup3(k, pc, pb) {
+     }
+ 
+     // Final mixing of three 32-bit values in to c
+-    mixed = finalMix(a, b, c)
++    const mixed = finalMix(a, b, c)
+     a = mixed.a;
+     b = mixed.b;
+     c = mixed.c;
+diff --git a/SimHash.js b/SimHash.js
+index 2d02a732f3f19153cc71652903d339331b3122a4..a9998456275233310aa818b164083c15f4d3d836 100644
+--- a/SimHash.js
++++ b/SimHash.js
+@@ -71,7 +71,7 @@ function combineShingles(shingles) {
+     for (var pos = 0; pos < 32; pos++) {
+         var weight = 0;
+         for (var i in shingles) {
+-            shingle = parseInt(shingles[i], 16);
++            const shingle = parseInt(shingles[i], 16);
+             weight += !(~shingle & mask) == 1 ? 1 : -1;
+         }
+         if (weight > 0) simhash |= mask;
 diff --git a/index.js b/index.js
-index b34d1b6850cf03f3abe2fda77debe95a32e3214e..9ae535d64d7da100f887d12ca4c50cdbfacec07c 100644
+index b34d1b6850cf03f3abe2fda77debe95a32e3214e..397f279211d1e25aac91b500b3d4cc7ee46b5167 100644
 --- a/index.js
 +++ b/index.js
 @@ -1,7 +1,6 @@

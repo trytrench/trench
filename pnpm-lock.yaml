@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   simhash-js@1.0.0:
-    hash: hyvq3wukv43iwkyhjglthcxeki
+    hash: 64skjpucjub27ed3563ioydx3i
     path: patches/simhash-js@1.0.0.patch
 
 importers:
@@ -538,7 +538,7 @@ importers:
         version: 1.0.4
       simhash-js:
         specifier: ^1.0.0
-        version: 1.0.0(patch_hash=hyvq3wukv43iwkyhjglthcxeki)
+        version: 1.0.0(patch_hash=64skjpucjub27ed3563ioydx3i)
       superjson:
         specifier: ^1.13.1
         version: 1.13.3
@@ -12143,7 +12143,7 @@ packages:
     engines: {node: '>=14'}
     dev: true
 
-  /simhash-js@1.0.0(patch_hash=hyvq3wukv43iwkyhjglthcxeki):
+  /simhash-js@1.0.0(patch_hash=64skjpucjub27ed3563ioydx3i):
     resolution: {integrity: sha512-0amkwlDBXWWidaAXVpiZVF6xYNS8qG3mBbGcLRcyaAPsFDcsoaMxocBc08hrxI0dDDnd4IbfRkTJpTxks79/tg==}
     dev: false
     patched: true
