@@ -1,7 +1,7 @@
 import { format, parse, subWeeks } from "date-fns";
 import { Entity } from "event-processing";
 import { sumBy } from "lodash";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type DateRange } from "react-day-picker";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
@@ -18,6 +18,23 @@ export default function EventCharts({ entity }: Props) {
     from: subWeeks(new Date(), 2),
     to: new Date(),
   });
+
+  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
+    { entityFilters: { entityId: entity.id, entityType: entity.type } },
+    { enabled: !!entity }
+  );
+
+  const entityData = useMemo(() => entityDataRows?.rows[0], [entityDataRows]);
+  const [initializedFirstSeen, setInitializedFirstSeen] = useState(false);
+  useEffect(() => {
+    if (entityData && !initializedFirstSeen) {
+      setDateRange({
+        from: entityData.firstSeenAt,
+        to: new Date(),
+      });
+      setInitializedFirstSeen(true);
+    }
+  }, [entityData, initializedFirstSeen]);
 
   const { data: eventTypeBins } = api.charts.getEventTypeTimeData.useQuery(
     {

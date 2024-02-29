@@ -32,8 +32,6 @@ import {
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { config } from "webpack";
-import entityTypes from "../pages/settings/entity-types";
-import eventTypes from "../pages/settings/event-types";
 import { RenderResult } from "./RenderResult";
 
 const useEntityViewConfig = (seenWithEntity?: Entity) => {
@@ -97,7 +95,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   });
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 50,
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -470,38 +468,33 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           </div>
         </ScrollArea>
       ) : (
-        <div className="h-full py-4 overflow-y-scroll">
-          <div className="px-8 overflow-x-auto h-full">
-            <DataTable
-              table={table}
-              loading={fetchingEntities}
-              onRowClick={(entity) =>
-                router.push(
-                  `/entity/${entityTypes?.find(
-                    (et) => et.id === entity.entityType
-                  )?.type}/${entity.entityId}`
-                )
-              }
-              renderHeader={(table) => (
-                <>
-                  <Input
-                    placeholder="Filter event types..."
-                    value={
-                      (table.getColumn("Name")?.getFilterValue() as string) ??
-                      ""
-                    }
-                    onChange={(event) =>
-                      table
-                        .getColumn("Name")
-                        ?.setFilterValue(event.target.value)
-                    }
-                    className="max-w-sm"
-                  />
-                  <DataTableViewOptions table={table} />
-                </>
-              )}
-            />
-          </div>
+        <div className="h-full py-4 px-8 overflow-y-auto">
+          <DataTable
+            table={table}
+            loading={fetchingEntities}
+            onRowClick={(entity) =>
+              router.push(
+                `/entity/${entityTypes?.find(
+                  (et) => et.id === entity.entityType
+                )?.type}/${entity.entityId}`
+              )
+            }
+            renderHeader={(table) => (
+              <>
+                <Input
+                  placeholder="Filter event types..."
+                  value={
+                    (table.getColumn("Name")?.getFilterValue() as string) ?? ""
+                  }
+                  onChange={(event) =>
+                    table.getColumn("Name")?.setFilterValue(event.target.value)
+                  }
+                  className="max-w-sm"
+                />
+                <DataTableViewOptions table={table} />
+              </>
+            )}
+          />
         </div>
       )}
     </ViewsLayout>

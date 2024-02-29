@@ -43,6 +43,7 @@ import {
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { Skeleton } from "./skeleton";
+import { cn } from "../../lib/utils";
 
 interface DataTableProps<TData, TValue> {
   renderHeader?: (table: TableType<TData>) => React.ReactNode;
@@ -121,13 +122,26 @@ export function DataTable<TData, TValue>({
   );
 
   return (
-    <div className="relative">
+    <div className="relative flex flex-col h-full w-full">
       <div className="flex items-center py-4">{renderHeader?.(table)}</div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+      <div className="relative rounded-md border grow overflow-hidden">
+        <Table
+          className="relative overflow-auto h-full"
+          parentClassName="h-full"
+        >
+          <TableHeader
+            className="sticky top-0 bg-white shrink-0 z-10 [&_tr]:border-b-0"
+            style={{
+              boxShadow: "inset 0 -1px 0 rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            {table.getHeaderGroups().map((headerGroup, idx) => (
+              <TableRow
+                key={headerGroup.id}
+                className={cn({
+                  "border-b-0": idx === table.getHeaderGroups().length - 1,
+                })}
+              >
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -155,13 +169,15 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="overflow-y-auto">
             {loading ? (
-              Array.from({ length: 10 }).map((_, index) => (
+              Array.from({
+                length: table.getPaginationRowModel().rows.length,
+              }).map((_, index) => (
                 <TableRow key={index}>
                   {table.getAllColumns().map((column) => (
                     <TableCell key={column.id}>
-                      <Skeleton className="w-[100px] h-[20px]" />
+                      <Skeleton className="h-[20px]" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -199,7 +215,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="py-4">
+      <div className="py-2">
         <DataTablePagination table={table} />
       </div>
     </div>

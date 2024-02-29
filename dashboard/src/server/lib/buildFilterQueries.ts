@@ -126,12 +126,11 @@ export async function getEntitiesList(props: {
 }) {
   const { filters, limit, offset } = props;
 
-  const featureWhereClauses = [];
   const seenWhereClauses = [];
 
   const allFeatureColumnsNeeded = new Set<string>();
+  const featureConditions: string[] = [];
   if (filters.features && filters.features.length > 0) {
-    const featureConditions: string[] = [];
     for (const feature of filters.features) {
       const { clauses, featureColumnsNeeded } =
         buildWhereClauseForFeatureFilter(feature);
@@ -143,14 +142,6 @@ export async function getEntitiesList(props: {
         allFeatureColumnsNeeded.add(column);
       }
     }
-
-    featureWhereClauses.push(
-      featureConditions.filter((condition) => condition !== "").join(" OR ")
-    );
-  }
-
-  if (filters.eventId) {
-    featureWhereClauses.push(`event_id = '${filters.eventId}'`);
   }
 
   seenWhereClauses.push(`unique_entity_id != ''`);
@@ -165,7 +156,6 @@ export async function getEntitiesList(props: {
     );
   }
 
-  const featureWhereClausesExist = featureWhereClauses.length > 0;
   const seenWhereClause =
     seenWhereClauses.length > 0 ? `AND ${seenWhereClauses.join(" AND ")}` : "";
 
@@ -209,32 +199,31 @@ export async function getEntitiesList(props: {
         FROM
             timestamped_entities
         ${
-          featureWhereClausesExist
-            ? `
-            WHERE unique_entity_id IN (
-                SELECT unique_entity_id
-                FROM latest_entity_features_view AS features
-                WHERE 1
-                ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
-                ${eventTypeWhereClause ? `AND ${eventTypeWhereClause}` : ""}
-                ${
-                  filters.entityType
-                    ? `AND entity_type = '${filters.entityType}'`
-                    : ""
-                }
-                ${
-                  featureWhereClausesExist
-                    ? `AND ${featureWhereClauses.join(" AND ")}`
-                    : ""
-                }
-            )
-            `
+          featureConditions.length > 0
+            ? featureConditions
+                .map((clause, index) => {
+                  const prefix = index === 0 ? "WHERE" : "AND";
+                  return `
+                  ${prefix} unique_entity_id IN (
+                    SELECT unique_entity_id
+                    FROM latest_entity_features_view AS features
+                    WHERE ${clause}
+                  )
+                `;
+                })
+                .join("\n")
             : ""
         }
         ORDER BY
             last_seen DESC
         LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
+        SETTINGS 
+          convert_query_to_cnf = true,
+          join_algorithm = 'parallel_hash',
+          optimize_trivial_count_query = 1;
   `;
+
+  console.log(finalQuery1);
 
   const result = await db.query({
     query: finalQuery1,
