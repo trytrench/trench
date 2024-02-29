@@ -211,8 +211,8 @@ export async function getEntitiesList(props: {
         ${
           featureWhereClausesExist
             ? `
-            LEFT SEMI JOIN (
-                SELECT DISTINCT unique_entity_id
+            WHERE unique_entity_id IN (
+                SELECT unique_entity_id
                 FROM latest_entity_features_view AS features
                 WHERE 1
                 ${featureIdWhereClause ? `AND ${featureIdWhereClause}` : ""}
@@ -227,8 +227,7 @@ export async function getEntitiesList(props: {
                     ? `AND ${featureWhereClauses.join(" AND ")}`
                     : ""
                 }
-            ) AS features
-            ON timestamped_entities.unique_entity_id = features.unique_entity_id
+            )
             `
             : ""
         }

@@ -99,20 +99,14 @@ export const featuresRouter = createTRPCRouter({
               unique_entity_id,
               entity_type,
               entity_id,
-              groupArray((latest_features.feature_id, latest_features.value, latest_features.error)) as features_array
-          FROM (
-            SELECT
-                unique_entity_id,
-                entity_type,
-                entity_id,
-                groupArray((feature_id, value)) as features_array
-            FROM latest_entity_features_view
-            WHERE unique_entity_id IN (${entityIds
-              .map((id) => `'${id}'`)
-              .join(",")})
-            AND data_type = 'Name'
-            GROUP BY unique_entity_id, entity_type, entity_id
-            SETTINGS optimize_move_to_prewhere_if_final = 1
+              groupArray((feature_id, value)) as features_array
+          FROM latest_entity_features_view
+          WHERE unique_entity_id IN (${entityIds
+            .map((id) => `'${id}'`)
+            .join(",")})
+          AND data_type = 'Name'
+          GROUP BY unique_entity_id, entity_type, entity_id
+          SETTINGS optimize_move_to_prewhere_if_final = 1
         `,
         format: "JSONEachRow",
       });
@@ -121,7 +115,7 @@ export const featuresRouter = createTRPCRouter({
         {
           entity_type: string;
           entity_id: string;
-          features_array: Array<[string, string | null, string | null]>;
+          features_array: Array<[string, string | null]>;
         }[]
       >();
 
@@ -132,7 +126,11 @@ export const featuresRouter = createTRPCRouter({
           features: getAnnotatedFeatures(
             featureDefs,
             entityTypes,
-            entity.features_array
+            entity.features_array.map(([featureId, value]) => [
+              featureId,
+              value,
+              null,
+            ])
           ),
         };
       });

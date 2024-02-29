@@ -39,7 +39,6 @@ export const linksRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // 0: get the type of the entity.
-
       const { leftSideType, entityId, entityType } = input;
 
       const query = `
@@ -52,6 +51,7 @@ export const linksRouter = createTRPCRouter({
             WHERE eav.entity_type_1 = '${entityType}'
             AND eav.entity_id_1 = '${entityId}'
             ${leftSideType ? `AND eav.entity_type_2 = '${leftSideType}'` : ""}
+            LIMIT 1000
         ),
         second_degree_connections AS (
             SELECT
@@ -59,7 +59,9 @@ export const linksRouter = createTRPCRouter({
                 eav.unique_entity_id_2,
                 times_seen_together AS second_degree_links
             FROM entity_links_view AS eav
-            WHERE 1
+            WHERE eav.unique_entity_id_1 IN (
+                SELECT unique_entity_id_2 FROM first_degree_connections
+            )
             ${leftSideType ? `AND eav.entity_type_1 = '${leftSideType}'` : ""}
             ${entityType ? `AND eav.entity_type_2 = '${entityType}'` : ""}
         )
@@ -71,6 +73,7 @@ export const linksRouter = createTRPCRouter({
             sdc.second_degree_links as second_degree_links
         FROM first_degree_connections fdc
         JOIN second_degree_connections sdc ON fdc.unique_entity_id_2 = sdc.unique_entity_id_1
+        LIMIT 10000
         SETTINGS
             optimize_aggregation_in_order=1,
             max_memory_usage=1000000000,
