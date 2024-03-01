@@ -66,6 +66,7 @@ export function EditCounter({
     if (!initializedForm && initialNode) {
       form.setValue("name", initialNode.name);
       form.setValue("config", initialNode.fn.config as FormType["config"]);
+      form.setValue("inputs", initialNode.inputs as FormType["inputs"]);
 
       setInitializedForm(true);
     }

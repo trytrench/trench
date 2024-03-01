@@ -2,9 +2,10 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { type Entity } from "event-processing";
-import { GripVertical, MoreHorizontal } from "lucide-react";
+import { GripVertical } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import { type EventViewConfig } from "~/shared/validation";
-import { type RouterOutputs, api } from "~/utils/api";
+import { api, type RouterOutputs } from "~/utils/api";
 import { EntityChip } from "./EntityChip";
 import { SortableFeatureGrid } from "./SortableFeatureGrid";
 import { Button } from "./ui/button";
@@ -12,12 +13,10 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { useMemo } from "react";
 
 export const EventCardSection = ({
   id,
@@ -29,7 +28,7 @@ export const EventCardSection = ({
   event,
 }: {
   id: string;
-  entity: Entity;
+  entity?: Entity;
   entityNameMap: Record<string, string>;
   isEditing?: boolean;
   config: EventViewConfig["gridConfig"][string];
@@ -39,8 +38,8 @@ export const EventCardSection = ({
   const { data: features } = api.features.list.useQuery();
   const { data: entityTypes } = api.entityTypes.list.useQuery();
   const entityTypeName = useMemo(
-    () => entityTypes?.find((et) => et.id === entity.type)?.type ?? "",
-    [entity.type, entityTypes]
+    () => entityTypes?.find((et) => et.id === entity?.type)?.type ?? "",
+    [entity, entityTypes]
   );
 
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -50,6 +49,21 @@ export const EventCardSection = ({
     transform: CSS.Translate.toString(transform),
     transition,
   };
+
+  const key = useMemo(() => (entity ? entity.type : "event"), [entity]);
+
+  const handleOrderChange = useCallback(
+    (newOrder: string[]) => {
+      onConfigChange({
+        ...config,
+        featureOrder: {
+          ...config.featureOrder,
+          [key]: newOrder,
+        },
+      });
+    },
+    [onConfigChange, config, key]
+  );
 
   return (
     <div className="mb-8 bg-background" ref={setNodeRef} style={style}>
@@ -62,12 +76,14 @@ export const EventCardSection = ({
           />
         )}
 
-        <EntityChip
-          entityId={entity.id}
-          entityType={entity.type}
-          name={`${entityTypeName}: ${entityNameMap[entity.id] ?? entity.id}`}
-          href={`/entity/${entityTypeName}/${entity.id}`}
-        />
+        {entity && (
+          <EntityChip
+            entityId={entity.id}
+            entityType={entity.type}
+            name={`${entityTypeName}: ${entityNameMap[entity.id] ?? entity.id}`}
+            href={`/entity/${entityTypeName}/${entity.id}`}
+          />
+        )}
 
         {isEditing && (
           <>
@@ -92,55 +108,37 @@ export const EventCardSection = ({
                   .filter(
                     (feature) =>
                       feature.result.type === "success" &&
-                      features?.find((f) => f.id === feature.featureId)
-                        ?.entityTypeId === entity.type &&
-                      !feature.rule
+                      !feature.rule &&
+                      (entity
+                        ? features?.find((f) => f.id === feature.featureId)
+                            ?.entityTypeId === entity.type
+                        : features?.find((f) => f.id === feature.featureId)
+                            ?.eventTypeId)
                   )
-                  .map((feature) => {
-                    const entityType = features?.find(
-                      (f) => f.id === feature.featureId
-                    )?.entityTypeId;
-                    if (!entityType) return null;
-
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={feature.featureId}
-                        className="capitalize"
-                        checked={config.featureOrder[entityType]?.includes(
-                          feature.featureId
-                        )}
-                        onCheckedChange={(value) =>
-                          onConfigChange(
-                            value
-                              ? {
-                                  ...config,
-                                  featureOrder: {
-                                    ...config.featureOrder,
-                                    [entityType]: [
-                                      ...(config.featureOrder[entityType] ??
-                                        []),
-                                      feature.featureId,
-                                    ],
-                                  },
-                                }
-                              : {
-                                  ...config,
-                                  featureOrder: {
-                                    ...config.featureOrder,
-                                    [entityType]:
-                                      config.featureOrder[entityType]?.filter(
-                                        (id) => id !== feature.featureId
-                                      ) ?? [],
-                                  },
-                                }
-                          )
-                        }
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        {feature.featureName}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
+                  .map((feature) => (
+                    <DropdownMenuCheckboxItem
+                      key={feature.featureId}
+                      className="capitalize"
+                      checked={config.featureOrder[key]?.includes(
+                        feature.featureId
+                      )}
+                      onCheckedChange={(value) =>
+                        value
+                          ? handleOrderChange([
+                              ...(config.featureOrder[key] ?? []),
+                              feature.featureId,
+                            ])
+                          : handleOrderChange(
+                              config.featureOrder[key]?.filter(
+                                (id) => id !== feature.featureId
+                              ) ?? []
+                            )
+                      }
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {feature.featureName}
+                    </DropdownMenuCheckboxItem>
+                  ))}
               </DropdownMenuContent>
             </DropdownMenu>
             {/* <Button
@@ -158,20 +156,14 @@ export const EventCardSection = ({
         features={event.features.filter(
           (feature) =>
             feature.result.type === "success" &&
-            features?.find((f) => f.id === feature.featureId)?.entityTypeId ===
-              entity.type
+            (entity
+              ? features?.find((f) => f.id === feature.featureId)
+                  ?.entityTypeId === entity.type
+              : features?.find((f) => f.id === feature.featureId)?.eventTypeId)
         )}
         entityNameMap={entityNameMap}
-        onFeatureOrderChange={(order) => {
-          onConfigChange({
-            ...config,
-            featureOrder: {
-              ...config.featureOrder,
-              [entity.type]: order,
-            },
-          });
-        }}
-        featureOrder={config.featureOrder[entity.type] ?? []}
+        onFeatureOrderChange={handleOrderChange}
+        featureOrder={config.featureOrder[key] ?? []}
         isEditing={isEditing}
       />
     </div>

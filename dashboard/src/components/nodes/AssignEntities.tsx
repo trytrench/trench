@@ -28,6 +28,9 @@ import { CreateRuleDialog } from "./CreateRuleDialog";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 import { selectors, useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
+import { Separator } from "../ui/separator";
+import { EditFeatureDialog } from "./EditFeatureDialog";
+import { EditRuleDialog } from "./EditRuleDialog";
 
 const FeatureItem = ({
   feature,
@@ -35,28 +38,89 @@ const FeatureItem = ({
   dataPath,
   onDataPathChange,
   eventType,
+  nodeId,
 }: {
   feature: FeatureDef;
   rule?: Rule;
   dataPath: DataPath | null;
   onDataPathChange: (dataPath: DataPath | null) => void;
   eventType: string;
+  nodeId?: string;
 }) => {
-  return (
-    <div className="flex items-center space-x-2 h-8">
-      {rule && <div className={`rounded-full ${rule.color} w-2 h-2`} />}
-      <div className="font-medium text-sm">{feature.name}</div>
+  const { mutateAsync: deleteFeature } = api.features.delete.useMutation();
 
-      <div className="text-blue-300 text-xs font-bold">
-        {feature.schema.type}
+  const toasts = useMutationToasts();
+
+  const deleteNodeDef = useEditorStore.use.deleteNodeDef();
+  const { refetch: refetchFeatures } = api.features.list.useQuery();
+
+  return (
+    <div className="flex items-center h-8">
+      <div className="flex items-baseline space-x-2">
+        {rule && <div className={`rounded-full ${rule.color} w-2 h-2`} />}
+        <div className="font-medium text-sm">{feature.name}</div>
+
+        <div className="text-blue-300 text-xs font-bold">
+          {feature.schema.type}
+        </div>
+
+        <SelectDataPathOrEntityFeature
+          value={dataPath}
+          onChange={onDataPathChange}
+          eventType={eventType}
+          // desiredSchema={feature.schema}
+        />
       </div>
 
-      <SelectDataPathOrEntityFeature
-        value={dataPath}
-        onChange={onDataPathChange}
-        eventType={eventType}
-        // desiredSchema={feature.schema}
-      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="link" className="ml-auto">
+            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent>
+          {rule ? (
+            <EditRuleDialog
+              title="Edit Rule"
+              rule={{
+                id: rule.id,
+                name: feature.name,
+                color: rule.color ?? undefined,
+              }}
+            >
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                Edit
+              </DropdownMenuItem>
+            </EditRuleDialog>
+          ) : (
+            <EditFeatureDialog title="Edit Feature" feature={feature}>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                Edit
+              </DropdownMenuItem>
+            </EditFeatureDialog>
+          )}
+          <DropdownMenuItem
+            onSelect={() => {
+              if (nodeId) {
+                deleteNodeDef(nodeId)
+                  .catch(toasts.deleteNode.onError)
+                  .catch(handleError);
+              }
+
+              deleteFeature({
+                id: feature.id,
+              })
+                .then(() => refetchFeatures())
+                .then(toasts.deleteFeature.onSuccess)
+                .catch(toasts.deleteFeature.onError)
+                .catch(handleError);
+            }}
+          >
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
@@ -192,7 +256,9 @@ export default function AssignEntities({ eventType }: Props) {
               }
             )}
             onClick={() => setSelectedNodeId(EVENT)}
-          />
+          >
+            Event
+          </div>
 
           {nodes
             ?.filter((node) => hasFnType(node, FnType.EntityAppearance))
@@ -236,7 +302,10 @@ export default function AssignEntities({ eventType }: Props) {
                     entityTypeId={
                       selectedNodeId === EVENT
                         ? undefined
-                        : selectedNode?.fn.returnSchema.entityType
+                        : selectedNode &&
+                          hasFnType(selectedNode, FnType.EntityAppearance)
+                        ? selectedNode?.fn.returnSchema.entityType
+                        : undefined
                     }
                     eventTypeId={
                       selectedNodeId === EVENT ? eventType : undefined
@@ -255,7 +324,8 @@ export default function AssignEntities({ eventType }: Props) {
                         Create feature
                       </DropdownMenuItem>
                     </CreateEventFeatureDialog>
-                  ) : (
+                  ) : selectedNode &&
+                    hasFnType(selectedNode, FnType.EntityAppearance) ? (
                     <CreateFeatureDialog
                       title="Create entity feature"
                       entityTypeId={selectedNode?.fn.returnSchema.entityType}
@@ -264,7 +334,7 @@ export default function AssignEntities({ eventType }: Props) {
                         Create feature
                       </DropdownMenuItem>
                     </CreateFeatureDialog>
-                  )}
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -294,11 +364,12 @@ export default function AssignEntities({ eventType }: Props) {
                   />
                 )}
 
-              {!selectedNode || !filteredFeatures?.length ? (
+              {!selectedNodeId || !filteredFeatures?.length ? (
                 <div className="text-sm self-center py-8">No features</div>
               ) : (
                 filteredFeatures.map((feature) => (
                   <FeatureItem
+                    nodeId={featureToNodeMap[feature.id]?.id}
                     feature={feature}
                     rule={featureToRuleMap[feature.id]}
                     dataPath={
@@ -335,10 +406,13 @@ export default function AssignEntities({ eventType }: Props) {
                         },
                         inputs: {
                           dataPath,
-                          entityDataPath: {
-                            nodeId: selectedNode.id,
-                            path: [],
-                          },
+                          entityDataPath:
+                            selectedNodeId === EVENT
+                              ? undefined
+                              : {
+                                  nodeId: selectedNodeId,
+                                  path: [],
+                                },
                         },
                       })
                         // .then(toasts.createNode.onSuccess)

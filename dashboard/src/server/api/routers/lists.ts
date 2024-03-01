@@ -36,16 +36,16 @@ export const listsRouter = createTRPCRouter({
           })
           .optional(),
         limit: z.number().optional(),
-        cursor: z.number().optional(),
+        cursor: z.number().optional(), // offset, named "cursor" for compatibility with react-query
       })
     )
     .query(async ({ ctx, input }) => {
       const filters = input.entityFilters;
 
-      const entities = await getEntitiesList({
+      const { rows: entities, count } = await getEntitiesList({
         filters: filters,
         limit: input.limit,
-        cursor: input.cursor,
+        offset: input.cursor,
       });
 
       const featureDefs = await getLatestFeatureDefs();
@@ -53,7 +53,7 @@ export const listsRouter = createTRPCRouter({
       const rules = await prisma.rule.findMany();
 
       return {
-        count: 0,
+        count: count,
         rows: entities.map((entity) => {
           const entityType = entity.entity_type;
           const entityId = entity.entity_id;
@@ -89,7 +89,7 @@ export const listsRouter = createTRPCRouter({
     .input(
       z.object({
         eventFilters: eventFiltersZod,
-        cursor: z.number().optional(),
+        cursor: z.number().optional(), // offset, named "cursor" for compatibility with react-query
         limit: z.number().optional(),
       })
     )
@@ -100,7 +100,7 @@ export const listsRouter = createTRPCRouter({
         getEventsList({
           filter: filters,
           limit: input.limit,
-          cursor: input.cursor,
+          offset: input.cursor,
         }),
         getLatestFeatureDefs(),
         prisma.entityType.findMany(),

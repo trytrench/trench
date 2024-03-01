@@ -1,4 +1,4 @@
-import { db } from "../dist";
+import { db } from ".";
 
 async function runMigrations() {
   // Create tables
