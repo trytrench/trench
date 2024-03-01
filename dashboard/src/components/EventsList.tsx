@@ -31,9 +31,9 @@ const useEventViewConfig = (entity?: Entity) => {
   useEffect(() => {
     if (views?.[0]) {
       // If there are views, and the query param is set, set the view config
-      if (router.query.view) {
-        const view = views.find((view) => view.id === router.query.view);
-        if (view) setViewConfig(view.config);
+      const view = views.find((view) => view.id === router.query.view);
+      if (view) {
+        setViewConfig(view.config);
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
@@ -256,7 +256,7 @@ export default function EventsList({ entity }: EventsListProps) {
         isEditing={isEditing}
       >
         {eventsLoading ? (
-          <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+          <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin mx-auto mt-4" />
         ) : (
           <div className="relative flex-grow h-full overflow-y-auto">
             <ScrollArea className="px-4">

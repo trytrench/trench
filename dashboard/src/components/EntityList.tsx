@@ -50,9 +50,9 @@ const useEntityViewConfig = (seenWithEntity?: Entity) => {
   useEffect(() => {
     if (views?.[0]) {
       // If there are views, and the query param is set, set the view config
-      if (router.query.view) {
-        const view = views.find((view) => view.id === router.query.view);
-        if (view) setViewConfig(view.config);
+      const view = views.find((view) => view.id === router.query.view);
+      if (view) {
+        setViewConfig(view.config);
       } else {
         // If there are views, but no query param, set the query param to the first view
         router
@@ -427,7 +427,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
         <ScrollArea className="h-full">
           <div className="space-y-4 px-8 py-4">
             {entitiesTableLoading ? (
-              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin mx-auto" />
             ) : (
               <>
                 {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
