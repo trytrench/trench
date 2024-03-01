@@ -225,12 +225,12 @@ export type EntityViewConfig = z.infer<typeof entityViewConfigZod>;
 export const eventViewConfig = z.object({
   type: z.enum(["feed", "grid"]),
   filters: z.array(eventFilterZod),
-  // tableConfig: z
-  //   .object({
-  //     columnOrder: z.array(z.string()),
-  //     columnVisibility: z.record(z.boolean()),
-  //   })
-  //   .optional(),
+  tableConfig: z
+    .object({
+      columnOrder: z.array(z.string()),
+      columnVisibility: z.record(z.boolean()),
+    })
+    .optional(),
   gridConfig: z.record(
     z.object({
       featureOrder: z.record(z.array(z.string())),

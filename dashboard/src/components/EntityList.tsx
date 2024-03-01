@@ -269,14 +269,16 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: (updater) => {
       setViewConfig((prevConfig) => {
-        if (!prevConfig?.tableConfig) return prevConfig;
+        if (!prevConfig) return prevConfig;
         return {
           ...prevConfig,
           tableConfig: {
-            ...prevConfig.tableConfig,
+            columnOrder:
+              prevConfig.tableConfig?.columnOrder ??
+              columns.map((c) => c.id ?? ""),
             columnVisibility:
               typeof updater === "function"
-                ? updater(prevConfig.tableConfig.columnVisibility)
+                ? updater(prevConfig.tableConfig?.columnVisibility ?? {})
                 : updater,
           },
         };
@@ -285,14 +287,17 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: (updater) => {
       setViewConfig((prevConfig) => {
-        if (!prevConfig?.tableConfig) return prevConfig;
+        if (!prevConfig) return prevConfig;
         return {
           ...prevConfig,
           tableConfig: {
-            ...prevConfig.tableConfig,
+            columnVisibility: prevConfig.tableConfig?.columnVisibility ?? {},
             columnOrder:
               typeof updater === "function"
-                ? updater(prevConfig.tableConfig.columnOrder)
+                ? updater(
+                    prevConfig.tableConfig?.columnOrder ??
+                      columns.map((c) => c.id ?? "")
+                  )
                 : updater,
           },
         };
@@ -307,9 +312,10 @@ export const EntityList = ({ seenWithEntity }: Props) => {
     state: {
       sorting,
       columnFilters,
-      columnVisibility: viewConfig?.tableConfig?.columnVisibility ?? {},
+      columnVisibility: viewConfig?.tableConfig?.columnVisibility,
       rowSelection,
-      columnOrder: viewConfig?.tableConfig?.columnOrder ?? [],
+      columnOrder:
+        viewConfig?.tableConfig?.columnOrder ?? columns.map((c) => c.id ?? ""),
       pagination,
     },
   });
