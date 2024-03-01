@@ -66,7 +66,7 @@ export const Navbar = () => {
           <Menu height={24} width={24} />
         </button>
       )}
-      <NextLink href="/">
+      <NextLink href="/find">
         <h1 className="text-lg font-bold text-emphasis-foreground mx-4">
           Trench
         </h1>
