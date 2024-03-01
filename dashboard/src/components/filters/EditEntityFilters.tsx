@@ -1,5 +1,10 @@
 import { ListFilter } from "lucide-react";
-import { type EntityFilters } from "../../shared/validation";
+import {
+  getEventFiltersOfType,
+  type EntityFilter,
+  EntityFilterType,
+  getEntityFiltersOfType,
+} from "../../shared/validation";
 import { api } from "../../utils/api";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
@@ -16,27 +21,38 @@ import { AddEventFilterSubItem } from "./EventFilterSubItem";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
 interface EditEntityFiltersProps {
-  value: EntityFilters;
-  onChange: (value: EntityFilters) => void;
+  value: EntityFilter[];
+  onChange: (value: EntityFilter[]) => void;
 }
 
 export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { value, onChange } = props;
 
-  const handleChange = (newValue: EntityFilters) => {
+  const handleChange = (newValue: EntityFilter[]) => {
     onChange(newValue);
   };
 
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
-  const {
-    firstSeen,
-    lastSeen,
-    entityType,
-    features: featureFilters,
-    seenInEventType,
-  } = value;
+  const firstSeen = getEntityFiltersOfType(
+    value,
+    EntityFilterType.FirstSeen
+  )?.[0]?.data;
+  const lastSeen = getEntityFiltersOfType(value, EntityFilterType.LastSeen)?.[0]
+    ?.data;
+  const entityType = getEntityFiltersOfType(
+    value,
+    EntityFilterType.EntityType
+  )?.[0]?.data;
+  const featureFilters = getEntityFiltersOfType(
+    value,
+    EntityFilterType.Feature
+  )?.map((f) => f.data);
+  const seenInEventType = getEntityFiltersOfType(
+    value,
+    EntityFilterType.SeenInEventType
+  )?.[0]?.data;
 
   const filteredFeatureDefs = allFeatureDefs?.filter((f) => {
     if (!entityType) return true;
@@ -65,10 +81,13 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
                 to: firstSeen?.to,
               }}
               onSelect={(newRange) => {
-                onChange({
-                  ...value,
-                  firstSeen: newRange,
-                });
+                if (!newRange) {
+                  return;
+                }
+                handleChange([
+                  ...value.filter((f) => f.type !== EntityFilterType.FirstSeen),
+                  { type: EntityFilterType.FirstSeen, data: newRange },
+                ]);
               }}
               numberOfMonths={2}
             />
@@ -86,10 +105,13 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
                 to: lastSeen?.to,
               }}
               onSelect={(newRange) => {
-                handleChange({
-                  ...value,
-                  lastSeen: newRange,
-                });
+                if (!newRange) {
+                  return;
+                }
+                handleChange([
+                  ...value.filter((f) => f.type !== EntityFilterType.LastSeen),
+                  { type: EntityFilterType.LastSeen, data: newRange },
+                ]);
               }}
               numberOfMonths={2}
             />
@@ -98,10 +120,12 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
 
         <AddEventFilterSubItem
           onAdd={(eventType) => {
-            handleChange({
-              ...value,
-              seenInEventType: eventType,
-            });
+            handleChange([
+              ...value.filter(
+                (f) => f.type !== EntityFilterType.SeenInEventType
+              ),
+              { type: EntityFilterType.SeenInEventType, data: eventType },
+            ]);
           }}
         />
 
@@ -115,10 +139,10 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
           }
           value={entityType ?? null}
           onChange={(type) => {
-            handleChange({
-              ...value,
-              entityType: type,
-            });
+            handleChange([
+              ...value.filter((f) => f.type !== EntityFilterType.EntityType),
+              { type: EntityFilterType.EntityType, data: type },
+            ]);
           }}
         />
 
@@ -126,11 +150,10 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
         <AddFeatureFilterSubItem
           featureDefs={filteredFeatureDefs ?? []}
           onAdd={(feature) => {
-            const featuresArr = featureFilters ?? [];
-            handleChange({
+            handleChange([
               ...value,
-              features: [...featuresArr, feature],
-            });
+              { type: EntityFilterType.Feature, data: feature },
+            ]);
           }}
         />
       </DropdownMenuContent>

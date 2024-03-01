@@ -1,5 +1,9 @@
 import { ListFilter } from "lucide-react";
-import { EventFilters } from "../../shared/validation";
+import {
+  EventFilter,
+  EventFilterType,
+  getEventFiltersOfType,
+} from "../../shared/validation";
 import { api } from "../../utils/api";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
@@ -15,8 +19,8 @@ import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
 interface EditEventFiltersProps {
-  value: EventFilters;
-  onChange: (value: EventFilters) => void;
+  value: EventFilter[];
+  onChange: (value: EventFilter[]) => void;
 }
 
 export function EditEventFilters(props: EditEventFiltersProps) {
@@ -25,7 +29,16 @@ export function EditEventFilters(props: EditEventFiltersProps) {
   const { data: allEventTypes } = api.eventTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
-  const { dateRange, eventType, features: featureFilters } = value;
+  // const { dateRange, eventType, features: featureFilters } = value;
+
+  const dateRange = getEventFiltersOfType(value, EventFilterType.DateRange)?.[0]
+    ?.data;
+  const eventType = getEventFiltersOfType(value, EventFilterType.EventType)?.[0]
+    ?.data;
+  const featureFilters = getEventFiltersOfType(
+    value,
+    EventFilterType.Feature
+  )?.map((f) => f.data);
 
   return (
     <DropdownMenu>
@@ -53,10 +66,13 @@ export function EditEventFilters(props: EditEventFiltersProps) {
                 to: dateRange?.to,
               }}
               onSelect={(newRange) => {
-                onChange({
-                  ...value,
-                  dateRange: newRange,
-                });
+                if (!newRange) {
+                  return;
+                }
+                onChange([
+                  ...value.filter((f) => f.type !== EventFilterType.DateRange),
+                  { type: EventFilterType.DateRange, data: newRange },
+                ]);
               }}
               numberOfMonths={2}
             />
@@ -73,10 +89,10 @@ export function EditEventFilters(props: EditEventFiltersProps) {
           }
           value={eventType ?? null}
           onChange={(type) => {
-            onChange({
-              ...value,
-              eventType: type,
-            });
+            onChange([
+              ...value.filter((f) => f.type !== EventFilterType.EventType),
+              { type: EventFilterType.EventType, data: type },
+            ]);
           }}
         />
 
@@ -84,11 +100,10 @@ export function EditEventFilters(props: EditEventFiltersProps) {
         <AddFeatureFilterSubItem
           featureDefs={allFeatureDefs ?? []}
           onAdd={(feature) => {
-            const featuresArr = featureFilters ?? [];
-            onChange({
+            onChange([
               ...value,
-              features: [...featuresArr, feature],
-            });
+              { type: EventFilterType.Feature, data: feature },
+            ]);
           }}
         />
       </DropdownMenuContent>

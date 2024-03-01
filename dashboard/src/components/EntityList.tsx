@@ -7,7 +7,11 @@ import { SpinnerButton } from "~/components/ui/custom/spinner-button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { handleError } from "~/lib/handleError";
-import { EntityViewConfig } from "~/shared/validation";
+import {
+  EntityFilter,
+  EntityFilterType,
+  EntityViewConfig,
+} from "~/shared/validation";
 import { RouterInputs, RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
 import { ViewsLayout } from "./ViewsLayout";
@@ -68,7 +72,12 @@ const useEntityViewConfig = (seenWithEntity?: Entity) => {
     if (views && !views.length && entityTypes?.[0] && !viewConfig) {
       setViewConfig({
         type: "grid",
-        filters: { entityType: entityTypes[0].id },
+        filters: [
+          {
+            type: EntityFilterType.EntityType,
+            data: entityTypes[0].id,
+          },
+        ],
       });
     }
   }, [views, entityTypes, seenWithEntity, viewConfig]);
@@ -125,11 +134,18 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   // );
 
   const queryProps: RouterInputs["lists"]["getEntitiesList"] = useMemo(() => {
+    const filters: EntityFilter[] = [];
+    if (viewConfig) {
+      filters.push(...viewConfig.filters);
+    }
+    if (seenWithEntity) {
+      filters.push({
+        type: EntityFilterType.SeenWithEntity,
+        data: seenWithEntity,
+      });
+    }
     return {
-      entityFilters: {
-        ...viewConfig?.filters,
-        seenWithEntity,
-      },
+      entityFilters: filters,
       limit: pagination.pageSize,
       cursor: pagination.pageIndex * pagination.pageSize,
     };
@@ -146,13 +162,13 @@ export const EntityList = ({ seenWithEntity }: Props) => {
 
   const { data: features } = api.features.list.useQuery();
 
-  const filteredFeatures = useMemo(
-    () =>
-      features?.filter(
-        (feature) => feature.entityTypeId === viewConfig?.filters.entityType
-      ),
-    [features, viewConfig]
-  );
+  const filteredFeatures = useMemo(() => {
+    const entType =
+      viewConfig?.filters.find(
+        (filt) => filt.type === EntityFilterType.EntityType
+      )?.data ?? null;
+    return features?.filter((feature) => feature.entityTypeId === entType);
+  }, [features, viewConfig]);
 
   const allEntities = useMemo(() => {
     return entities?.rows ?? [];
@@ -173,7 +189,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
           })
           .filter(Boolean) ?? []
       );
-    });
+    }) as string[];
   }, [allEntities]);
   const entityNameMap = useEntityNameMap(entityIds);
 
@@ -327,7 +343,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
       views={views ?? []}
       filterComponent={
         <EditEntityFilters
-          value={viewConfig?.filters ?? {}}
+          value={viewConfig?.filters ?? []}
           onChange={(filters) => {
             if (viewConfig) setViewConfig({ ...viewConfig, filters });
           }}

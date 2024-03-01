@@ -1,106 +1,103 @@
 import { api } from "~/utils/api";
-import { EntityFilters } from "../../shared/validation";
+import { EntityFilter, EntityFilterType } from "../../shared/validation";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 
 interface Props {
-  filters: EntityFilters;
-  onFiltersChange: (filters: EntityFilters) => void;
+  filters: EntityFilter[];
+  onFiltersChange: (filters: EntityFilter[]) => void;
 }
 
 export function RenderEntityFilters({ filters, onFiltersChange }: Props) {
-  const {
-    firstSeen,
-    lastSeen,
-    entityType,
-    features: featureFilters,
-    seenInEventType,
-  } = filters;
-
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
-
-  const entityTypeObj = allEntityTypes?.find((e) => e.id === entityType);
 
   return (
     <div className="mr-auto ml-3 flex gap-1 flex-wrap">
-      {entityType && (
-        <TypeChip
-          type={entityTypeObj?.type ?? ""}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              entityType: undefined,
-            });
-          }}
-        />
-      )}
-
-      {firstSeen?.from && firstSeen.to && (
-        <DateRangeChip
-          title="First Seen"
-          dateRange={{
-            from: firstSeen.from,
-            to: firstSeen.to,
-          }}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              firstSeen: undefined,
-            });
-          }}
-        />
-      )}
-
-      {lastSeen?.from && lastSeen.to && (
-        <DateRangeChip
-          title="Last Seen"
-          dateRange={{
-            from: lastSeen.from,
-            to: lastSeen.to,
-          }}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              lastSeen: undefined,
-            });
-          }}
-        />
-      )}
-
-      {featureFilters?.map((filter, idx) => (
-        <FeatureFilterChip
-          key={idx}
-          filter={filter}
-          onDelete={() => {
-            const newFeatures = featureFilters?.filter((_, i) => i !== idx);
-            onFiltersChange({
-              ...filters,
-              features: newFeatures,
-            });
-          }}
-          onChange={(newFilter) => {
-            const newFeatures = featureFilters?.map((f, i) =>
-              i === idx ? newFilter : f
+      {filters.map((filter, idx) => {
+        switch (filter.type) {
+          case EntityFilterType.EntityType:
+            const typeName = allEntityTypes?.find((t) => t.id === filter.data)
+              ?.type;
+            return (
+              <TypeChip
+                type={typeName ?? "Unknown type"}
+                onDelete={() => {
+                  onFiltersChange(
+                    filters.filter(
+                      (f) => f.type !== EntityFilterType.EntityType
+                    )
+                  );
+                }}
+              />
             );
-            onFiltersChange({
-              ...filters,
-              features: newFeatures,
-            });
-          }}
-        />
-      ))}
-
-      {seenInEventType && (
-        <TypeChip
-          title="Event"
-          type={seenInEventType}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              seenInEventType: undefined,
-            });
-          }}
-        />
-      )}
+          case EntityFilterType.FirstSeen:
+            return (
+              <DateRangeChip
+                title="First Seen"
+                dateRange={{
+                  from: filter.data.from,
+                  to: filter.data.to,
+                }}
+                onDelete={() => {
+                  onFiltersChange(
+                    filters.filter((f) => f.type !== EntityFilterType.FirstSeen)
+                  );
+                }}
+              />
+            );
+          case EntityFilterType.LastSeen:
+            return (
+              <DateRangeChip
+                title="Last Seen"
+                dateRange={{
+                  from: filter.data.from,
+                  to: filter.data.to,
+                }}
+                onDelete={() => {
+                  onFiltersChange(
+                    filters.filter((f) => f.type !== EntityFilterType.LastSeen)
+                  );
+                }}
+              />
+            );
+          case EntityFilterType.Feature:
+            return (
+              <FeatureFilterChip
+                filter={filter.data}
+                onDelete={() => {
+                  // based on idx
+                  onFiltersChange(filters.filter((_, i) => i !== idx));
+                }}
+                onChange={(newFilter) => {
+                  const newFilters: EntityFilter[] = filters.map((f, i) =>
+                    i === idx
+                      ? {
+                          type: EntityFilterType.Feature,
+                          data: newFilter,
+                        }
+                      : f
+                  );
+                  onFiltersChange(newFilters);
+                }}
+              />
+            );
+          case EntityFilterType.SeenInEventType:
+            return (
+              <TypeChip
+                title="Event"
+                type={filter.data}
+                onDelete={() => {
+                  onFiltersChange(
+                    filters.filter(
+                      (f) => f.type !== EntityFilterType.SeenInEventType
+                    )
+                  );
+                }}
+              />
+            );
+          default:
+            return null;
+        }
+      })}
     </div>
   );
 }

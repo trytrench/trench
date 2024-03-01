@@ -5,7 +5,11 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { handleError } from "~/lib/handleError";
-import { EventViewConfig } from "~/shared/validation";
+import {
+  EventFilter,
+  EventFilterType,
+  EventViewConfig,
+} from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventCard } from "./EventCard";
 import { EventDrawer } from "./EventDrawer";
@@ -51,7 +55,7 @@ const useEventViewConfig = (entity?: Entity) => {
     if (views && !views.length && !viewConfig) {
       setViewConfig({
         type: "grid",
-        filters: {},
+        filters: [],
         gridConfig: {},
       });
     }
@@ -72,6 +76,20 @@ export default function EventsList({ entity }: EventsListProps) {
 
   const { data: views, refetch: refetchViews } = api.eventViews.list.useQuery();
 
+  const filters = useMemo(() => {
+    const arr: EventFilter[] = [];
+    if (viewConfig?.filters) {
+      arr.push(...viewConfig.filters);
+    }
+    if (entity) {
+      arr.push({
+        type: EventFilterType.Entities,
+        data: [entity],
+      });
+    }
+    return arr;
+  }, [viewConfig, entity]);
+
   const {
     data: events,
     fetchNextPage,
@@ -80,10 +98,7 @@ export default function EventsList({ entity }: EventsListProps) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: {
-        ...viewConfig?.filters,
-        entities: entity ? [entity] : undefined,
-      },
+      eventFilters: filters,
       limit,
     },
     {
@@ -168,7 +183,7 @@ export default function EventsList({ entity }: EventsListProps) {
         views={views ?? []}
         filterComponent={
           <EditEventFilters
-            value={viewConfig?.filters ?? {}}
+            value={viewConfig?.filters ?? []}
             onChange={(newFilters) => {
               if (!viewConfig) return;
               setViewConfig({ ...viewConfig, filters: newFilters });

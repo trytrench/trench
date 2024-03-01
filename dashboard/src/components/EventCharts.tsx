@@ -8,6 +8,7 @@ import { api } from "../utils/api";
 import { DatePickerWithRange } from "./DatePickerWithRange";
 import { BarList } from "./charts/BarList";
 import { Card } from "./ui/card";
+import { EntityFilter, EntityFilterType } from "../shared/validation";
 
 interface Props {
   entity: Entity;
@@ -19,8 +20,22 @@ export default function EventCharts({ entity }: Props) {
     to: new Date(),
   });
 
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    if (entity) {
+      arr.push({
+        type: EntityFilterType.EntityId,
+        data: entity.id,
+      });
+      arr.push({
+        type: EntityFilterType.EntityType,
+        data: entity.type,
+      });
+    }
+    return arr;
+  }, [entity]);
   const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
-    { entityFilters: { entityId: entity.id, entityType: entity.type } },
+    { entityFilters: filters },
     { enabled: !!entity }
   );
 

@@ -2,12 +2,12 @@ import { type z } from "zod";
 import {
   EntityViewConfig,
   type entityFiltersZod,
-  type eventFiltersZod,
+  type eventFilterZod,
 } from "../shared/validation";
 
 // Assuming TypeName and jsonFilterZod are properly defined elsewhere
 
-type EventFilters = z.infer<typeof eventFiltersZod>;
+type EventFilters = z.infer<typeof eventFilterZod>;
 type EntityFilters = z.infer<typeof entityFiltersZod>;
 
 export function encodeEventFilters(filters: EventFilters): URLSearchParams {

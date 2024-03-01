@@ -27,6 +27,7 @@ import { api } from "~/utils/api";
 import { customDecodeURIComponent } from "../../../lib/uri";
 import { Badge } from "../../../components/ui/badge";
 import { FeatureSuccess } from "../../../shared/types";
+import { EntityFilter, EntityFilterType } from "../../../shared/validation";
 
 type Option = {
   label: string;
@@ -90,8 +91,18 @@ const Page: NextPageWithLayout = () => {
   const entTypeObj = entityTypes?.find((et) => et.type === entityTypeName);
   const entityTypeId = entTypeObj?.id;
 
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    if (entityId) {
+      arr.push({ type: EntityFilterType.EntityId, data: entityId });
+    }
+    if (entityTypeId) {
+      arr.push({ type: EntityFilterType.EntityType, data: entityTypeId });
+    }
+    return arr;
+  }, [entityId, entityTypeId]);
   const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
-    { entityFilters: { entityId, entityType: entityTypeId } },
+    { entityFilters: filters },
     { enabled: !!entityId && !!entityTypeId }
   );
 
