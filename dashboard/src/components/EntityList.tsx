@@ -144,6 +144,7 @@ export const EntityList = ({ seenWithEntity }: Props) => {
   } = api.lists.getEntitiesList.useQuery(queryProps, {
     keepPreviousData: true,
     staleTime: 15000,
+    enabled: !!viewConfig,
   });
 
   const { data: features } = api.features.list.useQuery();
