@@ -11,8 +11,6 @@
     <a href="https://discord.gg/cSYC47MXTR" target="_blank">Discord</a>
     -
     <a href="https://www.trytrench.com" target="_blank">Website</a>
-    -
-    <a href="https://docs.trytrench.com" target="_blank">Docs</a>
 </p>
 
 ## Getting started
@@ -21,7 +19,9 @@ Trench provides a core set of fraud prevention tools to help you collect data on
 
 ## Deploying Trench
 
-You can deploy Trench in one click to [Vercel](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftrytrench%2Ftrench%2Ftree%2Fmain%2Fdashboard&repository-name=trench-demo&project-name=trench-demo&env=ADMIN_USERNAME,ADMIN_PASSWORD,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,API_KEY,JWT_SECRET&stores=[{"type":"postgres"}]) or any hosting service.
+- Install Docker Engine and Docker Compose
+- Clone the repository: `git clone https://github.com/trytrench/trench.git && cd trench`
+- Run Trench: `docker-compose up`
 
 ## Sending data to Trench
 
@@ -51,25 +51,6 @@ curl \
   }
 ```
 
-## Applying decisions
-
-Trench lets you automatically apply decisions to events and objects in your events like users and IP addresses. We use a modified version of [SQRL](https://sqrl-lang.github.io/sqrl/), a rules language from Twitter, which lets you easily write rules with counts and aggregations that can be run on thousands of events per second with sub 100ms latency.
-
-```sql
-LET Card := entity('Card', jsonValue(EventData, '$.data.card.fingerprint'));
-LET User := entity('User', jsonValue(EventData, '$.data.user.id'));
-
-LET NumCards := countUnique(Card BY User LAST Week);
-
-CREATE RULE UserUsedTooManyCards
-  WHERE NumCards > 4
-  WITH REASON "User ${User} used ${NumCards} in the last week";
-
-WHEN UserUsedTooManyCards THEN
-  addEventLabel('$BLOCK', 'too many cards'),
-  addEntityLabel(User, '$BLOCKLIST', 'too many cards');
-```
-
 ## Design Philosophy
 
 - **Full customization.** You know your product and user interactions better than anyone else. To be effective, you should have full control over the data you collect and integrate.
@@ -77,10 +58,9 @@ WHEN UserUsedTooManyCards THEN
 
 ## Local development
 
-1. Clone the repository
-2. Go to dashboard project: `cd dashboard`
-3. Install dependencies: `yarn` or `npm i`
-4. Run the development server: `yarn dev` or `npm run dev`
+1. Clone the repository: `git clone https://github.com/trytrench/trench.git && cd trench`
+2. Install dependencies: `pnpm install`
+3. Run the development server: `pnpm dev`
 
 ## Join our community
 
