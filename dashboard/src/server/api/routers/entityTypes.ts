@@ -1,6 +1,10 @@
 import { TypeName } from "event-processing";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 export const entityTypesRouter = createTRPCRouter({
   create: protectedProcedure
@@ -39,7 +43,7 @@ export const entityTypesRouter = createTRPCRouter({
         },
       });
     }),
-  list: protectedProcedure.query(async ({ ctx, input }) => {
+  list: publicProcedure.query(async ({ ctx, input }) => {
     return ctx.prisma.entityType.findMany({});
   }),
   upsertPage: protectedProcedure
@@ -76,7 +80,7 @@ export const entityTypesRouter = createTRPCRouter({
         });
       }
     }),
-  getPage: protectedProcedure
+  getPage: publicProcedure
     .input(
       z.object({
         entityTypeId: z.string(),

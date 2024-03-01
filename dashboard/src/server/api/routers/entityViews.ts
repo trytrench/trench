@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import {
   type EntityViewConfig,
   entityViewConfigZod,
 } from "~/shared/validation";
 
 export const entityViewsRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         entityTypeId: z.string().nullable(),

@@ -1,9 +1,13 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { EventViewConfig, eventViewConfig } from "~/shared/validation";
 
 export const eventViewsRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx, input }) => {
+  list: publicProcedure.query(async ({ ctx, input }) => {
     const views = await ctx.prisma.eventView.findMany();
     return views.map((view) => ({
       ...view,

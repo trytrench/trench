@@ -1,6 +1,10 @@
 import { TypeName } from "event-processing";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 const ruleSchema = z.object({
   id: z.string(),
@@ -11,7 +15,7 @@ const ruleSchema = z.object({
 });
 
 export const rulesRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx, input }) => {
+  list: publicProcedure.query(async ({ ctx, input }) => {
     return ctx.prisma.rule.findMany({
       include: {
         feature: true,

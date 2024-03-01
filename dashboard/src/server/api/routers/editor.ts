@@ -1,6 +1,10 @@
 import { type NodeDef, nodeDefSchema } from "event-processing";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { prismaNodeSnapshotToNodeDef } from "../../lib/prismaConverters";
 import { checkErrors, prune } from "../../../shared/publish";
 import { GlobalStateKey, Prisma } from "@prisma/client";
@@ -9,7 +13,7 @@ import { uniqBy } from "lodash";
 import { assert, generateNanoId } from "../../../../../packages/common/src";
 
 export const editorRouter = createTRPCRouter({
-  getLatestEngine: protectedProcedure.query(async ({ ctx }) => {
+  getLatestEngine: publicProcedure.query(async ({ ctx }) => {
     const latestEngineId = await ctx.prisma.executionEngine.findFirstOrThrow({
       orderBy: { createdAt: "desc" },
     });
@@ -19,7 +23,7 @@ export const editorRouter = createTRPCRouter({
       nodeDefs: await getEngineNodeDefs(latestEngineId.id),
     };
   }),
-  getEngine: protectedProcedure
+  getEngine: publicProcedure
     .input(z.object({ engineId: z.string() }))
     .query(async ({ ctx, input }) => {
       const engineId = input.engineId;

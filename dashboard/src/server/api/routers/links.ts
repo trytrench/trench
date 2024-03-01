@@ -11,7 +11,11 @@ import {
   RawLinks,
 } from "~/components/LinksView/types";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { db } from "~/server/db";
 
 // set to true to print out query statistics
@@ -27,7 +31,7 @@ function unpackUniqueId(uniqueId: string) {
 }
 
 export const linksRouter = createTRPCRouter({
-  relatedEntities: protectedProcedure
+  relatedEntities: publicProcedure
     .input(
       z.object({
         entityId: z.string(),

@@ -1,11 +1,15 @@
 import { db } from "databases";
 import { uniq } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { getBins } from "~/server/utils/getBins";
 
 export const chartsRouter = createTRPCRouter({
-  getEventTypeTimeData: protectedProcedure
+  getEventTypeTimeData: publicProcedure
     .input(
       z.object({
         start: z.date(),
@@ -56,7 +60,7 @@ export const chartsRouter = createTRPCRouter({
       };
     }),
 
-  getEventTypeCounts: protectedProcedure
+  getEventTypeCounts: publicProcedure
     .input(
       z.object({
         start: z.date(),

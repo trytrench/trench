@@ -6,11 +6,15 @@ import {
   tSchemaZod,
 } from "event-processing";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
 
 export const featuresRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z
         .object({
@@ -80,7 +84,7 @@ export const featuresRouter = createTRPCRouter({
       return feature;
     }),
 
-  getFeatures: protectedProcedure
+  getFeatures: publicProcedure
     .input(
       z.object({
         featureIds: z.array(z.string()),
@@ -136,7 +140,7 @@ export const featuresRouter = createTRPCRouter({
       });
     }),
 
-  getValue: protectedProcedure
+  getValue: publicProcedure
     .input(
       z.object({
         featurePath: z.array(z.string()), // Specify the type more precisely

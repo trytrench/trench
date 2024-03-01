@@ -24,7 +24,7 @@ import { AnnotatedFeature } from "../../../shared/types";
 import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
 
 export const listsRouter = createTRPCRouter({
-  getEntitiesList: protectedProcedure
+  getEntitiesList: publicProcedure
     .input(
       z.object({
         entityFilters: entityFiltersZod,
@@ -85,7 +85,7 @@ export const listsRouter = createTRPCRouter({
       };
     }),
 
-  getEventsList: protectedProcedure
+  getEventsList: publicProcedure
     .input(
       z.object({
         eventFilters: eventFiltersZod,

@@ -1,8 +1,12 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 export const decisionsRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx, input }) => {
+  list: publicProcedure.query(async ({ ctx, input }) => {
     return ctx.prisma.decision.findMany();
   }),
   create: protectedProcedure
