@@ -1,7 +1,7 @@
 import { type Entity, TypeName } from "event-processing";
 import { uniqBy } from "lodash";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { prisma } from "~/server/db";
 import { entityFiltersZod, eventFilterZod } from "../../../shared/validation";
 import { getEntitiesList, getEventsList } from "../../lib/buildFilterQueries";
