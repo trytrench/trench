@@ -654,7 +654,7 @@ export function EditEntityView(props: {
                 <DropdownMenuItem
                   onSelect={() => onDropdownClick?.("viewConfig")}
                 >
-                  Save view config
+                  Save view
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
                   Delete
@@ -667,7 +667,7 @@ export function EditEntityView(props: {
         <div className="flex items-center flex-wrap z-0">
           {initState && (
             <>
-              <div className="self-stretch w-0.5 shrink-0 bg-accent"></div>
+              {/* <div className="self-stretch w-0.5 shrink-0 bg-accent"></div> */}
               <RenderEntityFilters
                 filters={editState?.config?.filters ?? []}
                 onFiltersChange={(filters) => {
@@ -681,16 +681,7 @@ export function EditEntityView(props: {
                 }}
                 editable={isEditing}
                 renderWrapper={(children, idx) => {
-                  return (
-                    <div
-                      className={cn({
-                        "bg-accent p-1 pr-0 flex items-center self-stretch h-8":
-                          true,
-                      })}
-                    >
-                      {children}
-                    </div>
-                  );
+                  return <div className="opacity-80">{children}</div>;
                 }}
               />
               {isEditing && (
@@ -710,7 +701,7 @@ export function EditEntityView(props: {
                 </div>
               )}
 
-              <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
+              {/* <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div> */}
             </>
           )}
           {isEditing ? null : (

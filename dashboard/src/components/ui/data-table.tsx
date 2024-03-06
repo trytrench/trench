@@ -195,7 +195,7 @@ export function DataTable<TData, TValue>({
   );
 
   return (
-    <div className="relative flex flex-col h-full w-full overflow-auto bg-gray-50/50">
+    <div className="relative flex flex-col h-full w-full overflow-auto">
       <div>{renderHeader?.(table)}</div>
       <div className="relative rounded-md border grow overflow-hidden">
         <DndContext
