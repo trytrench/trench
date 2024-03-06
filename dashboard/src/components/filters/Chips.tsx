@@ -433,7 +433,7 @@ function BooleanFilterChip(props: {
       }}
     >
       <PopoverTrigger disabled={!isEditable}>
-        <Badge variant="outline" className={cn("flex")}>
+        <Badge variant="outline" className={cn("flex bg-card")}>
           {filter.featureName}{" "}
           <span className="ml-1 font-mono text-xs">
             {opLabel && value ? `${opLabel} ${value}` : "exists"}
