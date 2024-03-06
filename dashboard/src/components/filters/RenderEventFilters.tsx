@@ -1,65 +1,89 @@
-import { EventFilters } from "../../shared/validation";
+import { EventFilter, EventFilterType } from "../../shared/validation";
 import { DateRangeChip, FeatureFilterChip, TypeChip } from "./Chips";
 
 interface Props {
-  filters: EventFilters;
-  onFiltersChange: (filters: EventFilters) => void;
+  filters: EventFilter[];
+  onFiltersChange: (filters: EventFilter[]) => void;
+  editable?: boolean;
+  renderWrapper?: (children: React.ReactNode, idx: number) => React.ReactNode;
+  renderPlaceholder?: (props: {
+    renderWrapper: (children: React.ReactNode, idx: number) => React.ReactNode;
+  }) => React.ReactNode;
 }
 
-export function RenderEventFilters({ filters, onFiltersChange }: Props) {
-  const { dateRange, eventType, features: featureFilters } = filters;
-
+export function RenderEventFilters({
+  filters,
+  onFiltersChange,
+  editable = false,
+  renderWrapper = (children) => children,
+  renderPlaceholder = ({ renderWrapper }) =>
+    renderWrapper(
+      <div className="text-xs text-muted-foreground">No filters</div>,
+      -1
+    ),
+}: Props) {
+  if (filters.length === 0) {
+    return <>{renderPlaceholder({ renderWrapper })}</>;
+  }
   return (
-    <div className="mr-auto ml-3 flex gap-1 flex-wrap">
-      {eventType && (
-        <TypeChip
-          type={eventType}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              eventType: undefined,
-            });
-          }}
-        />
-      )}
-
-      {dateRange?.from && dateRange.to && (
-        <DateRangeChip
-          dateRange={{
-            from: dateRange.from,
-            to: dateRange.to,
-          }}
-          onDelete={() => {
-            onFiltersChange({
-              ...filters,
-              dateRange: undefined,
-            });
-          }}
-        />
-      )}
-
-      {featureFilters?.map((filter, idx) => (
-        <FeatureFilterChip
-          key={idx}
-          filter={filter}
-          onDelete={() => {
-            const newFeatures = featureFilters?.filter((_, i) => i !== idx);
-            onFiltersChange({
-              ...filters,
-              features: newFeatures,
-            });
-          }}
-          onChange={(newFilter) => {
-            const newFeatures = featureFilters?.map((f, i) =>
-              i === idx ? newFilter : f
-            );
-            onFiltersChange({
-              ...filters,
-              features: newFeatures,
-            });
-          }}
-        />
-      ))}
-    </div>
+    <>
+      {filters
+        .map((filter, idx) => {
+          switch (filter.type) {
+            case EventFilterType.EventType:
+              return (
+                <TypeChip
+                  type={filter.data}
+                  onDelete={() => {
+                    onFiltersChange(
+                      filters.filter(
+                        (f) => f.type !== EventFilterType.EventType
+                      )
+                    );
+                  }}
+                  isEditable={editable}
+                />
+              );
+            case EventFilterType.DateRange:
+              return (
+                <DateRangeChip
+                  dateRange={{
+                    from: filter.data.from,
+                    to: filter.data.to,
+                  }}
+                  onDelete={() => {
+                    onFiltersChange(
+                      filters.filter(
+                        (f) => f.type !== EventFilterType.DateRange
+                      )
+                    );
+                  }}
+                  isEditable={editable}
+                />
+              );
+            case EventFilterType.Feature:
+              return (
+                <FeatureFilterChip
+                  filter={filter.data}
+                  onDelete={() => {
+                    // based on the index, remove the filter from the array
+                    onFiltersChange(filters.filter((f, i) => i !== idx));
+                  }}
+                  onChange={(newFilter) => {
+                    onFiltersChange(
+                      filters.map((f, i) =>
+                        i === idx
+                          ? { type: EventFilterType.Feature, data: newFilter }
+                          : f
+                      )
+                    );
+                  }}
+                  isEditable={editable}
+                />
+              );
+          }
+        })
+        .map(renderWrapper)}
+    </>
   );
 }

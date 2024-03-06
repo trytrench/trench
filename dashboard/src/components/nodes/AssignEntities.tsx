@@ -6,6 +6,8 @@ import {
   FnType,
   NodeDef,
   TypeName,
+  createDataType,
+  getFnTypeDef,
   hasFnType,
 } from "event-processing";
 import { MoreHorizontal } from "lucide-react";
@@ -31,6 +33,7 @@ import { useMutationToasts } from "./editor/useMutationToasts";
 import { Separator } from "../ui/separator";
 import { EditFeatureDialog } from "./EditFeatureDialog";
 import { EditRuleDialog } from "./EditRuleDialog";
+import { SidebarButton } from "../ui/custom/sidebar-button";
 
 const FeatureItem = ({
   feature,
@@ -137,28 +140,24 @@ const NodeItem = ({
   onDelete?: () => void;
 }) => {
   return (
-    <div
-      className={clsx(
-        "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
-        { "bg-accent text-accent-foreground": selected }
-      )}
-      onClick={onClick}
-    >
-      <div>{name}</div>
-      {onDelete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="iconXs" variant="link" className="h-3 ml-auto">
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
+    <SidebarButton selected={selected} onClick={onClick}>
+      <div className="flex items-center gap-2">
+        <div>{name}</div>
+        {onDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="iconXs" variant="link" className="h-3 ml-auto">
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </SidebarButton>
   );
 };
 
@@ -174,18 +173,27 @@ export default function AssignEntities({ eventType }: Props) {
 
   const nodes = useEditorStore(selectors.getNodeDefs({ eventType }));
 
+  const [selectedNodeId, setSelectedNodeId] = useState(EVENT);
+
   const featureToNodeMap = useMemo(() => {
     if (!nodes) return {};
     return nodes.reduce(
       (acc, node) => {
-        if (hasFnType(node, FnType.LogEntityFeature)) {
+        const { getDataPaths } = getFnTypeDef(node.fn.type);
+        const dataPaths = getDataPaths(node.inputs);
+        const dataPathNodeIds = dataPaths.map((path) => path.nodeId);
+
+        if (
+          hasFnType(node, FnType.LogEntityFeature) &&
+          dataPathNodeIds.includes(selectedNodeId)
+        ) {
           return { ...acc, [node.fn.config.featureId]: node };
         }
         return acc;
       },
       {} as Record<string, NodeDef<FnType.LogEntityFeature>>
     );
-  }, [nodes]);
+  }, [nodes, selectedNodeId]);
 
   const featureToRuleMap = useMemo(() => {
     if (!rules) return {};
@@ -196,8 +204,6 @@ export default function AssignEntities({ eventType }: Props) {
       {} as Record<string, Rule>
     );
   }, [rules]);
-
-  const [selectedNodeId, setSelectedNodeId] = useState(EVENT);
 
   const selectedNode = useMemo(() => {
     if (selectedNodeId === EVENT) return null;

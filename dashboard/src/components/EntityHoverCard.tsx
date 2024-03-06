@@ -11,6 +11,7 @@ import { useEntityNameMap } from "~/hooks/useEntityNameMap";
 import { TypeName } from "event-processing";
 import { useEntityName } from "~/hooks/useEntityName";
 import { type FeatureSuccess } from "../shared/types";
+import { EntityFilter, EntityFilterType } from "../shared/validation";
 
 interface Props {
   entityId: string;
@@ -21,8 +22,20 @@ interface Props {
 export const EntityHoverCard = ({ entityId, entityType, children }: Props) => {
   const [open, setOpen] = useState(false);
 
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    arr.push({
+      type: EntityFilterType.EntityId,
+      data: entityId,
+    });
+    arr.push({
+      type: EntityFilterType.EntityType,
+      data: entityType,
+    });
+    return arr;
+  }, [entityId, entityType]);
   const { data } = api.lists.getEntitiesList.useQuery(
-    { entityFilters: { entityId, entityType } },
+    { entityFilters: filters },
     { enabled: !!entityId && open }
   );
 
@@ -37,8 +50,10 @@ export const EntityHoverCard = ({ entityId, entityType, children }: Props) => {
             feature.result.type === "success" &&
             feature.result.data.schema.type === TypeName.Entity
         )
-        .map((feature) => (feature.result as FeatureSuccess).data.value.id) ??
-      []
+        .map((feature) => {
+          const data = (feature.result as FeatureSuccess).data;
+          return `${data.value.type}_${data.value.id}`;
+        }) ?? []
     );
   }, [entity]);
   const entityNameMap = useEntityNameMap(entityIds);

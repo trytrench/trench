@@ -1,33 +1,17 @@
-import {
-  Entity,
-  FeatureDef,
-  TSchema,
-  TypeName,
-  TypedData,
-  createDataType,
-  getTypedData,
-} from "event-processing";
-import { get, uniq, uniqBy } from "lodash";
+import { type Entity, TypeName } from "event-processing";
+import { uniqBy } from "lodash";
 import { z } from "zod";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
-import { db, prisma } from "~/server/db";
-import { JsonFilter, JsonFilterOp } from "../../../shared/jsonFilter";
-import { entityFiltersZod, eventFiltersZod } from "../../../shared/validation";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { prisma } from "~/server/db";
+import { entityFiltersZod, eventFilterZod } from "../../../shared/validation";
 import { getEntitiesList, getEventsList } from "../../lib/buildFilterQueries";
-import { nanoid } from "nanoid";
-import { EntityType } from "@prisma/client";
-import { AnnotatedFeature } from "../../../shared/types";
 import { getAnnotatedFeatures, getLatestFeatureDefs } from "../../lib/features";
 
 export const listsRouter = createTRPCRouter({
   getEntitiesList: protectedProcedure
     .input(
       z.object({
-        entityFilters: entityFiltersZod,
+        entityFilters: z.array(entityFiltersZod),
         sortBy: z
           .object({
             feature: z.string(),
@@ -88,7 +72,7 @@ export const listsRouter = createTRPCRouter({
   getEventsList: protectedProcedure
     .input(
       z.object({
-        eventFilters: eventFiltersZod,
+        eventFilters: z.array(eventFilterZod),
         cursor: z.number().optional(), // offset, named "cursor" for compatibility with react-query
         limit: z.number().optional(),
       })
@@ -98,7 +82,7 @@ export const listsRouter = createTRPCRouter({
 
       const [events, featureDefs, entityTypes, rules] = await Promise.all([
         getEventsList({
-          filter: filters,
+          filters: filters,
           limit: input.limit,
           offset: input.cursor,
         }),
@@ -106,7 +90,6 @@ export const listsRouter = createTRPCRouter({
         prisma.entityType.findMany(),
         prisma.rule.findMany(),
       ]);
-
       return {
         count: 0,
         rows: events.map((event) => ({
