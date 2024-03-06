@@ -5,6 +5,8 @@ import { isEditModeAtom } from "../state";
 import { RenderResult } from "../../RenderResult";
 import { FeatureSelector } from "../FeatureSelector";
 import { TypeName } from "event-processing";
+import { EntityFilter, EntityFilterType } from "../../../shared/validation";
+import { useMemo } from "react";
 
 export interface FeatureConfig {
   featurePath: string[];
@@ -18,8 +20,16 @@ export const FeatureComponent: EntityPageComponent<FeatureConfig> = ({
 }) => {
   const [isEditMode] = useAtom(isEditModeAtom);
   // Component implementation
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    if (entity) {
+      arr.push({ type: EntityFilterType.EntityId, data: entity.id });
+      arr.push({ type: EntityFilterType.EntityType, data: entity.type });
+    }
+    return arr;
+  }, [entity]);
   const { data: entitiesData } = api.lists.getEntitiesList.useQuery({
-    entityFilters: { entityId: entity.id, entityType: entity.type },
+    entityFilters: filters,
   });
   const features = entitiesData?.rows[0]?.features ?? [];
 

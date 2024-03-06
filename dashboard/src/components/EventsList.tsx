@@ -1,11 +1,19 @@
-import { Entity } from "event-processing";
 import { uniq } from "lodash";
-import { LayoutGrid, List, Loader2Icon } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Loader2Icon,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
-import { useEntityNameMap } from "~/hooks/useEntityNameMap";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { handleError } from "~/lib/handleError";
-import { EventViewConfig } from "~/shared/validation";
+import {
+  EventFilter,
+  EventFilterType,
+  EventViewConfig,
+} from "~/shared/validation";
 import { RouterOutputs, api } from "~/utils/api";
 import { EventCard } from "./EventCard";
 import { EventDrawer } from "./EventDrawer";
@@ -16,53 +24,70 @@ import { RenderEventFilters } from "./filters/RenderEventFilters";
 import { SpinnerButton } from "./ui/custom/spinner-button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { SidebarButton } from "./ui/custom/sidebar-button";
+import { Input } from "./ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { table } from "console";
+import { cn } from "../lib/utils";
+import { DataTable } from "./ui/data-table";
+import { DataTableViewOptions } from "./ui/data-table-view-options";
+import { toast } from "./ui/use-toast";
+import { Button } from "./ui/button";
+import { useEntityNameMap } from "../hooks/useEntityNameMap";
+import { Entity } from "event-processing";
+
+type EventView = RouterOutputs["eventViews"]["list"][number];
 
 interface EventsListProps {
   entity?: Entity;
 }
 
-const useEventViewConfig = (entity?: Entity) => {
-  const router = useRouter();
-
-  const { data: views, refetch } = api.eventViews.list.useQuery();
-
-  const [viewConfig, setViewConfig] = useState<EventViewConfig | null>(null);
-
-  useEffect(() => {
-    if (views?.[0]) {
-      // If there are views, and the query param is set, set the view config
-      const view = views.find((view) => view.id === router.query.view);
-      if (view) {
-        setViewConfig(view.config);
-      } else {
-        // If there are views, but no query param, set the query param to the first view
-        router
-          .replace({
-            pathname: router.pathname,
-            query: { ...router.query, view: views[0].id },
-          })
-          .catch(handleError);
-      }
-    }
-  }, [views, router, entity]);
-
-  useEffect(() => {
-    // If there are no views, set default
-    if (views && !views.length && !viewConfig) {
-      setViewConfig({
-        type: "grid",
-        filters: {},
-        gridConfig: {},
-      });
-    }
-  }, [views, viewConfig]);
-
-  return { viewConfig, setViewConfig };
-};
-
 export default function EventsList({ entity }: EventsListProps) {
   const router = useRouter();
-  const { viewConfig, setViewConfig } = useEventViewConfig();
+
+  const { data: views, refetch: refetchViews } = api.eventViews.list.useQuery(
+    undefined,
+    {
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+    }
+  );
+
+  const selectedViewId = router.query.view as string | undefined;
+
+  const viewConfig = useMemo(() => {
+    if (!views) return null;
+    return views.find((view) => view.id === selectedViewId)?.config;
+  }, [views, selectedViewId]);
+
+  const selectedView = useMemo(() => {
+    return views?.find((view) => view.id === selectedViewId);
+  }, [views, selectedViewId]);
+
+  const [currentViewState, setCurrentViewState] = useState<EventViewConfig>({
+    type: "feed",
+    filters: [],
+  });
+  useEffect(() => {
+    if (viewConfig) {
+      setCurrentViewState({
+        ...viewConfig,
+        filters: [], // Filters are handled separately
+      });
+    } else {
+      setCurrentViewState({
+        type: "feed",
+        filters: [],
+        gridConfig: undefined,
+        tableConfig: undefined,
+      });
+    }
+  }, [viewConfig]);
 
   const [limit, setLimit] = useState(50);
 
@@ -70,7 +95,19 @@ export default function EventsList({ entity }: EventsListProps) {
   const { mutateAsync: updateView } = api.eventViews.update.useMutation();
   const { mutateAsync: deleteView } = api.eventViews.delete.useMutation();
 
-  const { data: views, refetch: refetchViews } = api.eventViews.list.useQuery();
+  const filters = useMemo(() => {
+    const arr: EventFilter[] = [];
+    if (viewConfig?.filters) {
+      arr.push(...viewConfig.filters);
+    }
+    if (entity) {
+      arr.push({
+        type: EventFilterType.Entities,
+        data: [entity],
+      });
+    }
+    return arr;
+  }, [viewConfig, entity]);
 
   const {
     data: events,
@@ -80,10 +117,7 @@ export default function EventsList({ entity }: EventsListProps) {
     hasNextPage,
   } = api.lists.getEventsList.useInfiniteQuery(
     {
-      eventFilters: {
-        ...viewConfig?.filters,
-        entities: entity ? [entity] : undefined,
-      },
+      eventFilters: filters,
       limit,
     },
     {
@@ -91,7 +125,6 @@ export default function EventsList({ entity }: EventsListProps) {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
-      enabled: !!viewConfig,
     }
   );
 
@@ -119,7 +152,7 @@ export default function EventsList({ entity }: EventsListProps) {
   };
   const listItems: (DividerItem | EventItem)[] = useMemo(() => {
     // not applicable in list view
-    if (viewConfig?.type !== "grid") return [];
+    // if (currentViewState?.type !== "grid") return [];
 
     // if two events differ by over two hours, insert a divider item
     const dividerThreshold = 1000 * 60 * 60 * 2;
@@ -146,7 +179,7 @@ export default function EventsList({ entity }: EventsListProps) {
     }
 
     return items;
-  }, [allEvents, viewConfig]);
+  }, [allEvents]);
 
   const [selectedEvent, setSelectedEvent] = useState<
     RouterOutputs["lists"]["getEventsList"]["rows"][number] | null
@@ -163,176 +196,238 @@ export default function EventsList({ entity }: EventsListProps) {
         }}
         selectedEvent={selectedEvent}
       />
-
-      <ViewsLayout
-        views={views ?? []}
-        filterComponent={
-          <EditEventFilters
-            value={viewConfig?.filters ?? {}}
-            onChange={(newFilters) => {
-              if (!viewConfig) return;
-              setViewConfig({ ...viewConfig, filters: newFilters });
-            }}
-          />
-        }
-        toggleComponent={
-          <Tabs
-            value={viewConfig?.type}
-            onValueChange={(value) => {
-              if (!viewConfig) return;
-              setViewConfig({ ...viewConfig, type: value as "grid" | "feed" });
-            }}
-          >
-            <TabsList className="p-0.5">
-              <TabsTrigger className="px-2" value="grid">
-                <LayoutGrid className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger className="px-2" value="feed">
-                <List className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        }
-        filtersComponent={
-          !isEditing &&
-          viewConfig?.filters &&
-          Object.entries(viewConfig.filters).filter((filter) =>
-            Array.isArray(filter[1]) ? filter[1].length : filter[1]
-          ).length > 0 && (
-            <div className="border-b px-6 py-3 flex justify-between"></div>
-          ) ? (
-            <RenderEventFilters
-              filters={viewConfig.filters}
-              onFiltersChange={(filters) => {
-                setViewConfig({
-                  ...viewConfig,
-                  filters,
-                });
+      <div className="h-full flex">
+        <div className="w-64 border-r shrink-0 pt-4 px-6 h-full">
+          <div className="flex items-center mb-2">
+            <div className="text-sm font-medium text-emphasis-foreground">
+              Views
+            </div>
+            <button
+              className="rounded-md flex items-center p-0.5 ml-1 data-[state=open]:bg-muted hover:bg-muted transition"
+              onClick={() => {
+                const newViewName = `New View ${(views?.length ?? 0) + 1}`;
+                createView({
+                  name: newViewName,
+                  config: {
+                    type: "feed",
+                    filters: [],
+                  },
+                })
+                  .then(() => refetchViews())
+                  .then(() => {
+                    toast({
+                      title: "New view created successfully",
+                    });
+                  })
+                  .catch(handleError);
               }}
-            />
-          ) : undefined
-        }
-        onSave={() => {
-          if (typeof router.query.view !== "string" || !viewConfig) return;
-          updateView({
-            id: router.query.view,
-            config: viewConfig,
-          })
-            .then(() => refetchViews())
-            .catch(handleError);
-        }}
-        onCreate={(name) => {
-          if (!viewConfig) return;
-          createView({
-            name,
-            config: viewConfig,
-          })
-            .then((view) => {
-              router
-                .replace({
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+          <SidebarButton
+            onClick={() =>
+              router.push({
+                pathname: router.pathname,
+                query: { ...router.query, view: undefined },
+              })
+            }
+            selected={!selectedViewId}
+          >
+            All Events
+          </SidebarButton>
+          {views?.map((view) => (
+            <SidebarButton
+              key={view.id}
+              onClick={() =>
+                router.push({
                   pathname: router.pathname,
                   query: { ...router.query, view: view.id },
                 })
-                .catch(handleError);
-              return refetchViews();
-            })
-            .catch(handleError);
-        }}
-        onRename={(name) => {
-          if (typeof router.query.view !== "string") return;
-          updateView({ id: router.query.view, name })
-            .then(() => {
-              return refetchViews();
-            })
-            .catch(handleError);
-        }}
-        onDelete={() => {
-          if (typeof router.query.view !== "string") return;
-          deleteView({ id: router.query.view })
-            .then(() => refetchViews())
-            .catch(handleError);
-        }}
-        onIsEditingChange={setIsEditing}
-        isEditing={isEditing}
-      >
-        {eventsLoading ? (
-          <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin mx-auto mt-4" />
-        ) : (
-          <div className="relative flex-grow h-full overflow-y-auto">
-            <ScrollArea className="px-4">
-              {viewConfig?.type === "feed" ? (
-                <>
-                  <div className="h-2" />
-                  {allEvents.map((event) => (
-                    <EventListItem
-                      key={event.id}
-                      event={event}
-                      onClick={() => {
-                        setSelectedEvent(event);
-                      }}
-                      selected={selectedEvent?.id === event.id}
-                    />
-                  ))}
-                </>
-              ) : (
-                (isEditing ? listItems.slice(0, 10) : listItems).map(
-                  (item, idx) =>
-                    item.type === "event" ? (
-                      <EventCard
-                        key={item.event.id}
-                        event={item.event}
-                        isFirst={idx === 0}
-                        isLast={idx === listItems.length - 1}
-                        entityNameMap={entityNameMap}
-                        config={
-                          viewConfig?.gridConfig[item.event.type] ?? {
-                            featureOrder: {},
-                            entityTypeOrder: [],
-                          }
-                        }
-                        onConfigChange={(newConfig) => {
-                          if (viewConfig)
-                            setViewConfig({
-                              ...viewConfig,
-                              gridConfig: {
-                                ...viewConfig.gridConfig,
-                                [item.event.type]: newConfig,
-                              },
-                            });
+              }
+              selected={view.id === selectedViewId}
+            >
+              {view.name}
+            </SidebarButton>
+          ))}
+        </div>
+        <div className="h-full grow overflow-auto flex flex-col">
+          <div className="shrink-0">
+            <EditEventView
+              view={selectedView}
+              onViewChange={(newView) => {
+                if (selectedView) {
+                  updateView({
+                    id: selectedView.id,
+                    name: newView.name,
+                    config: newView.config,
+                  })
+                    .then(() => refetchViews())
+                    .catch(handleError);
+                }
+              }}
+              extraFilters={currentViewState.filters}
+              onExtraFiltersChange={(filters) => {
+                setCurrentViewState((prev) => {
+                  return {
+                    ...prev,
+                    filters,
+                  };
+                });
+              }}
+              onDropdownClick={(val) => {
+                if (val === "viewConfig") {
+                  if (selectedView) {
+                    updateView({
+                      id: selectedView.id,
+                      name: selectedView.name,
+                      config: {
+                        ...currentViewState,
+                        filters: selectedView.config.filters,
+                      },
+                    })
+                      .then(() => refetchViews())
+                      .then(() => {
+                        toast({
+                          title: "View config saved successfully",
+                        });
+                      })
+                      .catch(handleError);
+                  }
+                } else if (val === "delete") {
+                  if (selectedView) {
+                    deleteView({ id: selectedView.id })
+                      .then(() => refetchViews())
+                      .then(() => {
+                        toast({
+                          title: "View deleted successfully",
+                        });
+                      })
+                      .catch(handleError);
+                  }
+                }
+              }}
+              renderRightItems={() => {
+                return (
+                  <div className="flex items-center gap-2">
+                    {currentViewState.type === "feed" ? null : (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing((prev) => !prev);
                         }}
-                        isEditing={isEditing}
-                      />
-                    ) : (
-                      <TimeDivider
-                        key={item.duration}
-                        duration={item.duration}
-                      />
-                    )
-                )
-              )}
-              <div className="w-auto mt-4 mb-6 flex justify-center">
-                {hasNextPage ? (
-                  <SpinnerButton
-                    variant="outline"
-                    onClick={() => {
-                      fetchNextPage().catch((err) => {
-                        console.error(err);
-                      });
-                    }}
-                    loading={isFetchingNextPage}
-                  >
-                    Fetch more events
-                  </SpinnerButton>
-                ) : (
-                  <div className="text-sm text-muted-fg italic">
-                    No more Events.
+                      >
+                        {isEditing ? "Done" : "Edit Grid"}
+                      </Button>
+                    )}
+                    <Tabs
+                      value={viewConfig?.type}
+                      onValueChange={(newType) => {
+                        setCurrentViewState((prev) => {
+                          return {
+                            ...prev,
+                            type: newType as "grid" | "feed",
+                          };
+                        });
+                      }}
+                    >
+                      <TabsList className="p-0.5">
+                        <TabsTrigger className="px-2" value="grid">
+                          <LayoutGrid className="h-4 w-4" />
+                        </TabsTrigger>
+                        <TabsTrigger className="px-2" value="feed">
+                          <List className="h-4 w-4" />
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                );
+              }}
+            />
           </div>
-        )}
-      </ViewsLayout>
+          <div className="grow overflow-y-auto">
+            {eventsLoading ? (
+              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+            ) : (
+              <div className="relative flex-grow h-full overflow-y-auto">
+                <ScrollArea className="">
+                  {currentViewState?.type === "feed" ? (
+                    <>
+                      <div className="h-2" />
+                      {allEvents.map((event) => (
+                        <EventListItem
+                          key={event.id}
+                          event={event}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                          }}
+                          selected={selectedEvent?.id === event.id}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    (isEditing ? listItems.slice(0, 10) : listItems).map(
+                      (item, idx) =>
+                        item.type === "event" ? (
+                          <EventCard
+                            key={item.event.id}
+                            event={item.event}
+                            isFirst={idx === 0}
+                            isLast={idx === listItems.length - 1}
+                            entityNameMap={entityNameMap}
+                            config={
+                              currentViewState?.gridConfig?.[
+                                item.event.type
+                              ] ?? {
+                                featureOrder: {},
+                                entityTypeOrder: [],
+                              }
+                            }
+                            onConfigChange={(newConfig) => {
+                              setCurrentViewState({
+                                ...currentViewState,
+                                gridConfig: {
+                                  ...currentViewState.gridConfig,
+                                  [item.event.type]: newConfig,
+                                },
+                              });
+                            }}
+                            isEditing={isEditing}
+                          />
+                        ) : (
+                          <TimeDivider
+                            key={item.duration}
+                            duration={item.duration}
+                          />
+                        )
+                    )
+                  )}
+                  <div className="w-auto mt-4 mb-6 flex justify-center">
+                    {hasNextPage ? (
+                      <SpinnerButton
+                        variant="outline"
+                        onClick={() => {
+                          fetchNextPage().catch((err) => {
+                            console.error(err);
+                          });
+                        }}
+                        loading={isFetchingNextPage}
+                      >
+                        Fetch more events
+                      </SpinnerButton>
+                    ) : (
+                      <div className="text-sm text-muted-fg italic">
+                        No more Events.
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* <div className="absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-background pointer-events-none"></div> */}
     </>
@@ -401,6 +496,202 @@ function TimeDivider({ duration }: TimeDividerProps) {
       <div className="italic text-muted-foreground my-auto grow text-md">
         {timeToWords(duration)}
       </div>
+    </div>
+  );
+}
+
+export function EditEventView(props: {
+  view: EventView | undefined;
+  onViewChange: (value: EventView) => void;
+
+  extraFilters?: EventFilter[];
+  onExtraFiltersChange?: (filters: EventFilter[]) => void;
+
+  onDropdownClick?: (dropdownValue: string) => void;
+
+  renderRightItems?: () => React.ReactNode;
+}) {
+  const {
+    view: initState,
+    onViewChange,
+    extraFilters,
+    onExtraFiltersChange,
+    renderRightItems,
+    onDropdownClick,
+  } = props;
+
+  const [editState, setEditState] = useState<EventView | undefined>(initState);
+
+  const resetState = useCallback(() => {
+    setEditState(initState);
+  }, [initState]);
+
+  useEffect(() => {
+    resetState();
+  }, [resetState]);
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  const allFilters = useMemo(() => {
+    return [
+      ...(editState?.config?.filters ?? []),
+      ...(extraFilters ?? []),
+    ] as EventFilter[];
+  }, [editState, extraFilters]);
+
+  return (
+    <div
+      className={cn({
+        "flex flex-col flex-grow overflow-auto transition": true,
+        "bg-gray-50": isEditing,
+      })}
+    >
+      <div className="flex items-center h-14 px-8 border-b shrink-0">
+        {isEditing ? (
+          <div className="mr-4">
+            <Input
+              inputSize="md"
+              value={editState?.name ?? ""}
+              onChange={(e) => {
+                setEditState((prev) => {
+                  if (!prev) return prev;
+                  return { ...prev, name: e.target.value };
+                });
+              }}
+              className="max-w-sm font-bold"
+            />
+          </div>
+        ) : initState ? (
+          <>
+            <div className="text-emphasis-foreground text-md">
+              {initState?.name}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="mr-4">
+                <Button size="iconXs" variant="link" className="shrink-0">
+                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onSelect={() => setIsEditing(true)}>
+                  Edit filters
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => onDropdownClick?.("viewConfig")}
+                >
+                  Save view
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : null}
+
+        <div className="flex items-center flex-wrap z-0">
+          {initState && (
+            <>
+              <RenderEventFilters
+                filters={editState?.config?.filters ?? []}
+                onFiltersChange={(filters) => {
+                  setEditState((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      config: { ...prev.config, filters },
+                    };
+                  });
+                }}
+                editable={isEditing}
+                renderWrapper={(children, idx) => {
+                  return <div className="opacity-80">{children}</div>;
+                }}
+              />
+              {isEditing && (
+                <div className="self-stretch flex items-center bg-accent pl-1">
+                  <EditEventFilters
+                    value={editState?.config?.filters ?? []}
+                    onChange={(filters) => {
+                      setEditState((prev) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          config: { ...prev.config, filters },
+                        };
+                      });
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div> */}
+            </>
+          )}
+          {isEditing ? null : (
+            <>
+              <RenderEventFilters
+                filters={extraFilters ?? []}
+                onFiltersChange={(filters) => {
+                  onExtraFiltersChange?.(filters);
+                }}
+                editable={!isEditing}
+                renderWrapper={(children, idx) => {
+                  return (
+                    <div
+                      className={cn({
+                        "pr-0 flex items-center self-stretch h-8": true,
+                        "p-1": idx >= 0,
+                      })}
+                    >
+                      {children}
+                    </div>
+                  );
+                }}
+                renderPlaceholder={initState ? () => null : undefined}
+              />
+
+              <div className="bg-white px-1 self-stretch flex items-center">
+                <EditEventFilters
+                  existingFilters={allFilters}
+                  value={extraFilters ?? []}
+                  onChange={(filters) => {
+                    onExtraFiltersChange?.(filters);
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="ml-auto">{!isEditing && renderRightItems?.()}</div>
+      </div>
+      {isEditing ? (
+        <div className="flex items-center justify-end w-full gap-2 px-8 py-2">
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              resetState();
+              setIsEditing(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="xs"
+            onClick={() => {
+              if (editState) {
+                onViewChange(editState);
+              }
+              setIsEditing(false);
+            }}
+          >
+            Done
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { MoreHorizontal } from "lucide-react";
+import { Filter, FilterIcon, ListFilter, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { EditViewDialog } from "./EditViewDialog";
@@ -10,6 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { EditEntityFilters } from "./filters/EditEntityFilters";
+import { useEntityViewConfig } from "./useEntityViewConfig";
+import { RenderEntityFilters } from "./filters/RenderEntityFilters";
 
 interface Props {
   views: { name: string; id: string }[];
@@ -43,6 +46,8 @@ export function ViewsLayout({
     () => views.find((v) => v.id === router.query.view),
     [router.query.view, views]
   );
+
+  const { viewConfig, setViewConfig } = useEntityViewConfig();
 
   return (
     <div className="flex h-full items-stretch">
@@ -125,7 +130,21 @@ export function ViewsLayout({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {filterComponent}
+            <div className="flex items-center gap-2">
+              <RenderEntityFilters
+                filters={viewConfig?.filters ?? []}
+                onFiltersChange={(filters) => {
+                  if (viewConfig) setViewConfig({ ...viewConfig, filters });
+                }}
+              />
+
+              <EditEntityFilters
+                value={viewConfig?.filters ?? []}
+                onChange={(filters) => {
+                  if (viewConfig) setViewConfig({ ...viewConfig, filters });
+                }}
+              />
+            </div>
 
             <div className="flex items-center gap-2 ml-auto">
               {toggleComponent}

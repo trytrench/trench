@@ -1,5 +1,9 @@
-import { ListFilter } from "lucide-react";
-import { EventFilters } from "../../shared/validation";
+import { ListFilter, Plus } from "lucide-react";
+import {
+  EventFilter,
+  EventFilterType,
+  getEventFiltersOfType,
+} from "../../shared/validation";
 import { api } from "../../utils/api";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
@@ -15,29 +19,38 @@ import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
 interface EditEventFiltersProps {
-  value: EventFilters;
-  onChange: (value: EventFilters) => void;
+  value: EventFilter[];
+  existingFilters?: EventFilter[];
+  onChange: (value: EventFilter[]) => void;
 }
 
 export function EditEventFilters(props: EditEventFiltersProps) {
-  const { value, onChange } = props;
+  const { value, onChange, existingFilters = value } = props;
 
   const { data: allEventTypes } = api.eventTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
-  const { dateRange, eventType, features: featureFilters } = value;
+  // const { dateRange, eventType, features: featureFilters } = value;
+
+  const dateRange = getEventFiltersOfType(
+    existingFilters,
+    EventFilterType.DateRange
+  )?.[0]?.data;
+  const eventType = getEventFiltersOfType(
+    existingFilters,
+    EventFilterType.EventType
+  )?.[0]?.data;
+  const featureFilters = getEventFiltersOfType(
+    existingFilters,
+    EventFilterType.Feature
+  )?.map((f) => f.data);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="xs"
-          // className="p-1 px-2 my-auto h-6 flex items-center hover:bg-muted hover:text-muted-foreground"
-        >
-          <ListFilter className="h-4 w-4 mr-1.5" />
-          <span className="text-xs">Filter</span>
-        </Button>
+        <button className="rounded-md flex items-center p-1 data-[state=open]:bg-muted hover:bg-muted transition">
+          <Plus className="h-4 w-4" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         {/* Date Range Filter */}
@@ -53,10 +66,13 @@ export function EditEventFilters(props: EditEventFiltersProps) {
                 to: dateRange?.to,
               }}
               onSelect={(newRange) => {
-                onChange({
-                  ...value,
-                  dateRange: newRange,
-                });
+                if (!newRange) {
+                  return;
+                }
+                onChange([
+                  ...value.filter((f) => f.type !== EventFilterType.DateRange),
+                  { type: EventFilterType.DateRange, data: newRange },
+                ]);
               }}
               numberOfMonths={2}
             />
@@ -73,10 +89,10 @@ export function EditEventFilters(props: EditEventFiltersProps) {
           }
           value={eventType ?? null}
           onChange={(type) => {
-            onChange({
-              ...value,
-              eventType: type,
-            });
+            onChange([
+              ...value.filter((f) => f.type !== EventFilterType.EventType),
+              { type: EventFilterType.EventType, data: type },
+            ]);
           }}
         />
 
@@ -84,11 +100,10 @@ export function EditEventFilters(props: EditEventFiltersProps) {
         <AddFeatureFilterSubItem
           featureDefs={allFeatureDefs ?? []}
           onAdd={(feature) => {
-            const featuresArr = featureFilters ?? [];
-            onChange({
+            onChange([
               ...value,
-              features: [...featuresArr, feature],
-            });
+              { type: EventFilterType.Feature, data: feature },
+            ]);
           }}
         />
       </DropdownMenuContent>

@@ -40,10 +40,6 @@ export const EntityComponent: EntityPageComponent<EntityConfig> = ({
         )
       : null;
 
-  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery({
-    entityFilters: { entityId: entity.id, entityType: entity.type },
-  });
-
   return (
     <div>
       {isEditMode ? (

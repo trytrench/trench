@@ -1,15 +1,14 @@
 import { format, parse, subWeeks } from "date-fns";
 import { Entity } from "event-processing";
 import { sumBy } from "lodash";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type DateRange } from "react-day-picker";
 import { ZoomAreaChart } from "~/components/ZoomAreaChart";
 import { api } from "../utils/api";
 import { DatePickerWithRange } from "./DatePickerWithRange";
 import { BarList } from "./charts/BarList";
 import { Card } from "./ui/card";
-import { Loader2Icon } from "lucide-react";
-import { Skeleton } from "./ui/skeleton";
+import { EntityFilter, EntityFilterType } from "../shared/validation";
 
 interface Props {
   entity: Entity;
@@ -21,15 +20,45 @@ export default function EventCharts({ entity }: Props) {
     to: new Date(),
   });
 
-  const { data: eventTypeBins, isLoading: eventTypeBinsLoading } =
-    api.charts.getEventTypeTimeData.useQuery(
-      {
-        start: dateRange?.from ?? new Date(),
-        end: dateRange?.to ?? new Date(),
-        entity,
-      },
-      { enabled: !!dateRange?.from && !!dateRange?.to }
-    );
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    if (entity) {
+      arr.push({
+        type: EntityFilterType.EntityId,
+        data: entity.id,
+      });
+      arr.push({
+        type: EntityFilterType.EntityType,
+        data: entity.type,
+      });
+    }
+    return arr;
+  }, [entity]);
+  const { data: entityDataRows } = api.lists.getEntitiesList.useQuery(
+    { entityFilters: filters },
+    { enabled: !!entity }
+  );
+
+  const entityData = useMemo(() => entityDataRows?.rows[0], [entityDataRows]);
+  const [initializedFirstSeen, setInitializedFirstSeen] = useState(false);
+  useEffect(() => {
+    if (entityData && !initializedFirstSeen) {
+      setDateRange({
+        from: entityData.firstSeenAt,
+        to: new Date(),
+      });
+      setInitializedFirstSeen(true);
+    }
+  }, [entityData, initializedFirstSeen]);
+
+  const { data: eventTypeBins } = api.charts.getEventTypeTimeData.useQuery(
+    {
+      start: dateRange?.from ?? new Date(),
+      end: dateRange?.to ?? new Date(),
+      entity,
+    },
+    { enabled: !!dateRange?.from && !!dateRange?.to }
+  );
 
   const { data: eventTypeCounts, isLoading: eventTypeCountsLoading } =
     api.charts.getEventTypeCounts.useQuery(

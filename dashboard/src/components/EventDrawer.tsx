@@ -2,7 +2,7 @@ import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { uniq } from "lodash";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EntityCard } from "~/components/EntityCard";
 import { Badge } from "~/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader } from "~/components/ui/sheet";
@@ -10,6 +10,7 @@ import { RouterOutputs, api } from "~/utils/api";
 import { PropertyList } from "./ui/custom/property-list";
 import { RenderResult, RenderTypedData } from "./RenderResult";
 import { useEntityNameMap } from "../hooks/useEntityNameMap";
+import { EntityFilter, EntityFilterType } from "../shared/validation";
 
 export function EventDrawer(props: {
   selectedEvent: RouterOutputs["lists"]["getEventsList"]["rows"][number] | null;
@@ -24,11 +25,20 @@ export function EventDrawer(props: {
     selectedEvent?.labels?.filter((label) => label !== "") ?? []
   );
 
+  const filters = useMemo(() => {
+    const arr: EntityFilter[] = [];
+    if (selectedEvent) {
+      arr.push({
+        type: EntityFilterType.SeenInEventId,
+        data: selectedEvent.id,
+      });
+    }
+    return arr;
+  }, [selectedEvent]);
+
   const { data: entitiesList } = api.lists.getEntitiesList.useQuery(
     {
-      entityFilters: {
-        eventId: selectedEvent?.id,
-      },
+      entityFilters: filters,
     },
     {
       enabled: !!selectedEvent?.id,

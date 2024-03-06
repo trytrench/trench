@@ -33,6 +33,7 @@ import { useMutationToasts } from "./editor/useMutationToasts";
 import { Separator } from "../ui/separator";
 import { EditFeatureDialog } from "./EditFeatureDialog";
 import { EditRuleDialog } from "./EditRuleDialog";
+import { SidebarButton } from "../ui/custom/sidebar-button";
 
 const FeatureItem = ({
   feature,
@@ -139,28 +140,24 @@ const NodeItem = ({
   onDelete?: () => void;
 }) => {
   return (
-    <div
-      className={clsx(
-        "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
-        { "bg-accent text-accent-foreground": selected }
-      )}
-      onClick={onClick}
-    >
-      <div>{name}</div>
-      {onDelete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="iconXs" variant="link" className="h-3 ml-auto">
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
+    <SidebarButton selected={selected} onClick={onClick}>
+      <div className="flex items-center gap-2">
+        <div>{name}</div>
+        {onDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="iconXs" variant="link" className="h-3 ml-auto">
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </SidebarButton>
   );
 };
 
