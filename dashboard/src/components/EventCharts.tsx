@@ -9,6 +9,8 @@ import { DatePickerWithRange } from "./DatePickerWithRange";
 import { BarList } from "./charts/BarList";
 import { Card } from "./ui/card";
 import { EntityFilter, EntityFilterType } from "../shared/validation";
+import { Loader2Icon } from "lucide-react";
+import { Skeleton } from "./ui/skeleton";
 
 interface Props {
   entity: Entity;
@@ -51,14 +53,15 @@ export default function EventCharts({ entity }: Props) {
     }
   }, [entityData, initializedFirstSeen]);
 
-  const { data: eventTypeBins } = api.charts.getEventTypeTimeData.useQuery(
-    {
-      start: dateRange?.from ?? new Date(),
-      end: dateRange?.to ?? new Date(),
-      entity,
-    },
-    { enabled: !!dateRange?.from && !!dateRange?.to }
-  );
+  const { data: eventTypeBins, isLoading: eventTypeBinsLoading } =
+    api.charts.getEventTypeTimeData.useQuery(
+      {
+        start: dateRange?.from ?? new Date(),
+        end: dateRange?.to ?? new Date(),
+        entity,
+      },
+      { enabled: !!dateRange?.from && !!dateRange?.to }
+    );
 
   const { data: eventTypeCounts, isLoading: eventTypeCountsLoading } =
     api.charts.getEventTypeCounts.useQuery(
