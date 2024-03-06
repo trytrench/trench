@@ -1,4 +1,4 @@
-import { ListFilter } from "lucide-react";
+import { ListFilter, Plus } from "lucide-react";
 import {
   EventFilter,
   EventFilterType,
@@ -48,14 +48,9 @@ export function EditEventFilters(props: EditEventFiltersProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="xs"
-          // className="p-1 px-2 my-auto h-6 flex items-center hover:bg-muted hover:text-muted-foreground"
-        >
-          <ListFilter className="h-4 w-4 mr-1.5" />
-          <span className="text-xs">Filter</span>
-        </Button>
+        <button className="rounded-md flex items-center p-1 data-[state=open]:bg-muted hover:bg-muted transition">
+          <Plus className="h-4 w-4" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         {/* Date Range Filter */}

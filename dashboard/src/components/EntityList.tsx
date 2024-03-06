@@ -94,12 +94,6 @@ export function EntityList({ seenWithEntity }: Props) {
 
   const [isEditing, setIsEditing] = useState(false);
 
-  // const [extraFilters, setExtraFilters] = useState<EntityFilter[]>([]);
-  // const [tableConfig, setTableConfig] = useState<{
-  //   columnOrder?: ColumnOrderState;
-  //   columnVisibility?: VisibilityState;
-  //   columnSizing?: ColumnSizingState;
-  // }>({});
   const [currentViewState, setCurrentViewState] = useState<EntityViewConfig>({
     type: "grid",
     filters: [],
@@ -338,7 +332,7 @@ export function EntityList({ seenWithEntity }: Props) {
           }
           selected={!selectedViewId}
         >
-          All
+          All Entities
         </SidebarButton>
         {views?.map((view) => (
           <SidebarButton
@@ -563,7 +557,7 @@ export function EditEntityView(props: {
     >
       <div className="flex items-center h-14 px-8 border-b shrink-0">
         {isEditing ? (
-          <div>
+          <div className="mr-4">
             <Input
               inputSize="md"
               value={editState?.name ?? ""}
@@ -576,13 +570,13 @@ export function EditEntityView(props: {
               className="max-w-sm font-bold"
             />
           </div>
-        ) : (
+        ) : initState ? (
           <>
             <div className="text-emphasis-foreground text-md">
-              {initState?.name}
+              {initState.name}
             </div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild className="mr-4">
                 <Button size="iconXs" variant="link" className="shrink-0">
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </Button>
@@ -601,36 +595,15 @@ export function EditEntityView(props: {
               </DropdownMenuContent>
             </DropdownMenu>
           </>
-        )}
-
-        <div className="w-4 shrink-0"></div>
+        ) : null}
 
         <div className="flex items-center flex-wrap z-0">
-          <RenderEntityFilters
-            filters={editState?.config?.filters ?? []}
-            onFiltersChange={(filters) => {
-              setEditState((prev) => {
-                if (!prev) return prev;
-                return {
-                  ...prev,
-                  config: { ...prev.config, filters },
-                };
-              });
-            }}
-            editable={isEditing}
-            renderWrapper={(children) => {
-              return (
-                <div className="bg-accent p-1 pr-0 flex items-center self-stretch h-8">
-                  {children}
-                </div>
-              );
-            }}
-          />
-          {isEditing && (
-            <div className="self-stretch flex items-center bg-accent pl-1">
-              <EditEntityFilters
-                value={editState?.config?.filters ?? []}
-                onChange={(filters) => {
+          {initState && (
+            <>
+              <div className="self-stretch w-0.5 shrink-0 bg-accent"></div>
+              <RenderEntityFilters
+                filters={editState?.config?.filters ?? []}
+                onFiltersChange={(filters) => {
                   setEditState((prev) => {
                     if (!prev) return prev;
                     return {
@@ -639,12 +612,40 @@ export function EditEntityView(props: {
                     };
                   });
                 }}
+                editable={isEditing}
+                renderWrapper={(children, idx) => {
+                  return (
+                    <div
+                      className={cn({
+                        "bg-accent p-1 pr-0 flex items-center self-stretch h-8":
+                          true,
+                      })}
+                    >
+                      {children}
+                    </div>
+                  );
+                }}
               />
-            </div>
+              {isEditing && (
+                <div className="self-stretch flex items-center bg-accent pl-1">
+                  <EditEntityFilters
+                    value={editState?.config?.filters ?? []}
+                    onChange={(filters) => {
+                      setEditState((prev) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          config: { ...prev.config, filters },
+                        };
+                      });
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
+            </>
           )}
-
-          <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
-
           {isEditing ? null : (
             <>
               <RenderEntityFilters
@@ -653,14 +654,20 @@ export function EditEntityView(props: {
                   onExtraFiltersChange?.(filters);
                 }}
                 editable={!isEditing}
-                renderWrapper={(children) => {
+                renderWrapper={(children, idx) => {
                   return (
-                    <div className="bg-white p-1 pr-0 flex items-center">
+                    <div
+                      className={cn({
+                        "bg-white pr-0 flex items-center self-stretch h-8":
+                          true,
+                        "p-1": idx >= 0,
+                      })}
+                    >
                       {children}
                     </div>
                   );
                 }}
-                renderPlaceholder={() => null}
+                renderPlaceholder={initState ? () => null : undefined}
               />
 
               <div className="bg-white px-1 self-stretch flex items-center">

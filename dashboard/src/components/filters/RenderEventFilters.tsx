@@ -5,9 +5,9 @@ interface Props {
   filters: EventFilter[];
   onFiltersChange: (filters: EventFilter[]) => void;
   editable?: boolean;
-  renderWrapper?: (children: React.ReactNode) => React.ReactNode;
+  renderWrapper?: (children: React.ReactNode, idx: number) => React.ReactNode;
   renderPlaceholder?: (props: {
-    renderWrapper: (children: React.ReactNode) => React.ReactNode;
+    renderWrapper: (children: React.ReactNode, idx: number) => React.ReactNode;
   }) => React.ReactNode;
 }
 
@@ -18,7 +18,8 @@ export function RenderEventFilters({
   renderWrapper = (children) => children,
   renderPlaceholder = ({ renderWrapper }) =>
     renderWrapper(
-      <div className="text-xs text-muted-foreground">No filters</div>
+      <div className="text-xs text-muted-foreground">No filters</div>,
+      -1
     ),
 }: Props) {
   if (filters.length === 0) {

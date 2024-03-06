@@ -6,9 +6,9 @@ interface Props {
   filters: EntityFilter[];
   onFiltersChange: (filters: EntityFilter[]) => void;
   editable?: boolean;
-  renderWrapper?: (children: React.ReactNode) => React.ReactNode;
+  renderWrapper?: (children: React.ReactNode, idx: number) => React.ReactNode;
   renderPlaceholder?: (props: {
-    renderWrapper: (children: React.ReactNode) => React.ReactNode;
+    renderWrapper: (children: React.ReactNode, idx: number) => React.ReactNode;
   }) => React.ReactNode;
 }
 
@@ -20,7 +20,8 @@ export function RenderEntityFilters(props: Props) {
     renderWrapper = (x) => x,
     renderPlaceholder = ({ renderWrapper }) =>
       renderWrapper(
-        <div className="text-xs text-muted-foreground">No filters</div>
+        <div className="text-xs text-muted-foreground">No filters</div>,
+        -1
       ),
   } = props;
   const { data: allEntityTypes } = api.entityTypes.list.useQuery();
@@ -153,7 +154,7 @@ export function RenderEntityFilters(props: Props) {
               return null;
           }
         })
-        .map((child) => renderWrapper(child))}
+        .map(renderWrapper)}
     </>
   );
 }

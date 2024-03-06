@@ -198,7 +198,7 @@ export default function EventsList({ entity }: EventsListProps) {
             }
             selected={!selectedViewId}
           >
-            All
+            All Events
           </SidebarButton>
           {views?.map((view) => (
             <SidebarButton
@@ -304,7 +304,7 @@ export default function EventsList({ entity }: EventsListProps) {
               <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
             ) : (
               <div className="relative flex-grow h-full overflow-y-auto">
-                <ScrollArea className="px-4">
+                <ScrollArea className="">
                   {currentViewState?.type === "feed" ? (
                     <>
                       <div className="h-2" />
@@ -501,7 +501,7 @@ export function EditEventView(props: {
     >
       <div className="flex items-center h-14 px-8 border-b shrink-0">
         {isEditing ? (
-          <div>
+          <div className="mr-4">
             <Input
               inputSize="md"
               value={editState?.name ?? ""}
@@ -514,13 +514,13 @@ export function EditEventView(props: {
               className="max-w-sm font-bold"
             />
           </div>
-        ) : (
+        ) : initState ? (
           <>
             <div className="text-emphasis-foreground text-md">
               {initState?.name}
             </div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild className="mr-4">
                 <Button size="iconXs" variant="link" className="shrink-0">
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </Button>
@@ -539,36 +539,14 @@ export function EditEventView(props: {
               </DropdownMenuContent>
             </DropdownMenu>
           </>
-        )}
-
-        <div className="w-4 shrink-0"></div>
+        ) : null}
 
         <div className="flex items-center flex-wrap z-0">
-          <RenderEventFilters
-            filters={editState?.config?.filters ?? []}
-            onFiltersChange={(filters) => {
-              setEditState((prev) => {
-                if (!prev) return prev;
-                return {
-                  ...prev,
-                  config: { ...prev.config, filters },
-                };
-              });
-            }}
-            editable={isEditing}
-            renderWrapper={(children) => {
-              return (
-                <div className="bg-accent p-1 pr-0 flex items-center self-stretch h-8">
-                  {children}
-                </div>
-              );
-            }}
-          />
-          {isEditing && (
-            <div className="self-stretch flex items-center bg-accent pl-1">
-              <EditEventFilters
-                value={editState?.config?.filters ?? []}
-                onChange={(filters) => {
+          {initState && (
+            <>
+              <RenderEventFilters
+                filters={editState?.config?.filters ?? []}
+                onFiltersChange={(filters) => {
                   setEditState((prev) => {
                     if (!prev) return prev;
                     return {
@@ -577,12 +555,41 @@ export function EditEventView(props: {
                     };
                   });
                 }}
+                editable={isEditing}
+                renderWrapper={(children, idx) => {
+                  return (
+                    <div
+                      className={cn({
+                        "bg-accent pr-0 flex items-center self-stretch h-8":
+                          true,
+                        "p-1": idx >= 0,
+                      })}
+                    >
+                      {children}
+                    </div>
+                  );
+                }}
               />
-            </div>
+              {isEditing && (
+                <div className="self-stretch flex items-center bg-accent pl-1">
+                  <EditEventFilters
+                    value={editState?.config?.filters ?? []}
+                    onChange={(filters) => {
+                      setEditState((prev) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          config: { ...prev.config, filters },
+                        };
+                      });
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
+            </>
           )}
-
-          <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
-
           {isEditing ? null : (
             <>
               <RenderEventFilters
@@ -591,14 +598,19 @@ export function EditEventView(props: {
                   onExtraFiltersChange?.(filters);
                 }}
                 editable={!isEditing}
-                renderWrapper={(children) => {
+                renderWrapper={(children, idx) => {
                   return (
-                    <div className="bg-white p-1 pr-0 flex items-center">
+                    <div
+                      className={cn({
+                        "pr-0 flex items-center self-stretch h-8": true,
+                        "p-1": idx >= 0,
+                      })}
+                    >
                       {children}
                     </div>
                   );
                 }}
-                renderPlaceholder={() => null}
+                renderPlaceholder={initState ? () => null : undefined}
               />
 
               <div className="bg-white px-1 self-stretch flex items-center">
