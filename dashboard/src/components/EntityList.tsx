@@ -55,6 +55,7 @@ import { SidebarButton } from "./ui/custom/sidebar-button";
 import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
 import { customEncodeURIComponent } from "../lib/uri";
+import Link from "next/link";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -210,8 +211,7 @@ export function EntityList({ seenWithEntity }: Props) {
           )?.type;
           const entId = row.original.entityId;
           return (
-            <a
-              target="_blank"
+            <Link
               href={`/entity/${customEncodeURIComponent(
                 entTypeName
               )}/${customEncodeURIComponent(entId)}`}
@@ -220,7 +220,7 @@ export function EntityList({ seenWithEntity }: Props) {
                 className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
                 size={16}
               />
-            </a>
+            </Link>
           );
         },
       },
