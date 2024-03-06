@@ -141,20 +141,22 @@ const NodeItem = ({
 }) => {
   return (
     <SidebarButton selected={selected} onClick={onClick}>
-      <div>{name}</div>
-      {onDelete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="iconXs" variant="link" className="h-3 ml-auto">
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
+      <div className="flex items-center gap-2">
+        <div>{name}</div>
+        {onDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="iconXs" variant="link" className="h-3 ml-auto">
+                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </SidebarButton>
   );
 };

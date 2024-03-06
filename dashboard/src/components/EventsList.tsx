@@ -1,5 +1,11 @@
 import { uniq } from "lodash";
-import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Loader2Icon,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { handleError } from "~/lib/handleError";
@@ -192,10 +198,33 @@ export default function EventsList({ entity }: EventsListProps) {
       />
       <div className="h-full flex">
         <div className="w-64 border-r shrink-0 pt-4 px-6 h-full">
-          <div className="mb-2 text-sm font-medium text-emphasis-foreground">
-            Views
+          <div className="flex items-center mb-2">
+            <div className="text-sm font-medium text-emphasis-foreground">
+              Views
+            </div>
+            <button
+              className="rounded-md flex items-center p-0.5 ml-1 data-[state=open]:bg-muted hover:bg-muted transition"
+              onClick={() => {
+                const newViewName = `New View ${(views?.length ?? 0) + 1}`;
+                createView({
+                  name: newViewName,
+                  config: {
+                    type: "feed",
+                    filters: [],
+                  },
+                })
+                  .then(() => refetchViews())
+                  .then(() => {
+                    toast({
+                      title: "New view created successfully",
+                    });
+                  })
+                  .catch(handleError);
+              }}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
           </div>
-
           <SidebarButton
             onClick={() =>
               router.push({
@@ -261,6 +290,17 @@ export default function EventsList({ entity }: EventsListProps) {
                       .then(() => {
                         toast({
                           title: "View config saved successfully",
+                        });
+                      })
+                      .catch(handleError);
+                  }
+                } else if (val === "delete") {
+                  if (selectedView) {
+                    deleteView({ id: selectedView.id })
+                      .then(() => refetchViews())
+                      .then(() => {
+                        toast({
+                          title: "View deleted successfully",
                         });
                       })
                       .catch(handleError);
@@ -542,7 +582,9 @@ export function EditEventView(props: {
                 >
                   Save view config
                 </DropdownMenuItem>
-                <DropdownMenuItem>Delete</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
+                  Delete
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>

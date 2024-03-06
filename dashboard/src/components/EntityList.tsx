@@ -5,6 +5,7 @@ import {
   List,
   Loader2Icon,
   MoreHorizontal,
+  Plus,
 } from "lucide-react";
 import { useRouter } from "next/router";
 import {
@@ -303,20 +304,6 @@ export function EntityList({ seenWithEntity }: Props) {
             ? updater(prev?.columnVisibility ?? {})
             : updater;
 
-        // table.setColumnOrder((prev) => {
-        //   const prevCols = new Set(prev);
-        //   const visibleColumnIds = new Set(
-        //     Object.entries(colVis)
-        //       .filter(([, v]) => v)
-        //       .map(([k]) => k)
-        //   );
-
-        //   return [
-        //     ...prev.filter((id) => visibleColumnIds.has(id)),
-        //     ...Array.from(visibleColumnIds).filter((id) => !prevCols.has(id)),
-        //   ];
-        // });
-
         return {
           ...prev,
           columnVisibility: colVis,
@@ -340,13 +327,6 @@ export function EntityList({ seenWithEntity }: Props) {
           typeof updater === "function"
             ? updater(prev?.columnOrder ?? [])
             : updater;
-        // const visibleColumnIds = Object.entries(
-        //   table.getState().columnVisibility ?? {}
-        // )
-        //   .map(([k, v]) => (v ? k : null))
-        //   .filter(Boolean) as string[];
-        // const newColOrderSet = new Set(newColOrder);
-
         return {
           ...prev,
           columnOrder: [
@@ -378,10 +358,34 @@ export function EntityList({ seenWithEntity }: Props) {
   return (
     <div className="h-full flex">
       <div className="w-64 border-r shrink-0 pt-4 px-6 h-full">
-        <div className="mb-2 text-sm font-medium text-emphasis-foreground">
-          Views
+        <div className="flex items-center mb-2">
+          <div className="text-sm font-medium text-emphasis-foreground">
+            Views
+          </div>
+          <button
+            className="rounded-md flex items-center p-0.5 ml-1 data-[state=open]:bg-muted hover:bg-muted transition"
+            onClick={() => {
+              const newViewName = `New View ${(views?.length ?? 0) + 1}`;
+              createView({
+                name: newViewName,
+                config: {
+                  type: "list",
+                  filters: [],
+                },
+                entityTypeId: seenWithEntity?.type,
+              })
+                .then(() => refetchViews())
+                .then(() => {
+                  toast({
+                    title: "New view created successfully",
+                  });
+                })
+                .catch(handleError);
+            }}
+          >
+            <Plus className="h-3 w-3" />
+          </button>
         </div>
-
         <SidebarButton
           onClick={() =>
             router.push({
@@ -447,6 +451,17 @@ export function EntityList({ seenWithEntity }: Props) {
                     .then(() => {
                       toast({
                         title: "View config saved successfully",
+                      });
+                    })
+                    .catch(handleError);
+                }
+              } else if (val === "delete") {
+                if (selectedView) {
+                  deleteView({ id: selectedView.id })
+                    .then(() => refetchViews())
+                    .then(() => {
+                      toast({
+                        title: "View deleted successfully",
                       });
                     })
                     .catch(handleError);
@@ -640,7 +655,9 @@ export function EditEntityView(props: {
                 >
                   Save view config
                 </DropdownMenuItem>
-                <DropdownMenuItem>Delete</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
+                  Delete
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
