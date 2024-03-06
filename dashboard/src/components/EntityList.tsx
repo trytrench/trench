@@ -238,7 +238,16 @@ export function EntityList({ seenWithEntity }: Props) {
                   <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
                 )
               ) : value.result ? (
-                <RenderResult result={value.result} />
+                <div
+                // className={cn({
+                //   "text-right":
+                //     value.result.type === "success" &&
+                //     (value.result.data.schema.type === TypeName.Float64 ||
+                //       value.result.data.schema.type === TypeName.Int64),
+                // })}
+                >
+                  <RenderResult result={value.result} />
+                </div>
               ) : null;
             },
           }) as ColumnDef<EntityData>
