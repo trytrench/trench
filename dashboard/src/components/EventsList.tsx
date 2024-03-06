@@ -73,6 +73,13 @@ export default function EventsList({ entity }: EventsListProps) {
         ...viewConfig,
         filters: [], // Filters are handled separately
       });
+    } else {
+      setCurrentViewState({
+        type: "feed",
+        filters: [],
+        gridConfig: undefined,
+        tableConfig: undefined,
+      });
     }
   }, [viewConfig]);
 

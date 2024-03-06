@@ -1,5 +1,11 @@
 import { type Entity, TypeName } from "event-processing";
-import { LayoutGrid, List, Loader2Icon, MoreHorizontal } from "lucide-react";
+import {
+  ExternalLinkIcon,
+  LayoutGrid,
+  List,
+  Loader2Icon,
+  MoreHorizontal,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import {
   type SetStateAction,
@@ -47,6 +53,7 @@ import {
 import { SidebarButton } from "./ui/custom/sidebar-button";
 import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
+import { customEncodeURIComponent } from "../lib/uri";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -103,6 +110,13 @@ export function EntityList({ seenWithEntity }: Props) {
       setCurrentViewState({
         ...viewConfig,
         filters: [], // Filters are handled separately
+      });
+    } else {
+      setCurrentViewState({
+        type: "list",
+        filters: [],
+        tableConfig: undefined,
+        gridConfig: undefined,
       });
     }
   }, [viewConfig]);
@@ -175,30 +189,6 @@ export function EntityList({ seenWithEntity }: Props) {
   type EntityData = RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
   const columns: ColumnDef<EntityData>[] = useMemo(
     () => [
-      // {
-      //   id: "select",
-      //   header: ({ table }) => (
-      //     <Checkbox
-      //       checked={
-      //         table.getIsAllPageRowsSelected() ||
-      //         (table.getIsSomePageRowsSelected() && "indeterminate")
-      //       }
-      //       onCheckedChange={(value) =>
-      //         table.toggleAllPageRowsSelected(!!value)
-      //       }
-      //       aria-label="Select all"
-      //     />
-      //   ),
-      //   cell: ({ row }) => (
-      //     <Checkbox
-      //       checked={row.getIsSelected()}
-      //       onCheckedChange={(value) => row.toggleSelected(!!value)}
-      //       aria-label="Select row"
-      //     />
-      //   ),
-      //   enableSorting: false,
-      //   enableHiding: false,
-      // },
       {
         accessorKey: "entityId",
         id: "ID",
@@ -208,6 +198,29 @@ export function EntityList({ seenWithEntity }: Props) {
         header: "Last Seen",
         id: "Last Seen",
         accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
+      },
+      {
+        header: "Link",
+        id: "Link",
+        cell: ({ row }) => {
+          const entTypeName = entityTypes?.find(
+            (et) => et.id === row.original.entityType
+          )?.type;
+          const entId = row.original.entityId;
+          return (
+            <a
+              target="_blank"
+              href={`/entity/${customEncodeURIComponent(
+                entTypeName
+              )}/${customEncodeURIComponent(entId)}`}
+            >
+              <ExternalLinkIcon
+                className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
+                size={16}
+              />
+            </a>
+          );
+        },
       },
       ...(filteredFeatures?.map(
         (feature) =>
@@ -230,8 +243,9 @@ export function EntityList({ seenWithEntity }: Props) {
           }) as ColumnDef<EntityData>
       ) ?? []),
     ],
-    [filteredFeatures]
+    [entityTypes, filteredFeatures]
   );
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -251,6 +265,25 @@ export function EntityList({ seenWithEntity }: Props) {
     []
   );
 
+  useEffect(() => {
+    setCurrentViewState((prev) => {
+      // Add new columns to the end of the column order
+      const columnIds = columns.map((c) => c.id ?? "");
+      const oldColIds = new Set(prev.tableConfig?.columnOrder ?? []);
+      const newColOrder = [
+        ...(prev.tableConfig?.columnOrder ?? []),
+        ...columnIds.filter((id) => !oldColIds.has(id)),
+      ];
+      return {
+        ...prev,
+        tableConfig: {
+          ...prev.tableConfig,
+          columnOrder: newColOrder,
+        },
+      };
+    });
+  }, [columns]);
+
   const table = useReactTable({
     data: allEntities,
     columns,
@@ -265,35 +298,61 @@ export function EntityList({ seenWithEntity }: Props) {
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: (updater) => {
       handleTableConfigChange((prev) => {
-        if (!prev) return prev;
+        const colVis =
+          typeof updater === "function"
+            ? updater(prev?.columnVisibility ?? {})
+            : updater;
+
+        // table.setColumnOrder((prev) => {
+        //   const prevCols = new Set(prev);
+        //   const visibleColumnIds = new Set(
+        //     Object.entries(colVis)
+        //       .filter(([, v]) => v)
+        //       .map(([k]) => k)
+        //   );
+
+        //   return [
+        //     ...prev.filter((id) => visibleColumnIds.has(id)),
+        //     ...Array.from(visibleColumnIds).filter((id) => !prevCols.has(id)),
+        //   ];
+        // });
+
         return {
           ...prev,
-          columnVisibility:
-            typeof updater === "function"
-              ? updater(prev.columnVisibility)
-              : updater,
+          columnVisibility: colVis,
         };
       });
     },
     onColumnSizingChange: (updater) => {
       handleTableConfigChange((prev) => {
-        if (!prev) return prev;
         return {
           ...prev,
           columnSizing:
             typeof updater === "function"
-              ? updater(prev.columnSizing)
+              ? updater(prev?.columnSizing ?? {})
               : updater,
         };
       });
     },
     onColumnOrderChange: (updater) => {
       handleTableConfigChange((prev) => {
-        if (!prev) return prev;
+        const newColOrder =
+          typeof updater === "function"
+            ? updater(prev?.columnOrder ?? [])
+            : updater;
+        // const visibleColumnIds = Object.entries(
+        //   table.getState().columnVisibility ?? {}
+        // )
+        //   .map(([k, v]) => (v ? k : null))
+        //   .filter(Boolean) as string[];
+        // const newColOrderSet = new Set(newColOrder);
+
         return {
           ...prev,
-          columnOrder:
-            typeof updater === "function" ? updater(prev.columnOrder) : updater,
+          columnOrder: [
+            ...newColOrder,
+            // ...visibleColumnIds.filter((id) => !newColOrderSet.has(id)),
+          ],
         };
       });
     },
@@ -490,17 +549,7 @@ export function EntityList({ seenWithEntity }: Props) {
             </ScrollArea>
           ) : (
             <div className="h-full py-4 px-8 overflow-y-auto">
-              <DataTable
-                table={table}
-                loading={fetchingEntities}
-                onRowClick={(entity) =>
-                  router.push(
-                    `/entity/${entityTypes?.find(
-                      (et) => et.id === entity.entityType
-                    )?.type}/${entity.entityId}`
-                  )
-                }
-              />
+              <DataTable table={table} loading={fetchingEntities} />
             </div>
           )}
         </div>

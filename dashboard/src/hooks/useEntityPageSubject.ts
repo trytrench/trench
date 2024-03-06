@@ -10,16 +10,12 @@ export function useEntityPageSubject() {
   const entityType = customDecodeURIComponent(
     router.query.entityType as string
   );
-  const entityId = customDecodeURIComponent(router.query.entityId as string);
+  const entityId = router.query.entityId as string;
 
   const entityTypeId = entityTypes?.find((et) => et.type === entityType)?.id;
 
-  if (!entityId || !entityTypeId) {
-    throw new Error("Entity ID or type not found");
-  }
-
   return {
-    id: entityId,
-    type: entityTypeId,
+    id: entityId ?? "",
+    type: entityTypeId ?? "",
   };
 }

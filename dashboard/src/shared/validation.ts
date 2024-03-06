@@ -209,9 +209,9 @@ export const entityViewConfigZod = z.object({
   filters: z.array(entityFiltersZod),
   tableConfig: z
     .object({
-      columnOrder: z.array(z.string()),
-      columnVisibility: z.record(z.boolean()),
-      columnSizing: z.record(z.number()),
+      columnOrder: z.array(z.string()).optional(),
+      columnVisibility: z.record(z.boolean()).optional(),
+      columnSizing: z.record(z.number()).optional(),
     })
     .optional(),
   gridConfig: z
@@ -228,9 +228,9 @@ export const eventViewConfig = z.object({
   type: z.enum(["feed", "grid"]),
   tableConfig: z
     .object({
-      columnOrder: z.array(z.string()),
-      columnVisibility: z.record(z.boolean()),
-      columnSizing: z.record(z.number()),
+      columnOrder: z.array(z.string()).optional(),
+      columnVisibility: z.record(z.boolean()).optional(),
+      columnSizing: z.record(z.number()).optional(),
     })
     .optional(),
   gridConfig: z

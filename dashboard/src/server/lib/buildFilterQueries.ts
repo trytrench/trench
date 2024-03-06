@@ -194,6 +194,8 @@ export async function getEntitiesList(props: {
     }
   }
 
+  seenWhereClauses.push("entity_type != ''");
+
   const seenWhereClause =
     seenWhereClauses.length > 0 ? `${seenWhereClauses.join(" AND ")}` : "1";
 
