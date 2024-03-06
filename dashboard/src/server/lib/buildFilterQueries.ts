@@ -9,6 +9,7 @@ import {
   type featureFilterDataZod,
   EventFilterType,
   EntityFilterType,
+  getEntityFiltersOfType,
 } from "../../shared/validation";
 import { db } from "databases";
 import { TypeName } from "event-processing";
@@ -133,6 +134,9 @@ export async function getEntitiesList(props: {
   const allFeatureColumnsNeeded = new Set<string>();
   const featureConditions: string[] = [];
 
+  const entityType =
+    getEntityFiltersOfType(filters, EntityFilterType.EntityType)[0]?.data ?? "";
+
   for (const filter of filters) {
     switch (filter.type) {
       case EntityFilterType.EntityType: {
@@ -196,38 +200,40 @@ export async function getEntitiesList(props: {
   const finalQuery1 = `
     WITH timestamped_entities AS (
         SELECT
-            unique_entity_id,
-            first_seen,
-            last_seen
-        FROM entity_seen_view
+            unique_entity_id, first_seen, last_seen
+        FROM entities_seen_mv_table 
+        FINAL
         WHERE ${seenWhereClause}
     )
-        SELECT
-            unique_entity_id,
-            first_seen,
-            last_seen,
-            count() OVER() AS total_count
-        FROM
-            timestamped_entities
-        WHERE 1
-        ${featureConditions
-          .map((clause) => {
-            return `
-                  AND unique_entity_id IN (
-                      SELECT unique_entity_id
-                      FROM latest_entity_features_view AS features
-                      WHERE ${clause}
-                  )
-                `;
-          })
-          .join("\n")}
-        ORDER BY
-            last_seen DESC
-        LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
-        SETTINGS 
-          convert_query_to_cnf = true,
-          join_algorithm = 'parallel_hash',
-          optimize_trivial_count_query = 1;
+    SELECT
+        timestamped_entities.unique_entity_id AS unique_entity_id,
+        first_seen,
+        last_seen,
+        count() OVER() AS total_count
+    FROM
+        timestamped_entities
+    ${featureConditions
+      .map((clause, idx) => {
+        const alias = `f_${idx}`;
+        return `
+              LEFT SEMI JOIN (
+                  SELECT unique_entity_id
+                  FROM latest_entity_features_view AS features
+                  WHERE 
+                  entity_type = '${entityType}'
+                  AND ${clause}
+              ) AS ${alias}
+              ON timestamped_entities.unique_entity_id = ${alias}.unique_entity_id
+            `;
+      })
+      .join("\n")}
+    ORDER BY
+        last_seen DESC
+    LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
+    SETTINGS 
+      convert_query_to_cnf = true,
+      join_algorithm = 'parallel_hash',
+      optimize_trivial_count_query = 1;
   `;
 
   const result = await db.query({
@@ -263,14 +269,14 @@ export async function getEntitiesList(props: {
   const finalQuery2 = `
     SELECT
         unique_entity_id,
-        entity_type,
-        entity_id,
+        any(entity_type) as entity_type,
+        any(entity_id) as entity_id,
         groupArray((feature_id, value)) as features_array
     FROM latest_entity_features_view
     WHERE unique_entity_id IN (${entities.data
       .map((entity) => `'${entity.unique_entity_id}'`)
       .join(", ")})
-    GROUP BY unique_entity_id, entity_type, entity_id
+    GROUP BY unique_entity_id
     SETTINGS optimize_move_to_prewhere_if_final = 1
   `;
 

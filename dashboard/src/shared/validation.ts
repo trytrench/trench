@@ -211,6 +211,7 @@ export const entityViewConfigZod = z.object({
     .object({
       columnOrder: z.array(z.string()),
       columnVisibility: z.record(z.boolean()),
+      columnSizing: z.record(z.number()),
     })
     .optional(),
   gridConfig: z
@@ -223,20 +224,23 @@ export const entityViewConfigZod = z.object({
 export type EntityViewConfig = z.infer<typeof entityViewConfigZod>;
 
 export const eventViewConfig = z.object({
-  type: z.enum(["feed", "grid"]),
   filters: z.array(eventFilterZod),
+  type: z.enum(["feed", "grid"]),
   tableConfig: z
     .object({
       columnOrder: z.array(z.string()),
       columnVisibility: z.record(z.boolean()),
+      columnSizing: z.record(z.number()),
     })
     .optional(),
-  gridConfig: z.record(
-    z.object({
-      featureOrder: z.record(z.array(z.string())),
-      entityTypeOrder: z.array(z.string()),
-    })
-  ),
+  gridConfig: z
+    .record(
+      z.object({
+        featureOrder: z.record(z.array(z.string())),
+        entityTypeOrder: z.array(z.string()),
+      })
+    )
+    .optional(),
 });
 
 export type EventViewConfig = z.infer<typeof eventViewConfig>;

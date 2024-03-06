@@ -14,6 +14,7 @@ import {
   type OnChangeFn,
   HeaderGroup,
   Row,
+  Header,
 } from "@tanstack/react-table";
 import * as React from "react";
 import { DataTablePagination } from "./data-table-pagination";
@@ -76,15 +77,17 @@ export const useDataTableState = ({
   };
 };
 
-const SortableTableHead = ({
-  id,
+const SortableTableHead = <TData, TValue>({
+  header,
   children,
+  table,
 }: {
-  id: string;
+  header: Header<TData, TValue>;
+  table: TableType<TData>;
   children: React.ReactNode;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
+    useSortable({ id: header.id });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -92,8 +95,35 @@ const SortableTableHead = ({
   };
 
   return (
-    <TableHead ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <TableHead ref={setNodeRef} style={style} {...attributes}>
+      <div className="flex items-center justify-between h-full group">
+        <div {...listeners} className="grow h-full flex items-center px-4">
+          {children}
+        </div>
+        <div
+          onDoubleClick={() => header.column.resetSize()}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            header.getResizeHandler()(e);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            header.getResizeHandler()(e);
+          }}
+          className="w-1 h-full cursor-col-resize shrink-0 group-hover:bg-gray-200 transition"
+          style={{
+            transform:
+              table.options.columnResizeMode === "onEnd" &&
+              header.column.getIsResizing()
+                ? `translateX(${
+                    1 * (table.getState().columnSizingInfo.deltaOffset ?? 0)
+                  }px)`
+                : "",
+          }}
+        ></div>
+      </div>
     </TableHead>
   );
 };
@@ -112,7 +142,6 @@ function SortedTableCells<TData>({
     if (!over?.id || !active?.id) {
       return visibleCells;
     }
-    console.log("Lmao");
     const colOrder = table.getState().columnOrder;
 
     const oldIndex = colOrder.indexOf(active.id.toString());
@@ -166,8 +195,8 @@ export function DataTable<TData, TValue>({
   );
 
   return (
-    <div className="relative flex flex-col h-full w-full">
-      <div className="flex items-center py-4">{renderHeader?.(table)}</div>
+    <div className="relative flex flex-col h-full w-full overflow-auto bg-gray-50/50">
+      <div>{renderHeader?.(table)}</div>
       <div className="relative rounded-md border grow overflow-hidden">
         <DndContext
           sensors={sensors}
@@ -176,8 +205,14 @@ export function DataTable<TData, TValue>({
           modifiers={[restrictToHorizontalAxis]}
         >
           <Table
-            className="relative overflow-auto h-full"
+            className="relative overflow-auto max-h-full"
             parentClassName="h-full"
+            style={{
+              flexShrink: 0,
+              width: table.getCenterTotalSize(),
+              minWidth: table.getCenterTotalSize(),
+              maxWidth: table.getCenterTotalSize(),
+            }}
           >
             <TableHeader
               className="sticky top-0 bg-white shrink-0 z-10 [&_tr]:border-b-0"
@@ -198,13 +233,22 @@ export function DataTable<TData, TValue>({
                   >
                     {headerGroup.headers.map((header) => {
                       return (
-                        <SortableTableHead key={header.id} id={header.id}>
+                        <SortableTableHead
+                          key={header.id}
+                          header={header}
+                          table={table}
+                        >
                           {header.isPlaceholder
                             ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                            : flexRender(header.column.columnDef.header, {
+                                ...header.getContext(),
+                                style: {
+                                  width: header.getSize(),
+                                  minWidth: header.getSize(),
+                                  maxWidth: header.getSize(),
+                                  flexShrink: 0,
+                                },
+                              })}
                         </SortableTableHead>
                       );
                     })}
@@ -212,14 +256,21 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody className="overflow-y-auto">
+            <TableBody className="overflow-y-auto bg-white">
               {loading ? (
                 Array.from({
                   length: table.getPaginationRowModel().rows.length,
                 }).map((_, index) => (
                   <TableRow key={index}>
-                    {table.getAllColumns().map((column) => (
-                      <TableCell key={column.id}>
+                    {table.getVisibleLeafColumns().map((column) => (
+                      <TableCell
+                        key={column.id}
+                        style={{
+                          width: column.getSize(),
+                          minWidth: column.getSize(),
+                          maxWidth: column.getSize(),
+                        }}
+                      >
                         <Skeleton className="h-[20px]" />
                       </TableCell>
                     ))}
@@ -237,7 +288,15 @@ export function DataTable<TData, TValue>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       return (
-                        <TableCell key={cell.id} className="truncate max-w-md">
+                        <TableCell
+                          key={cell.id}
+                          className="truncate shrink-0"
+                          style={{
+                            width: cell.column.getSize(),
+                            minWidth: cell.column.getSize(),
+                            maxWidth: cell.column.getSize(),
+                          }}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()

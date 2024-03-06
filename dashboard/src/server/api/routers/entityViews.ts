@@ -5,6 +5,32 @@ import {
   entityViewConfigZod,
 } from "~/shared/validation";
 
+function convertISOStringsToDate<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertISOStringsToDate(item)) as unknown as T;
+  } else if (typeof obj === "object" && obj !== null) {
+    const entries = Object.entries(obj).map(([key, value]) => {
+      if (
+        typeof value === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(.\d{3})?Z$/.test(value)
+      ) {
+        // It's an ISO string, convert it to a Date object
+        return [key, new Date(value)];
+      } else if (typeof value === "object") {
+        // Recursively process the object
+        return [key, convertISOStringsToDate(value)];
+      } else {
+        // Return the value unchanged
+        return [key, value];
+      }
+    });
+
+    return Object.fromEntries(entries) as T;
+  } else {
+    return obj;
+  }
+}
+
 export const entityViewsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(
@@ -18,10 +44,12 @@ export const entityViewsRouter = createTRPCRouter({
           entityTypeId: input.entityTypeId,
         },
       });
-      return views.map((view) => ({
-        ...view,
-        config: view.config as unknown as EntityViewConfig,
-      }));
+      return views.map((view) =>
+        convertISOStringsToDate({
+          ...view,
+          config: view.config as unknown as EntityViewConfig,
+        })
+      );
     }),
   create: protectedProcedure
     .input(

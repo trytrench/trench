@@ -1,10 +1,9 @@
 import { X } from "lucide-react";
-import type { DateRange } from "react-day-picker";
 import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
 
 import { useEffect, useMemo, useState } from "react";
-import { type FeatureFilter } from "../../shared/validation";
+import { DateRange, type FeatureFilter } from "../../shared/validation";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { TypeName } from "event-processing";
+import { z } from "zod";
 
 // Type
 
@@ -22,6 +22,7 @@ interface TypeChipProps extends React.ComponentPropsWithoutRef<"div"> {
   type: string;
   onDelete?: () => void;
   title?: string;
+  isEditable?: boolean;
 }
 
 const TypeChip = ({
@@ -29,16 +30,19 @@ const TypeChip = ({
   onDelete,
   className,
   title = "Type",
+  isEditable = false,
 }: TypeChipProps) => {
   return (
     <Badge variant="outline" className={cn("flex pr-2 bg-card", className)}>
       {title}: {type}
-      <button
-        className="ml-1 rounded-full flex items-center"
-        onClick={onDelete}
-      >
-        <X className="h-3 w-3 my-auto" />
-      </button>
+      {isEditable && (
+        <button
+          className="ml-1 rounded-full flex items-center"
+          onClick={onDelete}
+        >
+          <X className="h-3 w-3 my-auto" />
+        </button>
+      )}
     </Badge>
   );
 };
@@ -48,23 +52,27 @@ const TypeChip = ({
 interface LabelChipProps extends React.ComponentPropsWithoutRef<"div"> {
   label: string;
   onDelete?: () => void;
+  isEditable?: boolean;
 }
 
 const LabelChip = ({
   label,
   onDelete,
   className,
+  isEditable = false,
   ...props
 }: LabelChipProps) => {
   return (
     <Badge variant="default" className={cn("flex pr-2", className)}>
       {label}
-      <button
-        className="ml-1 rounded-full flex items-center"
-        onClick={onDelete}
-      >
-        <X className="h-3 w-3 my-auto" />
-      </button>
+      {isEditable && (
+        <button
+          className="ml-1 rounded-full flex items-center"
+          onClick={onDelete}
+        >
+          <X className="h-3 w-3 my-auto" />
+        </button>
+      )}
     </Badge>
   );
 };
@@ -75,6 +83,7 @@ interface DateRangeChipProps extends React.ComponentPropsWithoutRef<"div"> {
   dateRange: DateRange;
   title?: string;
   onDelete?: () => void;
+  isEditable?: boolean;
 }
 
 const DateRangeChip = ({
@@ -82,23 +91,25 @@ const DateRangeChip = ({
   title = "Date Range",
   onDelete,
   className,
-  ...props
+  isEditable = false,
 }: DateRangeChipProps) => {
   let dateRangeString = "--";
-
+  console.log(dateRange);
   if (dateRange.from && dateRange.to) {
-    dateRangeString = `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`;
+    dateRangeString = `${dateRange.from?.toLocaleDateString()} - ${dateRange.to?.toLocaleDateString()}`;
   }
 
   return (
-    <Badge variant="default" className={cn("flex pr-2", className)}>
+    <Badge variant="outline" className={cn("flex bg-card pr-2", className)}>
       {title}: {dateRangeString}
-      <button
-        className="ml-1 rounded-full flex items-center"
-        onClick={onDelete}
-      >
-        <X className="h-3 w-3 my-auto" />
-      </button>
+      {isEditable && (
+        <button
+          className="ml-1 rounded-full flex items-center"
+          onClick={onDelete}
+        >
+          <X className="h-3 w-3 my-auto" />
+        </button>
+      )}
     </Badge>
   );
 };
@@ -106,9 +117,10 @@ const DateRangeChip = ({
 export function FeatureFilterChip(props: {
   filter: FeatureFilter;
   onChange: (value: FeatureFilter) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  isEditable?: boolean;
 }) {
-  const { filter, onChange, onDelete } = props;
+  const { filter, onChange, onDelete, isEditable = false } = props;
 
   switch (filter?.dataType) {
     case TypeName.Int64:
@@ -118,6 +130,7 @@ export function FeatureFilterChip(props: {
           filter={filter}
           onChange={onChange}
           onDelete={onDelete}
+          isEditable={isEditable}
         />
       );
     }
@@ -128,6 +141,7 @@ export function FeatureFilterChip(props: {
           filter={filter}
           onChange={onChange}
           onDelete={onDelete}
+          isEditable={isEditable}
         />
       );
     }
@@ -137,6 +151,7 @@ export function FeatureFilterChip(props: {
           filter={filter}
           onChange={onChange}
           onDelete={onDelete}
+          isEditable={isEditable}
         />
       );
     }
@@ -162,9 +177,10 @@ type NumberFilter = Extract<
 function NumberFilterChip(props: {
   filter: NumberFilter;
   onChange: (value: NumberFilter) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  isEditable?: boolean;
 }) {
-  const { filter, onChange, onDelete } = props;
+  const { filter, onChange, onDelete, isEditable } = props;
 
   const [key, setKey] = useState<OpKey | undefined>();
   const [value, setValue] = useState<number | undefined>();
@@ -200,18 +216,20 @@ function NumberFilterChip(props: {
         setOpen(newIsOpen);
       }}
     >
-      <PopoverTrigger>
-        <Badge variant="default" className={cn("flex")}>
+      <PopoverTrigger disabled={!isEditable}>
+        <Badge variant="outline" className={cn("flex bg-card pr-2")}>
           {filter.featureName}{" "}
           <span className="ml-1 font-mono text-xs">
             {opLabel && value ? `${opLabel} ${value}` : "exists"}
           </span>
-          <button
-            className="ml-1 rounded-full flex items-center"
-            onClick={onDelete}
-          >
-            <X className="h-3 w-3 my-auto" />
-          </button>
+          {isEditable && (
+            <button
+              className="ml-1 rounded-full flex items-center"
+              onClick={onDelete}
+            >
+              <X className="h-3 w-3 my-auto" />
+            </button>
+          )}
         </Badge>
       </PopoverTrigger>
       <PopoverContent align="start">
@@ -269,9 +287,10 @@ type StringOpKey = (typeof STRING_FILTER_OPS)[number]["key"];
 function StringFilterChip(props: {
   filter: StringFilter;
   onChange: (value: StringFilter) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  isEditable?: boolean;
 }) {
-  const { filter, onChange, onDelete } = props;
+  const { filter, onChange, onDelete, isEditable = false } = props;
 
   const [key, setKey] = useState<StringOpKey | undefined>();
   const [value, setValue] = useState<string | undefined>();
@@ -307,18 +326,20 @@ function StringFilterChip(props: {
         setOpen(newIsOpen);
       }}
     >
-      <PopoverTrigger>
-        <Badge variant="default" className={cn("flex")}>
+      <PopoverTrigger disabled={!isEditable}>
+        <Badge variant="outline" className={cn("flex bg-card")}>
           {filter.featureName}{" "}
-          <span className="ml-1 font-mono text-xs">
+          <span className="ml-1 text-xs">
             {opLabel && value ? `${opLabel} ${value}` : "exists"}
           </span>
-          <button
-            className="ml-1 rounded-full flex items-center"
-            onClick={onDelete}
-          >
-            <X className="h-3 w-3 my-auto" />
-          </button>
+          {isEditable && (
+            <button
+              className="ml-1 rounded-full flex items-center"
+              onClick={onDelete}
+            >
+              <X className="h-3 w-3 my-auto" />
+            </button>
+          )}
         </Badge>
       </PopoverTrigger>
       <PopoverContent align="start">
@@ -369,9 +390,10 @@ type BooleanOpKey = (typeof BOOLEAN_FILTER_OPS)[number]["key"];
 function BooleanFilterChip(props: {
   filter: BooleanFilter;
   onChange: (value: BooleanFilter) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
+  isEditable?: boolean;
 }) {
-  const { filter, onChange, onDelete } = props;
+  const { filter, onChange, onDelete, isEditable = false } = props;
 
   const [key, setKey] = useState<BooleanOpKey | undefined>();
   const [value, setValue] = useState<"true" | "false" | undefined>();
@@ -410,18 +432,20 @@ function BooleanFilterChip(props: {
         setOpen(newIsOpen);
       }}
     >
-      <PopoverTrigger>
-        <Badge variant="default" className={cn("flex")}>
+      <PopoverTrigger disabled={!isEditable}>
+        <Badge variant="outline" className={cn("flex")}>
           {filter.featureName}{" "}
           <span className="ml-1 font-mono text-xs">
             {opLabel && value ? `${opLabel} ${value}` : "exists"}
           </span>
-          <button
-            className="ml-1 rounded-full flex items-center"
-            onClick={onDelete}
-          >
-            <X className="h-3 w-3 my-auto" />
-          </button>
+          {isEditable && (
+            <button
+              className="ml-1 rounded-full flex items-center"
+              onClick={onDelete}
+            >
+              <X className="h-3 w-3 my-auto" />
+            </button>
+          )}
         </Badge>
       </PopoverTrigger>
       <PopoverContent align="start">

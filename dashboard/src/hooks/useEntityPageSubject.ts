@@ -14,6 +14,10 @@ export function useEntityPageSubject() {
 
   const entityTypeId = entityTypes?.find((et) => et.type === entityType)?.id;
 
+  if (!entityId || !entityTypeId) {
+    throw new Error("Entity ID or type not found");
+  }
+
   return {
     id: entityId,
     type: entityTypeId,

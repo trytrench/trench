@@ -33,6 +33,7 @@ import { useMutationToasts } from "./editor/useMutationToasts";
 import { Separator } from "../ui/separator";
 import { EditFeatureDialog } from "./EditFeatureDialog";
 import { EditRuleDialog } from "./EditRuleDialog";
+import { SidebarButton } from "../ui/custom/sidebar-button";
 
 const FeatureItem = ({
   feature,
@@ -139,13 +140,7 @@ const NodeItem = ({
   onDelete?: () => void;
 }) => {
   return (
-    <div
-      className={clsx(
-        "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex justify-between items-center hover:bg-muted",
-        { "bg-accent text-accent-foreground": selected }
-      )}
-      onClick={onClick}
-    >
+    <SidebarButton selected={selected} onClick={onClick}>
       <div>{name}</div>
       {onDelete && (
         <DropdownMenu>
@@ -160,7 +155,7 @@ const NodeItem = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-    </div>
+    </SidebarButton>
   );
 };
 

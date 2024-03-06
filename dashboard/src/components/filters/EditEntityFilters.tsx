@@ -1,4 +1,4 @@
-import { ListFilter } from "lucide-react";
+import { ListFilter, Plus } from "lucide-react";
 import {
   getEventFiltersOfType,
   type EntityFilter,
@@ -19,14 +19,17 @@ import {
 import { AddFeatureFilterSubItem } from "./AddFeatureFilterSubItem";
 import { AddEventFilterSubItem } from "./EventFilterSubItem";
 import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
+import { Badge } from "../ui/badge";
+import { cn } from "../../lib/utils";
 
 interface EditEntityFiltersProps {
   value: EntityFilter[];
+  existingFilters?: EntityFilter[];
   onChange: (value: EntityFilter[]) => void;
 }
 
 export function EditEntityFilters(props: EditEntityFiltersProps) {
-  const { value, onChange } = props;
+  const { value, onChange, existingFilters = value } = props;
 
   const handleChange = (newValue: EntityFilter[]) => {
     onChange(newValue);
@@ -36,21 +39,23 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
   const firstSeen = getEntityFiltersOfType(
-    value,
+    existingFilters,
     EntityFilterType.FirstSeen
   )?.[0]?.data;
-  const lastSeen = getEntityFiltersOfType(value, EntityFilterType.LastSeen)?.[0]
-    ?.data;
+  const lastSeen = getEntityFiltersOfType(
+    existingFilters,
+    EntityFilterType.LastSeen
+  )?.[0]?.data;
   const entityType = getEntityFiltersOfType(
-    value,
+    existingFilters,
     EntityFilterType.EntityType
   )?.[0]?.data;
   const featureFilters = getEntityFiltersOfType(
-    value,
+    existingFilters,
     EntityFilterType.Feature
   )?.map((f) => f.data);
   const seenInEventType = getEntityFiltersOfType(
-    value,
+    existingFilters,
     EntityFilterType.SeenInEventType
   )?.[0]?.data;
 
@@ -62,12 +67,30 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="xs" className="py-0 px-2">
-          <ListFilter className="h-4 w-4 mr-1.5" />
-          <span className="text-xs">Filter</span>
-        </Button>
+        <button className="rounded-md flex items-center p-1 data-[state=open]:bg-muted hover:bg-muted transition">
+          <Plus className="h-4 w-4" />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
+        {/* Type Filter */}
+        {!entityType && (
+          <TypeSelectorSubItem
+            types={
+              allEntityTypes?.map((e) => ({
+                id: e.id,
+                name: e.type,
+              })) ?? []
+            }
+            value={entityType ?? null}
+            onChange={(type) => {
+              handleChange([
+                ...value.filter((f) => f.type !== EntityFilterType.EntityType),
+                { type: EntityFilterType.EntityType, data: type },
+              ]);
+            }}
+          />
+        )}
+
         {/* First Seen / Last Seen Filter */}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>First Seen</DropdownMenuSubTrigger>
@@ -129,33 +152,18 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
           }}
         />
 
-        {/* Type Filter */}
-        <TypeSelectorSubItem
-          types={
-            allEntityTypes?.map((e) => ({
-              id: e.id,
-              name: e.type,
-            })) ?? []
-          }
-          value={entityType ?? null}
-          onChange={(type) => {
-            handleChange([
-              ...value.filter((f) => f.type !== EntityFilterType.EntityType),
-              { type: EntityFilterType.EntityType, data: type },
-            ]);
-          }}
-        />
-
         {/* Feature Filter*/}
-        <AddFeatureFilterSubItem
-          featureDefs={filteredFeatureDefs ?? []}
-          onAdd={(feature) => {
-            handleChange([
-              ...value,
-              { type: EntityFilterType.Feature, data: feature },
-            ]);
-          }}
-        />
+        {entityType && (
+          <AddFeatureFilterSubItem
+            featureDefs={filteredFeatureDefs ?? []}
+            onAdd={(feature) => {
+              handleChange([
+                ...value,
+                { type: EntityFilterType.Feature, data: feature },
+              ]);
+            }}
+          />
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

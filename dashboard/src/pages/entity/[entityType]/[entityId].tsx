@@ -28,6 +28,7 @@ import { customDecodeURIComponent } from "../../../lib/uri";
 import { Badge } from "../../../components/ui/badge";
 import { FeatureSuccess } from "../../../shared/types";
 import { EntityFilter, EntityFilterType } from "../../../shared/validation";
+import { useEntityPageSubject } from "../../../hooks/useEntityPageSubject";
 
 type Option = {
   label: string;
@@ -122,6 +123,8 @@ const Page: NextPageWithLayout = () => {
   );
   const decision = useDecision(entity?.features ?? []);
 
+  const subjectEntity = useEntityPageSubject();
+
   const [tab, setTab] = useQueryParam("tab", StringParam);
 
   return (
@@ -196,12 +199,7 @@ const Page: NextPageWithLayout = () => {
         </TabsContent>
         <TabsContent value="entities" className="flex-grow mt-0">
           {entityId && entityTypeId && (
-            <EntityList
-              seenWithEntity={{
-                id: entityId,
-                type: entityTypeId,
-              }}
-            />
+            <EntityList seenWithEntity={subjectEntity} />
           )}
         </TabsContent>
         <TabsContent value="links" className="flex-grow mt-0">

@@ -17,6 +17,7 @@ import { generateNanoId } from "../../../../packages/common/src";
 import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
 import { useMutationToasts } from "~/components/nodes/editor/useMutationToasts";
+import { SidebarButton } from "../../components/ui/custom/sidebar-button";
 
 function StatusIndicator(props: { status: EngineCompileStatus }) {
   const { status } = props;
@@ -229,34 +230,20 @@ const Page: NextPageWithLayout = () => {
           <div className="text-lg font-medium">Event Types</div>
           <div className="h-2"></div>
           {eventNodes?.map((node) => (
-            <div
-              className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center",
-                {
-                  "bg-accent text-accent-foreground":
-                    selectedEventType === node.eventType,
-                  "hover:bg-muted cursor-pointer":
-                    selectedEventType !== node.eventType,
-                }
-              )}
+            <SidebarButton
+              selected={selectedEventType === node.eventType}
               onClick={() => setSelectedEventType(node.eventType)}
               key={node.eventType}
             >
               {node.eventType}
-            </div>
+            </SidebarButton>
           ))}
           <div className="h-4"></div>
           <div className="text-lg font-medium">Add</div>
           <div className="h-2"></div>
           {filteredEventTypes?.map((eventType) => (
-            <div
-              className={clsx(
-                "px-4 py-1 w-full text-sm font text-muted-foreground text-left rounded-md transition flex gap-2 items-center hover:bg-muted cursor-pointer",
-                {
-                  "bg-accent text-accent-foreground":
-                    selectedEventType === eventType.id,
-                }
-              )}
+            <SidebarButton
+              selected={selectedEventType === eventType.id}
               onClick={() => {
                 setSelectedEventType(eventType.id);
 
@@ -280,7 +267,7 @@ const Page: NextPageWithLayout = () => {
               key={eventType.id}
             >
               {eventType.id}
-            </div>
+            </SidebarButton>
           ))}
         </div>
         <div className="flex-1">
