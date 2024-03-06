@@ -580,7 +580,7 @@ export function EditEventView(props: {
                 <DropdownMenuItem
                   onSelect={() => onDropdownClick?.("viewConfig")}
                 >
-                  Save view config
+                  Save view
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
                   Delete
@@ -606,17 +606,7 @@ export function EditEventView(props: {
                 }}
                 editable={isEditing}
                 renderWrapper={(children, idx) => {
-                  return (
-                    <div
-                      className={cn({
-                        "bg-accent pr-0 flex items-center self-stretch h-8":
-                          true,
-                        "p-1": idx >= 0,
-                      })}
-                    >
-                      {children}
-                    </div>
-                  );
+                  return <div className="opacity-80">{children}</div>;
                 }}
               />
               {isEditing && (
@@ -636,7 +626,7 @@ export function EditEventView(props: {
                 </div>
               )}
 
-              <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div>
+              {/* <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div> */}
             </>
           )}
           {isEditing ? null : (

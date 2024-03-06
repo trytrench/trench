@@ -17,6 +17,16 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/find",
+        permanent: true,
+      },
+    ];
+  },
   webpack: (
     /** @type {import('webpack').Configuration} */
     config,
