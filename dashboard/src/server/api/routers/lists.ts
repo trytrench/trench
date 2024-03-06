@@ -90,7 +90,6 @@ export const listsRouter = createTRPCRouter({
         prisma.entityType.findMany(),
         prisma.rule.findMany(),
       ]);
-
       return {
         count: 0,
         rows: events.map((event) => ({

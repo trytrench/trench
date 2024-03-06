@@ -75,13 +75,14 @@ export function EntityList({ seenWithEntity }: Props) {
       staleTime: Infinity,
     }
   );
-  const viewConfig = useMemo(() => {
-    if (!views) return null;
-    const selectedViewId = router.query.view as string | undefined;
-    return views.find((view) => view.id === selectedViewId)?.config;
-  }, [views, router.query.view]);
 
   const selectedViewId = router.query.view as string | undefined;
+
+  const viewConfig = useMemo(() => {
+    if (!views) return null;
+    return views.find((view) => view.id === selectedViewId)?.config;
+  }, [views, selectedViewId]);
+
   const selectedView = useMemo(() => {
     return views?.find((view) => view.id === selectedViewId);
   }, [views, selectedViewId]);

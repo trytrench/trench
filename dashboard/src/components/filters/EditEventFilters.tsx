@@ -20,23 +20,28 @@ import { TypeSelectorSubItem } from "./TypeSelectorSubItem";
 
 interface EditEventFiltersProps {
   value: EventFilter[];
+  existingFilters?: EventFilter[];
   onChange: (value: EventFilter[]) => void;
 }
 
 export function EditEventFilters(props: EditEventFiltersProps) {
-  const { value, onChange } = props;
+  const { value, onChange, existingFilters = value } = props;
 
   const { data: allEventTypes } = api.eventTypes.list.useQuery();
   const { data: allFeatureDefs } = api.features.list.useQuery();
 
   // const { dateRange, eventType, features: featureFilters } = value;
 
-  const dateRange = getEventFiltersOfType(value, EventFilterType.DateRange)?.[0]
-    ?.data;
-  const eventType = getEventFiltersOfType(value, EventFilterType.EventType)?.[0]
-    ?.data;
+  const dateRange = getEventFiltersOfType(
+    existingFilters,
+    EventFilterType.DateRange
+  )?.[0]?.data;
+  const eventType = getEventFiltersOfType(
+    existingFilters,
+    EventFilterType.EventType
+  )?.[0]?.data;
   const featureFilters = getEventFiltersOfType(
-    value,
+    existingFilters,
     EventFilterType.Feature
   )?.map((f) => f.data);
 
