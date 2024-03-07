@@ -30,6 +30,7 @@ import { customEncodeURIComponent } from "../../lib/uri";
 import { LoadingPlaceholder } from "../LoadingPlaceholder";
 import { useEntityPageSubject } from "../../hooks/useEntityPageSubject";
 import { sumBy } from "lodash";
+import { useTheme } from "next-themes";
 
 interface LinksViewProps {
   entityId: string;
@@ -511,6 +512,17 @@ function RightSideCard(props: RightSideCardProps) {
 
   const entityTypeName = entityTypes?.find((et) => et.id === type)?.type;
   const [expanded, setExpanded] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
+  const calcColor = (simIndex: number) => {
+    if (!isDark) {
+      return `rgba(200, 220, 255, ${simIndex})`;
+    } else {
+      return `rgba(0, 80, 170, ${simIndex})`;
+    }
+  };
+
   return (
     <div key={item.id} ref={divRef}>
       <div
@@ -522,7 +534,7 @@ function RightSideCard(props: RightSideCardProps) {
         })}
         style={{
           // based on weight, darken the background. weight is a number between 0 and 1.
-          backgroundColor: `rgba(200, 220, 255, ${1 * item.similarityIndex})`,
+          backgroundColor: calcColor(item.similarityIndex),
         }}
         onClick={onClick}
       >

@@ -28,6 +28,7 @@
     /* custom */
     --emphasis: 0 0% 100%;
     --emphasis-foreground: 217.2 32.6% 17.5%;
+    --destructive-background: 0, 91%, 95%;
   }
 
   .dark {
@@ -54,6 +55,7 @@
     /* custom */
     --emphasis: 217.2 32.6% 17.5%;
     --emphasis-foreground: 0 0% 100%;
+    --destructive-background: 0 92% 27%;
   }
 }
 
