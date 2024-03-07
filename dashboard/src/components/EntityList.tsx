@@ -624,7 +624,7 @@ export function EditEntityView(props: {
     <div
       className={cn({
         "flex flex-col flex-grow overflow-auto transition": true,
-        "bg-gray-50": isEditing,
+        "bg-muted": isEditing,
       })}
     >
       <div className="flex items-center h-14 px-8 border-b shrink-0">
@@ -723,8 +723,7 @@ export function EditEntityView(props: {
                   return (
                     <div
                       className={cn({
-                        "bg-white pr-0 flex items-center self-stretch h-8":
-                          true,
+                        "pr-0 flex items-center self-stretch h-8": true,
                         "p-1": idx >= 0,
                       })}
                     >
@@ -735,7 +734,7 @@ export function EditEntityView(props: {
                 renderPlaceholder={initState ? () => null : undefined}
               />
 
-              <div className="bg-white px-1 self-stretch flex items-center">
+              <div className="px-1 self-stretch flex items-center">
                 <EditEntityFilters
                   existingFilters={allFilters}
                   value={extraFilters ?? []}

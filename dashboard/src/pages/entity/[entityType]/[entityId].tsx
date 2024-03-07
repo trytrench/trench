@@ -161,7 +161,7 @@ const Page: NextPageWithLayout = () => {
         value={tab ?? "overview"}
         onValueChange={setTab}
       >
-        <TabsList className="px-8 shrink-0 sticky top-0 bg-white z-10">
+        <TabsList className="px-8 shrink-0 sticky top-0 bg-background z-10">
           {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="entities">Entities</TabsTrigger>

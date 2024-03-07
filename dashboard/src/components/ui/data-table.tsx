@@ -215,7 +215,7 @@ export function DataTable<TData, TValue>({
             }}
           >
             <TableHeader
-              className="sticky top-0 bg-white shrink-0 z-10 [&_tr]:border-b-0"
+              className="sticky top-0 bg-background shrink-0 z-10 [&_tr]:border-b-0"
               style={{
                 boxShadow: "inset 0 -1px 0 rgba(0, 0, 0, 0.1)",
               }}
@@ -256,7 +256,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody className="overflow-y-auto bg-white">
+            <TableBody className="overflow-y-auto bg-background">
               {loading ? (
                 Array.from({
                   length: table.getPaginationRowModel().rows.length,

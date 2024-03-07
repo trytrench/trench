@@ -113,9 +113,10 @@ async function runMigrations() {
                 unique_entity_id_2,
                 entity_type_2 AS entity_type_2,
                 entity_id_2 AS entity_id_2,
+                event_type,
                 countMerge(times_seen_together) AS times_seen_together
             FROM entity_links_mv_table
-            GROUP BY unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2
+            GROUP BY unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2, event_type
         );
     `,
     clickhouse_settings: {

@@ -543,7 +543,7 @@ export function EditEventView(props: {
     <div
       className={cn({
         "flex flex-col flex-grow overflow-auto transition": true,
-        "bg-gray-50": isEditing,
+        "bg-muted": isEditing,
       })}
     >
       <div className="flex items-center h-14 px-8 border-b shrink-0">
@@ -652,7 +652,7 @@ export function EditEventView(props: {
                 renderPlaceholder={initState ? () => null : undefined}
               />
 
-              <div className="bg-white px-1 self-stretch flex items-center">
+              <div className="px-1 self-stretch flex items-center">
                 <EditEventFilters
                   existingFilters={allFilters}
                   value={extraFilters ?? []}
