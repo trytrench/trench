@@ -47,8 +47,6 @@ export function EventDrawer(props: {
     ) ?? [];
   const entityNameMap = useEntityNameMap(entityIds);
 
-  console.log(entitiesList?.rows);
-
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl overflow-auto">

@@ -40,6 +40,7 @@ import { toast } from "./ui/use-toast";
 import { Button } from "./ui/button";
 import { useEntityNameMap } from "../hooks/useEntityNameMap";
 import { Entity } from "event-processing";
+import { Skeleton } from "./ui/skeleton";
 
 type EventView = RouterOutputs["eventViews"]["list"][number];
 
@@ -348,7 +349,11 @@ export default function EventsList({ entity }: EventsListProps) {
           </div>
           <div className="grow overflow-y-auto">
             {eventsLoading ? (
-              <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
+              <div className="flex flex-col gap-2 px-8 pt-2">
+                {Array.from({ length: 50 }).map((_, idx) => (
+                  <Skeleton className="h-[20px]" key={idx} />
+                ))}
+              </div>
             ) : (
               <div className="relative flex-grow h-full overflow-y-auto">
                 <ScrollArea className="">

@@ -55,6 +55,7 @@ import { SidebarButton } from "./ui/custom/sidebar-button";
 import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
 import { customEncodeURIComponent } from "../lib/uri";
+import { Skeleton } from "./ui/skeleton";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -79,7 +80,11 @@ export function EntityList({ seenWithEntity }: Props) {
   const { mutateAsync: updateView } = api.entityViews.update.useMutation();
   const { mutateAsync: deleteView } = api.entityViews.delete.useMutation();
 
-  const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery(
+  const {
+    data: views,
+    isLoading: loadingViews,
+    refetch: refetchViews,
+  } = api.entityViews.list.useQuery(
     {
       entityTypeId: seenWithEntity?.type ?? null,
     },
@@ -88,6 +93,8 @@ export function EntityList({ seenWithEntity }: Props) {
       staleTime: Infinity,
     }
   );
+
+  const loadingViewsAndRouter = !router.isReady || loadingViews;
 
   const selectedViewId = router.query.view as string | undefined;
 
@@ -155,6 +162,7 @@ export function EntityList({ seenWithEntity }: Props) {
     api.lists.getEntitiesList.useQuery(queryProps, {
       keepPreviousData: true,
       staleTime: 15000,
+      enabled: !loadingViewsAndRouter,
     });
 
   const { data: features } = api.features.list.useQuery();
@@ -424,31 +432,40 @@ export function EntityList({ seenWithEntity }: Props) {
             <Plus className="h-3 w-3" />
           </button>
         </div>
-        <SidebarButton
-          onClick={() =>
-            router.push({
-              pathname: router.pathname,
-              query: { ...router.query, view: undefined },
-            })
-          }
-          selected={!selectedViewId}
-        >
-          All Entities
-        </SidebarButton>
-        {views?.map((view) => (
-          <SidebarButton
-            key={view.id}
-            onClick={() =>
-              router.push({
-                pathname: router.pathname,
-                query: { ...router.query, view: view.id },
-              })
-            }
-            selected={view.id === selectedViewId}
-          >
-            {view.name}
-          </SidebarButton>
-        ))}
+
+        {loadingViews ? (
+          Array.from({ length: 4 }).map((_, idx) => (
+            <Skeleton className="h-[20px] mt-2" key={idx} />
+          ))
+        ) : (
+          <>
+            <SidebarButton
+              onClick={() =>
+                router.push({
+                  pathname: router.pathname,
+                  query: { ...router.query, view: undefined },
+                })
+              }
+              selected={!selectedViewId}
+            >
+              All Entities
+            </SidebarButton>
+            {views?.map((view) => (
+              <SidebarButton
+                key={view.id}
+                onClick={() =>
+                  router.push({
+                    pathname: router.pathname,
+                    query: { ...router.query, view: view.id },
+                  })
+                }
+                selected={view.id === selectedViewId}
+              >
+                {view.name}
+              </SidebarButton>
+            ))}
+          </>
+        )}
       </div>
       <div className="h-full grow overflow-auto flex flex-col">
         <div className="shrink-0">
@@ -598,7 +615,10 @@ export function EntityList({ seenWithEntity }: Props) {
             </ScrollArea>
           ) : (
             <div className="h-full py-4 px-8 overflow-y-auto">
-              <DataTable table={table} loading={fetchingEntities} />
+              <DataTable
+                table={table}
+                loading={fetchingEntities || loadingViews}
+              />
             </div>
           )}
         </div>
