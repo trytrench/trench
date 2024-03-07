@@ -226,35 +226,61 @@ export function EntityList({ seenWithEntity }: Props) {
           );
         },
       },
-      ...(filteredFeatures?.map(
-        (feature) =>
-          ({
-            id: feature.name,
-            header: feature.name,
-            cell: ({ row }) => {
-              const value = row.original.features.find(
-                (f) => f.featureId === feature.id
-              );
-              if (!value) return null;
-              return value.rule && value.result.type === "success" ? (
-                value.result.data.value && (
-                  <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
-                )
-              ) : value.result ? (
-                <div
-                // className={cn({
-                //   "text-right":
-                //     value.result.type === "success" &&
-                //     (value.result.data.schema.type === TypeName.Float64 ||
-                //       value.result.data.schema.type === TypeName.Int64),
-                // })}
-                >
-                  <RenderResult result={value.result} />
-                </div>
-              ) : null;
-            },
-          }) as ColumnDef<EntityData>
-      ) ?? []),
+      {
+        header: "Type",
+        id: "Type",
+        accessorFn: (row) => {
+          const entType = entityTypes?.find((et) => et.id === row.entityType);
+          return entType?.type;
+        },
+      },
+      {
+        header: "Name",
+        id: "Name",
+        cell: ({ row }) => {
+          const nameFeature = row.original.features.find(
+            (f) =>
+              f.result.type === "success" &&
+              f.result.data.schema.type === TypeName.Name
+          );
+          return nameFeature?.result.type === "success"
+            ? nameFeature.result.data.value
+            : row.original.entityId;
+        },
+      },
+      ...(filteredFeatures
+        ?.filter((f) => f.schema.type !== TypeName.Name)
+        .map(
+          (feature) =>
+            ({
+              id: feature.id,
+              header: feature.name,
+              cell: ({ row }) => {
+                const value = row.original.features.find(
+                  (f) => f.featureId === feature.id
+                );
+                if (!value) return null;
+                return value.rule && value.result.type === "success" ? (
+                  value.result.data.value && (
+                    <div
+                      className={`rounded-full ${value.rule.color} w-2 h-2`}
+                    />
+                  )
+                ) : value.result ? (
+                  <div
+                  // className={cn({
+                  //   "text-right":
+                  //     value.result.type === "success" &&
+                  //     (value.result.data.schema.type === TypeName.Float64 ||
+                  //       value.result.data.schema.type === TypeName.Int64),
+                  // })}
+                  >
+                    <RenderResult result={value.result} />
+                  </div>
+                ) : null;
+              },
+            }) as ColumnDef<EntityData>
+        ) ?? []),
     ],
     [entityTypes, filteredFeatures]
   );
