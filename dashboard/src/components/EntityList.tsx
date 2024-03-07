@@ -433,7 +433,7 @@ export function EntityList({ seenWithEntity }: Props) {
           </button>
         </div>
 
-        {loadingViews ? (
+        {loadingViewsAndRouter ? (
           Array.from({ length: 4 }).map((_, idx) => (
             <Skeleton className="h-[20px] mt-2" key={idx} />
           ))

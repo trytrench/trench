@@ -51,13 +51,16 @@ interface EventsListProps {
 export default function EventsList({ entity }: EventsListProps) {
   const router = useRouter();
 
-  const { data: views, refetch: refetchViews } = api.eventViews.list.useQuery(
-    undefined,
-    {
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-    }
-  );
+  const {
+    data: views,
+    refetch: refetchViews,
+    isLoading: loadingViews,
+  } = api.eventViews.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
+
+  const loadingViewsAndRouter = !router.isReady || loadingViews;
 
   const selectedViewId = router.query.view as string | undefined;
 
@@ -126,6 +129,8 @@ export default function EventsList({ entity }: EventsListProps) {
         if (lastPage.rows.length < limit) return undefined;
         return pages.length * limit;
       },
+      // refetchInterval: 1000 * 3,
+      enabled: !loadingViewsAndRouter,
     }
   );
 
@@ -226,31 +231,39 @@ export default function EventsList({ entity }: EventsListProps) {
               <Plus className="h-3 w-3" />
             </button>
           </div>
-          <SidebarButton
-            onClick={() =>
-              router.push({
-                pathname: router.pathname,
-                query: { ...router.query, view: undefined },
-              })
-            }
-            selected={!selectedViewId}
-          >
-            All Events
-          </SidebarButton>
-          {views?.map((view) => (
-            <SidebarButton
-              key={view.id}
-              onClick={() =>
-                router.push({
-                  pathname: router.pathname,
-                  query: { ...router.query, view: view.id },
-                })
-              }
-              selected={view.id === selectedViewId}
-            >
-              {view.name}
-            </SidebarButton>
-          ))}
+          {loadingViewsAndRouter ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <Skeleton className="h-[20px] mt-2" key={idx} />
+            ))
+          ) : (
+            <>
+              <SidebarButton
+                onClick={() =>
+                  router.push({
+                    pathname: router.pathname,
+                    query: { ...router.query, view: undefined },
+                  })
+                }
+                selected={!selectedViewId}
+              >
+                All Events
+              </SidebarButton>
+              {views?.map((view) => (
+                <SidebarButton
+                  key={view.id}
+                  onClick={() =>
+                    router.push({
+                      pathname: router.pathname,
+                      query: { ...router.query, view: view.id },
+                    })
+                  }
+                  selected={view.id === selectedViewId}
+                >
+                  {view.name}
+                </SidebarButton>
+              ))}
+            </>
+          )}
         </div>
         <div className="h-full grow overflow-auto flex flex-col">
           <div className="shrink-0">
