@@ -63,6 +63,11 @@ interface Props {
 
 type EntityView = RouterOutputs["entityViews"]["list"][number];
 
+const DEFAULT_PAGINATION: PaginationState = {
+  pageIndex: 0,
+  pageSize: 50,
+};
+
 export function EntityList({ seenWithEntity }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -96,10 +101,8 @@ export function EntityList({ seenWithEntity }: Props) {
     return views?.find((view) => view.id === selectedViewId);
   }, [views, selectedViewId]);
 
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 50,
-  });
+  const [pagination, setPagination] =
+    useState<PaginationState>(DEFAULT_PAGINATION);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -121,6 +124,9 @@ export function EntityList({ seenWithEntity }: Props) {
         gridConfig: undefined,
       });
     }
+
+    // Reset pagination
+    setPagination(DEFAULT_PAGINATION);
   }, [viewConfig]);
 
   const allFilters = useMemo(() => {
@@ -146,15 +152,11 @@ export function EntityList({ seenWithEntity }: Props) {
     };
   }, [allFilters, pagination.pageSize, pagination.pageIndex]);
 
-  const {
-    data: entities,
-    isLoading: entitiesTableLoading,
-    isFetching: fetchingEntities,
-  } = api.lists.getEntitiesList.useQuery(queryProps, {
-    keepPreviousData: true,
-    staleTime: 15000,
-    enabled: !!viewConfig,
-  });
+  const { data: entities, isFetching: fetchingEntities } =
+    api.lists.getEntitiesList.useQuery(queryProps, {
+      keepPreviousData: true,
+      staleTime: 15000,
+    });
 
   const { data: features } = api.features.list.useQuery();
 
@@ -239,7 +241,16 @@ export function EntityList({ seenWithEntity }: Props) {
                   <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
                 )
               ) : value.result ? (
-                <RenderResult result={value.result} />
+                <div
+                // className={cn({
+                //   "text-right":
+                //     value.result.type === "success" &&
+                //     (value.result.data.schema.type === TypeName.Float64 ||
+                //       value.result.data.schema.type === TypeName.Int64),
+                // })}
+                >
+                  <RenderResult result={value.result} />
+                </div>
               ) : null;
             },
           }) as ColumnDef<EntityData>
@@ -515,36 +526,33 @@ export function EntityList({ seenWithEntity }: Props) {
           {currentViewState.type === "grid" ? (
             <ScrollArea className="h-full">
               <div className="space-y-4 px-8 py-4">
-                {entitiesTableLoading ? (
-                  <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
-                ) : (
-                  <>
-                    {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
-                      (entity) => {
-                        return (
-                          <EntityCard
-                            key={`${entity.entityType}:${entity.entityId}`}
-                            entity={entity}
-                            entityNameMap={entityNameMap}
-                            featureOrder={
-                              currentViewState.gridConfig?.featureOrder ?? []
-                            }
-                            onFeatureOrderChange={(newOrder) =>
-                              setCurrentViewState((prev) => {
-                                return {
-                                  ...prev,
-                                  gridConfig: {
-                                    featureOrder: newOrder,
-                                  },
-                                };
-                              })
-                            }
-                            isEditing={isEditing}
-                          />
-                        );
-                      }
-                    )}
-                    {/* {hasNextPage && (
+                <>
+                  {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
+                    (entity) => {
+                      return (
+                        <EntityCard
+                          key={`${entity.entityType}:${entity.entityId}`}
+                          entity={entity}
+                          entityNameMap={entityNameMap}
+                          featureOrder={
+                            currentViewState.gridConfig?.featureOrder ?? []
+                          }
+                          onFeatureOrderChange={(newOrder) =>
+                            setCurrentViewState((prev) => {
+                              return {
+                                ...prev,
+                                gridConfig: {
+                                  featureOrder: newOrder,
+                                },
+                              };
+                            })
+                          }
+                          isEditing={isEditing}
+                        />
+                      );
+                    }
+                  )}
+                  {/* {hasNextPage && (
                   <div className="self-center my-4">
                     <SpinnerButton
                       variant="outline"
@@ -559,8 +567,7 @@ export function EntityList({ seenWithEntity }: Props) {
                     </SpinnerButton>
                   </div>
                 )} */}
-                  </>
-                )}
+                </>
               </div>
             </ScrollArea>
           ) : (
@@ -617,7 +624,7 @@ export function EditEntityView(props: {
     <div
       className={cn({
         "flex flex-col flex-grow overflow-auto transition": true,
-        "bg-gray-50": isEditing,
+        "bg-muted": isEditing,
       })}
     >
       <div className="flex items-center h-14 px-8 border-b shrink-0">
@@ -716,8 +723,7 @@ export function EditEntityView(props: {
                   return (
                     <div
                       className={cn({
-                        "bg-white pr-0 flex items-center self-stretch h-8":
-                          true,
+                        "pr-0 flex items-center self-stretch h-8": true,
                         "p-1": idx >= 0,
                       })}
                     >
@@ -728,7 +734,7 @@ export function EditEntityView(props: {
                 renderPlaceholder={initState ? () => null : undefined}
               />
 
-              <div className="bg-white px-1 self-stretch flex items-center">
+              <div className="px-1 self-stretch flex items-center">
                 <EditEntityFilters
                   existingFilters={allFilters}
                   value={extraFilters ?? []}

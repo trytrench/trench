@@ -159,6 +159,7 @@ export async function getEntitiesList(props: {
         );
         break;
       }
+
       case EntityFilterType.Feature: {
         const { clauses, featureColumnsNeeded } =
           buildWhereClauseForFeatureFilter(filter.data);
@@ -182,10 +183,7 @@ export async function getEntitiesList(props: {
         );
         break;
       }
-      case EntityFilterType.SeenInEventType: {
-        seenWhereClauses.push(`event_type = '${filter.data}'`);
-        break;
-      }
+
       case EntityFilterType.SeenInEventId: {
         // TODO: Implement properly
         // featureConditions.push(`event_id = '${filter.data}'`);
@@ -193,6 +191,12 @@ export async function getEntitiesList(props: {
       }
     }
   }
+  /// Seen in event type
+  const seenInEventTypeFilter = getEntityFiltersOfType(
+    filters,
+    EntityFilterType.SeenInEventType
+  )[0]?.data;
+  seenWhereClauses.push(`event_type = '${seenInEventTypeFilter ?? ""}'`);
 
   seenWhereClauses.push("entity_type != ''");
 
@@ -203,7 +207,7 @@ export async function getEntitiesList(props: {
     WITH timestamped_entities AS (
         SELECT
             unique_entity_id, first_seen, last_seen
-        FROM entities_seen_mv_table 
+        FROM entities_seen_mv_table
         FINAL
         WHERE ${seenWhereClause}
     )
