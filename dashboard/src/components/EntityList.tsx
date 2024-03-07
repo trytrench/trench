@@ -62,6 +62,11 @@ interface Props {
 
 type EntityView = RouterOutputs["entityViews"]["list"][number];
 
+const DEFAULT_PAGINATION: PaginationState = {
+  pageIndex: 0,
+  pageSize: 50,
+};
+
 export function EntityList({ seenWithEntity }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -95,10 +100,8 @@ export function EntityList({ seenWithEntity }: Props) {
     return views?.find((view) => view.id === selectedViewId);
   }, [views, selectedViewId]);
 
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 50,
-  });
+  const [pagination, setPagination] =
+    useState<PaginationState>(DEFAULT_PAGINATION);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -120,6 +123,9 @@ export function EntityList({ seenWithEntity }: Props) {
         gridConfig: undefined,
       });
     }
+
+    // Reset pagination
+    setPagination(DEFAULT_PAGINATION);
   }, [viewConfig]);
 
   const allFilters = useMemo(() => {
