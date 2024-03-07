@@ -21,10 +21,6 @@ export function EventDrawer(props: {
   const [expandData, setExpandData] = useState(false);
   const router = useRouter();
 
-  const eventLabels = uniq(
-    selectedEvent?.labels?.filter((label) => label !== "") ?? []
-  );
-
   const filters = useMemo(() => {
     const arr: EntityFilter[] = [];
     if (selectedEvent) {
@@ -51,13 +47,15 @@ export function EventDrawer(props: {
     ) ?? [];
   const entityNameMap = useEntityNameMap(entityIds);
 
+  console.log(entitiesList?.rows);
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl overflow-auto">
         <SheetHeader>Event</SheetHeader>
 
         <div className="w-full">
-          {eventLabels.length > 0 ? (
+          {/* {eventLabels.length > 0 ? (
             eventLabels.map((label) => {
               return (
                 <Badge key={label} className="cursor-pointer">
@@ -67,7 +65,7 @@ export function EventDrawer(props: {
             })
           ) : (
             <Badge variant={"outline"}>No labels</Badge>
-          )}
+          )} */}
         </div>
         <div className="h-4"></div>
         <PropertyList
@@ -118,6 +116,8 @@ export function EventDrawer(props: {
                 key={entity.entityId}
                 entity={entity}
                 entityNameMap={entityNameMap}
+                featureOrder={[]}
+                onFeatureOrderChange={() => {}}
               />
             );
           })}
