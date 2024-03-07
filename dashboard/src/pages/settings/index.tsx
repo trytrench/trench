@@ -25,7 +25,7 @@ function StatusIndicator(props: { status: EngineCompileStatus }) {
     case "idle":
     case "compiling":
       return (
-        <div className="flex items-center gap-1 text-xs text-gray-400 px-3 p-1 rounded-sm bg-gray-50">
+        <div className="flex items-center gap-1 text-xs text-gray-400 px-3 p-1 rounded-sm bg-muted">
           Compiling...
         </div>
       );

@@ -36,6 +36,7 @@ export const linksRouter = createTRPCRouter({
       z.object({
         entityId: z.string(),
         entityType: z.string(),
+        eventType: z.string().optional(),
         leftSideType: z.string().optional(),
         limit: z.number().optional(),
         skip: z.number().optional(),
@@ -43,47 +44,50 @@ export const linksRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // 0: get the type of the entity.
-      const { leftSideType, entityId, entityType } = input;
+      const { leftSideType, entityId, entityType, eventType = "" } = input;
 
       const query = `
         WITH first_degree_connections AS (
             SELECT
-                eav.unique_entity_id_1,
-                eav.unique_entity_id_2,
+                eav.unique_entity_id_1 as e_start,
+                eav.unique_entity_id_2 as e_middle,
                 times_seen_together AS first_degree_links
             FROM entity_links_view AS eav
-            WHERE eav.entity_type_1 = '${entityType}'
+            WHERE event_type = '${eventType}'
+            AND eav.entity_type_1 = '${entityType}'
             AND eav.entity_id_1 = '${entityId}'
             ${leftSideType ? `AND eav.entity_type_2 = '${leftSideType}'` : ""}
             LIMIT 1000
         ),
         second_degree_connections AS (
             SELECT
-                eav.unique_entity_id_1,
-                eav.unique_entity_id_2,
+                eav.unique_entity_id_1 as e_middle,
+                eav.unique_entity_id_2 as e_end,
                 times_seen_together AS second_degree_links
             FROM entity_links_view AS eav
-            WHERE eav.unique_entity_id_1 IN (
-                SELECT unique_entity_id_2 FROM first_degree_connections
+            WHERE e_middle IN (
+                SELECT DISTINCT e_middle FROM first_degree_connections
             )
+            AND event_type = '${eventType}'
             ${leftSideType ? `AND eav.entity_type_1 = '${leftSideType}'` : ""}
             ${entityType ? `AND eav.entity_type_2 = '${entityType}'` : ""}
         )
         SELECT
-            fdc.unique_entity_id_1 as entity_id,
-            fdc.unique_entity_id_2 as first_degree_id,
-            sdc.unique_entity_id_2 as second_degree_id,
+            fdc.e_start as entity_id,
+            fdc.e_middle as first_degree_id,
+            sdc.e_end as second_degree_id,
             fdc.first_degree_links as first_degree_links,
             sdc.second_degree_links as second_degree_links
         FROM first_degree_connections fdc
-        JOIN second_degree_connections sdc ON fdc.unique_entity_id_2 = sdc.unique_entity_id_1
+        JOIN second_degree_connections sdc ON fdc.e_middle = sdc.e_middle
         LIMIT 10000
-        SETTINGS
-            optimize_aggregation_in_order=1,
-            max_memory_usage=1000000000,
-            max_bytes_before_external_group_by=500000000,
-            max_threads=1;
       `;
+
+      // SETTINGS
+      // optimize_aggregation_in_order=1,
+      // max_memory_usage=1000000000,
+      // max_bytes_before_external_group_by=500000000,
+      // max_threads=1;
 
       const result = await db.query({
         query,
