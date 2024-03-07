@@ -145,15 +145,11 @@ export function EntityList({ seenWithEntity }: Props) {
     };
   }, [allFilters, pagination.pageSize, pagination.pageIndex]);
 
-  const {
-    data: entities,
-    isLoading: entitiesTableLoading,
-    isFetching: fetchingEntities,
-  } = api.lists.getEntitiesList.useQuery(queryProps, {
-    keepPreviousData: true,
-    staleTime: 15000,
-    enabled: !!viewConfig,
-  });
+  const { data: entities, isFetching: fetchingEntities } =
+    api.lists.getEntitiesList.useQuery(queryProps, {
+      keepPreviousData: true,
+      staleTime: 15000,
+    });
 
   const { data: features } = api.features.list.useQuery();
 
@@ -524,36 +520,33 @@ export function EntityList({ seenWithEntity }: Props) {
           {currentViewState.type === "grid" ? (
             <ScrollArea className="h-full">
               <div className="space-y-4 px-8 py-4">
-                {entitiesTableLoading ? (
-                  <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin self-center" />
-                ) : (
-                  <>
-                    {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
-                      (entity) => {
-                        return (
-                          <EntityCard
-                            key={`${entity.entityType}:${entity.entityId}`}
-                            entity={entity}
-                            entityNameMap={entityNameMap}
-                            featureOrder={
-                              currentViewState.gridConfig?.featureOrder ?? []
-                            }
-                            onFeatureOrderChange={(newOrder) =>
-                              setCurrentViewState((prev) => {
-                                return {
-                                  ...prev,
-                                  gridConfig: {
-                                    featureOrder: newOrder,
-                                  },
-                                };
-                              })
-                            }
-                            isEditing={isEditing}
-                          />
-                        );
-                      }
-                    )}
-                    {/* {hasNextPage && (
+                <>
+                  {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
+                    (entity) => {
+                      return (
+                        <EntityCard
+                          key={`${entity.entityType}:${entity.entityId}`}
+                          entity={entity}
+                          entityNameMap={entityNameMap}
+                          featureOrder={
+                            currentViewState.gridConfig?.featureOrder ?? []
+                          }
+                          onFeatureOrderChange={(newOrder) =>
+                            setCurrentViewState((prev) => {
+                              return {
+                                ...prev,
+                                gridConfig: {
+                                  featureOrder: newOrder,
+                                },
+                              };
+                            })
+                          }
+                          isEditing={isEditing}
+                        />
+                      );
+                    }
+                  )}
+                  {/* {hasNextPage && (
                   <div className="self-center my-4">
                     <SpinnerButton
                       variant="outline"
@@ -568,8 +561,7 @@ export function EntityList({ seenWithEntity }: Props) {
                     </SpinnerButton>
                   </div>
                 )} */}
-                  </>
-                )}
+                </>
               </div>
             </ScrollArea>
           ) : (

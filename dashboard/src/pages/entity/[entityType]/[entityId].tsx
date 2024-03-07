@@ -43,7 +43,12 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
   const [filterEntityType, setFilterEntityType] = useState<Option | undefined>(
     undefined
   );
+  const [filterEventType, setFilterEventType] = useState<Option | undefined>(
+    undefined
+  );
+
   const { data: entityTypes } = api.entityTypes.list.useQuery();
+  const { data: eventTypes } = api.eventTypes.list.useQuery();
 
   return (
     <div className="h-full">
@@ -61,6 +66,18 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
           value={filterEntityType}
           isClearable={true}
         />
+
+        <ClearableSelect
+          options={
+            eventTypes?.map((et) => ({ label: et.id, value: et.id })) ?? []
+          }
+          onChange={(value) => {
+            setFilterEventType((value as Option) ?? undefined);
+          }}
+          placeholder="All Events"
+          value={filterEventType}
+          isClearable={true}
+        />
       </div>
 
       <ScrollArea className="px-8">
@@ -74,6 +91,7 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
               eType ? { label: eType.type, value: eType.id } : undefined
             );
           }}
+          eventType={filterEventType?.value ?? ""}
         />
       </ScrollArea>
     </div>

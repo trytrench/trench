@@ -36,6 +36,7 @@ interface LinksViewProps {
   entityType: string;
   leftTypeFilter: string;
   onLeftTypeFilterChange?: (value: string) => void;
+  eventType?: string;
 }
 
 function LinksView({
@@ -43,6 +44,7 @@ function LinksView({
   entityType,
   leftTypeFilter,
   onLeftTypeFilterChange,
+  eventType,
 }: LinksViewProps) {
   const [joinKeysToExpand, setJoinKeysToExpand] = useState<string[]>([]);
 
@@ -54,6 +56,7 @@ function LinksView({
       leftSideType: leftTypeFilter,
       limit: leftTypeFilter ? 20 : undefined,
       skip: leftTypeFilter ? 0 : undefined,
+      eventType,
     },
     { enabled: !!entityId && !!entityType }
   );
