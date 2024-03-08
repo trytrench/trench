@@ -104,6 +104,9 @@ export default function EventsList({ entity }: EventsListProps) {
     if (viewConfig?.filters) {
       arr.push(...viewConfig.filters);
     }
+    if (currentViewState.filters) {
+      arr.push(...currentViewState.filters);
+    }
     if (entity) {
       arr.push({
         type: EventFilterType.Entities,
@@ -111,7 +114,7 @@ export default function EventsList({ entity }: EventsListProps) {
       });
     }
     return arr;
-  }, [viewConfig, entity]);
+  }, [viewConfig?.filters, currentViewState.filters, entity]);
 
   const {
     data: events,
