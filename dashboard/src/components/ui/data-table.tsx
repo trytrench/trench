@@ -259,7 +259,7 @@ export function DataTable<TData, TValue>({
             <TableBody className="overflow-y-auto bg-background">
               {loading ? (
                 Array.from({
-                  length: table.getPaginationRowModel().rows.length,
+                  length: table.getState().pagination.pageSize,
                 }).map((_, index) => (
                   <TableRow key={index}>
                     {table.getVisibleLeafColumns().map((column) => (

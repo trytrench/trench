@@ -32,7 +32,7 @@ function StatusIndicator(props: { status: EngineCompileStatus }) {
     case "error":
       const errors = status.errors;
       return (
-        <div className="flex items-center gap-1 text-xs text-red-600 px-3 p-1 rounded-sm bg-red-50">
+        <div className="flex items-center gap-1 text-xs text-destructive-foreground px-3 p-1 rounded-sm bg-destructive-background">
           <XIcon className="h-4 w-4 " />
           <span>{`Errors (${Object.keys(errors).length})`}</span>
         </div>

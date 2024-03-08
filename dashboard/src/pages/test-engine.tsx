@@ -24,8 +24,8 @@ const getLayoutedElements = (
 } => {
   g.setGraph({
     rankdir: "RL",
-    nodesep: 100, // Horizontal spacing between nodes
-    ranksep: 200, // Vertical spacing between ranks (layers of nodes)
+    nodesep: 25, // Horizontal spacing between nodes
+    ranksep: 100, // Vertical spacing between ranks (layers of nodes)
   });
 
   edges.forEach((edge) => g.setEdge(edge.source, edge.target));
