@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Navbar } from "./Navbar";
 import { Toaster } from "./ui/toaster";
+import { Button } from "./ui/button";
 
 interface Props {
   children: React.ReactNode;

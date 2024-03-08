@@ -56,6 +56,7 @@ import { cn } from "../lib/utils";
 import { useToast } from "./ui/use-toast";
 import { customEncodeURIComponent } from "../lib/uri";
 import Link from "next/link";
+import { Skeleton } from "./ui/skeleton";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -80,7 +81,11 @@ export function EntityList({ seenWithEntity }: Props) {
   const { mutateAsync: updateView } = api.entityViews.update.useMutation();
   const { mutateAsync: deleteView } = api.entityViews.delete.useMutation();
 
-  const { data: views, refetch: refetchViews } = api.entityViews.list.useQuery(
+  const {
+    data: views,
+    isLoading: loadingViews,
+    refetch: refetchViews,
+  } = api.entityViews.list.useQuery(
     {
       entityTypeId: seenWithEntity?.type ?? null,
     },
@@ -89,6 +94,8 @@ export function EntityList({ seenWithEntity }: Props) {
       staleTime: Infinity,
     }
   );
+
+  const loadingViewsAndRouter = !router.isReady || loadingViews;
 
   const selectedViewId = router.query.view as string | undefined;
 
@@ -156,6 +163,7 @@ export function EntityList({ seenWithEntity }: Props) {
     api.lists.getEntitiesList.useQuery(queryProps, {
       keepPreviousData: true,
       staleTime: 15000,
+      enabled: !loadingViewsAndRouter,
     });
 
   const { data: features } = api.features.list.useQuery();
@@ -226,35 +234,61 @@ export function EntityList({ seenWithEntity }: Props) {
           );
         },
       },
-      ...(filteredFeatures?.map(
-        (feature) =>
-          ({
-            id: feature.name,
-            header: feature.name,
-            cell: ({ row }) => {
-              const value = row.original.features.find(
-                (f) => f.featureId === feature.id
-              );
-              if (!value) return null;
-              return value.rule && value.result.type === "success" ? (
-                value.result.data.value && (
-                  <div className={`rounded-full ${value.rule.color} w-2 h-2`} />
-                )
-              ) : value.result ? (
-                <div
-                // className={cn({
-                //   "text-right":
-                //     value.result.type === "success" &&
-                //     (value.result.data.schema.type === TypeName.Float64 ||
-                //       value.result.data.schema.type === TypeName.Int64),
-                // })}
-                >
-                  <RenderResult result={value.result} />
-                </div>
-              ) : null;
-            },
-          }) as ColumnDef<EntityData>
-      ) ?? []),
+      {
+        header: "Type",
+        id: "Type",
+        accessorFn: (row) => {
+          const entType = entityTypes?.find((et) => et.id === row.entityType);
+          return entType?.type;
+        },
+      },
+      {
+        header: "Name",
+        id: "Name",
+        cell: ({ row }) => {
+          const nameFeature = row.original.features.find(
+            (f) =>
+              f.result.type === "success" &&
+              f.result.data.schema.type === TypeName.Name
+          );
+          return nameFeature?.result.type === "success"
+            ? nameFeature.result.data.value
+            : row.original.entityId;
+        },
+      },
+      ...(filteredFeatures
+        ?.filter((f) => f.schema.type !== TypeName.Name)
+        .map(
+          (feature) =>
+            ({
+              id: feature.id,
+              header: feature.name,
+              cell: ({ row }) => {
+                const value = row.original.features.find(
+                  (f) => f.featureId === feature.id
+                );
+                if (!value) return null;
+                return value.rule && value.result.type === "success" ? (
+                  value.result.data.value && (
+                    <div
+                      className={`rounded-full ${value.rule.color} w-2 h-2`}
+                    />
+                  )
+                ) : value.result ? (
+                  <div
+                  // className={cn({
+                  //   "text-right":
+                  //     value.result.type === "success" &&
+                  //     (value.result.data.schema.type === TypeName.Float64 ||
+                  //       value.result.data.schema.type === TypeName.Int64),
+                  // })}
+                  >
+                    <RenderResult result={value.result} />
+                  </div>
+                ) : null;
+              },
+            }) as ColumnDef<EntityData>
+        ) ?? []),
     ],
     [entityTypes, filteredFeatures]
   );
@@ -398,31 +432,40 @@ export function EntityList({ seenWithEntity }: Props) {
             <Plus className="h-3 w-3" />
           </button>
         </div>
-        <SidebarButton
-          onClick={() =>
-            router.push({
-              pathname: router.pathname,
-              query: { ...router.query, view: undefined },
-            })
-          }
-          selected={!selectedViewId}
-        >
-          All Entities
-        </SidebarButton>
-        {views?.map((view) => (
-          <SidebarButton
-            key={view.id}
-            onClick={() =>
-              router.push({
-                pathname: router.pathname,
-                query: { ...router.query, view: view.id },
-              })
-            }
-            selected={view.id === selectedViewId}
-          >
-            {view.name}
-          </SidebarButton>
-        ))}
+
+        {loadingViewsAndRouter ? (
+          Array.from({ length: 4 }).map((_, idx) => (
+            <Skeleton className="h-[20px] mt-2" key={idx} />
+          ))
+        ) : (
+          <>
+            <SidebarButton
+              onClick={() =>
+                router.push({
+                  pathname: router.pathname,
+                  query: { ...router.query, view: undefined },
+                })
+              }
+              selected={!selectedViewId}
+            >
+              All Entities
+            </SidebarButton>
+            {views?.map((view) => (
+              <SidebarButton
+                key={view.id}
+                onClick={() =>
+                  router.push({
+                    pathname: router.pathname,
+                    query: { ...router.query, view: view.id },
+                  })
+                }
+                selected={view.id === selectedViewId}
+              >
+                {view.name}
+              </SidebarButton>
+            ))}
+          </>
+        )}
       </div>
       <div className="h-full grow overflow-auto flex flex-col">
         <div className="shrink-0">
@@ -572,7 +615,10 @@ export function EntityList({ seenWithEntity }: Props) {
             </ScrollArea>
           ) : (
             <div className="h-full py-4 px-8 overflow-y-auto">
-              <DataTable table={table} loading={fetchingEntities} />
+              <DataTable
+                table={table}
+                loading={fetchingEntities || loadingViews}
+              />
             </div>
           )}
         </div>

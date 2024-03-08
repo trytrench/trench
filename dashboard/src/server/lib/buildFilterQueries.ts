@@ -134,6 +134,8 @@ export async function getEntitiesList(props: {
   const allFeatureColumnsNeeded = new Set<string>();
   const featureConditions: string[] = [];
 
+  const eventIdConditions: string[] = [];
+
   const entityType =
     getEntityFiltersOfType(filters, EntityFilterType.EntityType)[0]?.data ?? "";
 
@@ -185,8 +187,7 @@ export async function getEntitiesList(props: {
       }
 
       case EntityFilterType.SeenInEventId: {
-        // TODO: Implement properly
-        // featureConditions.push(`event_id = '${filter.data}'`);
+        eventIdConditions.push(`event_id = '${filter.data}'`);
         break;
       }
     }
@@ -233,6 +234,20 @@ export async function getEntitiesList(props: {
             `;
       })
       .join("\n")}
+    ${eventIdConditions
+      .map((clause, idx) => {
+        const alias = `e_${idx}`;
+        return `
+            LEFT SEMI JOIN (
+                SELECT DISTINCT unique_entity_id
+                FROM features
+                WHERE ${clause}
+            ) AS ${alias}
+            ON timestamped_entities.unique_entity_id = ${alias}.unique_entity_id
+          `;
+      })
+      .join("\n")}
+    WHERE unique_entity_id != ''
     ORDER BY
         last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
@@ -261,8 +276,6 @@ export async function getEntitiesList(props: {
   const totalCount = entities.data[0]?.total_count
     ? parseInt(entities.data[0].total_count)
     : 0;
-
-  console.log(entities.data[0]);
 
   if (entities.data.length === 0) {
     console.log("Early return");
@@ -451,6 +464,7 @@ export const getEventsList = async (options: {
             groupArray(tuple(feature_id, value, error)) AS features_arr
         FROM features_subset
         WHERE event_id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
+        AND entity_type = ''
         GROUP BY event_id
     ),
     entity_appearances AS (

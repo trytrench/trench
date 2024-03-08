@@ -31,8 +31,10 @@ export const EventCardSection = ({
   entity?: Entity;
   entityNameMap: Record<string, string>;
   isEditing?: boolean;
-  config: EventViewConfig["gridConfig"][string];
-  onConfigChange: (newConfig: EventViewConfig["gridConfig"][string]) => void;
+  config: NonNullable<EventViewConfig["gridConfig"]>[string];
+  onConfigChange: (
+    newConfig: NonNullable<EventViewConfig["gridConfig"]>[string]
+  ) => void;
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
 }) => {
   const { data: features } = api.features.list.useQuery();
