@@ -1,4 +1,9 @@
-export { default } from "next-auth/middleware";
+import { env } from "./env";
+import { withAuth } from "next-auth/middleware";
+
+export default withAuth({
+  secret: env.JWT_SECRET,
+});
 
 export const config = {
   matcher: [
