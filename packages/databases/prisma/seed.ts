@@ -1,4 +1,4 @@
-import { GlobalStateKey, prisma } from "..";
+import { GlobalStateKey, prisma } from "../src";
 
 async function main() {}
 
