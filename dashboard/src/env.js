@@ -12,7 +12,6 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     CLICKHOUSE_URL: z.string().url(),
-    NEXTAUTH_SECRET: z.string().optional().default("nextauth-secret"),
     NEXTAUTH_URL: z.string().url().optional().default("http://localhost:3000"),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -42,7 +41,6 @@ export const env = createEnv({
     POSTGRES_URL: process.env.POSTGRES_URL,
     CLICKHOUSE_URL: process.env.CLICKHOUSE_URL,
     NODE_ENV: process.env.NODE_ENV,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
