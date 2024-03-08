@@ -29,6 +29,7 @@ services:
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
+
   dashboard:
     build:
       context: .
@@ -42,10 +43,22 @@ services:
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
-    env_file:
-      - .env
     ports:
       - "3000:3000"
+
+  migrator:
+    build:
+      context: .
+      dockerfile: ./packages/databases/Dockerfile
+    depends_on:
+      - clickhouse
+      - postgres
+    command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate dev && npx tsx src/clickhouse.ts"
+    environment:
+      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
+      CLICKHOUSE_URL: "http://clickhouse:8123"
+      REDIS_URL: "redis://redis:6379"
+      NODE_ENV: "production"
 
 volumes:
   postgres_data:

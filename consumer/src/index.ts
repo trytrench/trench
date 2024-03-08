@@ -14,7 +14,7 @@ import {
 } from "event-processing/src/function-type-defs/lib/store";
 import { getUnixTime } from "date-fns";
 
-const PAUSE_ENGINE = true;
+const PAUSE_ENGINE = false;
 var engine: ExecutionEngine | null = null;
 setInterval(async () => {
   // Check database for new engine, and update in-memory engine if necessary

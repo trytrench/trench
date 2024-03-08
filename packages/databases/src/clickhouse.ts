@@ -70,7 +70,7 @@ async function runMigrations() {
 
   await db.command({
     query: `
-        CREATE MATERIALIZED VIEW entity_links_mv
+        CREATE MATERIALIZED VIEW IF NOT EXISTS entity_links_mv
         TO entity_links_mv_table AS (
             SELECT
                 f1.unique_entity_id AS unique_entity_id_1,
@@ -105,7 +105,7 @@ async function runMigrations() {
 
   await db.command({
     query: `
-        CREATE OR REPLACE VIEW entity_links_view AS (
+        CREATE VIEW IF NOT EXISTS entity_links_view AS (
             SELECT
                 unique_entity_id_1,
                 entity_type_1 AS entity_type_1,
@@ -224,7 +224,7 @@ async function runMigrations() {
 
   await db.command({
     query: `
-        CREATE OR REPLACE VIEW latest_entity_features_view AS (
+        CREATE VIEW IF NOT EXISTS latest_entity_features_view AS (
             SELECT
                 entity_type,
                 unique_entity_id,
