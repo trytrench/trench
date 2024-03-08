@@ -12,27 +12,15 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     CLICKHOUSE_URL: z.string().url(),
-    NEXTAUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    NEXTAUTH_URL:
-      process.env.NODE_ENV === "production"
-        ? z.preprocess(
-            // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-            // Since NextAuth.js automatically uses the VERCEL_URL if present.
-            (str) => process.env.VERCEL_URL ?? str,
-            // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-            process.env.VERCEL ? z.string() : z.string().url()
-          )
-        : z.string().optional(),
+    NEXTAUTH_SECRET: z.string().optional().default("nextauth-secret"),
+    NEXTAUTH_URL: z.string().url().optional().default("http://localhost:3000"),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
-    ADMIN_USERNAME: z.string().optional(),
-    ADMIN_PASSWORD: z.string().optional(),
-    API_KEY: z.string().optional(),
-    CLIENT_KEY: z.string().optional(),
-    JWT_SECRET: z.string().optional(),
+    ADMIN_USERNAME: z.string().optional().default("admin"),
+    ADMIN_PASSWORD: z.string().optional().default("password"),
+    API_KEY: z.string().optional().default("api-key"),
+    CLIENT_KEY: z.string().optional().default("client-key"),
+    JWT_SECRET: z.string().optional().default("jwt-secret"),
     SENTRY_DSN: z.string().optional(),
   },
 
