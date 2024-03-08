@@ -53,7 +53,7 @@ services:
     depends_on:
       - clickhouse
       - postgres
-    command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate dev && npx tsx src/clickhouse.ts"
+    command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npx tsx src/clickhouse.ts"
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
       CLICKHOUSE_URL: "http://clickhouse:8123"
