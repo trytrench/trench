@@ -1,12 +1,16 @@
-import { Editor, useMonaco } from "@monaco-editor/react";
+import { Editor, Monaco, useMonaco } from "@monaco-editor/react";
 import { CheckIcon, Loader2, XIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef } from "react";
 import { useThrottle } from "../../../hooks/useThrottle";
 import { type CompileStatus, compileStatusAtom, tsCodeAtom } from "./state";
 import { useAtom } from "jotai";
-import { type CompileTsResult } from "event-processing/src/function-type-defs/types/Computed";
+import {
+  TS_COMPILER_OPTIONS,
+  type CompileTsResult,
+} from "event-processing/src/function-type-defs/types/Computed";
 import { handleError } from "../../../lib/handleError";
+import { editor } from "monaco-editor";
 
 interface CodeEditorProps {
   typeDefs: string;
@@ -92,12 +96,24 @@ function CodeEditor({ typeDefs }: CodeEditorProps) {
     }
   }, [debouncedCode, compile]);
 
+  const handleMount = useCallback(
+    (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        TS_COMPILER_OPTIONS
+      );
+    },
+    []
+  );
+
   return (
     <Editor
       theme={theme}
       value={code}
       defaultLanguage="typescript"
       onChange={(value) => setCode(value ?? "")}
+      onMount={handleMount}
     />
   );
 }
