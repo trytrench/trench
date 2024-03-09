@@ -21,14 +21,22 @@ services:
       context: .
       dockerfile: ./consumer/Dockerfile
     depends_on:
-      - postgres
-      - clickhouse
-      - redis
+      postgres:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+      migrator:
+        condition: service_completed_successfully
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
+    env_file:
+      - path: .env
+        required: false
 
   dashboard:
     build:
@@ -36,8 +44,13 @@ services:
       dockerfile: ./dashboard/Dockerfile
     restart: on-failure
     depends_on:
-      - postgres
-      - clickhouse
+      postgres:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+      migrator:
+        condition: service_completed_successfully
+
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
       CLICKHOUSE_URL: "http://clickhouse:8123"
@@ -45,20 +58,28 @@ services:
       NODE_ENV: "production"
     ports:
       - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
 
   migrator:
     build:
       context: .
       dockerfile: ./packages/databases/Dockerfile
     depends_on:
-      - clickhouse
-      - postgres
-    command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate dev && npx tsx src/clickhouse.ts"
+      postgres:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+    command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npx tsx src/clickhouse.ts"
     environment:
       POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
+    env_file:
+      - path: .env
+        required: false
 
 volumes:
   postgres_data:
