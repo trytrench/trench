@@ -18,7 +18,7 @@ const eventSchema = z.object({
   type: z.literal("pageview"),
   data: z.object({
     sessionId: z.string(),
-    deviceToken: z.string().optional(),
+    deviceToken: z.string().nullable(),
     fingerprintComponents: z.object({
       ...mapValues(sources, () => componentSchema),
     }),
@@ -87,7 +87,7 @@ export default async function handler(
 
   const deviceId = existingDeviceId ?? ulid();
 
-  const ipAddress = req.headers["x-forwarded-for"] as string | undefined;
+  const ipAddress = req.headers["x-real-ip"] as string | undefined;
   const fingerprint = hashComponents(fingerprintComponents);
 
   const eventId = ulid(Date.now());

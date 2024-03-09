@@ -7,7 +7,7 @@ async function runMigrations() {
         CREATE TABLE IF NOT EXISTS features (
             engine_id LowCardinality(String) CODEC(ZSTD(1)),
             created_at DateTime64 CODEC(Delta(8), ZSTD(1)),
-            event_type String CODEC(ZSTD(1)),
+            event_type LowCardinality(String) CODEC(ZSTD(1)),
             event_id String CODEC(ZSTD(1)),
             event_timestamp DateTime64 CODEC(Delta(8), ZSTD(1)),
             feature_type LowCardinality(String),
@@ -51,16 +51,17 @@ async function runMigrations() {
     query: `
         CREATE TABLE IF NOT EXISTS entity_links_mv_table (
             unique_entity_id_1 String,
-            entity_type_1 String,
+            entity_type_1 LowCardinality(String),
             entity_id_1 String,
             unique_entity_id_2 String,
-            entity_type_2 String,
+            entity_type_2 LowCardinality(String),
             entity_id_2 String,
             times_seen_together AggregateFunction(count, UInt64),
+            event_type LowCardinality(String),
             INDEX unique_entity_id_2_index(unique_entity_id_2) TYPE bloom_filter(0.01) GRANULARITY 1
         )
         ENGINE = AggregatingMergeTree()
-        ORDER BY (unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2);
+        ORDER BY (unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2, event_type);
     `,
     clickhouse_settings: {
       wait_end_of_query: 1,
@@ -71,26 +72,30 @@ async function runMigrations() {
     query: `
         CREATE MATERIALIZED VIEW IF NOT EXISTS entity_links_mv
         TO entity_links_mv_table AS (
-            SELECT DISTINCT
+            SELECT
                 f1.unique_entity_id AS unique_entity_id_1,
                 f1.entity_type AS entity_type_1,
                 f1.entity_id AS entity_id_1,
                 f2.unique_entity_id AS unique_entity_id_2,
                 f2.entity_type AS entity_type_2,
                 f2.entity_id AS entity_id_2,
-                countState() AS times_seen_together
+                countState() AS times_seen_together,
+                event_type
             FROM
                 features f1
             INNER JOIN
-                features f2 
+                features f2
                 ON f1.event_type = f2.event_type
                 AND f1.event_id = f2.event_id
             WHERE
-                f1.feature_type = 'EntityAppearance' 
+                f1.feature_type = 'EntityAppearance'
                 AND f2.feature_type = 'EntityAppearance'
                 AND f1.unique_entity_id != f2.unique_entity_id
             GROUP BY
-                unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2
+            GROUPING SETS (
+              (unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2, event_type),
+              (unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2)
+            )
         );
     `,
     clickhouse_settings: {
@@ -100,7 +105,7 @@ async function runMigrations() {
 
   await db.command({
     query: `
-        CREATE OR REPLACE VIEW entity_links_view AS (
+        CREATE VIEW IF NOT EXISTS entity_links_view AS (
             SELECT
                 unique_entity_id_1,
                 entity_type_1 AS entity_type_1,
@@ -108,9 +113,10 @@ async function runMigrations() {
                 unique_entity_id_2,
                 entity_type_2 AS entity_type_2,
                 entity_id_2 AS entity_id_2,
+                event_type,
                 countMerge(times_seen_together) AS times_seen_together
             FROM entity_links_mv_table
-            GROUP BY unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2
+            GROUP BY unique_entity_id_1, unique_entity_id_2, entity_type_1, entity_id_1, entity_type_2, entity_id_2, event_type
         );
     `,
     clickhouse_settings: {
@@ -122,14 +128,16 @@ async function runMigrations() {
   await db.command({
     query: `
         CREATE TABLE IF NOT EXISTS entities_seen_mv_table (
-            unique_entity_id String,
-            entity_id String,
-            entity_type String,
-            first_seen SimpleAggregateFunction(min, String),
-            last_seen SimpleAggregateFunction(max, String)
+            unique_entity_id String CODEC(ZSTD(1)),
+            event_type LowCardinality(String) CODEC(ZSTD(1)),
+            entity_id String CODEC(ZSTD(1)),
+            entity_type LowCardinality(String) CODEC(ZSTD(1)),
+            first_seen SimpleAggregateFunction(min, DateTime64),
+            last_seen SimpleAggregateFunction(max, DateTime64)
         )
         ENGINE = AggregatingMergeTree()
-        ORDER BY (unique_entity_id); 
+        PRIMARY KEY (event_type, entity_type)
+        ORDER BY (event_type, entity_type, unique_entity_id);
     `,
     clickhouse_settings: {
       wait_end_of_query: 1,
@@ -142,13 +150,15 @@ async function runMigrations() {
         TO entities_seen_mv_table AS (
             SELECT
                 unique_entity_id,
-                entity_id,
-                entity_type,
+                event_type,
+                any(entity_id) as entity_id,
+                any(entity_type) as entity_type,
                 minSimpleState(event_timestamp) AS first_seen,
                 maxSimpleState(event_timestamp) AS last_seen
             FROM features
             GROUP BY
-                unique_entity_id, entity_type, entity_id
+                unique_entity_id, event_type
+            WITH ROLLUP
         );
     `,
     clickhouse_settings: {
@@ -156,25 +166,8 @@ async function runMigrations() {
     },
   });
 
-  await db.command({
-    query: `
-        CREATE OR REPLACE VIEW entity_seen_view AS (
-            SELECT
-                unique_entity_id,
-                entity_type,
-                entity_id,
-                min(first_seen) AS first_seen,
-                max(last_seen) AS last_seen
-            FROM entities_seen_mv_table
-            GROUP BY unique_entity_id, entity_type, entity_id
-        );   
-    `,
-    clickhouse_settings: {
-      wait_end_of_query: 1,
-    },
-  });
-
   // Materialized view: latest entity features
+
   await db.command({
     query: `
         CREATE TABLE IF NOT EXISTS latest_entity_features_mv_table (
@@ -231,7 +224,7 @@ async function runMigrations() {
 
   await db.command({
     query: `
-        CREATE OR REPLACE VIEW latest_entity_features_view AS (
+        CREATE VIEW IF NOT EXISTS latest_entity_features_view AS (
             SELECT
                 entity_type,
                 unique_entity_id,

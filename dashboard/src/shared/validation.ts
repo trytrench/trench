@@ -9,7 +9,7 @@ export const dateRangeZod = z.object({
 
 export type DateRange = z.infer<typeof dateRangeZod>;
 
-export const featureFiltersZod = z.union([
+export const featureFilterDataZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
@@ -25,7 +25,7 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.enum([TypeName.String, TypeName.Name]),
+    dataType: z.enum([TypeName.String, TypeName.Name, TypeName.URL]),
     value: z.object({
       eq: z.string().optional(),
       contains: z.string().optional(),
@@ -79,82 +79,139 @@ export const featureFiltersZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.enum([TypeName.Date, TypeName.Rule, TypeName.Tuple]),
+    dataType: z.enum([
+      TypeName.Date,
+      TypeName.Rule,
+      TypeName.Tuple,
+      TypeName.Union,
+      TypeName.Null,
+      TypeName.Undefined,
+    ]),
     value: z.any(),
   }),
 ]);
 
-export const genericFiltersZod = z
-  .object({
-    dateRange: dateRangeZod.optional(),
-    type: z.string().optional(),
-    labels: z.array(z.string()).optional(),
-    features: z.array(jsonFilterZod).optional(),
-  })
-  .optional();
+export type FeatureFilter = z.infer<typeof featureFilterDataZod>;
 
-export type GenericFilters = z.infer<typeof genericFiltersZod>;
-
-export const eventFiltersZod = z.object({
-  dateRange: z
-    .object({
-      from: z.date().optional(),
-      to: z.date().optional(),
-    })
-    .optional(),
-  eventType: z.string().optional(),
-  features: z.array(featureFiltersZod).optional(),
-  entities: z
-    .array(
-      z.object({
-        type: z.string(),
-        id: z.string(),
-      })
-    )
-    .optional(),
+export enum EventFilterType {
+  EventType = "EventType",
+  DateRange = "DateRange",
+  Feature = "Feature",
+  Entities = "Entities",
+}
+const dateFilterZod = z.object({
+  type: z.literal(EventFilterType.DateRange),
+  data: dateRangeZod,
 });
 
-export type EventFilters = z.infer<typeof eventFiltersZod>;
+const featureFilterZod = z.object({
+  type: z.literal(EventFilterType.Feature),
+  data: featureFilterDataZod,
+});
 
-export const entityFiltersZod = z.object({
-  firstSeen: dateRangeZod.optional(),
-  lastSeen: dateRangeZod.optional(),
-  entityType: z.string().optional(),
-  entityId: z.string().optional(),
-  features: z.array(featureFiltersZod).optional(),
+const eventTypeFilterZod = z.object({
+  type: z.literal(EventFilterType.EventType),
+  data: z.string(),
+});
 
-  eventId: z.string().optional(),
-  seenWithEntity: z
-    .object({
+const entityFilterByZod = z.object({
+  type: z.literal(EventFilterType.Entities),
+  data: z.array(
+    z.object({
       type: z.string(),
       id: z.string(),
     })
-    .optional(),
-  seenInEventType: z.string().optional(),
-
-  // old
-  entityLabels: z.array(z.string()).optional(),
-  entityFeatures: z.array(jsonFilterZod).optional(),
+  ),
 });
 
-export type EntityFilters = z.infer<typeof entityFiltersZod>;
+export const eventFilterZod = z.union([
+  dateFilterZod,
+  featureFilterZod,
+  eventTypeFilterZod,
+  entityFilterByZod,
+]);
 
-export const findTopEntitiesArgs = z.object({
-  limit: z.number().optional(),
-  eventFilters: eventFiltersZod.optional(),
-  entityFilters: entityFiltersZod.optional(),
-  linkType: z.string().optional(),
+export type EventFilter = z.infer<typeof eventFilterZod>;
+
+// Entity Filters
+
+export enum EntityFilterType {
+  EntityType = "EntityType",
+  EntityId = "EntityId",
+  FirstSeen = "FirstSeen",
+  LastSeen = "LastSeen",
+  Feature = "Feature",
+  SeenWithEntity = "SeenWithEntity",
+  SeenInEventType = "SeenInEventType",
+  SeenInEventId = "SeenInEventId",
+}
+
+const entityTypeFilterZod = z.object({
+  type: z.literal(EntityFilterType.EntityType),
+  data: z.string(),
 });
 
-export type FindTopEntitiesArgs = z.infer<typeof findTopEntitiesArgs>;
+const entityIdFilterZod = z.object({
+  type: z.literal(EntityFilterType.EntityId),
+  data: z.string(),
+});
+
+const firstSeenFilterZod = z.object({
+  type: z.literal(EntityFilterType.FirstSeen),
+  data: dateRangeZod,
+});
+
+const lastSeenFilterZod = z.object({
+  type: z.literal(EntityFilterType.LastSeen),
+  data: dateRangeZod,
+});
+
+const entityFeatureFilterZod = z.object({
+  type: z.literal(EntityFilterType.Feature),
+  data: featureFilterDataZod,
+});
+
+const seenWithEntityFilterZod = z.object({
+  type: z.literal(EntityFilterType.SeenWithEntity),
+  data: z.object({
+    type: z.string(),
+    id: z.string(),
+  }),
+});
+
+const seenInEventTypeFilterZod = z.object({
+  type: z.literal(EntityFilterType.SeenInEventType),
+  data: z.string(),
+});
+
+const seenInEventIdFilterZod = z.object({
+  type: z.literal(EntityFilterType.SeenInEventId),
+  data: z.string(),
+});
+
+export const entityFiltersZod = z.union([
+  entityTypeFilterZod,
+  entityIdFilterZod,
+  firstSeenFilterZod,
+  lastSeenFilterZod,
+  entityFeatureFilterZod,
+  seenWithEntityFilterZod,
+  seenInEventTypeFilterZod,
+  seenInEventIdFilterZod,
+]);
+
+export type EntityFilter = z.infer<typeof entityFiltersZod>;
+
+// Entity View Config
 
 export const entityViewConfigZod = z.object({
   type: z.enum(["list", "grid"]),
-  filters: entityFiltersZod,
+  filters: z.array(entityFiltersZod),
   tableConfig: z
     .object({
-      columnOrder: z.array(z.string()),
-      columnVisibility: z.record(z.boolean()),
+      columnOrder: z.array(z.string()).optional(),
+      columnVisibility: z.record(z.boolean()).optional(),
+      columnSizing: z.record(z.number()).optional(),
     })
     .optional(),
   gridConfig: z
@@ -167,20 +224,37 @@ export const entityViewConfigZod = z.object({
 export type EntityViewConfig = z.infer<typeof entityViewConfigZod>;
 
 export const eventViewConfig = z.object({
+  filters: z.array(eventFilterZod),
   type: z.enum(["feed", "grid"]),
-  filters: eventFiltersZod,
-  // tableConfig: z
-  //   .object({
-  //     columnOrder: z.array(z.string()),
-  //     columnVisibility: z.record(z.boolean()),
-  //   })
-  //   .optional(),
-  gridConfig: z.record(
-    z.object({
-      featureOrder: z.record(z.array(z.string())),
-      entityTypeOrder: z.array(z.string()),
+  tableConfig: z
+    .object({
+      columnOrder: z.array(z.string()).optional(),
+      columnVisibility: z.record(z.boolean()).optional(),
+      columnSizing: z.record(z.number()).optional(),
     })
-  ),
+    .optional(),
+  gridConfig: z
+    .record(
+      z.object({
+        featureOrder: z.record(z.array(z.string())),
+        entityTypeOrder: z.array(z.string()),
+      })
+    )
+    .optional(),
 });
 
 export type EventViewConfig = z.infer<typeof eventViewConfig>;
+
+export function getEventFiltersOfType<T extends EventFilterType>(
+  filters: EventFilter[],
+  type: T
+): Extract<EventFilter, { type: T }>[] {
+  return filters.filter((filter) => filter.type === type) as any;
+}
+
+export function getEntityFiltersOfType<T extends EntityFilterType>(
+  filters: EntityFilter[],
+  type: T
+): Extract<EntityFilter, { type: T }>[] {
+  return filters.filter((filter) => filter.type === type) as any;
+}

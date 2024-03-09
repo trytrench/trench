@@ -2,28 +2,28 @@ import FingerprintJS, { Agent } from "@fingerprintjs/fingerprintjs";
 import UAParser from "ua-parser-js";
 
 class Trench {
-  baseUrl: string;
-  sessionId: string;
-  clientKey: string;
-  deviceToken = localStorage.getItem("deviceToken");
+  baseUrl: string = "";
+  sessionId: string = "";
+  clientKey: string = "";
+  deviceToken: string | null = null;
   fp: Agent | null = null;
 
-  constructor(baseUrl: string, sessionId: string, clientKey: string) {
+  async initialize(
+    baseUrl: string,
+    sessionId: string,
+    clientKey: string
+  ): Promise<void> {
     this.baseUrl = baseUrl;
     this.sessionId = sessionId;
     this.clientKey = clientKey;
+
+    this.deviceToken = localStorage.getItem("deviceToken");
   }
 
-  private async initFingerprint(): Promise<void> {
-    this.fp = await FingerprintJS.load({ monitoring: false });
-  }
+  async pageview() {
+    if (!this.fp) this.fp = await FingerprintJS.load({ monitoring: false });
 
-  async pageview(): Promise<void> {
-    if (!this.fp) {
-      await this.initFingerprint();
-    }
-
-    const components = await this.fp!.get();
+    const components = await this.fp.get();
     const userAgentData = new UAParser().getResult();
 
     try {
@@ -69,4 +69,5 @@ class Trench {
   }
 }
 
-export default Trench;
+const trench = new Trench();
+export default trench;

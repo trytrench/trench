@@ -2,6 +2,7 @@ import {
   BoxIcon,
   BracesIcon,
   Hash,
+  LinkIcon,
   LucideIcon,
   ToggleLeft,
   TypeIcon,
@@ -9,7 +10,7 @@ import {
 import { Type } from "ts-morph";
 import { ulid } from "ulid";
 import { JsonFilterOp } from "../../shared/jsonFilter";
-import { type EventFilters } from "../../shared/validation";
+import { FeatureFilter, type EventFilter } from "../../shared/validation";
 import {
   Command,
   CommandEmpty,
@@ -25,8 +26,6 @@ import {
 } from "../ui/dropdown-menu";
 import { FeatureDef, TypeName } from "event-processing";
 
-type FeatureFilter = NonNullable<NonNullable<EventFilters>["features"]>[number];
-
 const DATA_TYPE_TO_ICON = {
   [TypeName.Float64]: Hash,
   [TypeName.Int64]: Hash,
@@ -39,8 +38,12 @@ const DATA_TYPE_TO_ICON = {
   [TypeName.Location]: TypeIcon,
   [TypeName.Tuple]: TypeIcon,
   [TypeName.Name]: TypeIcon,
+  [TypeName.URL]: LinkIcon,
   [TypeName.Date]: TypeIcon,
   [TypeName.Rule]: TypeIcon,
+  [TypeName.Union]: TypeIcon,
+  [TypeName.Undefined]: TypeIcon,
+  [TypeName.Null]: TypeIcon,
 } satisfies Record<TypeName, LucideIcon>;
 
 export function AddFeatureFilterSubItem(props: {

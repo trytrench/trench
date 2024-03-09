@@ -14,10 +14,13 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { handleError } from "../lib/handleError";
+import { useRouter } from "next/router";
 
 export default function Page({
   csrfToken,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  const router = useRouter();
+
   return (
     <div className="flex h-screen items-center justify-center">
       <Card className="w-96">
@@ -64,6 +67,11 @@ export default function Page({
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" />
             </div>
+            {router.query.error && (
+              <div className="text-sm text-destructive self-start">
+                Username or password is incorrect
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full">

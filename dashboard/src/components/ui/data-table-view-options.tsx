@@ -29,7 +29,7 @@ export function DataTableViewOptions<TData>({
           className="ml-auto hidden h-8 lg:flex"
         >
           <MixerHorizontalIcon className="mr-2 h-4 w-4" />
-          View
+          Columns
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -50,7 +50,7 @@ export function DataTableViewOptions<TData>({
                 onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 onSelect={(event) => event.preventDefault()}
               >
-                {column.id}
+                {column.columnDef.header}
               </DropdownMenuCheckboxItem>
             );
           })}

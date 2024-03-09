@@ -55,7 +55,7 @@ export function EditableProperty(props: EditablePropertyProps) {
       value={editKey}
       onChange={setEditKey}
       active={isEditing}
-      className="inline font-bold outline-none mr-4"
+      className="inline font-mono font-medium outline-none mr-4"
       onFocus={() => setIsEditing(true)}
       onBlur={handleDefocus}
     />

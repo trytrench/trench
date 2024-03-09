@@ -36,14 +36,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { RouterOutputs } from "../utils/api";
 
 interface Props {
   event: RouterOutputs["lists"]["getEventsList"]["rows"][number];
   isFirst: boolean;
   isLast: boolean;
   entityNameMap: Record<string, string>;
-  config: EventViewConfig["gridConfig"][string];
-  onConfigChange: (newConfig: EventViewConfig["gridConfig"][string]) => void;
+  config: NonNullable<EventViewConfig["gridConfig"]>[string];
+  onConfigChange: (
+    newConfig: NonNullable<EventViewConfig["gridConfig"]>[string]
+  ) => void;
   isEditing?: boolean;
 }
 

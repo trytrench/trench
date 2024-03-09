@@ -32,6 +32,7 @@ export const linksRouter = createTRPCRouter({
       z.object({
         entityId: z.string(),
         entityType: z.string(),
+        eventType: z.string().optional(),
         leftSideType: z.string().optional(),
         limit: z.number().optional(),
         skip: z.number().optional(),
@@ -39,53 +40,50 @@ export const linksRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       // 0: get the type of the entity.
-
-      const { leftSideType, entityId, entityType } = input;
+      const { leftSideType, entityId, entityType, eventType = "" } = input;
 
       const query = `
-        WITH names AS (
+        WITH first_degree_connections AS (
             SELECT
-                unique_entity_id,
-                value_String as entity_name
-            FROM latest_entity_features_view
-            WHERE
-                data_type = 'Name'
-        ),
-        first_degree_connections AS (
-            SELECT
-                eav.unique_entity_id_1,
-                eav.unique_entity_id_2,
+                eav.unique_entity_id_1 as e_start,
+                eav.unique_entity_id_2 as e_middle,
                 times_seen_together AS first_degree_links
             FROM entity_links_view AS eav
-            WHERE eav.entity_type_1 = '${entityType}'
+            WHERE event_type = '${eventType}'
+            AND eav.entity_type_1 = '${entityType}'
             AND eav.entity_id_1 = '${entityId}'
             ${leftSideType ? `AND eav.entity_type_2 = '${leftSideType}'` : ""}
+            LIMIT 1000
         ),
         second_degree_connections AS (
             SELECT
-                eav.unique_entity_id_1,
-                eav.unique_entity_id_2,
+                eav.unique_entity_id_1 as e_middle,
+                eav.unique_entity_id_2 as e_end,
                 times_seen_together AS second_degree_links
             FROM entity_links_view AS eav
-            WHERE 1
+            WHERE e_middle IN (
+                SELECT DISTINCT e_middle FROM first_degree_connections
+            )
+            AND event_type = '${eventType}'
             ${leftSideType ? `AND eav.entity_type_1 = '${leftSideType}'` : ""}
             ${entityType ? `AND eav.entity_type_2 = '${entityType}'` : ""}
         )
         SELECT
-            fdc.unique_entity_id_1 as entity_id,
-            fdc.unique_entity_id_2 as first_degree_id,
-            sdc.unique_entity_id_2 as second_degree_id,
+            fdc.e_start as entity_id,
+            fdc.e_middle as first_degree_id,
+            sdc.e_end as second_degree_id,
             fdc.first_degree_links as first_degree_links,
             sdc.second_degree_links as second_degree_links
         FROM first_degree_connections fdc
-        JOIN second_degree_connections sdc ON fdc.unique_entity_id_2 = sdc.unique_entity_id_1
-        SETTINGS
-            optimize_aggregation_in_order=1,
-            max_memory_usage=1000000000,
-            max_bytes_before_external_group_by=500000000,
-            max_threads=1;
-
+        JOIN second_degree_connections sdc ON fdc.e_middle = sdc.e_middle
+        LIMIT 10000
       `;
+
+      // SETTINGS
+      // optimize_aggregation_in_order=1,
+      // max_memory_usage=1000000000,
+      // max_bytes_before_external_group_by=500000000,
+      // max_threads=1;
 
       const result = await db.query({
         query,
@@ -104,51 +102,6 @@ export const linksRouter = createTRPCRouter({
         statistics: any;
       }>();
 
-      const uniqueIds = uniq([
-        ...parsed.data.map((item) => item.first_degree_id),
-        ...parsed.data.map((item) => item.second_degree_id),
-      ]);
-
-      const uniqueNames = await db.query({
-        query: `
-          SELECT
-              unique_entity_id,
-              value_String as entity_name
-          FROM latest_entity_features_view
-          WHERE
-              data_type = 'Name'
-          AND unique_entity_id IN (${uniqueIds
-            .map((id) => `'${id}'`)
-            .join(",")})
-        `,
-      });
-
-      const names = await uniqueNames.json<{
-        data: {
-          unique_entity_id: string;
-          entity_name: string;
-        }[];
-        statistics: any;
-      }>();
-
-      const namesMap = new Map(
-        names.data.map((item) => [item.unique_entity_id, item.entity_name])
-      );
-
-      // console.log(parsed.data.slice(0, 5));
-
-      console.log();
-      console.log("````````````````````");
-      console.log("getLinks - get links");
-      console.log(parsed.statistics);
-      console.log();
-      console.log(`uniqueIds: ${uniqueIds.length}`);
-      console.log();
-      console.log("getLinks - get names");
-      console.log(names.statistics);
-      console.log("....................");
-      console.log();
-
       const firstDegreeEntities: EntityWithName[] = uniqBy(
         parsed.data.map((item) => {
           const { type, id } = unpackUniqueId(item.first_degree_id);
@@ -156,7 +109,7 @@ export const linksRouter = createTRPCRouter({
           return {
             id: id,
             type: type,
-            name: namesMap.get(item.first_degree_id) ?? id,
+            name: id,
             numLinks: parseInt(item.first_degree_links),
           };
         }),
@@ -184,23 +137,126 @@ export const linksRouter = createTRPCRouter({
             from: {
               id: fromId,
               type: fromType,
-              name: namesMap.get(item.first_degree_id) ?? fromId,
+              name: fromId,
               numLinks: parseInt(item.first_degree_links),
             },
             to: {
               id: toId,
               type: toType,
-              name: namesMap.get(item.second_degree_id) ?? toId,
+              name: toId,
               numLinks: parseInt(item.second_degree_links),
             },
           };
         })
         .filter(Boolean) as Link[];
 
-      return processQueryOutput({
+      const output = processQueryOutput({
         rawLeft: firstDegreeEntities,
         rawLinks: secondDegreeLinks,
         shouldGroup: !input.leftSideType,
       });
+
+      const leftEntityIds = output.left
+        .filter((item) => item.itemType === "entity")
+        .map((item) => `${item.type}_${item.id}`);
+      const rightEntityIds = output.right
+        .flatMap((item) => {
+          if (item.itemType === "entity") {
+            return [item];
+          }
+          if (item.itemType === "group") {
+            return item.entities;
+          }
+          return [];
+        })
+        .filter((item) => item.itemType === "entity")
+        .map((item) => `${item.type}_${item.id}`);
+
+      const entityIds = uniq([...leftEntityIds, ...rightEntityIds]);
+
+      const { namesMap, statistics } = await getNamesMap(entityIds);
+
+      output.left = output.left.map((item) => {
+        if (item.itemType === "entity") {
+          const id = `${item.type}_${item.id}`;
+          return {
+            ...item,
+            name: namesMap.get(id) ?? item.id,
+          };
+        }
+        return item;
+      });
+      output.right = output.right.map((item) => {
+        if (item.itemType === "entity") {
+          const id = `${item.type}_${item.id}`;
+          return {
+            ...item,
+            name: namesMap.get(id) ?? item.id,
+          };
+        } else if (item.itemType === "group") {
+          return {
+            ...item,
+            entities: item.entities.map((entity) => {
+              const id = `${entity.type}_${entity.id}`;
+              return {
+                ...entity,
+                name: namesMap.get(id) ?? entity.id,
+              };
+            }),
+          };
+        }
+        return item;
+      });
+
+      // console.log(parsed.data.slice(0, 5));
+
+      console.log();
+      console.log("````````````````````");
+      console.log("getLinks - get links");
+      console.log(parsed.statistics);
+      console.log();
+      console.log(`uniqueIds: ${entityIds.length}`);
+      console.log();
+      console.log("getLinks - get names");
+      console.log(statistics);
+      console.log("....................");
+      console.log();
+
+      return output;
     }),
 });
+
+async function getNamesMap(uniqueIds: string[]) {
+  if (uniqueIds.length === 0) {
+    return {
+      namesMap: new Map<string, string>(),
+      statistics: {},
+    };
+  }
+  const uniqueNames = await db.query({
+    query: `
+      SELECT
+          unique_entity_id,
+          value_String as entity_name
+      FROM latest_entity_features_view
+      WHERE
+          data_type = 'Name'
+      AND unique_entity_id IN (${uniqueIds.map((id) => `'${id}'`).join(",")});
+    `,
+  });
+
+  const names = await uniqueNames.json<{
+    data: {
+      unique_entity_id: string;
+      entity_name: string;
+    }[];
+    statistics: any;
+  }>();
+
+  return {
+    namesMap: new Map(
+      names.data.map((item) => [item.unique_entity_id, item.entity_name])
+    ),
+    statistics: names.statistics,
+  };
+}
