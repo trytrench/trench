@@ -18,6 +18,7 @@ export enum TypeName {
   Union = "Union",
   Undefined = "Undefined",
   Null = "Null",
+  URL = "URL",
 }
 
 export type Entity = {
@@ -105,6 +106,10 @@ export interface TNullSchema extends TSchemaBase {
   type: TypeName.Null;
 }
 
+export interface TURLSchema extends TSchemaBase {
+  type: TypeName.URL;
+}
+
 interface SchemaTypeMap {
   [TypeName.Boolean]: boolean;
   [TypeName.Float64]: number;
@@ -122,6 +127,7 @@ interface SchemaTypeMap {
   [TypeName.Union]: any;
   [TypeName.Undefined]: undefined;
   [TypeName.Null]: null;
+  [TypeName.URL]: string;
 }
 
 type InferTupleItemType<T> = T extends TSchema ? InferSchemaType<T> : never;
@@ -417,6 +423,25 @@ class NullDataType extends IDataType<TNullSchema> {
   }
 }
 
+class URLDataType
+  extends IDataType<TURLSchema>
+  implements IDataType<TURLSchema>
+{
+  parse(input: any): string {
+    if (typeof input !== "string") this.throwParseError(input);
+    return input;
+  }
+
+  toTypescript(): string {
+    return "string";
+  }
+
+  canBeAssigned<T extends TSchema>(schema: T): boolean {
+    if (schema.type === TypeName.String) return true;
+    return super.canBeAssigned(schema);
+  }
+}
+
 type RegistryConfig = {
   [K in TypeName]: {
     type: new (schema: any) => IDataType<any>;
@@ -490,6 +515,10 @@ export const DATA_TYPES_REGISTRY = {
     type: NullDataType,
     defaultSchema: { type: TypeName.Null },
   },
+  [TypeName.URL]: {
+    type: URLDataType,
+    defaultSchema: { type: TypeName.URL },
+  },
 } satisfies RegistryConfig;
 
 type DataTypesConstructorMap = typeof DATA_TYPES_REGISTRY;
@@ -513,7 +542,8 @@ export type TSchema =
   | TNameSchema
   | TUnionSchema
   | TUndefinedSchema
-  | TNullSchema;
+  | TNullSchema
+  | TURLSchema;
 
 export const tSchemaZod = z.custom<TSchema>((input) => {
   if (!input) return false;

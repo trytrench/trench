@@ -25,7 +25,7 @@ export const featureFilterDataZod = z.union([
   z.object({
     featureId: z.string(),
     featureName: z.string().optional(),
-    dataType: z.enum([TypeName.String, TypeName.Name]),
+    dataType: z.enum([TypeName.String, TypeName.Name, TypeName.URL]),
     value: z.object({
       eq: z.string().optional(),
       contains: z.string().optional(),
