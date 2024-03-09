@@ -34,6 +34,9 @@ services:
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
+    env_file:
+      - path: .env
+        required: false
 
   dashboard:
     build:
@@ -55,6 +58,9 @@ services:
       NODE_ENV: "production"
     ports:
       - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
 
   migrator:
     build:
@@ -71,6 +77,9 @@ services:
       CLICKHOUSE_URL: "http://clickhouse:8123"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
+    env_file:
+      - path: .env
+        required: false
 
 volumes:
   postgres_data:
