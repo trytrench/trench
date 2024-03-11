@@ -464,7 +464,6 @@ export const getEventsList = async (options: {
             groupArray(tuple(feature_id, value, error)) AS features_arr
         FROM features_subset
         WHERE event_id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
-        AND entity_type = ''
         GROUP BY event_id
     ),
     entity_appearances AS (
