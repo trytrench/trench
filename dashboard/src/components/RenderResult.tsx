@@ -46,6 +46,16 @@ export function RenderTypedData({ data }: { data: TypedData }) {
     case TypeName.Float64:
     case TypeName.Int64:
       return data.value;
+    case TypeName.URL:
+      return (
+        <a
+          className="hover:underline text-primary-foreground/80"
+          target="_blank"
+          href={data.value}
+        >
+          {data.value}
+        </a>
+      );
     case TypeName.Location:
 
     default:
