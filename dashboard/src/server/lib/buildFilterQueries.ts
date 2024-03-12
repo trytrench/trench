@@ -207,10 +207,12 @@ export async function getEntitiesList(props: {
   const finalQuery1 = `
     WITH timestamped_entities AS (
         SELECT
-            unique_entity_id, first_seen, last_seen
+            unique_entity_id, 
+            min(first_seen) as first_seen, 
+            max(last_seen) as last_seen
         FROM entities_seen_mv_table
-        FINAL
         WHERE ${seenWhereClause}
+        GROUP BY unique_entity_id
     )
     SELECT
         timestamped_entities.unique_entity_id AS unique_entity_id,
@@ -252,9 +254,8 @@ export async function getEntitiesList(props: {
         last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
     SETTINGS 
-      convert_query_to_cnf = true,
-      join_algorithm = 'parallel_hash',
-      optimize_trivial_count_query = 1;
+      max_threads = 8,
+      join_algorithm = 'parallel_hash';
   `;
 
   const result = await db.query({

@@ -171,19 +171,17 @@ async function runMigrations() {
   await db.command({
     query: `
         CREATE TABLE IF NOT EXISTS latest_entity_features_mv_table (
-            feature_id String,
+            feature_id LowCardinality(String),
             unique_entity_id String,
-            entity_type String,
+            entity_type LowCardinality(String),
             entity_id String,
-            data_type String,
+            data_type LowCardinality(String),
             value AggregateFunction(argMax, String, String),
             value_Int64 AggregateFunction(argMax, Nullable(Int64), String),
             value_Float64 AggregateFunction(argMax, Nullable(Float64), String),
             value_String AggregateFunction(argMax, Nullable(String), String),
             value_Bool AggregateFunction(argMax, Nullable(Bool), String),
-            INDEX feature_id_index(feature_id) TYPE bloom_filter(0.01) GRANULARITY 1,
-            INDEX unique_entity_id_index(unique_entity_id) TYPE bloom_filter(0.01) GRANULARITY 1,
-            INDEX data_type_index(data_type) TYPE bloom_filter(0.01) GRANULARITY 1
+            INDEX unique_entity_id_index(unique_entity_id) TYPE bloom_filter(0.01) GRANULARITY 1
         )
         ENGINE = AggregatingMergeTree()
         ORDER BY (entity_type, unique_entity_id, data_type, feature_id);
