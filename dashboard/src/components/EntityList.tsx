@@ -1,5 +1,6 @@
 import { type Entity, TypeName } from "event-processing";
 import {
+  ChevronDown,
   ExternalLinkIcon,
   LayoutGrid,
   List,
@@ -58,6 +59,7 @@ import { customEncodeURIComponent } from "../lib/uri";
 import Link from "next/link";
 import { Skeleton } from "./ui/skeleton";
 import { useBreakpoint } from "../hooks/useBreakpoint";
+import { ComboboxSelector } from "./ComboboxSelector";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -473,6 +475,7 @@ export function EntityList({ seenWithEntity }: Props) {
       <div className="h-full grow overflow-auto flex flex-col">
         <div className="shrink-0">
           <EditEntityView
+            allViews={views ?? []}
             view={selectedView}
             onViewChange={(newView) => {
               if (selectedView) {
@@ -631,6 +634,8 @@ export function EntityList({ seenWithEntity }: Props) {
 }
 
 export function EditEntityView(props: {
+  allViews: EntityView[];
+
   view: EntityView | undefined;
   onViewChange: (value: EntityView) => void;
 
@@ -642,6 +647,7 @@ export function EditEntityView(props: {
   renderRightItems?: () => React.ReactNode;
 }) {
   const {
+    allViews,
     view: initState,
     onViewChange,
     extraFilters,
@@ -649,6 +655,8 @@ export function EditEntityView(props: {
     renderRightItems,
     onDropdownClick,
   } = props;
+
+  const router = useRouter();
 
   const [editState, setEditState] = useState<EntityView | undefined>(initState);
 
@@ -773,34 +781,62 @@ export function EditEntityView(props: {
               className="max-w-sm font-bold"
             />
           </div>
-        ) : initState ? (
+        ) : (
           <>
             <div className="text-emphasis-foreground text-md">
-              {initState.name}
+              <ComboboxSelector
+                disabled={isMd}
+                value={initState?.id ?? null}
+                options={allViews.map((view) => ({
+                  value: view.id,
+                  label: view.name,
+                }))}
+                renderTrigger={({ value }) => {
+                  const view = allViews.find((v) => v.id === value);
+                  return (
+                    <div>
+                      {view?.name ?? "All Entities"}
+                      {!isMd && (
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground inline ml-1" />
+                      )}
+                    </div>
+                  );
+                }}
+                onSelect={(value) => {
+                  void router.push({
+                    pathname: router.pathname,
+                    query: { ...router.query, view: value },
+                  });
+                }}
+              />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild className="mr-4">
-                <Button size="iconXs" variant="link" className="shrink-0">
-                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
+            {initState && isMd && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild className="mr-4">
+                  <Button size="iconXs" variant="link" className="shrink-0">
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={() => setIsEditing(true)}>
-                  Edit filters
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onDropdownClick?.("viewConfig")}
-                >
-                  Save view
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onDropdownClick?.("delete")}>
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onSelect={() => setIsEditing(true)}>
+                    Edit filters
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onDropdownClick?.("viewConfig")}
+                  >
+                    Save view
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onDropdownClick?.("delete")}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </>
-        ) : null}
+        )}
 
         {isMd && renderEntityFilters()}
 

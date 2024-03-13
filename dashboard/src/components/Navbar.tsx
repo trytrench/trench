@@ -67,7 +67,7 @@ export const Navbar = () => {
   return (
     <>
       <nav className="block md:hidden border-b">
-        <div className="flex justify-between items-center px-4 py-1">
+        <div className="flex justify-between items-center px-4 py-2">
           <div className="text-lg font-bold text-emphasis-foreground">
             Trench
           </div>
