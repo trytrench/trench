@@ -150,11 +150,11 @@ const Page: NextPageWithLayout = () => {
 
   return (
     <main className="h-full flex flex-col">
-      <div className="px-4 md:px-8 py-3 md:py-6 flex flex-col items-start gap-0.5 md:gap-1 w-full">
-        <h1 className="text-lg md:text-2xl text-emphasis-foreground truncate w-full">
+      <div className="px-4 md:px-8 py-3 md:py-6 flex flex-wrap items-baseline gap-0.5 md:gap-1 w-full">
+        <h1 className="text-lg md:text-2xl text-emphasis-foreground truncate">
           {entity?.entityName}
         </h1>
-        <Badge className="whitespace-nowrap">{entityTypeName}</Badge>
+        <Badge className="whitespace-nowrap ml-1">{entityTypeName}</Badge>
         {/* <Badge className="-translate-y-0.5">{entityTypeName}</Badge> */}
         {/* {decision && <RenderDecision decision={decision} />} */}
       </div>
@@ -169,7 +169,7 @@ const Page: NextPageWithLayout = () => {
           {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="entities">Entities</TabsTrigger>
-          {isMd && <TabsTrigger value="links">Related Entities</TabsTrigger>}
+          <TabsTrigger value="links">Related Entities</TabsTrigger>
           <TabsTrigger value="history">Event History</TabsTrigger>
           {/* <TabsTrigger value="page">Custom Page</TabsTrigger> */}
         </TabsList>
@@ -228,8 +228,15 @@ const Page: NextPageWithLayout = () => {
           )}
         </TabsContent>
         <TabsContent value="links" className="flex-grow mt-0">
-          {entityId && entityTypeId && (
-            <RelatedEntities entityId={entityId} entityType={entityTypeId} />
+          {isMd ? (
+            entityId &&
+            entityTypeId && (
+              <RelatedEntities entityId={entityId} entityType={entityTypeId} />
+            )
+          ) : (
+            <div className="p-4">
+              Please move to a desktop to view related entities.
+            </div>
           )}
         </TabsContent>
         {/* <TabsContent value="page" className="h-full mt-0">
