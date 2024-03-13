@@ -2,6 +2,7 @@ import {
   DndContext,
   DragEndEvent,
   KeyboardSensor,
+  MouseSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -105,10 +106,10 @@ export const SortableFeatureGrid = ({
       feature.result.data.value
   );
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(MouseSensor)
+    // useSensor(KeyboardSensor, {
+    //   coordinateGetter: sortableKeyboardCoordinates,
+    // })
   );
 
   const handleDragEnd = useCallback(
