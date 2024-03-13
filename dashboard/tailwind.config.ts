@@ -1,5 +1,6 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+import { type Config } from "tailwindcss/types/config";
+
+const config = {
   darkMode: ["class"],
   content: ["./src/**/*.{ts,tsx}"],
 
@@ -61,17 +62,17 @@ module.exports = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: 0 },
+          from: { height: "0px" },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
+          to: { height: "0px" },
         },
         "pulse-in": {
-          "0%": { backgroundColor: "hsl(var(--background))", opacity: 0 },
-          "30%": { backgroundColor: "hsl(var(--primary))", opacity: 100 },
-          "100%": { backgroundColor: "hsl(var(--background))", opacity: 100 },
+          "0%": { backgroundColor: "hsl(var(--background))", opacity: "0" },
+          "30%": { backgroundColor: "hsl(var(--primary))", opacity: "1" },
+          "100%": { backgroundColor: "hsl(var(--background))", opacity: "1" },
         },
       },
       animation: {
@@ -111,4 +112,6 @@ module.exports = {
         /^(fill-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950))$/,
     },
   ],
-};
+} satisfies Config;
+
+export default config;
