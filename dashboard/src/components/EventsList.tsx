@@ -346,7 +346,7 @@ export default function EventsList({ entity }: EventsListProps) {
                           </Button>
                         )}
                     <Tabs
-                      value={viewConfig?.type}
+                      value={currentViewState?.type}
                       onValueChange={(newType) => {
                         setCurrentViewState((prev) => {
                           return {
