@@ -14,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Badge } from "./ui/badge";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 
 interface Props {
   entity: RouterOutputs["lists"]["getEntitiesList"]["rows"][number];
@@ -35,17 +37,19 @@ export const EntityCard = ({
   const entityTypeName = entityTypes?.find((et) => et.id === entity.entityType)
     ?.type;
 
+  const { isMd } = useBreakpoint("md");
+
   return (
-    <div className="border rounded-lg shadow-sm p-8">
-      <div className="flex items-center">
+    <div className="border rounded-lg shadow-sm px-8 py-4 md:py-8 w-full">
+      <div className="flex items-center w-full">
         <Link
           href={`/entity/${customEncodeURIComponent(
             entityTypeName
           )}/${customEncodeURIComponent(entity.entityId)}`}
+          className="w-full truncate break-all text-md md:text-lg text-emphasis-foreground"
+          as="h1"
         >
-          <h1 className="text-lg text-emphasis-foreground">
-            {entityTypeName}: {entity.entityName ?? entity.entityId}
-          </h1>
+          {entity.entityName ?? entity.entityId}
         </Link>
 
         <div className="flex items-center ml-auto space-x-2">
@@ -108,8 +112,13 @@ export const EntityCard = ({
           </div>
         )} */}
       {entity.lastSeenAt && (
-        <div className="text-muted-foreground text-sm">
-          Last seen: {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+          <Badge>{entityTypeName}</Badge>
+
+          <div className="text-muted-foreground text-sm">
+            Last seen:{" "}
+            {format(new Date(entity.lastSeenAt), "MMM d, yyyy h:mm a")}
+          </div>
         </div>
       )}
 
@@ -119,6 +128,7 @@ export const EntityCard = ({
         features={entity.features}
         entityNameMap={entityNameMap}
         featureOrder={featureOrder}
+        cols={isMd ? 4 : 2}
         onFeatureOrderChange={onFeatureOrderChange}
         isEditing={isEditing}
       />

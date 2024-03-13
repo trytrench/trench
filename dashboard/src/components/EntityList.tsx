@@ -57,6 +57,7 @@ import { useToast } from "./ui/use-toast";
 import { customEncodeURIComponent } from "../lib/uri";
 import Link from "next/link";
 import { Skeleton } from "./ui/skeleton";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -331,6 +332,8 @@ export function EntityList({ seenWithEntity }: Props) {
     });
   }, [columns]);
 
+  const { isMd } = useBreakpoint("md");
+
   const table = useReactTable({
     data: allEntities,
     columns,
@@ -402,8 +405,8 @@ export function EntityList({ seenWithEntity }: Props) {
   });
 
   return (
-    <div className="h-full flex">
-      <div className="w-64 border-r shrink-0 pt-4 px-6 h-full">
+    <div className="h-full flex flex-col md:flex-row">
+      <div className="hidden md:block w-64 border-r shrink-0 pt-4 px-6 md:h-full">
         <div className="flex items-center mb-2">
           <div className="text-sm font-medium text-emphasis-foreground">
             Views
@@ -529,15 +532,17 @@ export function EntityList({ seenWithEntity }: Props) {
                   {currentViewState.type === "list" ? (
                     <DataTableViewOptions table={table} />
                   ) : (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setIsEditing((prev) => !prev);
-                      }}
-                    >
-                      {isEditing ? "Done" : "Edit Grid"}
-                    </Button>
+                    isMd && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing((prev) => !prev);
+                        }}
+                      >
+                        {isEditing ? "Done" : "Edit Grid"}
+                      </Button>
+                    )
                   )}
 
                   <Tabs
@@ -565,37 +570,36 @@ export function EntityList({ seenWithEntity }: Props) {
             }}
           />
         </div>
-        <div className="grow overflow-y-auto">
+        <div className="grow overflow-y-auto px-2 md:px-8 py-2 md:py-4">
           {currentViewState.type === "grid" ? (
-            <ScrollArea className="h-full">
-              <div className="space-y-4 px-8 py-4">
-                <>
-                  {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
-                    (entity) => {
-                      return (
-                        <EntityCard
-                          key={`${entity.entityType}:${entity.entityId}`}
-                          entity={entity}
-                          entityNameMap={entityNameMap}
-                          featureOrder={
-                            currentViewState.gridConfig?.featureOrder ?? []
-                          }
-                          onFeatureOrderChange={(newOrder) =>
-                            setCurrentViewState((prev) => {
-                              return {
-                                ...prev,
-                                gridConfig: {
-                                  featureOrder: newOrder,
-                                },
-                              };
-                            })
-                          }
-                          isEditing={isEditing}
-                        />
-                      );
-                    }
-                  )}
-                  {/* {hasNextPage && (
+            <div className="space-y-4 w-full">
+              <>
+                {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
+                  (entity) => {
+                    return (
+                      <EntityCard
+                        key={`${entity.entityType}:${entity.entityId}`}
+                        entity={entity}
+                        entityNameMap={entityNameMap}
+                        featureOrder={
+                          currentViewState.gridConfig?.featureOrder ?? []
+                        }
+                        onFeatureOrderChange={(newOrder) =>
+                          setCurrentViewState((prev) => {
+                            return {
+                              ...prev,
+                              gridConfig: {
+                                featureOrder: newOrder,
+                              },
+                            };
+                          })
+                        }
+                        isEditing={isEditing}
+                      />
+                    );
+                  }
+                )}
+                {/* {hasNextPage && (
                   <div className="self-center my-4">
                     <SpinnerButton
                       variant="outline"
@@ -610,11 +614,10 @@ export function EntityList({ seenWithEntity }: Props) {
                     </SpinnerButton>
                   </div>
                 )} */}
-                </>
-              </div>
-            </ScrollArea>
+              </>
+            </div>
           ) : (
-            <div className="h-full py-4 px-8 overflow-y-auto">
+            <div className="h-full overflow-y-auto">
               <DataTable
                 table={table}
                 loading={fetchingEntities || loadingViews}
@@ -666,6 +669,88 @@ export function EditEntityView(props: {
     ] as EntityFilter[];
   }, [editState, extraFilters]);
 
+  const { isMd } = useBreakpoint("md");
+
+  const renderEntityFilters = () => {
+    return (
+      <div className="flex items-center flex-wrap z-0">
+        {initState && (
+          <>
+            {/* <div className="self-stretch w-0.5 shrink-0 bg-accent"></div> */}
+            <RenderEntityFilters
+              filters={editState?.config?.filters ?? []}
+              onFiltersChange={(filters) => {
+                setEditState((prev) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    config: { ...prev.config, filters },
+                  };
+                });
+              }}
+              editable={isEditing}
+              renderWrapper={(children, idx) => {
+                return <div className="opacity-80">{children}</div>;
+              }}
+            />
+            {isEditing && (
+              <div className="self-stretch flex items-center bg-accent pl-1">
+                <EditEntityFilters
+                  value={editState?.config?.filters ?? []}
+                  onChange={(filters) => {
+                    setEditState((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        config: { ...prev.config, filters },
+                      };
+                    });
+                  }}
+                />
+              </div>
+            )}
+
+            {/* <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div> */}
+          </>
+        )}
+        {isEditing ? null : (
+          <>
+            <RenderEntityFilters
+              filters={extraFilters ?? []}
+              onFiltersChange={(filters) => {
+                onExtraFiltersChange?.(filters);
+              }}
+              editable={!isEditing}
+              renderWrapper={(children, idx) => {
+                return (
+                  <div
+                    className={cn({
+                      "pr-0 flex items-center self-stretch h-8": true,
+                      "p-1": idx >= 0,
+                    })}
+                  >
+                    {children}
+                  </div>
+                );
+              }}
+              renderPlaceholder={initState ? () => null : undefined}
+            />
+
+            <div className="px-1 self-stretch flex items-center">
+              <EditEntityFilters
+                existingFilters={allFilters}
+                value={extraFilters ?? []}
+                onChange={(filters) => {
+                  onExtraFiltersChange?.(filters);
+                }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className={cn({
@@ -673,7 +758,7 @@ export function EditEntityView(props: {
         "bg-muted": isEditing,
       })}
     >
-      <div className="flex items-center h-14 px-8 border-b shrink-0">
+      <div className="flex items-center h-14 px-4 md:px-8 border-b shrink-0">
         {isEditing ? (
           <div className="mr-4">
             <Input
@@ -717,84 +802,11 @@ export function EditEntityView(props: {
           </>
         ) : null}
 
-        <div className="flex items-center flex-wrap z-0">
-          {initState && (
-            <>
-              {/* <div className="self-stretch w-0.5 shrink-0 bg-accent"></div> */}
-              <RenderEntityFilters
-                filters={editState?.config?.filters ?? []}
-                onFiltersChange={(filters) => {
-                  setEditState((prev) => {
-                    if (!prev) return prev;
-                    return {
-                      ...prev,
-                      config: { ...prev.config, filters },
-                    };
-                  });
-                }}
-                editable={isEditing}
-                renderWrapper={(children, idx) => {
-                  return <div className="opacity-80">{children}</div>;
-                }}
-              />
-              {isEditing && (
-                <div className="self-stretch flex items-center bg-accent pl-1">
-                  <EditEntityFilters
-                    value={editState?.config?.filters ?? []}
-                    onChange={(filters) => {
-                      setEditState((prev) => {
-                        if (!prev) return prev;
-                        return {
-                          ...prev,
-                          config: { ...prev.config, filters },
-                        };
-                      });
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* <div className="bg-accent -skew-x-[17deg] w-3 -translate-x-1 self-stretch -z-10"></div> */}
-            </>
-          )}
-          {isEditing ? null : (
-            <>
-              <RenderEntityFilters
-                filters={extraFilters ?? []}
-                onFiltersChange={(filters) => {
-                  onExtraFiltersChange?.(filters);
-                }}
-                editable={!isEditing}
-                renderWrapper={(children, idx) => {
-                  return (
-                    <div
-                      className={cn({
-                        "pr-0 flex items-center self-stretch h-8": true,
-                        "p-1": idx >= 0,
-                      })}
-                    >
-                      {children}
-                    </div>
-                  );
-                }}
-                renderPlaceholder={initState ? () => null : undefined}
-              />
-
-              <div className="px-1 self-stretch flex items-center">
-                <EditEntityFilters
-                  existingFilters={allFilters}
-                  value={extraFilters ?? []}
-                  onChange={(filters) => {
-                    onExtraFiltersChange?.(filters);
-                  }}
-                />
-              </div>
-            </>
-          )}
-        </div>
+        {isMd && renderEntityFilters()}
 
         <div className="ml-auto">{!isEditing && renderRightItems?.()}</div>
       </div>
+      {!isMd && <div className="px-4 py-1">{renderEntityFilters()}</div>}
       {isEditing ? (
         <div className="flex items-center justify-end w-full gap-2 px-8 py-2">
           <Button
