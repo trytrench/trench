@@ -12,7 +12,7 @@
     -
     <a href="https://www.trytrench.com" target="_blank">Website</a>
     -
-    <a href="trench.mintlify.app" target="_blank">Docs</a>
+    <a href="https://trench.mintlify.app" target="_blank">Docs</a>
 </p>
 
 ## Getting started
