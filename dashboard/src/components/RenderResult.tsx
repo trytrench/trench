@@ -48,11 +48,7 @@ export function RenderTypedData({ data }: { data: TypedData }) {
       return data.value;
     case TypeName.URL:
       return (
-        <a
-          className="hover:underline text-primary-foreground/80"
-          target="_blank"
-          href={data.value}
-        >
+        <a className="underline" target="_blank" href={data.value}>
           {data.value}
         </a>
       );
