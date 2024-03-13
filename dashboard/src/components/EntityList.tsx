@@ -681,7 +681,7 @@ export function EditEntityView(props: {
 
   const renderEntityFilters = () => {
     return (
-      <div className="flex items-center flex-wrap z-0">
+      <div className="flex items-center flex-wrap">
         {initState && (
           <>
             {/* <div className="self-stretch w-0.5 shrink-0 bg-accent"></div> */}
@@ -782,7 +782,7 @@ export function EditEntityView(props: {
             />
           </div>
         ) : (
-          <>
+          <div className="flex items-center">
             <div className="text-emphasis-foreground text-md">
               <ComboboxSelector
                 disabled={isMd}
@@ -812,7 +812,7 @@ export function EditEntityView(props: {
             </div>
             {initState && isMd && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild className="mr-4">
+                <DropdownMenuTrigger asChild className="">
                   <Button size="iconXs" variant="link" className="shrink-0">
                     <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                   </Button>
@@ -835,10 +835,10 @@ export function EditEntityView(props: {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-          </>
+          </div>
         )}
 
-        {isMd && renderEntityFilters()}
+        {isMd && <div className="ml-4">{renderEntityFilters()}</div>}
 
         <div className="ml-auto">{!isEditing && renderRightItems?.()}</div>
       </div>

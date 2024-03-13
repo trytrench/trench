@@ -279,7 +279,7 @@ export async function getEntitiesList(props: {
     : 0;
 
   if (entities.data.length === 0) {
-    console.log("Early return");
+    console.debug("Early return");
     return {
       count: 0,
       rows: [],
@@ -313,23 +313,23 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log();
-  console.log("````````````````````");
-  console.log("Time:", format(new Date(), "h:mm:ss a"));
-  console.log();
+  console.debug();
+  console.debug("````````````````````");
+  console.debug("Time:", format(new Date(), "h:mm:ss a"));
+  console.debug();
 
-  // console.log(Object.keys(entities));
-  console.log(finalQuery1);
-  console.log("getEntitiesList - desired_entities");
+  // console.debug(Object.keys(entities));
+  console.debug(finalQuery1);
+  console.debug("getEntitiesList - desired_entities");
   printEntityFilters(filters);
-  console.log(entities.statistics);
-  console.log();
-  // console.log(Object.keys(entities2));
-  // console.log(finalQuery2);
-  console.log("getEntitiesList - features");
-  console.log(entities2.statistics);
-  console.log("....................");
-  console.log();
+  console.debug(entities.statistics);
+  console.debug();
+  // console.debug(Object.keys(entities2));
+  // console.debug(finalQuery2);
+  console.debug("getEntitiesList - features");
+  console.debug(entities2.statistics);
+  console.debug("....................");
+  console.debug();
 
   // merge the two results
   const entityMap = new Map(
@@ -505,16 +505,16 @@ export const getEventsList = async (options: {
     statistics: any;
   }>();
 
-  // console.log(JSON.stringify(eventsDetailsResult.data[0], null, 2));
+  // console.debug(JSON.stringify(eventsDetailsResult.data[0], null, 2));
 
-  console.log();
-  console.log("````````````````````");
-  console.log("getEventsList");
+  console.debug();
+  console.debug("````````````````````");
+  console.debug("getEventsList");
   printEventFilters(filters);
-  console.log(eventIDsResult.statistics);
-  console.log(eventsDetailsResult.statistics);
-  console.log("....................");
-  console.log();
+  console.debug(eventIDsResult.statistics);
+  console.debug(eventsDetailsResult.statistics);
+  console.debug("....................");
+  console.debug();
 
   return eventsDetailsResult.data;
 };
