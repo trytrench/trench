@@ -81,7 +81,7 @@ export const Navbar = () => {
               >
                 <span className="sr-only">Menu</span>
                 <svg
-                  className="w-4 h-4 fill-current text-gray-900"
+                  className="w-4 h-4 fill-current text-foreground"
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
@@ -93,7 +93,7 @@ export const Navbar = () => {
             </SheetTrigger>
             <SheetPortal>
               <SheetOverlay />
-              <SheetContent side="right" className="min-w-80 bg-white p-4">
+              <SheetContent side="right" className="min-w-80 bg-background p-4">
                 <div className="h-12"></div>
                 <div className="flex flex-col space-y-4">
                   {TABS.map((tab) => (

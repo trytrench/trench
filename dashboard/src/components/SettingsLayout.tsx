@@ -19,7 +19,7 @@ export default function SettingsLayout({ children }: Props) {
   const router = useRouter();
 
   return (
-    <div className="h-0 min-h-screen flex flex-col">
+    <div className="h-0 min-h-dvh flex flex-col">
       <Navbar />
 
       <div className="flex-1 overflow-auto">

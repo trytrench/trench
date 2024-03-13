@@ -16,7 +16,7 @@ export default function Page() {
   });
 
   return (
-    <div className="w-screen h-screen flex">
+    <div className="w-screen h-dvh flex">
       <div className="flex flex-col">
         {entityTypes?.map((entityType) => {
           return (

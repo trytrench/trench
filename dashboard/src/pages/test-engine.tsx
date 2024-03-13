@@ -117,7 +117,7 @@ export default function Page() {
   );
 
   return (
-    <div className="w-screen h-screen">
+    <div className="w-screen h-dvh">
       <ReactFlow
         nodes={nodes}
         onNodesChange={onNodesChange}
