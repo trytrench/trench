@@ -11,6 +11,8 @@
     <a href="https://discord.gg/cSYC47MXTR" target="_blank">Discord</a>
     -
     <a href="https://www.trytrench.com" target="_blank">Website</a>
+    -
+    <a href="trench.mintlify.app" target="_blank">Docs</a>
 </p>
 
 ## Getting started
@@ -64,4 +66,6 @@ curl \
 
 ## Join our community
 
-Join the Trench community in [Discord](https://discord.gg/JPwzAumy) if you need support or have anything you'd like to ask. We'd love to chat!
+Join the Trench community in [Discord](https://discord.gg/cSYC47MXTR) if you need support or have anything you'd like to ask. We'd love to chat!
+
+
