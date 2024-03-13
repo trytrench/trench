@@ -29,6 +29,7 @@ import { Badge } from "../../../components/ui/badge";
 import { FeatureSuccess } from "../../../shared/types";
 import { EntityFilter, EntityFilterType } from "../../../shared/validation";
 import { useEntityPageSubject } from "../../../hooks/useEntityPageSubject";
+import { useBreakpoint } from "../../../hooks/useBreakpoint";
 
 type Option = {
   label: string;
@@ -145,23 +146,26 @@ const Page: NextPageWithLayout = () => {
 
   const [tab, setTab] = useQueryParam("tab", StringParam);
 
+  const { isMd } = useBreakpoint("md");
+
   return (
     <main className="h-full flex flex-col">
-      <div className="px-12 py-6">
-        <h1 className="text-2xl text-emphasis-foreground">
-          {entity?.entityName} <Badge>{entityTypeName}</Badge>
+      <div className="px-4 md:px-8 py-3 md:py-6 flex flex-wrap items-baseline gap-0.5 md:gap-1 w-full">
+        <h1 className="text-lg md:text-2xl text-emphasis-foreground truncate">
+          {entity?.entityName}
         </h1>
+        <Badge className="whitespace-nowrap ml-1">{entityTypeName}</Badge>
         {/* <Badge className="-translate-y-0.5">{entityTypeName}</Badge> */}
         {/* {decision && <RenderDecision decision={decision} />} */}
       </div>
 
       <Tabs
         defaultValue="history"
-        className="flex-grow overflow-auto flex flex-col relative"
+        className="flex-grow flex flex-col relative overflow-hidden"
         value={tab ?? "overview"}
         onValueChange={setTab}
       >
-        <TabsList className="px-8 shrink-0 sticky top-0 bg-background z-10">
+        <TabsList className="px-2 md:px-8 shrink-0 bg-background z-10 w-full overflow-x-auto">
           {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="entities">Entities</TabsTrigger>
@@ -178,10 +182,10 @@ const Page: NextPageWithLayout = () => {
               </div>
               <EventsDashboard entityId={entityId} datasetId={datasetId} />
             </TabsContent> */}
-        <TabsContent value="overview" className="mt-0 overflow-auto">
-          <div className="flex flex-col gap-4 p-4 overflow-y-auto bg-background border-r">
+        <TabsContent value="overview" className="mt-0 overflow-auto flex-grow">
+          <div className="flex flex-col gap-4 px-2 md:px-8 py-4 overflow-y-auto bg-background border-r">
             {entity && (
-              <Panel>
+              <Panel className="overflow-x-auto">
                 <div className="text-muted-foreground text-sm">
                   First Seen: {format(entity.firstSeenAt, "MMM d, yyyy h:mm a")}
                 </div>
@@ -191,21 +195,21 @@ const Page: NextPageWithLayout = () => {
                 <FeatureGrid
                   features={entity.features ?? []}
                   entityNameMap={entityNameMap}
-                  cols={5}
+                  cols={isMd ? 5 : 2}
                 />
                 <div className="h-8" />
               </Panel>
             )}
             {entity && (
-              <Card className="p-8">
+              <Panel className="overflow-auto">
                 <EventCharts
                   entity={{ id: entity.entityId, type: entity.entityType }}
                 />
-              </Card>
+              </Panel>
             )}
           </div>
         </TabsContent>
-        <TabsContent value="history" className="flex-grow mt-0">
+        <TabsContent value="history" className="flex-grow mt-0 overflow-y-auto">
           {entityId && entityTypeId && (
             <EventsList
               entity={{
@@ -215,14 +219,24 @@ const Page: NextPageWithLayout = () => {
             />
           )}
         </TabsContent>
-        <TabsContent value="entities" className="flex-grow mt-0">
+        <TabsContent
+          value="entities"
+          className="flex-grow mt-0 overflow-y-auto"
+        >
           {entityId && entityTypeId && (
             <EntityList seenWithEntity={subjectEntity} />
           )}
         </TabsContent>
         <TabsContent value="links" className="flex-grow mt-0">
-          {entityId && entityTypeId && (
-            <RelatedEntities entityId={entityId} entityType={entityTypeId} />
+          {isMd ? (
+            entityId &&
+            entityTypeId && (
+              <RelatedEntities entityId={entityId} entityType={entityTypeId} />
+            )
+          ) : (
+            <div className="p-4">
+              Please move to a desktop to view related entities.
+            </div>
           )}
         </TabsContent>
         {/* <TabsContent value="page" className="h-full mt-0">
