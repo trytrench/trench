@@ -254,6 +254,7 @@ export async function getEntitiesList(props: {
         last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
     SETTINGS 
+      use_query_cache = true,
       max_threads = 8,
       join_algorithm = 'parallel_hash';
   `;
@@ -297,7 +298,9 @@ export async function getEntitiesList(props: {
       .map((entity) => `'${entity.unique_entity_id}'`)
       .join(", ")})
     GROUP BY unique_entity_id
-    SETTINGS optimize_move_to_prewhere_if_final = 1
+    SETTINGS 
+      use_query_cache = true,
+      optimize_move_to_prewhere_if_final = 1;
   `;
 
   const result2 = await db.query({
@@ -489,6 +492,8 @@ export const getEventsList = async (options: {
     WHERE e.id IN (${eventIDs.map((id) => `'${id}'`).join(", ")})
     GROUP BY e.id
     ORDER BY e.id DESC
+    SETTINGS 
+      use_query_cache = true;
   `;
 
   const eventsDetailsResultRaw = await db.query({ query: eventsDetailsQuery });
