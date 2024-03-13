@@ -7,7 +7,7 @@ interface Props {
 
 export default function AppLayout({ children }: Props) {
   return (
-    <div className="h-screen flex flex-col border">
+    <div className="h-dvh flex flex-col border">
       <Navbar />
       <div className="flex-grow w-full min-h-0">{children}</div>
     </div>
