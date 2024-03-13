@@ -11,6 +11,7 @@ import {
   DragEndEvent,
   DndContext,
   closestCenter,
+  MouseSensor,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -47,7 +48,7 @@ export const FeatureGridComponent: EntityPageComponent<FeatureGridConfig> = ({
   config,
   setConfig,
 }) => {
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(useSensor(MouseSensor));
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
