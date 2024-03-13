@@ -1,4 +1,11 @@
-import { format, parse, subWeeks } from "date-fns";
+import {
+  addDays,
+  format,
+  parse,
+  startOfDay,
+  subDays,
+  subWeeks,
+} from "date-fns";
 import { Entity } from "event-processing";
 import { sumBy } from "lodash";
 import { useEffect, useMemo, useState } from "react";
@@ -46,7 +53,7 @@ export default function EventCharts({ entity }: Props) {
   useEffect(() => {
     if (entityData && !initializedFirstSeen) {
       setDateRange({
-        from: entityData.firstSeenAt,
+        from: subDays(startOfDay(entityData.firstSeenAt), 1),
         to: new Date(),
       });
       setInitializedFirstSeen(true);
@@ -88,7 +95,7 @@ export default function EventCharts({ entity }: Props) {
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
       />
-      <div className="flex mt-2 gap-4">
+      <div className="flex flex-col md:flex-row mt-2 gap-4">
         <div className="flex-1">
           <Card className="p-4">
             <div className="mb-2">Events</div>
@@ -97,6 +104,7 @@ export default function EventCharts({ entity }: Props) {
               <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin mx-auto my-20" />
             ) : (
               <ZoomAreaChart
+                className="h-64"
                 tooltipOrder="byValue"
                 data={
                   eventTypeBins?.bins
@@ -110,12 +118,12 @@ export default function EventCharts({ entity }: Props) {
                     : []
                 }
                 onZoom={(x1, x2) => {
-                  const start = parse(x1, "MMM d", new Date());
-                  const end = parse(x2, "MMM d", new Date());
-                  setDateRange({
-                    from: start > end ? end : start,
-                    to: start > end ? start : end,
-                  });
+                  // const start = parse(x1, "MMM d", new Date());
+                  // const end = parse(x2, "MMM d", new Date());
+                  // setDateRange({
+                  //   from: start > end ? end : start,
+                  //   to: start > end ? start : end,
+                  // });
                 }}
                 index="date"
                 categories={eventTypeBins?.labels ?? []}
