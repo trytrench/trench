@@ -42,6 +42,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MouseSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -88,10 +89,10 @@ const Page: NextPageWithLayout = () => {
   // dnd kit
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(MouseSensor)
+    // useSensor(KeyboardSensor, {
+    //   coordinateGetter: sortableKeyboardCoordinates,
+    // })
   );
 
   const [activeId, setActiveId] = useState<string | null>(null);

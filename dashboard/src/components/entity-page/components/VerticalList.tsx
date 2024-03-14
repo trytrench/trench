@@ -6,6 +6,7 @@ import {
   PointerSensor,
   closestCenter,
   DragEndEvent,
+  MouseSensor,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -46,7 +47,7 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
   config,
   setConfig,
 }) => {
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(useSensor(MouseSensor));
 
   const [isEditMode, setIsEditMode] = useAtom(isEditModeAtom);
 
