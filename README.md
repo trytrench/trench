@@ -17,7 +17,12 @@
 
 ## Getting started
 
-Trench provides a core set of fraud prevention tools to help you collect data on users, identify bad actors, and take action on them (e.g. blocking a payment).
+Trench is a tool for monitoring and preventing fraud and abuse. It helps you collect data on users, identify bad actors, and take action on them (e.g. blocking a payment).
+
+[Live demo](https://play.trytrench.com)
+
+## Documentation
+Check out the full documentation [here](https://trench.mintlify.app).
 
 ## Deploying Trench
 
