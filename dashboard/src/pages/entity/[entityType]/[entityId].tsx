@@ -30,6 +30,7 @@ import { FeatureSuccess } from "../../../shared/types";
 import { EntityFilter, EntityFilterType } from "../../../shared/validation";
 import { useEntityPageSubject } from "../../../hooks/useEntityPageSubject";
 import { useBreakpoint } from "../../../hooks/useBreakpoint";
+import { Analysis } from "../../../components/Analysis";
 
 type Option = {
   label: string;
@@ -171,6 +172,7 @@ const Page: NextPageWithLayout = () => {
           <TabsTrigger value="entities">Entities</TabsTrigger>
           <TabsTrigger value="links">Related Entities</TabsTrigger>
           <TabsTrigger value="history">Event History</TabsTrigger>
+          <TabsTrigger value="analysis">Analysis</TabsTrigger>
           {/* <TabsTrigger value="page">Custom Page</TabsTrigger> */}
         </TabsList>
         {/* <TabsContent value="explorer">
@@ -242,6 +244,9 @@ const Page: NextPageWithLayout = () => {
         {/* <TabsContent value="page" className="h-full mt-0">
           <EntityPageEditor />
         </TabsContent> */}
+        <TabsContent value="analysis" className="h-full mt-0">
+          <Analysis />
+        </TabsContent>
       </Tabs>
     </main>
   );
