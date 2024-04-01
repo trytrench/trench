@@ -89,7 +89,7 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
       }}
       modal
     >
-      <PopoverTrigger asChild disabled={true}>
+      <PopoverTrigger asChild disabled={disabled}>
         {renderTrigger
           ? renderTrigger({
               value,
