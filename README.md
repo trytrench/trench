@@ -11,11 +11,18 @@
     <a href="https://discord.gg/cSYC47MXTR" target="_blank">Discord</a>
     -
     <a href="https://www.trytrench.com" target="_blank">Website</a>
+    -
+    <a href="https://trench.mintlify.app" target="_blank">Docs</a>
 </p>
 
 ## Getting started
 
-Trench provides a core set of fraud prevention tools to help you collect data on users, identify bad actors, and take action on them (e.g. blocking a payment).
+Trench is a tool for monitoring and preventing fraud and abuse. It helps you collect data on users, identify bad actors, and take action on them (e.g. blocking a payment).
+
+[Live demo](https://play.trytrench.com)
+
+## Documentation
+Check out the full documentation [here](https://trench.mintlify.app).
 
 ## Deploying Trench
 
@@ -64,4 +71,6 @@ curl \
 
 ## Join our community
 
-Join the Trench community in [Discord](https://discord.gg/JPwzAumy) if you need support or have anything you'd like to ask. We'd love to chat!
+Join the Trench community in [Discord](https://discord.gg/cSYC47MXTR) if you need support or have anything you'd like to ask. We'd love to chat!
+
+

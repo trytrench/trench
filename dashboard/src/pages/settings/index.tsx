@@ -18,6 +18,7 @@ import { EditNodeSheet } from "../../components/nodes/editor/EditNodeSheet";
 import { EventEditor } from "../../components/nodes/editor/EventEditor";
 import { useMutationToasts } from "~/components/nodes/editor/useMutationToasts";
 import { SidebarButton } from "../../components/ui/custom/sidebar-button";
+import { useBreakpoint } from "../../hooks/useBreakpoint";
 
 function StatusIndicator(props: { status: EngineCompileStatus }) {
   const { status } = props;
@@ -129,6 +130,17 @@ const Page: NextPageWithLayout = () => {
 
   const toasts = useMutationToasts();
 
+  const { isMd } = useBreakpoint("md");
+  if (!isMd) {
+    return (
+      <div>
+        <Navbar />
+        <div className="p-4">
+          Please go to desktop to view the Trench Data Model.
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
       <Navbar />

@@ -32,6 +32,7 @@ interface ComboboxSelectorProps {
     label: string;
     value: string;
   }[];
+  disabled?: boolean;
   renderOption?: (props: {
     option: {
       label: string;
@@ -42,8 +43,15 @@ interface ComboboxSelectorProps {
 }
 
 export function ComboboxSelector(props: ComboboxSelectorProps) {
-  const { value, onSelect, placeholder, options, renderTrigger, renderOption } =
-    props;
+  const {
+    value,
+    onSelect,
+    placeholder,
+    options,
+    renderTrigger,
+    renderOption,
+    disabled = false,
+  } = props;
 
   // Set max height of popover without using max-h to fix scrolling issue
   // https://github.com/shadcn-ui/ui/issues/542
@@ -72,8 +80,16 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
     ? options.find((option) => option.value === value)?.label
     : placeholder ?? "Select...";
   return (
-    <Popover open={open} onOpenChange={setOpen} modal>
-      <PopoverTrigger asChild>
+    <Popover
+      open={open}
+      onOpenChange={(open) => {
+        // For some reason this is needed because the disabled prop doesn't work
+        if (disabled) return;
+        setOpen(open);
+      }}
+      modal
+    >
+      <PopoverTrigger asChild disabled={true}>
         {renderTrigger
           ? renderTrigger({
               value,

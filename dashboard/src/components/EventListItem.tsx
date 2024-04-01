@@ -35,7 +35,7 @@ export function EventListItem({ event, selected, ...rest }: EventCardProps) {
   return (
     <button
       className={clsx({
-        "px-8 py-1.5 w-full flex items-start text-xs font-mono cursor-pointer text-left border-b":
+        "px-4 md:px-8 py-1.5 w-full flex items-start text-xs font-mono cursor-pointer text-left border-b":
           true,
         "hover:bg-muted": !selected,
         "bg-muted": selected,

@@ -6,6 +6,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  MouseSensor,
 } from "@dnd-kit/core";
 import {
   restrictToParentElement,
@@ -83,10 +84,10 @@ export function EventCard({
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(MouseSensor)
+    // useSensor(KeyboardSensor, {
+    //   coordinateGetter: sortableKeyboardCoordinates,
+    // })
   );
 
   const sortedEntityTypes = sortBy(

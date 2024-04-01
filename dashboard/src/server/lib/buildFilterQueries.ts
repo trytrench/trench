@@ -207,10 +207,12 @@ export async function getEntitiesList(props: {
   const finalQuery1 = `
     WITH timestamped_entities AS (
         SELECT
-            unique_entity_id, first_seen, last_seen
+            unique_entity_id, 
+            min(first_seen) as first_seen, 
+            max(last_seen) as last_seen
         FROM entities_seen_mv_table
-        FINAL
         WHERE ${seenWhereClause}
+        GROUP BY unique_entity_id
     )
     SELECT
         timestamped_entities.unique_entity_id AS unique_entity_id,
@@ -252,9 +254,8 @@ export async function getEntitiesList(props: {
         last_seen DESC
     LIMIT ${limit ?? 50} OFFSET ${offset ?? 0}
     SETTINGS 
-      convert_query_to_cnf = true,
-      join_algorithm = 'parallel_hash',
-      optimize_trivial_count_query = 1;
+      max_threads = 8,
+      join_algorithm = 'parallel_hash';
   `;
 
   const result = await db.query({
@@ -278,7 +279,7 @@ export async function getEntitiesList(props: {
     : 0;
 
   if (entities.data.length === 0) {
-    console.log("Early return");
+    console.debug("Early return");
     return {
       count: 0,
       rows: [],
@@ -312,23 +313,23 @@ export async function getEntitiesList(props: {
     statistics: any;
   }>();
 
-  console.log();
-  console.log("````````````````````");
-  console.log("Time:", format(new Date(), "h:mm:ss a"));
-  console.log();
+  console.debug();
+  console.debug("````````````````````");
+  console.debug("Time:", format(new Date(), "h:mm:ss a"));
+  console.debug();
 
-  // console.log(Object.keys(entities));
-  console.log(finalQuery1);
-  console.log("getEntitiesList - desired_entities");
+  // console.debug(Object.keys(entities));
+  console.debug(finalQuery1);
+  console.debug("getEntitiesList - desired_entities");
   printEntityFilters(filters);
-  console.log(entities.statistics);
-  console.log();
-  // console.log(Object.keys(entities2));
-  // console.log(finalQuery2);
-  console.log("getEntitiesList - features");
-  console.log(entities2.statistics);
-  console.log("....................");
-  console.log();
+  console.debug(entities.statistics);
+  console.debug();
+  // console.debug(Object.keys(entities2));
+  // console.debug(finalQuery2);
+  console.debug("getEntitiesList - features");
+  console.debug(entities2.statistics);
+  console.debug("....................");
+  console.debug();
 
   // merge the two results
   const entityMap = new Map(
@@ -504,16 +505,16 @@ export const getEventsList = async (options: {
     statistics: any;
   }>();
 
-  // console.log(JSON.stringify(eventsDetailsResult.data[0], null, 2));
+  // console.debug(JSON.stringify(eventsDetailsResult.data[0], null, 2));
 
-  console.log();
-  console.log("````````````````````");
-  console.log("getEventsList");
+  console.debug();
+  console.debug("````````````````````");
+  console.debug("getEventsList");
   printEventFilters(filters);
-  console.log(eventIDsResult.statistics);
-  console.log(eventsDetailsResult.statistics);
-  console.log("....................");
-  console.log();
+  console.debug(eventIDsResult.statistics);
+  console.debug(eventsDetailsResult.statistics);
+  console.debug("....................");
+  console.debug();
 
   return eventsDetailsResult.data;
 };

@@ -22,7 +22,7 @@ export default function Page({
   const router = useRouter();
 
   return (
-    <div className="flex h-screen items-center justify-center">
+    <div className="flex h-dvh items-center justify-center">
       <Card className="w-96">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Log in to Trench</CardTitle>

@@ -44,6 +44,7 @@ import {
   useSensor,
   useSensors,
   useDndContext,
+  MouseSensor,
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { Skeleton } from "./skeleton";
@@ -188,10 +189,10 @@ export function DataTable<TData, TValue>({
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(MouseSensor)
+    // useSensor(KeyboardSensor, {
+    //   coordinateGetter: sortableKeyboardCoordinates,
+    // })
   );
 
   return (
