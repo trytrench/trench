@@ -70,7 +70,13 @@ export function SelectDataPathOrEntityFeature(props: SelectDataPathProps) {
         value={dataPathSelectorValue}
         onChange={onChange}
         disablePathSelection={disablePathSelection}
-        desiredSchema={desiredSchema}
+        desiredSchema={{
+          type: TypeName.Union,
+          unionTypes: [
+            desiredSchema ?? { type: TypeName.Any },
+            { type: TypeName.Entity },
+          ],
+        }}
       />
       {dpSelectorSchema?.type === TypeName.Entity && (
         <SelectEntityFeatureNodeDataPath

@@ -185,7 +185,7 @@ export default function AssignEntities({ eventType }: Props) {
 
         if (
           hasFnType(node, FnType.LogEntityFeature) &&
-          dataPathNodeIds.includes(selectedNodeId)
+          (dataPathNodeIds.includes(selectedNodeId) || selectedNodeId === EVENT)
         ) {
           return { ...acc, [node.fn.config.featureId]: node };
         }

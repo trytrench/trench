@@ -10,6 +10,7 @@ import { z } from "zod";
 import { MinusCircle, PlusCircle } from "lucide-react";
 import { type CountArgs } from "event-processing/src/function-type-defs/lib/args";
 import { useEditorStore } from "./editor/state/zustand";
+import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 
 interface SelectDataPathListProps {
   eventType: string;
@@ -126,7 +127,7 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
               placeholder="Arg Name"
             />
           )} */}
-          <SelectDataPath
+          <SelectDataPathOrEntityFeature
             eventType={eventType}
             value={dataPaths[index] ?? null}
             onChange={(newValue) => {
