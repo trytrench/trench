@@ -49,9 +49,10 @@ type EventView = RouterOutputs["eventViews"]["list"][number];
 
 interface EventsListProps {
   entity?: Entity;
+  defaultLimit?: number;
 }
 
-export default function EventsList({ entity }: EventsListProps) {
+export default function EventsList({ entity, defaultLimit }: EventsListProps) {
   const router = useRouter();
   const { isMd } = useBreakpoint("md");
 
@@ -98,6 +99,9 @@ export default function EventsList({ entity }: EventsListProps) {
   }, [viewConfig]);
 
   const [limit, setLimit] = useState(50);
+  useEffect(() => {
+    setLimit(defaultLimit ?? 50);
+  }, [defaultLimit]);
 
   const { mutateAsync: createView } = api.eventViews.create.useMutation();
   const { mutateAsync: updateView } = api.eventViews.update.useMutation();

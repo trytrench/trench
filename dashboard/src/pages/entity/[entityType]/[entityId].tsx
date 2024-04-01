@@ -244,7 +244,10 @@ const Page: NextPageWithLayout = () => {
         {/* <TabsContent value="page" className="h-full mt-0">
           <EntityPageEditor />
         </TabsContent> */}
-        <TabsContent value="analysis" className="h-full mt-0">
+        <TabsContent
+          value="analysis"
+          className="flex-grow mt-0 overflow-y-auto"
+        >
           <Analysis />
         </TabsContent>
       </Tabs>
