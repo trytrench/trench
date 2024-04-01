@@ -13,6 +13,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "~/components/ui/command";
 import {
   DropdownMenu,
@@ -91,35 +92,37 @@ export function EventEditor({ eventType }: Props) {
           <PopoverContent className="w-[200px] p-0">
             <Command>
               <CommandInput placeholder="Search types..." />
-              <CommandEmpty>No framework found.</CommandEmpty>
+              <CommandList>
+                <CommandEmpty>No framework found.</CommandEmpty>
 
-              <CommandGroup>
-                {[
-                  { name: "Computed", type: FnType.Computed },
-                  { name: "Counter", type: FnType.Counter },
-                  { name: "Unique Counter", type: FnType.UniqueCounter },
-                  { name: "Decision", type: FnType.Decision },
-                  { name: "Blocklist", type: FnType.Blocklist },
-                ].map((node) => (
-                  <CommandItem
-                    key={node.type}
-                    onSelect={() =>
-                      // void router.push(
-                      //   `/settings/event-types/${
-                      //     router.query.eventType as string
-                      //   }/node?type=${node.type}`
-                      // )
-                      setSheetState({
-                        isOpen: true,
-                        isEditing: false,
-                        fnType: node.type,
-                      })
-                    }
-                  >
-                    {node.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                <CommandGroup>
+                  {[
+                    { name: "Computed", type: FnType.Computed },
+                    { name: "Counter", type: FnType.Counter },
+                    { name: "Unique Counter", type: FnType.UniqueCounter },
+                    { name: "Decision", type: FnType.Decision },
+                    { name: "Blocklist", type: FnType.Blocklist },
+                  ].map((node) => (
+                    <CommandItem
+                      key={node.type}
+                      onSelect={() =>
+                        // void router.push(
+                        //   `/settings/event-types/${
+                        //     router.query.eventType as string
+                        //   }/node?type=${node.type}`
+                        // )
+                        setSheetState({
+                          isOpen: true,
+                          isEditing: false,
+                          fnType: node.type,
+                        })
+                      }
+                    >
+                      {node.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>

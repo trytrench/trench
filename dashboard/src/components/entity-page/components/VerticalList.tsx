@@ -34,6 +34,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "../../ui/command";
 import { DraggableItem } from "../DraggableItem";
 
@@ -110,52 +111,54 @@ export const VerticalListComponent: EntityPageComponent<VerticalListConfig> = ({
           <PopoverContent className="w-[200px] p-0">
             <Command>
               <CommandInput placeholder="Search framework..." />
-              <CommandEmpty>No framework found.</CommandEmpty>
-              <CommandGroup>
-                {Object.values(COMPONENT_REGISTRY).map((registryConfig) => (
-                  <CommandItem
-                    key={registryConfig.type}
-                    onSelect={() => {
-                      const value = registryConfig;
-                      setState((prev) => {
-                        if (!prev) return prev;
+              <CommandList>
+                <CommandEmpty>No framework found.</CommandEmpty>
+                <CommandGroup>
+                  {Object.values(COMPONENT_REGISTRY).map((registryConfig) => (
+                    <CommandItem
+                      key={registryConfig.type}
+                      onSelect={() => {
+                        const value = registryConfig;
+                        setState((prev) => {
+                          if (!prev) return prev;
 
-                        const prevVertList = prev?.components[id] as
-                          | ComponentConfig<ComponentType.VerticalList>
-                          | undefined;
-                        if (!prevVertList) {
-                          return prev;
-                        }
+                          const prevVertList = prev?.components[id] as
+                            | ComponentConfig<ComponentType.VerticalList>
+                            | undefined;
+                          if (!prevVertList) {
+                            return prev;
+                          }
 
-                        const componentId = nanoid();
+                          const componentId = nanoid();
 
-                        return {
-                          ...prev,
-                          components: {
-                            ...prev.components,
-                            // Add item to vertical list items
-                            [id]: {
-                              ...prevVertList,
-                              config: {
-                                items: [
-                                  ...prevVertList.config.items,
-                                  componentId,
-                                ],
+                          return {
+                            ...prev,
+                            components: {
+                              ...prev.components,
+                              // Add item to vertical list items
+                              [id]: {
+                                ...prevVertList,
+                                config: {
+                                  items: [
+                                    ...prevVertList.config.items,
+                                    componentId,
+                                  ],
+                                },
+                              },
+                              [componentId]: {
+                                type: value.type,
+                                config: value.defaultConfig,
                               },
                             },
-                            [componentId]: {
-                              type: value.type,
-                              config: value.defaultConfig,
-                            },
-                          },
-                        };
-                      });
-                    }}
-                  >
-                    {registryConfig.type}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                          };
+                        });
+                      }}
+                    >
+                      {registryConfig.type}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>

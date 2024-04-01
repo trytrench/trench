@@ -6,6 +6,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "../command";
 import { ScrollArea } from "../scroll-area";
 import { Button } from "../button";
@@ -46,26 +47,28 @@ export function SearchableSelect(props: Props) {
         <Command className="">
           <CommandInput placeholder="Search..." />
           <ScrollArea className="h-64">
-            <CommandEmpty>{emptyMessage ?? "No results found."}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  onSelect={(val) => {
-                    onValueChange?.(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            <CommandList>
+              <CommandEmpty>{emptyMessage ?? "No results found."}</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={(val) => {
+                      onValueChange?.(option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </ScrollArea>
         </Command>
       </PopoverContent>
