@@ -103,10 +103,12 @@ export function EditEvent({ initialNodeId, onSaveSuccess }: NodeEditorProps) {
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <SchemaBuilder
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <div>
+                    <SchemaBuilder
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

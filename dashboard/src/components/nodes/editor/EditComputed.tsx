@@ -10,7 +10,7 @@ import {
   buildFnDef,
   getFnTypeDef,
 } from "event-processing";
-import { Plus, Save } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -268,14 +268,17 @@ export function EditComputed({
             render={({ field }) => (
               <FormItem className="mt-4">
                 <FormLabel>Type</FormLabel>
-                <div>
+                <div className="flex">
                   <SchemaBuilder
                     value={field.value as TSchema}
                     onChange={field.onChange}
                   />
                   {form.watch("inferredSchema") && (
-                    <button
+                    <Button
+                      variant="outline"
+                      size="xs"
                       type="button"
+                      className="ml-2"
                       onClick={(e) => {
                         e.preventDefault();
                         const inferredSchema = form.watch("inferredSchema");
@@ -283,8 +286,8 @@ export function EditComputed({
                         field.onChange(inferredSchema);
                       }}
                     >
-                      infer
-                    </button>
+                      Infer
+                    </Button>
                   )}
                 </div>
                 <FormMessage />
@@ -412,16 +415,14 @@ function EditDepsMap(props: {
               }}
             />
 
-            <button
-              className="text-red-500 ml-4 text-xs"
+            <X
+              className="w-4 h-4 ml-4 cursor-pointer shrink-0"
               onClick={() => {
                 const newValues = { ...depsMapValue };
                 delete newValues[key];
                 onChange(newValues);
               }}
-            >
-              delete
-            </button>
+            />
           </div>
         );
       })}

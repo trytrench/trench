@@ -148,7 +148,9 @@ export function EditUniqueCounter({
           </form>
         </Form>
 
-        <div className="text-md font-bold mt-4 mb-2">Count</div>
+        <div className="text-sm font-medium mt-6 mb-2">
+          Count the number of unique...
+        </div>
 
         <SelectDataPathList
           args={form.watch("config.countArgs")}
@@ -162,7 +164,7 @@ export function EditUniqueCounter({
           }
         />
 
-        <div className="text-md font-bold mt-4 mb-2">By</div>
+        <div className="text-sm font-medium mt-6 mb-2">Seen with this...</div>
         <SelectDataPathList
           args={form.watch("config.countByArgs")}
           onArgsChange={(countByArgs) =>
@@ -174,7 +176,7 @@ export function EditUniqueCounter({
             form.setValue("inputs.countByDataPaths", countByDataPaths)
           }
         />
-        <div className="text-md font-bold mt-4 mb-2">Where</div>
+        <div className="text-sm font-medium mt-6 mb-2">Matching condition:</div>
 
         <SelectDataPathOrEntityFeature
           eventType={eventType}
@@ -191,9 +193,7 @@ export function EditUniqueCounter({
           }}
         />
 
-        <div className="text-md">is true</div>
-
-        <div className="text-md font-bold mt-4 mb-2">In the last</div>
+        <div className="text-sm font-medium mt-6 mb-2">In the last:</div>
 
         <TimeWindowDialog
           value={form.watch("config.timeWindow")}
@@ -201,9 +201,9 @@ export function EditUniqueCounter({
             form.setValue("config.timeWindow", timeWindow)
           }
         >
-          <div className="flex items-center">
+          <div className="flex items-center text-sm">
             <RenderTimeWindow value={form.watch("config.timeWindow")} />
-            <Button variant="outline" size="xs">
+            <Button variant="outline" size="xs" className="ml-2">
               <Plus className="h-4 w-4" />
             </Button>
           </div>

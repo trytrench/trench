@@ -7,10 +7,11 @@ import {
 } from "event-processing";
 import { SelectDataPath } from "./SelectDataPath"; // Make sure this path is correct
 import { z } from "zod";
-import { MinusCircle, PlusCircle } from "lucide-react";
+import { MinusCircle, Plus, PlusCircle, X } from "lucide-react";
 import { type CountArgs } from "event-processing/src/function-type-defs/lib/args";
 import { useEditorStore } from "./editor/state/zustand";
 import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
+import { Button } from "../ui/button";
 
 interface SelectDataPathListProps {
   eventType: string;
@@ -135,22 +136,13 @@ export const SelectDataPathList: React.FC<SelectDataPathListProps> = ({
             }}
             // desiredSchema={isEditingArgs ? undefined : arg.schema}
           />
-          <button
-            onClick={() => removeDataPath(index)}
-            className="p-1 text-red-500 hover:text-red-700"
-          >
-            <MinusCircle size={20} />
-          </button>
+          <X onClick={() => removeDataPath(index)} className="w-4 h-4 " />
         </div>
       ))}
       {isEditingArgs && args.length < dataPaths.length + 1 && (
-        <button
-          onClick={addDataPath}
-          className="p-1 text-green-500 hover:text-green-700"
-        >
-          <PlusCircle size={20} />
-          Add DataPath
-        </button>
+        <Button onClick={addDataPath} variant="outline" size="xs">
+          <Plus className="w-4 h-4" />
+        </Button>
       )}
     </div>
   );
