@@ -9,6 +9,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { env } from "~/env.js";
 import { prisma } from "~/server/db";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -58,6 +59,14 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+  },
+  events: {
+    signIn: ({ user }) => {
+      Sentry.setUser({ id: user.id });
+    },
+    signOut: () => {
+      Sentry.setUser(null);
+    },
   },
   adapter: PrismaAdapter(prisma),
   providers: [

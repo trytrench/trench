@@ -15,6 +15,7 @@ import { ZodError } from "zod";
 
 import { getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * 1. CONTEXT
@@ -114,16 +115,9 @@ export const createTRPCRouter = t.router;
  */
 export const publicProcedure = t.procedure;
 
-/**
- * Protected (authenticated) procedure
- *
- * If you want a query or mutation to ONLY be accessible to logged in users, use this. It verifies
- * the session is valid and guarantees `ctx.session.user` is not null.
- *
- * @see https://trpc.io/docs/procedures
- */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.session || !ctx.session.user) {
+/** Reusable middleware that enforces users are logged in before running the procedure. */
+const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({
@@ -133,3 +127,22 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
     },
   });
 });
+
+const sentryMiddleware = t.middleware(
+  // @ts-expect-error Type is broken
+  Sentry.Handlers.trpcMiddleware({
+    attachRpcInput: true,
+  })
+);
+
+const finalMiddleware = sentryMiddleware.unstable_pipe(enforceUserIsAuthed);
+
+/**
+ * Protected (authenticated) procedure
+ *
+ * If you want a query or mutation to ONLY be accessible to logged in users, use this. It verifies
+ * the session is valid and guarantees `ctx.session.user` is not null.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const protectedProcedure = t.procedure.use(finalMiddleware);
