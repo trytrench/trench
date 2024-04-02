@@ -60,6 +60,7 @@ import Link from "next/link";
 import { Skeleton } from "./ui/skeleton";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { ComboboxSelector } from "./ComboboxSelector";
+import { EntityChip } from "./EntityChip";
 
 interface Props {
   seenWithEntity?: Entity;
@@ -286,7 +287,20 @@ export function EntityList({ seenWithEntity }: Props) {
                   //       value.result.data.schema.type === TypeName.Int64),
                   // })}
                   >
-                    <RenderResult result={value.result} />
+                    {value.result.type === "success" &&
+                    value.result.data.schema.type === TypeName.Entity ? (
+                      <EntityChip
+                        entityId={value.result.data.value.id}
+                        entityType={value.result.data.value.type}
+                        name={
+                          entityNameMap[value.result.data.value.id] ??
+                          value.result.data.value.id
+                        }
+                        href={`/entity/${value.result.data.value.type}/${value.result.data.value.id}`}
+                      />
+                    ) : (
+                      <RenderResult result={value.result} />
+                    )}
                   </div>
                 ) : null;
               },
