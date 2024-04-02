@@ -41,7 +41,7 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
     const stringType = createDataType({ type: TypeName.String });
 
     if (
-      !stringType.canBeAssigned(schema) ||
+      !stringType.canBeAssigned(schema) &&
       !entityType.canBeAssigned(schema)
     ) {
       return {
