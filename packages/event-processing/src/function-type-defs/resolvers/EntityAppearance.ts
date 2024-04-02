@@ -21,21 +21,32 @@ export const entityAppearanceFnResolver = createFnTypeResolverBuilder()
         dataPath,
       });
 
-      let id: string;
+      let entity;
       if (typeof value === "string") {
-        id = value;
+        entity = {
+          type: entityType,
+          id: value,
+        };
       } else if (typeof value === "number") {
-        id = value.toString();
+        entity = {
+          type: entityType,
+          id: value.toString(),
+        };
+      } else if (
+        typeof value === "object" &&
+        value.hasOwnProperty("type") &&
+        value.hasOwnProperty("id") &&
+        value.type === entityType
+      ) {
+        entity = {
+          type: entityType,
+          id: value.id,
+        };
       } else {
         throw new Error(
-          `Expected id to be a string or number, but got ${typeof value}`
+          `Expected a string or number id, or entity, but got ${typeof value}`
         );
       }
-
-      const entity = {
-        type: entityType,
-        id,
-      };
 
       const rowToSave: StoreRowMap[StoreTable.Features] = {
         engine_id: engineId,
