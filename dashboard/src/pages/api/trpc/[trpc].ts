@@ -7,6 +7,7 @@ const DEBUG = true;
 
 // export API handler
 export default createNextApiHandler({
+  allowMethodOverride: true,
   router: appRouter,
   createContext: createTRPCContext,
   onError:

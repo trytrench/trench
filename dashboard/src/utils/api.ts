@@ -1,14 +1,14 @@
-import { PrismaClient } from "@prisma/client";
 /**
  * This is the client-side entrypoint for your tRPC API. It is used to create the `api` object which
  * contains the Next.js App-wrapper, as well as your type-safe React Query hooks.
  *
  * We also create a few inference helpers for input and output types.
  */
-import { httpBatchLink, httpLink, loggerLink } from "@trpc/client";
+import { httpBatchLink, loggerLink } from "@trpc/client";
 import { createTRPCNext } from "@trpc/next";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import superjson from "superjson";
+
 import { type AppRouter } from "~/server/api/root";
 
 const getBaseUrl = () => {
@@ -22,22 +22,6 @@ export const api = createTRPCNext<AppRouter>({
   config() {
     return {
       /**
-       * Transformer used for data de-serialization from the server.
-       *
-       * @see https://trpc.io/docs/data-transformers
-       */
-      transformer: superjson,
-      queryClientConfig: {
-        defaultOptions: {
-          queries: {
-            queryKeyHashFn(queryKey) {
-              return superjson.stringify(queryKey);
-            },
-          },
-        },
-      },
-
-      /**
        * Links used to determine request flow from client to server.
        *
        * @see https://trpc.io/docs/links
@@ -48,11 +32,15 @@ export const api = createTRPCNext<AppRouter>({
             process.env.NODE_ENV === "development" ||
             (opts.direction === "down" && opts.result instanceof Error),
         }),
-        // httpLink({
-        //   url: `${getBaseUrl()}/api/trpc`,
-        // }),
         httpBatchLink({
+          /**
+           * Transformer used for data de-serialization from the server.
+           *
+           * @see https://trpc.io/docs/data-transformers
+           */
+          transformer: superjson,
           url: `${getBaseUrl()}/api/trpc`,
+          methodOverride: "POST",
         }),
       ],
     };
@@ -63,6 +51,7 @@ export const api = createTRPCNext<AppRouter>({
    * @see https://trpc.io/docs/nextjs#ssr-boolean-default-false
    */
   ssr: false,
+  transformer: superjson,
 });
 
 /**

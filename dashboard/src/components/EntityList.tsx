@@ -307,7 +307,7 @@ export function EntityList({ seenWithEntity }: Props) {
             }) as ColumnDef<EntityData>
         ) ?? []),
     ],
-    [entityTypes, filteredFeatures]
+    [entityTypes, filteredFeatures, entityNameMap]
   );
 
   const [sorting, setSorting] = useState<SortingState>([]);
