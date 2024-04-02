@@ -53,7 +53,7 @@ export const linksRouter = createTRPCRouter({
             AND eav.entity_type_1 = '${entityType}'
             AND eav.entity_id_1 = '${entityId}'
             ${leftSideType ? `AND eav.entity_type_2 = '${leftSideType}'` : ""}
-            LIMIT 1000
+            LIMIT 10000
         ),
         second_degree_connections AS (
             SELECT
@@ -76,7 +76,7 @@ export const linksRouter = createTRPCRouter({
             sdc.second_degree_links as second_degree_links
         FROM first_degree_connections fdc
         JOIN second_degree_connections sdc ON fdc.e_middle = sdc.e_middle
-        LIMIT 10000
+        LIMIT 20000
       `;
 
       // SETTINGS

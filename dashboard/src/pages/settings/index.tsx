@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { isAfter } from "date-fns";
 import { FnType, TSchema } from "event-processing";
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, Trash, XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Navbar } from "~/components/Navbar";
 import {
@@ -64,6 +64,7 @@ const Page: NextPageWithLayout = () => {
   const editorEngine = useEditorStore((state) => state.engine);
   const editorHasChanged = useEditorStore((state) => state.hasChanged);
   const updateErrors = useEditorStore.use.updateErrors();
+  const deleteNode = useEditorStore.use.deleteNodeDef();
 
   const initializeEditor = useEditorStore.use.initializeFromNodeDefs();
   const fnDefs = useEditorStore(selectors.getFnDefs());
@@ -289,7 +290,33 @@ const Page: NextPageWithLayout = () => {
               eventType={selectedEventType}
             />
           )}
+          <div className="h-8"></div>
+
+          {status.status === "error" && (
+            <div>
+              {Object.entries(status.errors).map(([nodeId, error]) => (
+                <div key={nodeId}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-medium">Node: {nodeId}</div>
+                    <Trash
+                      onClick={() => {
+                        deleteNode(nodeId)
+                          .then(updateErrors)
+                          .then(toasts.deleteNode.onSuccess)
+                          .catch(toasts.deleteNode.onError)
+                          .catch(handleError);
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  {error}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="h-16"></div>
         </div>
+
         {selectedEventType && <EditNodeSheet eventType={selectedEventType} />}
       </div>
     </div>

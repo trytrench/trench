@@ -6,7 +6,12 @@ export interface RedisInterface {
   increment(key: Buffer, amount?: number): Promise<number>;
   get(key: Buffer): Promise<Buffer>;
   del(...keys: Buffer[]): Promise<number>;
-  set(key: Buffer, value: string, mode?: "NX" | "XX"): Promise<boolean>;
+  set(
+    key: Buffer,
+    value: string,
+    mode?: "NX" | "XX",
+    expiration?: number
+  ): Promise<boolean>;
   getList(key: Buffer): Promise<string[]>;
   listPush(
     key: Buffer,
@@ -46,7 +51,9 @@ class RedisService implements RedisInterface {
     mode?: "NX" | "XX" | "EX",
     expiration?: number
   ) {
-    const rv = await this.conn.set(key, value, mode, expiration);
+    const rv = mode
+      ? await this.conn.set(key, value, mode, expiration)
+      : await this.conn.set(key, value);
     if (rv === "OK") {
       return true;
     } else if (rv === null) {

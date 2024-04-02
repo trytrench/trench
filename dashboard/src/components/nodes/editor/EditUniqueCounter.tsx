@@ -28,6 +28,7 @@ import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
 import { useEditorStore, selectors } from "./state/zustand";
 import { generateNanoId } from "../../../../../packages/common/src";
+import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature";
 
 const fnTypeDef = getFnTypeDef(FnType.UniqueCounter);
 
@@ -177,7 +178,7 @@ export function EditUniqueCounter({
         />
         <div className="text-sm font-medium mt-6 mb-2">Matching condition:</div>
 
-        <SelectDataPath
+        <SelectDataPathOrEntityFeature
           eventType={eventType}
           desiredSchema={{
             type: TypeName.Boolean,
