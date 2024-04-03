@@ -289,15 +289,21 @@ export function EntityList({ seenWithEntity }: Props) {
                   >
                     {value.result.type === "success" &&
                     value.result.data.schema.type === TypeName.Entity ? (
-                      <EntityChip
-                        entityId={value.result.data.value.id}
-                        entityType={value.result.data.value.type}
-                        name={
-                          entityNameMap[value.result.data.value.id] ??
-                          value.result.data.value.id
-                        }
-                        href={`/entity/${value.result.data.value.type}/${value.result.data.value.id}`}
-                      />
+                      <div className="-my-2">
+                        <EntityChip
+                          entityId={value.result.data.value.id}
+                          entityType={value.result.data.value.type}
+                          name={
+                            entityNameMap[value.result.data.value.id] ??
+                            value.result.data.value.id
+                          }
+                          href={`/entity/${entityTypes?.find(
+                            (et) =>
+                              value.result.type === "success" &&
+                              et.id === value.result.data.value.type
+                          )?.type}/${value.result.data.value.id}`}
+                        />
+                      </div>
                     ) : (
                       <RenderResult result={value.result} />
                     )}
@@ -526,6 +532,22 @@ export function EntityList({ seenWithEntity }: Props) {
                     .then(() => {
                       toast({
                         title: "View config saved successfully",
+                      });
+                    })
+                    .catch(handleError);
+                }
+              } else if (val === "duplicate") {
+                if (selectedView) {
+                  const newViewName = `${selectedView.name} (Copy)`;
+                  createView({
+                    name: newViewName,
+                    config: selectedView.config,
+                    entityTypeId: seenWithEntity?.type,
+                  })
+                    .then(() => refetchViews())
+                    .then(() => {
+                      toast({
+                        title: "View created successfully",
                       });
                     })
                     .catch(handleError);
@@ -835,6 +857,11 @@ export function EditEntityView(props: {
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem onSelect={() => setIsEditing(true)}>
                     Edit filters
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onDropdownClick?.("duplicate")}
+                  >
+                    Duplicate
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => onDropdownClick?.("viewConfig")}

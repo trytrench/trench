@@ -2,6 +2,7 @@ import { TypeName } from "event-processing";
 import { AnnotatedFeature } from "~/shared/types";
 import { EntityChip } from "./EntityChip";
 import { RenderResult } from "./RenderResult";
+import { api } from "~/utils/api";
 
 interface Props {
   features: AnnotatedFeature[];
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
   const rulesToShow = features.filter(
     (feature) =>
       feature.rule &&
@@ -48,7 +51,9 @@ export const FeatureGrid = ({ features, entityNameMap, cols = 5 }: Props) => {
                   name={
                     entityNameMap[result.data.value.id] ?? result.data.value.id
                   }
-                  href={`/entity/${result.data.value.type}/${result.data.value.id}`}
+                  href={`/entity/${entityTypes?.find(
+                    (et) => et.id === result.data.value.type
+                  )?.type}/${result.data.value.id}`}
                 />
               ) : (
                 <RenderResult result={result} />
