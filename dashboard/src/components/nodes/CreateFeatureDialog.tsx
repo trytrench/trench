@@ -32,11 +32,22 @@ import { api } from "~/utils/api";
 import { SchemaBuilder } from "../SchemaBuilder";
 import { useMutationToasts } from "./editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
+import CreateLabelsForm from "./CreateLabelsForm";
+import { FeatureColor } from "./colors";
 
 const formSchema = z.object({
   name: z.string(),
   entityTypeId: z.string(),
   schema: tSchemaZod,
+  labels: z.array(
+    z.object({ name: z.string().min(1), color: z.nativeEnum(FeatureColor) })
+  ),
 });
 
 interface Props {
@@ -59,6 +70,7 @@ export const CreateFeatureDialog = ({
       schema: {
         type: TypeName.String,
       },
+      labels: [],
     },
   });
   const { data: entityTypes } = api.entityTypes.list.useQuery();
@@ -162,6 +174,34 @@ export const CreateFeatureDialog = ({
                   )}
                 />
               </div>
+              {form.watch("schema.type") === TypeName.String && (
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="item-1" className="border-none">
+                    <AccordionTrigger className="text-sm">
+                      Advanced Settings
+                    </AccordionTrigger>
+
+                    <AccordionContent>
+                      <FormField
+                        control={form.control}
+                        name="labels"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Labels</FormLabel>
+                            <FormControl>
+                              <CreateLabelsForm
+                                labels={form.watch("labels")}
+                                onChange={form.setValue as any}
+                              />
+                            </FormControl>
+                            {/* <FormMessage /> */}
+                          </FormItem>
+                        )}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit">Save</Button>

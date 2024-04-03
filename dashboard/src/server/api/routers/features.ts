@@ -33,6 +33,7 @@ export const featuresRouter = createTRPCRouter({
           schema: f.schema as unknown as TSchema,
           entityTypeId: f.entityTypeId ?? undefined,
           eventTypeId: f.eventTypeId ?? undefined,
+          metadata: f.metadata,
         };
       });
 
@@ -46,13 +47,14 @@ export const featuresRouter = createTRPCRouter({
           name: input.name,
           schema: input.schema as any,
           entityTypeId: input.entityTypeId,
+          metadata: input.metadata,
         },
       });
 
       return feature;
     }),
   update: protectedProcedure
-    .input(z.object({ id: z.string(), name: z.string() }))
+    .input(featureDefSchema.pick({ id: true, name: true, metadata: true }))
     .mutation(async ({ ctx, input }) => {
       const feature = await ctx.prisma.feature.update({
         where: {
@@ -60,6 +62,7 @@ export const featuresRouter = createTRPCRouter({
         },
         data: {
           name: input.name,
+          metadata: input.metadata,
         },
       });
 
@@ -74,6 +77,7 @@ export const featuresRouter = createTRPCRouter({
           name: input.name,
           schema: input.schema as any,
           eventTypeId: input.eventTypeId,
+          metadata: input.metadata,
         },
       });
 

@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FeatureDef, TypeName } from "event-processing";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -22,11 +23,21 @@ import {
 import { Input } from "~/components/ui/input";
 import { handleError } from "~/lib/handleError";
 import { api } from "~/utils/api";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
+import CreateLabelsForm from "./CreateLabelsForm";
 import { useMutationToasts } from "./editor/useMutationToasts";
-import { FeatureDef } from "event-processing";
+import { FeatureColor } from "./colors";
 
 const formSchema = z.object({
   name: z.string(),
+  labels: z.array(
+    z.object({ name: z.string().min(1), color: z.nativeEnum(FeatureColor) })
+  ),
 });
 
 interface Props {
@@ -41,6 +52,7 @@ export const EditFeatureDialog = ({ title, feature, children }: Props) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: feature.name,
+      labels: feature.metadata?.labels ?? [],
     },
   });
 
@@ -65,6 +77,9 @@ export const EditFeatureDialog = ({ title, feature, children }: Props) => {
               updateFeature({
                 id: feature.id,
                 name: values.name,
+                metadata: values.labels.length
+                  ? { labels: values.labels }
+                  : undefined,
               })
                 .then(toasts.updateFeature.onSuccess)
                 .then(() => refetchFeatures())
@@ -92,6 +107,35 @@ export const EditFeatureDialog = ({ title, feature, children }: Props) => {
                 />
               </div>
             </div>
+            {feature.schema.type === TypeName.String && (
+              <Accordion type="single" collapsible>
+                <AccordionItem value="item-1" className="border-none">
+                  <AccordionTrigger className="text-sm">
+                    Advanced Settings
+                  </AccordionTrigger>
+
+                  <AccordionContent>
+                    <FormField
+                      control={form.control}
+                      name="labels"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Labels</FormLabel>
+                          <FormControl>
+                            <CreateLabelsForm
+                              labels={form.watch("labels")}
+                              onChange={form.setValue as any}
+                            />
+                          </FormControl>
+                          {/* <FormMessage /> */}
+                        </FormItem>
+                      )}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
+
             <DialogFooter>
               <Button type="submit">Save</Button>
             </DialogFooter>

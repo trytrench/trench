@@ -60,7 +60,8 @@ model Feature {
   entityType   EntityType? @relation(fields: [entityTypeId], references: [id])
   entityTypeId String?
 
-  rule Rule?
+  rule     Rule?
+  metadata Json  @default("{}")
 }
 
 model Rule {

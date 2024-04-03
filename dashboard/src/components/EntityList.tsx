@@ -305,7 +305,10 @@ export function EntityList({ seenWithEntity }: Props) {
                         />
                       </div>
                     ) : (
-                      <RenderResult result={value.result} />
+                      <RenderResult
+                        result={value.result}
+                        metadata={feature.metadata}
+                      />
                     )}
                   </div>
                 ) : null;
