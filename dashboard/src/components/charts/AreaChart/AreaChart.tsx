@@ -41,6 +41,9 @@ export interface AreaChartProps extends BaseChartProps {
   onMouseMoveChart?: CategoricalChartFunc;
   onMouseDownChart?: CategoricalChartFunc;
   onMouseUpChart?: CategoricalChartFunc;
+
+  formatXAxis?: (value: string) => string;
+  formatTooltip?: (value: string) => string;
 }
 
 const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
@@ -79,13 +82,13 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
       onMouseMoveChart,
       onMouseDownChart,
       onMouseUpChart,
+      formatXAxis,
       ...other
     } = props;
     const [legendHeight, setLegendHeight] = useState(60);
     const categoryColors = constructCategoryColors(categories, colors);
 
     const yAxisDomain = getYAxisDomain(autoMinValue, minValue, maxValue);
-
     return (
       <div ref={ref} className={twMerge("w-full h-80", className)} {...other}>
         <ResponsiveContainer className="h-full w-full">
@@ -135,7 +138,8 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
                 tickLine={false}
                 axisLine={false}
                 padding={{ left: 10, right: 10 }}
-                minTickGap={5}
+                minTickGap={16}
+                tickFormatter={formatXAxis}
               />
               <YAxis
                 width={yAxisWidth}
@@ -143,6 +147,8 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
                 axisLine={false}
                 tickLine={false}
                 type="number"
+                allowDataOverflow={true}
+                // domain={[0, 500]}
                 domain={yAxisDomain as AxisDomain}
                 tick={{ transform: "translate(-3, 0)" }}
                 fill=""

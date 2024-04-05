@@ -2,13 +2,14 @@ import { AreaChart, type AreaChartProps } from "./charts/AreaChart";
 import { useCallback, useMemo, useState } from "react";
 import { ReferenceArea } from "recharts";
 import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { BarChart, BarChartProps } from "./charts/BarChart";
 
-interface Props extends AreaChartProps {
+interface Props extends BarChartProps {
   xAxisSelection?: [x1: string, x2: string];
   onXAxisSelect: (selection: [x1: string, x2: string]) => void;
 }
 
-export const ZoomAreaChart = ({
+export const ZoomBarChart = ({
   xAxisSelection,
   onXAxisSelect,
   data,
@@ -86,9 +87,8 @@ export const ZoomAreaChart = ({
   );
 
   return (
-    <AreaChart
+    <BarChart
       {...props}
-      tooltipOrder="byValue"
       data={data}
       index={index}
       onMouseDownChart={handleMouseDown}
@@ -113,6 +113,6 @@ export const ZoomAreaChart = ({
           fillOpacity={0.3}
         />
       )}
-    </AreaChart>
+    </BarChart>
   );
 };
