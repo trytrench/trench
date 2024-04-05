@@ -882,6 +882,7 @@ function EntityViewContainer({
 }) {
   const { data: views } = api.entityViews.list.useQuery(
     { entityTypeId: seenWithEntity?.type ?? null },
+    // { entityTypeId: null },
     { refetchOnWindowFocus: false, staleTime: Infinity }
   );
 
@@ -932,7 +933,7 @@ const EntityViewChart = ({
     const addEntityFilter = (filters: EntityFilter[]) => {
       return [
         ...(filters ?? []),
-        ...(seenWithEntity
+        ...(view.entityTypeId === seenWithEntity?.type
           ? [
               {
                 type: EntityFilterType.SeenWithEntity as const,
