@@ -52,7 +52,7 @@ function RelatedEntities({ entityId, entityType }: RelatedEntitiesProps) {
   const { data: eventTypes } = api.eventTypes.list.useQuery();
 
   return (
-    <div className="h-full">
+    <div className="h-full overflow-y-auto">
       <div className="flex items-center gap-4 px-8 py-2 border-b">
         <span className="whitespace-nowrap text-sm">Filter</span>
 
@@ -165,7 +165,7 @@ const Page: NextPageWithLayout = () => {
         value={tab ?? "overview"}
         onValueChange={setTab}
       >
-        <TabsList className="px-2 md:px-8 shrink-0 bg-background z-10 w-full overflow-x-auto">
+        <TabsList className="px-2 md:px-8 shrink-0 bg-background z-10 w-full overflow-x-auto overflow-y-hidden">
           {/* <TabsTrigger value="explorer">Event Explorer</TabsTrigger> */}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="entities">Entities</TabsTrigger>
@@ -227,7 +227,7 @@ const Page: NextPageWithLayout = () => {
             <EntityList seenWithEntity={subjectEntity} />
           )}
         </TabsContent>
-        <TabsContent value="links" className="flex-grow mt-0">
+        <TabsContent value="links" className="flex-grow mt-0 overflow-y-auto">
           {isMd ? (
             entityId &&
             entityTypeId && (
