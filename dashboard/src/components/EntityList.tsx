@@ -1,6 +1,7 @@
 import { type Entity, TypeName } from "event-processing";
 import {
   ChevronDown,
+  ChevronUp,
   ExternalLinkIcon,
   LayoutGrid,
   List,
@@ -47,6 +48,7 @@ import {
 } from "@tanstack/react-table";
 import {
   addHours,
+  endOfDay,
   format,
   getUnixTime,
   parse,
@@ -76,7 +78,7 @@ import { ZoomBarChart } from "./ZoomBarChart";
 import { CHART_INTERVAL_HOURS } from "../shared/config";
 
 // const END_DATE = new Date("2024-02-28");
-const END_DATE = new Date("2024-03-15");
+const END_DATE = endOfDay(new Date());
 const START_DATE = startOfDay(subDays(END_DATE, 30));
 
 export function useEntityFiltersToText() {
@@ -543,6 +545,7 @@ export function EntityList({ seenWithEntity }: Props) {
   });
 
   const [isChartSelectorOpen, setIsChartSelectorOpen] = useState(false);
+  const [showChart, setShowChart] = useState(true);
 
   return (
     <div className="h-full flex flex-col md:flex-row">
@@ -720,76 +723,75 @@ export function EntityList({ seenWithEntity }: Props) {
             }}
           />
         </div>
-        <div className="w-full pr-8">
-          {entityBins ? (
-            <ZoomBarChart
-              className="h-48"
-              // tooltipOrder="byValue"
-              data={
-                entityBins?.bins
-                  ? Object.entries(entityBins.bins).map(([time, labels]) => ({
-                      date: new Date(time).toISOString(),
-                      time,
-                      ...labels,
-                    }))
-                  : []
-              }
-              // maxValue={maxYValue}
-              formatXAxis={(date) => format(new Date(date), "MMM d")}
-              formatTooltip={(date) => {
-                return `${format(new Date(date), "MMM d, h a")} - ${format(
-                  addHours(new Date(date), CHART_INTERVAL_HOURS),
-                  "MMM d, h a"
-                )}`;
-              }}
-              xAxisSelection={xAxisSelection}
-              onXAxisSelect={(result) => {
-                setSeenFilter((prev) => {
-                  return result
-                    ? {
-                        type: EntityFilterType.Seen as const,
-                        data: {
-                          from: new Date(result[0]),
-                          to: addHours(
-                            new Date(result[1]),
-                            CHART_INTERVAL_HOURS
-                          ),
-                        },
-                      }
-                    : undefined;
-                });
-              }}
-              index="date"
-              categories={entityBins?.labels ?? []}
-              valueFormatter={(value) => {
-                return Intl.NumberFormat("us").format(value).toString();
-              }}
-            />
-          ) : (
-            <div className="h-48 w-full px-8 py-4 pt-12">
-              <Skeleton className="h-full w-full bg-gray-50"></Skeleton>
-            </div>
-          )}
-        </div>
+        {showChart && (
+          <div className="w-full pr-8">
+            {entityBins ? (
+              <ZoomBarChart
+                className="h-48"
+                // tooltipOrder="byValue"
+                data={
+                  entityBins?.bins
+                    ? Object.entries(entityBins.bins).map(([time, labels]) => ({
+                        date: new Date(time).toISOString(),
+                        time,
+                        ...labels,
+                      }))
+                    : []
+                }
+                // maxValue={maxYValue}
+                formatXAxis={(date) => format(new Date(date), "MMM d")}
+                formatTooltip={(date) => {
+                  return `${format(new Date(date), "MMM d, h a")} - ${format(
+                    addHours(new Date(date), CHART_INTERVAL_HOURS),
+                    "MMM d, h a"
+                  )}`;
+                }}
+                xAxisSelection={xAxisSelection}
+                onXAxisSelect={(result) => {
+                  setSeenFilter((prev) => {
+                    return result
+                      ? {
+                          type: EntityFilterType.Seen as const,
+                          data: {
+                            from: new Date(result[0]),
+                            to: addHours(
+                              new Date(result[1]),
+                              CHART_INTERVAL_HOURS
+                            ),
+                          },
+                        }
+                      : undefined;
+                  });
+                }}
+                index="date"
+                categories={entityBins?.labels ?? []}
+                valueFormatter={(value) => {
+                  return Intl.NumberFormat("us").format(value).toString();
+                }}
+              />
+            ) : (
+              <div className="h-48 w-full px-8 py-4 pt-12">
+                <Skeleton className="h-full w-full bg-gray-50"></Skeleton>
+              </div>
+            )}
+          </div>
+        )}
 
-        <button
-          className={cn({
-            "flex justify-center w-full transition py-0.5": true,
-            "hover:to-gray-200/50 bg-gradient-to-b from-white to-gray-100/60":
-              !isChartSelectorOpen,
-            "border-b": isChartSelectorOpen,
-          })}
-          onClick={() => {
-            setIsChartSelectorOpen((prev) => !prev);
-          }}
-        >
-          <ChevronDown
-            className={cn({
-              "transform rotate-180": isChartSelectorOpen,
-              "h-5 w-5 transition-transform": true,
-            })}
-          />
-        </button>
+        <div className={cn("flex justify-center", { "border-b": showChart })}>
+          <button
+            onClick={() => {
+              setShowChart(!showChart);
+            }}
+            className="py-1"
+          >
+            <ChevronUp
+              className={cn("text-foreground-muted opacity-80", {
+                "transform rotate-180": !showChart,
+                "h-5 w-5 transition-transform": true,
+              })}
+            />
+          </button>
+        </div>
 
         <div className="relative grow w-full overflow-hidden">
           <ScrollArea
