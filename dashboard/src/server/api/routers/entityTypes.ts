@@ -40,7 +40,7 @@ export const entityTypesRouter = createTRPCRouter({
       });
     }),
   list: protectedProcedure.query(async ({ ctx, input }) => {
-    return ctx.prisma.entityType.findMany({});
+    return await ctx.prisma.entityType.findMany({});
   }),
   upsertPage: protectedProcedure
     .input(

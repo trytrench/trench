@@ -46,6 +46,11 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
     existingFilters,
     EntityFilterType.LastSeen
   )?.[0]?.data;
+  const seen = getEntityFiltersOfType(
+    existingFilters,
+    EntityFilterType.Seen
+  )?.[0]?.data;
+
   const entityType = getEntityFiltersOfType(
     existingFilters,
     EntityFilterType.EntityType
@@ -92,7 +97,7 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
         )}
 
         {/* First Seen / Last Seen Filter */}
-        <DropdownMenuSub>
+        {/* <DropdownMenuSub>
           <DropdownMenuSubTrigger>First Seen</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <Calendar
@@ -134,6 +139,31 @@ export function EditEntityFilters(props: EditEntityFiltersProps) {
                 handleChange([
                   ...value.filter((f) => f.type !== EntityFilterType.LastSeen),
                   { type: EntityFilterType.LastSeen, data: newRange },
+                ]);
+              }}
+              numberOfMonths={2}
+            />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub> */}
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Seen</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={seen?.from}
+              selected={{
+                from: seen?.from,
+                to: seen?.to,
+              }}
+              onSelect={(newRange) => {
+                if (!newRange) {
+                  return;
+                }
+                handleChange([
+                  ...value.filter((f) => f.type !== EntityFilterType.Seen),
+                  { type: EntityFilterType.Seen, data: newRange },
                 ]);
               }}
               numberOfMonths={2}

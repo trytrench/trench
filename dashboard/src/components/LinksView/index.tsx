@@ -152,7 +152,7 @@ function LinksView({
     );
   }
   return (
-    <div className="flex items-stretch">
+    <div className="flex items-stretch overflow-y-auto h-full">
       <div id="leftLeft" className="w-[60px] shrink-0 relative">
         <svg className="w-full h-full">
           {sortedForLeftSvgs(left, leftSelection, lastLeftSelection).map(

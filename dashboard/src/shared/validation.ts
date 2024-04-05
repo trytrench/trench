@@ -140,6 +140,7 @@ export enum EntityFilterType {
   EntityId = "EntityId",
   FirstSeen = "FirstSeen",
   LastSeen = "LastSeen",
+  Seen = "Seen",
   Feature = "Feature",
   SeenWithEntity = "SeenWithEntity",
   SeenInEventType = "SeenInEventType",
@@ -163,6 +164,11 @@ const firstSeenFilterZod = z.object({
 
 const lastSeenFilterZod = z.object({
   type: z.literal(EntityFilterType.LastSeen),
+  data: dateRangeZod,
+});
+
+const seenFilterZod = z.object({
+  type: z.literal(EntityFilterType.Seen),
   data: dateRangeZod,
 });
 
@@ -194,6 +200,7 @@ export const entityFiltersZod = z.union([
   entityIdFilterZod,
   firstSeenFilterZod,
   lastSeenFilterZod,
+  seenFilterZod,
   entityFeatureFilterZod,
   seenWithEntityFilterZod,
   seenInEventTypeFilterZod,
@@ -201,6 +208,54 @@ export const entityFiltersZod = z.union([
 ]);
 
 export type EntityFilter = z.infer<typeof entityFiltersZod>;
+
+export function featureFilterToText(filter: FeatureFilter) {
+  switch (filter.dataType) {
+    case TypeName.Float64:
+    case TypeName.Int64:
+      if (filter.value.eq) return `${filter.featureName} = ${filter.value.eq}`;
+      if (filter.value.gt) return `${filter.featureName} > ${filter.value.gt}`;
+      if (filter.value.lt) return `${filter.featureName} < ${filter.value.lt}`;
+      if (filter.value.gte)
+        return `${filter.featureName} >= ${filter.value.gte}`;
+      if (filter.value.lte)
+        return `${filter.featureName} <= ${filter.value.lte}`;
+      return `${filter.featureName} exists`;
+    case TypeName.String:
+    case TypeName.Name:
+    case TypeName.URL:
+      if (filter.value.eq) {
+        return `${filter.featureName} = '${filter.value.eq}'`;
+      } else if (filter.value.contains) {
+        return `${filter.featureName} contains '${filter.value.contains}'`;
+      } else {
+        return `${filter.featureName} exists`;
+      }
+    case TypeName.Boolean:
+      return `${filter.featureName} = ${filter.value.eq}`;
+    case TypeName.Entity:
+      if (!filter.value.eq) {
+        return `${filter.featureName} is entity`;
+      }
+    case TypeName.Object:
+      return `${filter.featureName} is object`;
+    case TypeName.Array:
+      return `${filter.featureName} is array`;
+    case TypeName.Any:
+      return `${filter.featureName} is any`;
+    case TypeName.Location:
+      return `${filter.featureName} is location`;
+    case TypeName.Date:
+    case TypeName.Rule:
+    case TypeName.Tuple:
+    case TypeName.Union:
+    case TypeName.Null:
+    case TypeName.Undefined:
+      return `${filter.featureName} is ${filter.dataType}`;
+  }
+
+  return "";
+}
 
 // Entity View Config
 

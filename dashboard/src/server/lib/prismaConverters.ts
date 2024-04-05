@@ -1,5 +1,5 @@
 import {
-  Prisma,
+  type Prisma,
   type Fn as PrismaFn,
   type FnSnapshot as PrismaFnSnapshot,
   type Node as PrismaNode,
@@ -9,7 +9,7 @@ import {
   type FnDef,
   type FnType,
   type TSchema,
-  type NodeDef,
+  type NodeDefAny,
 } from "event-processing";
 
 type FnSnapshot = PrismaFnSnapshot & {
@@ -47,7 +47,7 @@ export function prismaNodeToNodeDef(
       fnSnapshot: FnSnapshot;
     })[];
   }
-): NodeDef<FnType> {
+): NodeDefAny {
   const snapshot = val.snapshots[0];
   if (!snapshot) {
     throw new Error("No snapshot found for node. This should never happen");
@@ -69,7 +69,7 @@ export function prismaNodeSnapshotToNodeDef(
     node: PrismaNode;
     fnSnapshot: FnSnapshot & { fn: PrismaFn };
   }
-): NodeDef<FnType> {
+): NodeDefAny {
   return prismaNodeToNodeDef({
     ...val.node,
     snapshots: [val],

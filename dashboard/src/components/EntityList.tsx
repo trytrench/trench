@@ -24,6 +24,8 @@ import {
   type EntityFilter,
   EntityFilterType,
   type EntityViewConfig,
+  getEntityFiltersOfType,
+  featureFilterToText,
 } from "~/shared/validation";
 import { type RouterInputs, type RouterOutputs, api } from "~/utils/api";
 import { EditEntityFilters } from "../components/filters/EditEntityFilters";
@@ -43,7 +45,15 @@ import {
   getFilteredRowModel,
   type PaginationState,
 } from "@tanstack/react-table";
-import { format } from "date-fns";
+import {
+  addHours,
+  format,
+  getUnixTime,
+  parse,
+  startOfDay,
+  subDays,
+  subHours,
+} from "date-fns";
 import { RenderResult } from "./RenderResult";
 import { Button } from "./ui/button";
 import {
@@ -61,12 +71,54 @@ import { Skeleton } from "./ui/skeleton";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { ComboboxSelector } from "./ComboboxSelector";
 import { EntityChip } from "./EntityChip";
+import pluralize from "pluralize";
+import { ZoomBarChart } from "./ZoomBarChart";
+import { CHART_INTERVAL_HOURS } from "../shared/config";
+
+// const END_DATE = new Date("2024-02-28");
+const END_DATE = new Date("2024-03-15");
+const START_DATE = startOfDay(subDays(END_DATE, 30));
+
+export function useEntityFiltersToText() {
+  const { data: entityTypes } = api.entityTypes.list.useQuery();
+
+  const entityFiltersToText = useCallback(
+    (filters: EntityFilter[]) => {
+      const eTypeFilter = getEntityFiltersOfType(
+        filters,
+        EntityFilterType.EntityType
+      )[0]?.data;
+
+      const featureFilters = getEntityFiltersOfType(
+        filters,
+        EntityFilterType.Feature
+      );
+
+      const entityType = entityTypes?.find((et) => et.id === eTypeFilter)?.type;
+
+      let str = `${pluralize(entityType ?? "Entity")}`;
+
+      if (featureFilters.length > 0) {
+        str += ` with ${featureFilters
+          .map((val) => featureFilterToText(val.data))
+          .join(", ")}`;
+      }
+
+      return str;
+    },
+    [entityTypes]
+  );
+
+  return { entityFiltersToText };
+}
 
 interface Props {
   seenWithEntity?: Entity;
 }
 
 type EntityView = RouterOutputs["entityViews"]["list"][number];
+
+type SeenFilter = Extract<EntityFilter, { type: EntityFilterType.Seen }>;
 
 const DEFAULT_PAGINATION: PaginationState = {
   pageIndex: 0,
@@ -76,6 +128,7 @@ const DEFAULT_PAGINATION: PaginationState = {
 export function EntityList({ seenWithEntity }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const { entityFiltersToText } = useEntityFiltersToText();
 
   const { data: entityTypes } = api.entityTypes.list.useQuery();
 
@@ -121,6 +174,9 @@ export function EntityList({ seenWithEntity }: Props) {
     type: "grid",
     filters: [],
   });
+  const [extraFilters, setExtraFilters] = useState<EntityFilter[]>([]);
+  const [seenFilter, setSeenFilter] = useState<SeenFilter | undefined>();
+
   useEffect(() => {
     if (viewConfig) {
       setCurrentViewState({
@@ -140,12 +196,12 @@ export function EntityList({ seenWithEntity }: Props) {
     setPagination(DEFAULT_PAGINATION);
   }, [viewConfig]);
 
-  const allFilters = useMemo(() => {
+  const combinedFilters = useMemo(() => {
     const filters: EntityFilter[] = [];
     if (viewConfig) {
       filters.push(...viewConfig.filters);
     }
-    filters.push(...currentViewState.filters);
+    filters.push(...extraFilters);
     if (seenWithEntity) {
       filters.push({
         type: EntityFilterType.SeenWithEntity,
@@ -153,31 +209,87 @@ export function EntityList({ seenWithEntity }: Props) {
       });
     }
     return filters;
-  }, [viewConfig, currentViewState.filters, seenWithEntity]);
+  }, [viewConfig, extraFilters, seenWithEntity]);
 
   const queryProps: RouterInputs["lists"]["getEntitiesList"] = useMemo(() => {
+    const allFilters = [...combinedFilters];
+    if (seenFilter) {
+      allFilters.push(seenFilter);
+    }
     return {
       entityFilters: allFilters,
       limit: pagination.pageSize,
       cursor: pagination.pageIndex * pagination.pageSize,
     };
-  }, [allFilters, pagination.pageSize, pagination.pageIndex]);
+  }, [combinedFilters, seenFilter, pagination.pageSize, pagination.pageIndex]);
 
   const { data: entities, isFetching: fetchingEntities } =
     api.lists.getEntitiesList.useQuery(queryProps, {
-      keepPreviousData: true,
+      // keepPreviousData: true,
       staleTime: 15000,
       enabled: !loadingViewsAndRouter,
     });
+
+  const binQueryProps: RouterInputs["charts"]["getEntityTimeData"] =
+    useMemo(() => {
+      return {
+        start: START_DATE,
+        end: END_DATE,
+        charts: [
+          {
+            entityFilters: combinedFilters,
+            label: entityFiltersToText(combinedFilters),
+          },
+        ],
+      };
+    }, [combinedFilters, entityFiltersToText]);
+
+  const { data: entityBins } =
+    api.charts.getEntityTimeData.useQuery(binQueryProps);
+
+  const maxYValue = useMemo(() => {
+    // Calculate avg and stdev of every bin
+    const labels = entityBins?.labels ?? [];
+    const binValues = Object.values(entityBins?.bins ?? {});
+
+    const maxThreshold = Math.max(
+      ...labels.map((label) => {
+        const vals = binValues.map((bin) => bin[label] ?? 0);
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const stdev = Math.sqrt(
+          vals.reduce((a, b) => a + (b - avg) ** 2, 0) / vals.length
+        );
+
+        const max = Math.max(...vals);
+
+        return max;
+        // if (max > avg + 4 * stdev) {
+        //   return max;
+        // }
+        // return avg + 2 * stdev;
+      })
+    );
+
+    return maxThreshold;
+  }, [entityBins?.bins, entityBins?.labels]);
+
+  const xAxisSelection: [string, string] | undefined = useMemo(() => {
+    const x1 = seenFilter?.data.from;
+    const x2 = seenFilter?.data.to;
+
+    return x1 && x2
+      ? [x1.toISOString(), subHours(x2, CHART_INTERVAL_HOURS).toISOString()]
+      : undefined;
+  }, [seenFilter?.data.from, seenFilter?.data.to]);
 
   const { data: features } = api.features.list.useQuery();
 
   const filteredFeatures = useMemo(() => {
     const entType =
-      allFilters.find((filt) => filt.type === EntityFilterType.EntityType)
+      combinedFilters.find((filt) => filt.type === EntityFilterType.EntityType)
         ?.data ?? null;
     return features?.filter((feature) => feature.entityTypeId === entType);
-  }, [allFilters, features]);
+  }, [combinedFilters, features]);
 
   const allEntities = useMemo(() => {
     return entities?.rows ?? [];
@@ -215,6 +327,7 @@ export function EntityList({ seenWithEntity }: Props) {
         header: "Last Seen",
         id: "Last Seen",
         accessorFn: (row) => format(row.lastSeenAt, "MMM d, yyyy h:mm a"),
+        // accessorFn: (row) => getUnixTime(row.lastSeenAt),
       },
       {
         header: "Link",
@@ -429,6 +542,8 @@ export function EntityList({ seenWithEntity }: Props) {
     },
   });
 
+  const [isChartSelectorOpen, setIsChartSelectorOpen] = useState(false);
+
   return (
     <div className="h-full flex flex-col md:flex-row">
       <div className="hidden md:block w-64 border-r shrink-0 pt-4 px-6 md:h-full">
@@ -511,15 +626,8 @@ export function EntityList({ seenWithEntity }: Props) {
                   .catch(handleError);
               }
             }}
-            extraFilters={currentViewState.filters}
-            onExtraFiltersChange={(filters) => {
-              setCurrentViewState((prev) => {
-                return {
-                  ...prev,
-                  filters,
-                };
-              });
-            }}
+            extraFilters={extraFilters}
+            onExtraFiltersChange={setExtraFilters}
             onDropdownClick={(val) => {
               if (val === "viewConfig") {
                 if (selectedView) {
@@ -612,36 +720,122 @@ export function EntityList({ seenWithEntity }: Props) {
             }}
           />
         </div>
-        <div className="grow overflow-y-auto px-2 md:px-8 py-2 md:py-4">
-          {currentViewState.type === "grid" ? (
-            <div className="space-y-4 w-full">
-              <>
-                {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
-                  (entity) => {
-                    return (
-                      <EntityCard
-                        key={`${entity.entityType}:${entity.entityId}`}
-                        entity={entity}
-                        entityNameMap={entityNameMap}
-                        featureOrder={
-                          currentViewState.gridConfig?.featureOrder ?? []
-                        }
-                        onFeatureOrderChange={(newOrder) =>
-                          setCurrentViewState((prev) => {
-                            return {
-                              ...prev,
-                              gridConfig: {
-                                featureOrder: newOrder,
-                              },
-                            };
-                          })
-                        }
-                        isEditing={isEditing}
-                      />
-                    );
-                  }
-                )}
-                {/* {hasNextPage && (
+        <div className="w-full pr-8">
+          {entityBins ? (
+            <ZoomBarChart
+              className="h-48"
+              // tooltipOrder="byValue"
+              data={
+                entityBins?.bins
+                  ? Object.entries(entityBins.bins).map(([time, labels]) => ({
+                      date: new Date(time).toISOString(),
+                      time,
+                      ...labels,
+                    }))
+                  : []
+              }
+              // maxValue={maxYValue}
+              formatXAxis={(date) => format(new Date(date), "MMM d")}
+              formatTooltip={(date) => {
+                return `${format(new Date(date), "MMM d, h a")} - ${format(
+                  addHours(new Date(date), CHART_INTERVAL_HOURS),
+                  "MMM d, h a"
+                )}`;
+              }}
+              xAxisSelection={xAxisSelection}
+              onXAxisSelect={([start, end]) => {
+                setSeenFilter((prev) => {
+                  return {
+                    type: EntityFilterType.Seen as const,
+                    data: {
+                      from: new Date(start),
+                      to: addHours(new Date(end), CHART_INTERVAL_HOURS),
+                    },
+                  };
+                });
+              }}
+              index="date"
+              categories={entityBins?.labels ?? []}
+              valueFormatter={(value) => {
+                return Intl.NumberFormat("us").format(value).toString();
+              }}
+            />
+          ) : (
+            <div className="h-48 w-full px-8 py-4 pt-12">
+              <Skeleton className="h-full w-full bg-gray-50"></Skeleton>
+            </div>
+          )}
+        </div>
+
+        <button
+          className={cn({
+            "flex justify-center w-full transition py-0.5": true,
+            "hover:to-gray-200/50 bg-gradient-to-b from-white to-gray-100/60":
+              !isChartSelectorOpen,
+            "border-b": isChartSelectorOpen,
+          })}
+          onClick={() => {
+            setIsChartSelectorOpen((prev) => !prev);
+          }}
+        >
+          <ChevronDown
+            className={cn({
+              "transform rotate-180": isChartSelectorOpen,
+              "h-5 w-5 transition-transform": true,
+            })}
+          />
+        </button>
+
+        <div className="relative grow w-full overflow-hidden">
+          <ScrollArea
+            // style={{
+            //   transition: "height 1s",
+            // }}
+            className={cn({
+              "w-full top-0 z-20 transition-all bg-background pr-8": true,
+              "h-0": !isChartSelectorOpen,
+              "h-full": isChartSelectorOpen,
+            })}
+          >
+            <div className="overflow-y-auto min-h-full flex flex-col gap-2">
+              <EntityViewContainer
+                seenFilter={seenFilter}
+                onSeenFilterChange={setSeenFilter}
+                seenWithEntity={seenWithEntity}
+                excludeViewId={selectedViewId}
+              />
+            </div>
+          </ScrollArea>
+          <div className="h-full px-2 md:px-8 py-2 md:py-4">
+            {currentViewState.type === "grid" ? (
+              <div className="space-y-4 w-full">
+                <>
+                  {(isEditing ? allEntities.slice(0, 8) : allEntities).map(
+                    (entity) => {
+                      return (
+                        <EntityCard
+                          key={`${entity.entityType}:${entity.entityId}`}
+                          entity={entity}
+                          entityNameMap={entityNameMap}
+                          featureOrder={
+                            currentViewState.gridConfig?.featureOrder ?? []
+                          }
+                          onFeatureOrderChange={(newOrder) =>
+                            setCurrentViewState((prev) => {
+                              return {
+                                ...prev,
+                                gridConfig: {
+                                  featureOrder: newOrder,
+                                },
+                              };
+                            })
+                          }
+                          isEditing={isEditing}
+                        />
+                      );
+                    }
+                  )}
+                  {/* {hasNextPage && (
                   <div className="self-center my-4">
                     <SpinnerButton
                       variant="outline"
@@ -656,21 +850,192 @@ export function EntityList({ seenWithEntity }: Props) {
                     </SpinnerButton>
                   </div>
                 )} */}
-              </>
-            </div>
-          ) : (
-            <div className="h-full overflow-y-auto">
-              <DataTable
-                table={table}
-                loading={fetchingEntities || loadingViews}
-              />
-            </div>
-          )}
+                </>
+              </div>
+            ) : (
+              <div className="h-full overflow-y-auto">
+                <DataTable
+                  table={table}
+                  loading={fetchingEntities || loadingViews}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+function EntityViewContainer({
+  seenFilter,
+  onSeenFilterChange,
+  excludeViewId,
+  seenWithEntity,
+}: {
+  seenFilter?: SeenFilter;
+  onSeenFilterChange?: (
+    updater: SetStateAction<SeenFilter | undefined>
+  ) => void;
+  excludeViewId?: string;
+  seenWithEntity?: Entity;
+}) {
+  const { data: views } = api.entityViews.list.useQuery(
+    { entityTypeId: seenWithEntity?.type ?? null },
+    { refetchOnWindowFocus: false, staleTime: Infinity }
+  );
+
+  if (!views) return <div>Loading...</div>;
+
+  return (
+    <>
+      {views.map((view) => (
+        <EntityViewChart
+          key={view.id}
+          view={view}
+          seenFilter={seenFilter}
+          onSeenFilterChange={onSeenFilterChange}
+          excludeViewId={excludeViewId}
+          seenWithEntity={seenWithEntity}
+        />
+      ))}
+    </>
+  );
+}
+
+const EntityViewChart = ({
+  view,
+  seenFilter,
+  onSeenFilterChange,
+  excludeViewId,
+  seenWithEntity,
+}: {
+  view: EntityView;
+  seenFilter?: SeenFilter;
+  onSeenFilterChange?: (
+    updater: SetStateAction<SeenFilter | undefined>
+  ) => void;
+  excludeViewId?: string;
+  seenWithEntity?: Entity;
+}) => {
+  const { entityFiltersToText } = useEntityFiltersToText();
+
+  const binQueryProps = useMemo(() => {
+    const onlyTypeFilters = getEntityFiltersOfType(
+      view.config.filters,
+      EntityFilterType.EntityType
+    );
+    const onlyTypeFiltersLabel = entityFiltersToText(onlyTypeFilters);
+
+    const label = entityFiltersToText(view.config.filters);
+
+    const addEntityFilter = (filters: EntityFilter[]) => {
+      return [
+        ...(filters ?? []),
+        ...(seenWithEntity
+          ? [
+              {
+                type: EntityFilterType.SeenWithEntity as const,
+                data: seenWithEntity,
+              },
+            ]
+          : []),
+      ];
+    };
+
+    return {
+      start: START_DATE,
+      end: END_DATE,
+      charts: [
+        {
+          entityFilters: addEntityFilter(view.config.filters),
+          label: label,
+        },
+        // {
+        //   entityFilters: addEntityFilter(onlyTypeFilters),
+        //   label: onlyTypeFiltersLabel,
+        // },
+      ],
+    };
+  }, [entityFiltersToText, seenWithEntity, view.config.filters]);
+
+  const { data: entityBins } =
+    api.charts.getEntityTimeData.useQuery(binQueryProps);
+
+  const xAxisSelection: [string, string] | undefined = useMemo(() => {
+    const x1 = seenFilter?.data.from;
+    const x2 = seenFilter?.data.to;
+    return x1 && x2
+      ? [x1.toISOString(), subHours(x2, CHART_INTERVAL_HOURS).toISOString()]
+      : undefined;
+  }, [seenFilter?.data.from, seenFilter?.data.to]);
+
+  const chartData = useMemo(
+    () =>
+      entityBins?.bins
+        ? Object.entries(entityBins.bins).map(([time, labels]) => ({
+            date: new Date(time).toISOString(),
+            time,
+            ...labels,
+          }))
+        : [],
+    [entityBins]
+  );
+
+  if (excludeViewId && view.id === excludeViewId) {
+    return null;
+  }
+
+  return (
+    <div className="h-36 relative">
+      {entityBins ? (
+        <>
+          <ZoomBarChart
+            colors={["blue", "sky"]}
+            className="h-full"
+            data={chartData}
+            xAxisSelection={xAxisSelection}
+            onXAxisSelect={(selectedRange: [string, string]) => {
+              onSeenFilterChange?.(() => ({
+                type: EntityFilterType.Seen,
+                data: {
+                  from: new Date(selectedRange[0]),
+                  to: addHours(
+                    new Date(selectedRange[1]),
+                    CHART_INTERVAL_HOURS
+                  ),
+                },
+              }));
+            }}
+            stack={true}
+            // showXAxis={idx === entityBins.labels.length - 1}
+            // tooltipOrder="byValue"
+            formatXAxis={(date) => format(new Date(date), "MMM d")}
+            formatTooltip={(date) => {
+              return `${format(new Date(date), "MMM d, h a")} - ${format(
+                addHours(new Date(date), CHART_INTERVAL_HOURS),
+                "MMM d, h a"
+              )}`;
+            }}
+            categories={entityBins.labels}
+            index="date"
+            valueFormatter={(value) => {
+              return Intl.NumberFormat("us").format(value).toString();
+            }}
+          />
+          <div className="top-2 left-[3.8rem] absolute text-foreground font-medium text-md">
+            {view.name}{" "}
+            <Link href={`/find?view=${view.id}`}>
+              <ExternalLinkIcon className="h-3.5 w-3.5 text-muted-foreground inline" />
+            </Link>
+          </div>
+        </>
+      ) : (
+        <Skeleton className="h-full w-full bg-gray-50"></Skeleton>
+      )}
+    </div>
+  );
+};
 
 export function EditEntityView(props: {
   allViews: EntityView[];
