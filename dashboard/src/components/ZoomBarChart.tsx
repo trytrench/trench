@@ -6,7 +6,7 @@ import { BarChart, BarChartProps } from "./charts/BarChart";
 
 interface Props extends BarChartProps {
   xAxisSelection?: [x1: string, x2: string];
-  onXAxisSelect: (selection: [x1: string, x2: string]) => void;
+  onXAxisSelect?: (selection: [x1: string, x2: string] | undefined) => void;
 }
 
 export const ZoomBarChart = ({
@@ -66,7 +66,6 @@ export const ZoomBarChart = ({
       if (!e) return;
 
       const finalX = e.activeLabel;
-      console.log(e.activeLabel);
       if (!firstX || !finalX) return;
 
       const smaller = Math.min(xTicks.indexOf(firstX), xTicks.indexOf(finalX));
@@ -74,16 +73,28 @@ export const ZoomBarChart = ({
 
       if (!smaller || !larger) return;
 
-      const selection = [xTicks[smaller], xTicks[larger]] as [
-        x1: string,
-        x2: string,
-      ];
+      const selectionSmallIdx = xTicks.indexOf(xAxisSelection?.[0]);
+      const selectionLargeIdx = xTicks.indexOf(xAxisSelection?.[1]);
+      if (
+        smaller === larger &&
+        selectionSmallIdx <= smaller &&
+        larger <= selectionLargeIdx
+      ) {
+        setFirstX(undefined);
+        setSecondX(undefined);
+        onXAxisSelect?.(undefined);
+      } else {
+        const selection = [xTicks[smaller], xTicks[larger]] as [
+          x1: string,
+          x2: string,
+        ];
 
-      onXAxisSelect(selection);
-      setFirstX(undefined);
-      setSecondX(undefined);
+        onXAxisSelect?.(selection);
+        setFirstX(undefined);
+        setSecondX(undefined);
+      }
     },
-    [firstX, xTicks, onXAxisSelect]
+    [firstX, xTicks, xAxisSelection, onXAxisSelect]
   );
 
   return (

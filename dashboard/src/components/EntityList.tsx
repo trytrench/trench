@@ -743,15 +743,20 @@ export function EntityList({ seenWithEntity }: Props) {
                 )}`;
               }}
               xAxisSelection={xAxisSelection}
-              onXAxisSelect={([start, end]) => {
+              onXAxisSelect={(result) => {
                 setSeenFilter((prev) => {
-                  return {
-                    type: EntityFilterType.Seen as const,
-                    data: {
-                      from: new Date(start),
-                      to: addHours(new Date(end), CHART_INTERVAL_HOURS),
-                    },
-                  };
+                  return result
+                    ? {
+                        type: EntityFilterType.Seen as const,
+                        data: {
+                          from: new Date(result[0]),
+                          to: addHours(
+                            new Date(result[1]),
+                            CHART_INTERVAL_HOURS
+                          ),
+                        },
+                      }
+                    : undefined;
                 });
               }}
               index="date"
@@ -996,17 +1001,18 @@ const EntityViewChart = ({
             className="h-full"
             data={chartData}
             xAxisSelection={xAxisSelection}
-            onXAxisSelect={(selectedRange: [string, string]) => {
-              onSeenFilterChange?.(() => ({
-                type: EntityFilterType.Seen,
-                data: {
-                  from: new Date(selectedRange[0]),
-                  to: addHours(
-                    new Date(selectedRange[1]),
-                    CHART_INTERVAL_HOURS
-                  ),
-                },
-              }));
+            onXAxisSelect={(result) => {
+              onSeenFilterChange?.((prev) => {
+                return result
+                  ? {
+                      type: EntityFilterType.Seen as const,
+                      data: {
+                        from: new Date(result[0]),
+                        to: addHours(new Date(result[1]), CHART_INTERVAL_HOURS),
+                      },
+                    }
+                  : undefined;
+              });
             }}
             stack={true}
             // showXAxis={idx === entityBins.labels.length - 1}
