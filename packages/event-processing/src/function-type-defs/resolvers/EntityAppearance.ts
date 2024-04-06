@@ -22,10 +22,11 @@ export const entityAppearanceFnResolver = createFnTypeResolverBuilder()
       });
 
       let entity;
-      if (!value) {
-        throw new Error(`Expected a entity ID value at dataPath ${dataPath}`);
-      }
       if (typeof value === "string") {
+        if (!value) {
+          throw new Error(`Expected a entity ID value at dataPath ${dataPath}`);
+        }
+
         entity = {
           type: entityType,
           id: value,
