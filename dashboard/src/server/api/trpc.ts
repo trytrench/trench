@@ -12,8 +12,10 @@ import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
+
 import { getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * 1. CONTEXT
@@ -84,6 +86,13 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
 });
 
 /**
+ * Create a server-side caller.
+ *
+ * @see https://trpc.io/docs/server/server-side-calls
+ */
+export const createCallerFactory = t.createCallerFactory;
+
+/**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
  *
  * These are the pieces you use to build your tRPC API. You should import these a lot in the
@@ -119,6 +128,15 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   });
 });
 
+const sentryMiddleware = t.middleware(
+  // @ts-expect-error Type is broken
+  Sentry.Handlers.trpcMiddleware({
+    attachRpcInput: true,
+  })
+);
+
+const finalMiddleware = sentryMiddleware.unstable_pipe(enforceUserIsAuthed);
+
 /**
  * Protected (authenticated) procedure
  *
@@ -127,4 +145,4 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
  *
  * @see https://trpc.io/docs/procedures
  */
-export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
+export const protectedProcedure = t.procedure.use(finalMiddleware);

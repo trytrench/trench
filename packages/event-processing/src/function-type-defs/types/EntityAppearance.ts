@@ -5,7 +5,7 @@ import { TypeName, createDataType } from "../../data-types";
 import { ClickhouseClient } from "databases";
 import { StoreTable } from "../lib/store";
 import { getUnixTime } from "date-fns";
-import { get } from "lodash";
+import { create, get } from "lodash";
 import { dataPathZodSchema } from "../../data-path";
 
 export const entityAppearanceFnDef = createFnTypeDefBuilder()
@@ -34,8 +34,16 @@ export const entityAppearanceFnDef = createFnTypeDefBuilder()
       };
     }
 
-    const desiredType = createDataType({ type: TypeName.String });
-    if (!desiredType.canBeAssigned(schema)) {
+    const entityType = createDataType({
+      type: TypeName.Entity,
+      entityType: fnDef.config.entityType,
+    });
+    const stringType = createDataType({ type: TypeName.String });
+
+    if (
+      !stringType.canBeAssigned(schema) &&
+      !entityType.canBeAssigned(schema)
+    ) {
       return {
         success: false,
         error: `Data path ${dataPath} is not of type ${TypeName.Entity}`,

@@ -18,6 +18,7 @@ import { Card } from "./ui/card";
 import { EntityFilter, EntityFilterType } from "../shared/validation";
 import { Loader2Icon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
+import { ZoomBarChart } from "./ZoomBarChart";
 
 interface Props {
   entity: Entity;
@@ -103,9 +104,10 @@ export default function EventCharts({ entity }: Props) {
             {eventTypeBinsLoading ? (
               <Loader2Icon className="w-8 h-8 text-muted-foreground animate-spin mx-auto my-20" />
             ) : (
-              <ZoomAreaChart
+              <ZoomBarChart
+                onXAxisSelect={() => {}}
                 className="h-64"
-                tooltipOrder="byValue"
+                // tooltipOrder="byValue"
                 data={
                   eventTypeBins?.bins
                     ? Object.entries(eventTypeBins.bins).map(
@@ -117,14 +119,15 @@ export default function EventCharts({ entity }: Props) {
                       )
                     : []
                 }
-                onZoom={(x1, x2) => {
-                  // const start = parse(x1, "MMM d", new Date());
-                  // const end = parse(x2, "MMM d", new Date());
-                  // setDateRange({
-                  //   from: start > end ? end : start,
-                  //   to: start > end ? start : end,
-                  // });
-                }}
+                stack={true}
+                // onXAxisSelect={(x1, x2) => {
+                //   // const start = parse(x1, "MMM d", new Date());
+                //   // const end = parse(x2, "MMM d", new Date());
+                //   // setDateRange({
+                //   //   from: start > end ? end : start,
+                //   //   to: start > end ? start : end,
+                //   // });
+                // }}
                 index="date"
                 categories={eventTypeBins?.labels ?? []}
                 valueFormatter={(value) => {

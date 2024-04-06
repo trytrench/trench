@@ -109,6 +109,28 @@ export function RenderEntityFilters(props: Props) {
                   }
                 />
               );
+            case EntityFilterType.Seen:
+              return (
+                <DateRangeChip
+                  title="Seen"
+                  dateRange={{
+                    from: filter.data.from,
+                    to: filter.data.to,
+                  }}
+                  isEditable={editable}
+                  onDelete={
+                    editable
+                      ? () => {
+                          onFiltersChange(
+                            filters.filter(
+                              (f) => f.type !== EntityFilterType.Seen
+                            )
+                          );
+                        }
+                      : undefined
+                  }
+                />
+              );
             case EntityFilterType.Feature:
               return (
                 <FeatureFilterChip

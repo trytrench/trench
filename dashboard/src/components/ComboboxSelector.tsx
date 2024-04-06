@@ -6,7 +6,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandSeparator,
+  CommandList,
 } from "~/components/ui/command";
 import {
   Popover,
@@ -89,7 +89,7 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
       }}
       modal
     >
-      <PopoverTrigger asChild disabled={true}>
+      <PopoverTrigger asChild disabled={disabled}>
         {renderTrigger
           ? renderTrigger({
               value,
@@ -105,37 +105,40 @@ export function ComboboxSelector(props: ComboboxSelectorProps) {
             ref={ref}
             className={clsx({ "h-[300px]": height >= 300 })}
           >
-            <CommandEmpty>No options found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  value={option.value}
-                  key={option.value}
-                  onSelect={() => {
-                    setOpen(false);
-                    if (option.value === value) {
-                      onSelect(null);
-                    } else {
-                      onSelect(option.value);
-                    }
-                  }}
-                >
-                  {renderOption ? (
-                    renderOption({ option, selected: option.value === value })
-                  ) : (
-                    <>
-                      <Check
-                        className={cn("mr-2 h-4 w-4", {
-                          "opacity-100": option.value === value,
-                          "opacity-0": option.value !== value,
-                        })}
-                      />
-                      {option.label}
-                    </>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            <CommandList>
+              <CommandEmpty>No options found.</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    keywords={[option.label]}
+                    value={option.value}
+                    key={option.value}
+                    onSelect={() => {
+                      setOpen(false);
+                      if (option.value === value) {
+                        onSelect(null);
+                      } else {
+                        onSelect(option.value);
+                      }
+                    }}
+                  >
+                    {renderOption ? (
+                      renderOption({ option, selected: option.value === value })
+                    ) : (
+                      <>
+                        <Check
+                          className={cn("mr-2 h-4 w-4", {
+                            "opacity-100": option.value === value,
+                            "opacity-0": option.value !== value,
+                          })}
+                        />
+                        {option.label}
+                      </>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </ScrollArea>
         </Command>
       </PopoverContent>

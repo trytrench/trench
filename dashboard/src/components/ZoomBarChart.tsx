@@ -2,13 +2,14 @@ import { AreaChart, type AreaChartProps } from "./charts/AreaChart";
 import { useCallback, useMemo, useState } from "react";
 import { ReferenceArea } from "recharts";
 import { type CategoricalChartState } from "recharts/types/chart/generateCategoricalChart";
+import { BarChart, BarChartProps } from "./charts/BarChart";
 
-interface Props extends AreaChartProps {
+interface Props extends BarChartProps {
   xAxisSelection?: [x1: string, x2: string];
-  onXAxisSelect: (selection: [x1: string, x2: string]) => void;
+  onXAxisSelect?: (selection: [x1: string, x2: string] | undefined) => void;
 }
 
-export const ZoomAreaChart = ({
+export const ZoomBarChart = ({
   xAxisSelection,
   onXAxisSelect,
   data,
@@ -65,7 +66,6 @@ export const ZoomAreaChart = ({
       if (!e) return;
 
       const finalX = e.activeLabel;
-      console.log(e.activeLabel);
       if (!firstX || !finalX) return;
 
       const smaller = Math.min(xTicks.indexOf(firstX), xTicks.indexOf(finalX));
@@ -73,22 +73,33 @@ export const ZoomAreaChart = ({
 
       if (!smaller || !larger) return;
 
-      const selection = [xTicks[smaller], xTicks[larger]] as [
-        x1: string,
-        x2: string,
-      ];
+      const selectionSmallIdx = xTicks.indexOf(xAxisSelection?.[0]);
+      const selectionLargeIdx = xTicks.indexOf(xAxisSelection?.[1]);
+      if (
+        smaller === larger &&
+        selectionSmallIdx <= smaller &&
+        larger <= selectionLargeIdx
+      ) {
+        setFirstX(undefined);
+        setSecondX(undefined);
+        onXAxisSelect?.(undefined);
+      } else {
+        const selection = [xTicks[smaller], xTicks[larger]] as [
+          x1: string,
+          x2: string,
+        ];
 
-      onXAxisSelect(selection);
-      setFirstX(undefined);
-      setSecondX(undefined);
+        onXAxisSelect?.(selection);
+        setFirstX(undefined);
+        setSecondX(undefined);
+      }
     },
-    [firstX, xTicks, onXAxisSelect]
+    [firstX, xTicks, xAxisSelection, onXAxisSelect]
   );
 
   return (
-    <AreaChart
+    <BarChart
       {...props}
-      tooltipOrder="byValue"
       data={data}
       index={index}
       onMouseDownChart={handleMouseDown}
@@ -113,6 +124,6 @@ export const ZoomAreaChart = ({
           fillOpacity={0.3}
         />
       )}
-    </AreaChart>
+    </BarChart>
   );
 };

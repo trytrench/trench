@@ -34,6 +34,7 @@ import { SelectDataPath } from "./SelectDataPath";
 import { useEditorStore } from "./editor/state/zustand";
 import { useMutationToasts } from "./editor/useMutationToasts";
 import { handleError } from "~/lib/handleError";
+import { SelectDataPathOrEntityFeature } from "./SelectDataPathOrEntityFeature";
 
 const formSchema = z.object({
   entityTypeId: z.string(),
@@ -170,7 +171,7 @@ export const CreateEntityAppearanceDialog = ({
                     <FormItem className="col-span-3">
                       <FormLabel>Path</FormLabel>
                       <FormControl>
-                        <SelectDataPath
+                        <SelectDataPathOrEntityFeature
                           eventType={eventType}
                           onChange={field.onChange}
                           value={field.value}

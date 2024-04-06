@@ -68,6 +68,7 @@ export function AddFeatureFilterSubItem(props: {
                   <CommandItem
                     key={fDef.id}
                     value={fDef.id}
+                    keywords={[fDef.name]}
                     className="pl-8"
                     onSelect={() => {
                       onAdd({

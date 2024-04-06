@@ -1,5 +1,15 @@
 version: "3"
 
+x-env: &env
+  environment:
+    POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
+    CLICKHOUSE_URL: "http://clickhouse:8123"
+    REDIS_URL: "redis://redis:6379"
+    NODE_ENV: "production"
+  env_file:
+    - path: .env
+      required: false
+
 services:
   redis:
     extends:
@@ -29,11 +39,7 @@ services:
         condition: service_started
       migrator:
         condition: service_completed_successfully
-    environment:
-      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
-      CLICKHOUSE_URL: "http://clickhouse:8123"
-      REDIS_URL: "redis://redis:6379"
-      NODE_ENV: "production"
+    <<: *env
 
   dashboard:
     build:
@@ -47,14 +53,9 @@ services:
         condition: service_started
       migrator:
         condition: service_completed_successfully
-
-    environment:
-      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
-      CLICKHOUSE_URL: "http://clickhouse:8123"
-      REDIS_URL: "redis://redis:6379"
-      NODE_ENV: "production"
     ports:
       - "3000:3000"
+    <<: *env
 
   migrator:
     build:
@@ -66,11 +67,7 @@ services:
       clickhouse:
         condition: service_started
     command: sh -c "cd packages/databases && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npx tsx src/clickhouse.ts"
-    environment:
-      POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/postgres?schema=public"
-      CLICKHOUSE_URL: "http://clickhouse:8123"
-      REDIS_URL: "redis://redis:6379"
-      NODE_ENV: "production"
+    <<: *env
 
 volumes:
   postgres_data:

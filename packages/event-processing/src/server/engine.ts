@@ -6,6 +6,7 @@ import {
   FnType,
   FnTypeContextMap,
   NodeDef,
+  NodeDefAny,
   Resolver,
   TrenchEvent,
 } from "../function-type-defs";
@@ -32,7 +33,7 @@ export class ExecutionEngine {
   engineId: string;
 
   context: FnTypeContextMap | null = null;
-  nodeDefs: Record<string, NodeDef<FnType>> = {};
+  nodeDefs: Record<string, NodeDefAny> = {};
   eventQueue: PQueue;
   functionQueues: Record<string, PQueue>;
   state: {

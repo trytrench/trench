@@ -23,6 +23,7 @@ import { useMutationToasts } from "./useMutationToasts";
 import { handleError } from "../../../lib/handleError";
 import { selectors, useEditorStore } from "./state/zustand";
 import { generateNanoId } from "../../../../../packages/common/src";
+import { SelectDataPathOrEntityFeature } from "../SelectDataPathOrEntityFeature";
 
 const fnTypeDef = getFnTypeDef(FnType.Counter);
 const formSchema = z.object({
@@ -159,7 +160,7 @@ export function EditCounter({
           Matching the condition:
         </div>
 
-        <SelectDataPath
+        <SelectDataPathOrEntityFeature
           eventType={eventType}
           desiredSchema={{
             type: TypeName.Boolean,

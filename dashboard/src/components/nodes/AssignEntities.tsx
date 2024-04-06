@@ -58,7 +58,7 @@ const FeatureItem = ({
   const { refetch: refetchFeatures } = api.features.list.useQuery();
 
   return (
-    <div className="flex items-center h-8">
+    <div className="flex items-center h-8 truncate">
       <div className="flex items-baseline space-x-2">
         {rule && <div className={`rounded-full ${rule.color} w-2 h-2`} />}
         <div className="font-medium text-sm">{feature.name}</div>
@@ -185,7 +185,7 @@ export default function AssignEntities({ eventType }: Props) {
 
         if (
           hasFnType(node, FnType.LogEntityFeature) &&
-          dataPathNodeIds.includes(selectedNodeId)
+          (dataPathNodeIds.includes(selectedNodeId) || selectedNodeId === EVENT)
         ) {
           return { ...acc, [node.fn.config.featureId]: node };
         }

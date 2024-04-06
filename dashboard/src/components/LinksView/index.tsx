@@ -31,6 +31,7 @@ import { LoadingPlaceholder } from "../LoadingPlaceholder";
 import { useEntityPageSubject } from "../../hooks/useEntityPageSubject";
 import { sumBy } from "lodash";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 
 interface LinksViewProps {
   entityId: string;
@@ -151,7 +152,7 @@ function LinksView({
     );
   }
   return (
-    <div className="flex items-stretch">
+    <div className="flex items-stretch overflow-y-auto h-full">
       <div id="leftLeft" className="w-[60px] shrink-0 relative">
         <svg className="w-full h-full">
           {sortedForLeftSvgs(left, leftSelection, lastLeftSelection).map(
@@ -427,7 +428,7 @@ function LeftSideCard(props: LeftSideCardProps) {
             />
           </button>
         ) : (
-          <a
+          <Link
             className="my-auto"
             href={href}
             onClick={(e) => {
@@ -438,7 +439,7 @@ function LeftSideCard(props: LeftSideCardProps) {
               className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
               size={18}
             />
-          </a>
+          </Link>
         )}
       </div>
 
@@ -545,7 +546,7 @@ function RightSideCard(props: RightSideCardProps) {
                 {item.name}
               </div>
             </div>
-            <a
+            <Link
               className="my-auto"
               href={href}
               onClick={(e) => {
@@ -556,7 +557,7 @@ function RightSideCard(props: RightSideCardProps) {
                 className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
                 size={18}
               />
-            </a>
+            </Link>
           </div>
         ) : (
           <div>
@@ -611,7 +612,7 @@ function RightSideCard(props: RightSideCardProps) {
                         {entity.linkCount} links
                       </div>
                     </div>
-                    <a
+                    <Link
                       href={`/entity/${customEncodeURIComponent(
                         entityTypeName
                       )}/${customEncodeURIComponent(entity.id)}?tab=links`}
@@ -623,7 +624,7 @@ function RightSideCard(props: RightSideCardProps) {
                         className="my-auto text-foreground opacity-30 hover:opacity-70 transition"
                         size={18}
                       />
-                    </a>
+                    </Link>
                   </div>
                 ))}
               </div>

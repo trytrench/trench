@@ -6,10 +6,10 @@ async function runMigrations() {
     query: `
         CREATE TABLE IF NOT EXISTS features (
             engine_id LowCardinality(String) CODEC(ZSTD(1)),
-            created_at DateTime64 CODEC(Delta(8), ZSTD(1)),
+            created_at DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
             event_type LowCardinality(String) CODEC(ZSTD(1)),
             event_id String CODEC(ZSTD(1)),
-            event_timestamp DateTime64 CODEC(Delta(8), ZSTD(1)),
+            event_timestamp DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
             feature_type LowCardinality(String),
             feature_id LowCardinality(String),
             entity_type LowCardinality(String),
@@ -35,7 +35,7 @@ async function runMigrations() {
     query: `
         CREATE TABLE IF NOT EXISTS events (
             id String CODEC(ZSTD(1)),
-            timestamp DateTime64 CODEC(Delta(8), ZSTD(1)),
+            timestamp DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
             type String CODEC(ZSTD(1)),
             data String
         ) ENGINE = ReplacingMergeTree()
@@ -132,8 +132,8 @@ async function runMigrations() {
             event_type LowCardinality(String) CODEC(ZSTD(1)),
             entity_id String CODEC(ZSTD(1)),
             entity_type LowCardinality(String) CODEC(ZSTD(1)),
-            first_seen SimpleAggregateFunction(min, DateTime64),
-            last_seen SimpleAggregateFunction(max, DateTime64)
+            first_seen SimpleAggregateFunction(min, DateTime64(3, 'UTC')),
+            last_seen SimpleAggregateFunction(max, DateTime64(3, 'UTC'))
         )
         ENGINE = AggregatingMergeTree()
         PRIMARY KEY (event_type, entity_type)
