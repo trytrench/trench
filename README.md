@@ -17,6 +17,8 @@
 
 ## Getting started
 
+🚧 This project is currently under development 🚧
+
 Trench is a tool for monitoring and preventing fraud and abuse. It helps you collect data on users, identify bad actors, and take action on them (e.g. blocking a payment).
 
 [Live demo](https://play.trytrench.com)
